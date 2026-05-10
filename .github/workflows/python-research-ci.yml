@@ -1,0 +1,32 @@
+name: Python research CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/python-research-ci.yml"
+      - "research/python-fow-lab/**"
+  pull_request:
+    paths:
+      - ".github/workflows/python-research-ci.yml"
+      - "research/python-fow-lab/**"
+
+concurrency:
+  group: ci-python-research-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-research:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research/python-fow-lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: research/python-fow-lab/pyproject.toml
+      - run: python -m pip install -e ".[dev]"
+      - run: pytest
