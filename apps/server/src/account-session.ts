@@ -206,8 +206,23 @@ export function expiredAccountSessionCookie(): string {
   ]);
 }
 
+// When set (prod), scopes the session cookie to the registrable domain (e.g.
+// `mistboard.com`) instead of host-only, so it is also sent to same-site
+// subdomains. This is what lets the live-game WebSocket run on a separate,
+// non-proxied host (e.g. `play.mistboard.com`, DNS-only/direct-to-origin for
+// low latency) while still resolving the logged-in account from the cookie on
+// the cross-origin upgrade — cross-origin WS handshakes carry no cookies unless
+// the cookie's Domain covers the socket host. Unset in dev/localhost (a Domain
+// would not match `localhost` and the cookie would be silently dropped).
+function accountSessionCookieDomain(): string | null {
+  const domain = process.env.MISTBOARD_COOKIE_DOMAIN?.trim();
+  return domain ? domain : null;
+}
+
 function cookieWithAttributes(prefix: string, extra: string[]): string {
   const attrs = [prefix, 'Path=/', 'HttpOnly', 'SameSite=Lax', ...extra];
+  const domain = accountSessionCookieDomain();
+  if (domain) attrs.push(`Domain=${domain}`);
   if (isProductionLikeRuntime()) attrs.push('Secure');
   return attrs.join('; ');
 }
