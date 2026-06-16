@@ -16,7 +16,7 @@
   "dependencies": {
     "@mistboard/game": "0.0.0",
     "chessground": "^9.2.1",
-    "posthog-js": "^1.372.9"
+    "posthog-js": "^1.386.8"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
