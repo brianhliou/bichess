@@ -345,6 +345,27 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: alwaysEnabled,
+      engineOptions: [
+        {
+          id: 'fairy-stockfish-mini-xiangqi-very-strong',
+          name: 'Fairy Stockfish - Strongest',
+          familyName: 'Fairy Stockfish',
+          kind: 'container',
+        },
+        {
+          id: 'fairy-stockfish-mini-xiangqi-strong',
+          name: 'Fairy Stockfish - Strong',
+          familyName: 'Fairy Stockfish',
+          kind: 'container',
+        },
+        {
+          id: 'fairy-stockfish-mini-xiangqi-amateur',
+          name: 'Fairy Stockfish - Amateur',
+          familyName: 'Fairy Stockfish',
+          kind: 'container',
+        },
+      ],
+      defaultEngineId: 'fairy-stockfish-mini-xiangqi-strong',
     },
   },
   {

@@ -718,12 +718,59 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// Mini Xiangqi (perfect-info 7x7) plays via Fairy-Stockfish's native
+// `minixiangqi` variant. Tiers were calibrated by engine-vs-engine self-play
+// (amateur ≪ strong ≪ strongest, each step ~90-97%). Weakening is Skill Level
+// (CPU-independent); the budget is a node count (reproducible across the slow
+// prod vCPU) capped by movetime as a wall-clock guard.
+const MINI_XIANGQI_ENGINES: Record<string, EngineDefinition> = {
+  'fairy-stockfish-mini-xiangqi-amateur': {
+    id: 'fairy-stockfish-mini-xiangqi-amateur',
+    engineId: 'fairy-stockfish-mini-xiangqi',
+    engineName: 'Fairy Stockfish',
+    name: 'Fairy Stockfish - Amateur',
+    kind: 'container',
+    gameSpecId: 'mini-xiangqi',
+    configHash: 'fsf-mini-xiangqi-amateur',
+    playSignature: 'fsf-mini-xiangqi-amateur',
+    config: { kind: 'fairy-stockfish', skill: 1, nodes: 6_000, movetime_ms: 300 },
+    notes: 'Mini Xiangqi Fairy-Stockfish tier capped for production-safe amateur play.',
+  },
+  'fairy-stockfish-mini-xiangqi-strong': {
+    id: 'fairy-stockfish-mini-xiangqi-strong',
+    engineId: 'fairy-stockfish-mini-xiangqi',
+    engineName: 'Fairy Stockfish',
+    name: 'Fairy Stockfish - Strong',
+    kind: 'container',
+    gameSpecId: 'mini-xiangqi',
+    configHash: 'fsf-mini-xiangqi-strong',
+    playSignature: 'fsf-mini-xiangqi-strong',
+    config: { kind: 'fairy-stockfish', skill: 8, nodes: 60_000, movetime_ms: 800 },
+    notes:
+      'Default Mini Xiangqi Fairy-Stockfish tier with mid-skill move selection plus the live immediate-loss guard.',
+  },
+  'fairy-stockfish-mini-xiangqi-very-strong': {
+    id: 'fairy-stockfish-mini-xiangqi-very-strong',
+    engineId: 'fairy-stockfish-mini-xiangqi',
+    engineName: 'Fairy Stockfish',
+    name: 'Fairy Stockfish - Strongest',
+    kind: 'container',
+    gameSpecId: 'mini-xiangqi',
+    configHash: 'fsf-mini-xiangqi-very-strong',
+    playSignature: 'fsf-mini-xiangqi-very-strong',
+    config: { kind: 'fairy-stockfish', skill: 20, nodes: 800_000, movetime_ms: 2_000 },
+    notes:
+      'Top Mini Xiangqi Fairy-Stockfish tier at full skill with a larger node budget plus the live immediate-loss guard.',
+  },
+};
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
   ...CROSSROADS_CHESS_ENGINES,
   ...JIEQI_ENGINES,
   ...BANQI_ENGINES,
+  ...MINI_XIANGQI_ENGINES,
 };
 
 export function latestBuiltinEngineIds(): { white: string; black: string } {

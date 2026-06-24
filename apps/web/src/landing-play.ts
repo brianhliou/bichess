@@ -2036,10 +2036,10 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) {
-    // Mini Xiangqi is open-info red/black mini xiangqi without drops, PvP-only
-    // and casual-only for now.
+    // Mini Xiangqi is open-info red/black mini xiangqi without drops, casual-only
+    // for now. PvE plays via Fairy-Stockfish's native minixiangqi variant.
     return {
-      mode: 'pvp',
+      mode,
       gameSpecId,
       timeControl: setup.timeControl,
       rated: false,
@@ -2049,6 +2049,7 @@ export function roomCreationRequestBody(
           : setup.preferredColor === 'red' || setup.preferredColor === 'black'
             ? setup.preferredColor
             : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
   if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) {

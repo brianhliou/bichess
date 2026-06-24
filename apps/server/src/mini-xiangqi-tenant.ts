@@ -19,8 +19,13 @@ import {
   type MiniXiangqiSquare,
   oppositeMiniXiangqiColor,
 } from '@mistboard/game';
+import {
+  isMiniXiangqiEngineClientId,
+  miniXiangqiEngineDisplayName,
+  miniXiangqiEngineVersion,
+} from './mini-xiangqi-engine.js';
 import type * as persistence from './persistence.js';
-import { tenantForfeitDeadlineForClient } from './variant-tenant/runtime.js';
+import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -113,12 +118,22 @@ export const miniXiangqiTenant: MiniXiangqiTenant = {
     clientEventFor: miniXiangqiClientEventFor,
     viewForClient: (state, client) => getMiniXiangqiClientView(state, client),
   },
+  engine: {
+    isEngineClientId: isMiniXiangqiEngineClientId,
+    displayName: miniXiangqiEngineDisplayName,
+    engineVersion: miniXiangqiEngineVersion,
+    reservationReleaseTag: 'mini-xiangqi',
+  },
   wire: {
-    snapshotExtras: (room, client) => ({
-      mode: 'pvp',
-      rated: room.rated,
-      forfeitDeadline: tenantForfeitDeadlineForClient(miniXiangqiTenant, room, client),
-    }),
+    snapshotExtras: (room, client) => {
+      const pveEngineId = tenantPveEngineId(miniXiangqiTenant, room);
+      return {
+        mode: pveEngineId ? 'pve' : 'pvp',
+        pveEngineId,
+        rated: room.rated,
+        forfeitDeadline: tenantForfeitDeadlineForClient(miniXiangqiTenant, room, client),
+      };
+    },
   },
   persistence: {
     resultForWinner: (winner: MiniXiangqiColor | null): persistence.GameResult => {

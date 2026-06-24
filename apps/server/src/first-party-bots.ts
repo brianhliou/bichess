@@ -88,6 +88,24 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     activeEngineId: 'misty-drop-mini-level-3',
     defaultGameSpecId: 'drop-mini-xiangqi',
   },
+  {
+    id: 'fairy-stockfish-mini-xiangqi-amateur',
+    displayName: 'Fairy Stockfish Mini Xiangqi - Amateur',
+    activeEngineId: 'fairy-stockfish-mini-xiangqi-amateur',
+    defaultGameSpecId: 'mini-xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-mini-xiangqi',
+    displayName: 'Fairy Stockfish Mini Xiangqi - Strong',
+    activeEngineId: 'fairy-stockfish-mini-xiangqi-strong',
+    defaultGameSpecId: 'mini-xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-mini-xiangqi-strongest',
+    displayName: 'Fairy Stockfish Mini Xiangqi - Strongest',
+    activeEngineId: 'fairy-stockfish-mini-xiangqi-very-strong',
+    defaultGameSpecId: 'mini-xiangqi',
+  },
 ];
 
 const botByEngineId = new Map<string, FirstPartyBotProfile>();

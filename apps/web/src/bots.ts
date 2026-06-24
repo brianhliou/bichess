@@ -638,7 +638,13 @@ function botColorChoices(bot: BotProfile): BotColorChoice[] {
 }
 
 function usesRedBlackSeats(gameSpecId: string): boolean {
-  return ['dark-mini-xiangqi', 'dark-xiangqi', 'drop-mini-xiangqi', 'jieqi'].includes(gameSpecId);
+  return [
+    'dark-mini-xiangqi',
+    'dark-xiangqi',
+    'drop-mini-xiangqi',
+    'jieqi',
+    'mini-xiangqi',
+  ].includes(gameSpecId);
 }
 
 function detailChip(label: string, extraClass?: string): HTMLElement {

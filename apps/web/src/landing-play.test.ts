@@ -990,7 +990,7 @@ describe('landing play panel', () => {
     expect(dmx?.disabled).toBe(false);
   });
 
-  it('greys out Mini Xiangqi in the Play-the-engine flow until it has a bot', () => {
+  it('keeps Mini Xiangqi selectable in the Play-the-engine flow (Fairy-Stockfish bot)', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -1002,9 +1002,9 @@ describe('landing play panel', () => {
     const mini = document.querySelector<HTMLButtonElement>(
       '.landing-variant-card[data-game-spec="mini-xiangqi"]',
     );
-    expect(mini?.disabled).toBe(true);
-    expect(mini?.classList.contains('landing-variant-card-disabled')).toBe(true);
-    expect(mini?.textContent).toContain('Soon');
+    expect(mini?.disabled).toBe(false);
+    expect(mini?.classList.contains('landing-variant-card-disabled')).toBe(false);
+    expect(mini?.textContent).not.toContain('Soon');
   });
 
   it('shows the Dark Crossroads marker even when the engine card is disabled', () => {
