@@ -81,6 +81,9 @@ export function fairyStockfishPath(): string {
   }
   for (const candidate of [
     resolve(process.cwd(), 'bin', 'fairy-stockfish'),
+    // Railway/railpack install location — resolved regardless of cwd so the
+    // engine never silently falls back to a first-legal move in prod.
+    '/app/bin/fairy-stockfish',
     '/usr/local/bin/fairy-stockfish',
     '/usr/bin/fairy-stockfish',
   ]) {
