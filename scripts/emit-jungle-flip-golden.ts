@@ -73,7 +73,13 @@ function statusTag(state: JungleFlipGameState): string {
   return 'aborted';
 }
 
-const APPLY_OPTS = { noProgressClockLimit: 40, repetitionDrawCount: 1_000_000 };
+const APPLY_OPTS = {
+  noProgressClockLimit: 40,
+  repetitionDrawCount: 1_000_000,
+  // Dead-position adjudication is a server-side draw rule the engine doesn't model,
+  // so keep it off here or terminals would diverge from the engine's.
+  adjudicateDeadPosition: false,
+};
 const MAX_PLIES = 300;
 
 function playGame(seed: number) {

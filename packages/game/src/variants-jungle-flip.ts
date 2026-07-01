@@ -30,7 +30,12 @@
 // passthrough mask; the only redaction boundary is the engine request (strip the deal).
 
 import type { AbortReason } from './types.js';
-import { JUNGLE_RANK, JUNGLE_ROLE_LETTER, type JunglePieceRole } from './variants-jungle.js';
+import {
+  JUNGLE_RANK,
+  JUNGLE_ROLE_LETTER,
+  type JunglePieceRole,
+  jungleRankBeats,
+} from './variants-jungle.js';
 
 export type JungleFlipColor = 'red' | 'black';
 
@@ -69,6 +74,7 @@ export type JungleFlipGameEndReason =
   | 'stalemate' // the side to move has no legal action (subsumes elimination)
   | 'no-progress' // 40 plies with no capture/trade and no flip
   | 'repetition' // threefold position repetition
+  | 'dead-position' // remaining material cannot force a win (insufficient material)
   | 'timeout'
   | 'resignation'
   | 'abandonment';
@@ -358,6 +364,10 @@ function jungleFlipPositionKey(state: JungleFlipGameState): string {
 export type JungleFlipApplyMoveOptions = {
   noProgressClockLimit?: number;
   repetitionDrawCount?: number;
+  // Draw a fully-revealed two-piece position the moment it can no longer be won
+  // ("dead position" — see jungleFlipIsDeadPosition). Default on; the golden-vector
+  // emitter disables it so its terminals stay comparable to the engine's.
+  adjudicateDeadPosition?: boolean;
 };
 
 export const DEFAULT_JUNGLE_FLIP_NO_PROGRESS_PLY_LIMIT = 40;
@@ -369,10 +379,63 @@ function jungleFlipIsEliminated(state: JungleFlipGameState, seat: JungleFlipSeat
   return !ALL_JUNGLE_FLIP_SQUARES.some((sq) => state.board[sq]?.color === ink);
 }
 
+// Checkerboard colour of a square (0/1). Adjacent squares always differ; two pieces a
+// diagonal apart always match.
+function jungleFlipSquareColor(square: JungleFlipSquare): 0 | 1 {
+  const { file, rank } = jungleFlipCoordOf(square);
+  return ((file + rank) % 2) as 0 | 1;
+}
+
+/**
+ * A "dead position": a fully-revealed endgame of exactly two pieces (one per ink) that
+ * can no longer be won by either side, so play could only ever shuffle to a repetition.
+ * Returns true only for provably-drawn positions — a winnable one returns false and the
+ * game continues.
+ *
+ * With one piece each the outcome is fixed by rank + geometry:
+ *  - equal rank → draw (the pieces can only trade — 同归于尽 — never capture-and-survive);
+ *  - otherwise the piece that out-ranks the other (or the rat, which beats the elephant)
+ *    is the "pursuer". On the 4×4 the pursuer can force the capture ONLY when the two
+ *    pieces sit on opposite square-colours on its own turn — then it can herd the evader
+ *    into a wall and corner it. Every other case is a dead draw: the evader keeps the
+ *    colour-parity and can never be caught (neither side can change it, since both must
+ *    move every turn).
+ *
+ * This closed form is checked exhaustively against a brute-force retrograde solve of the
+ * two-piece subgame in variants-jungle-flip-dead-position.test.ts, so it cannot silently
+ * misclassify a position.
+ */
+export function jungleFlipIsDeadPosition(state: JungleFlipGameState): boolean {
+  const pieces: { square: JungleFlipSquare; piece: JungleFlipPiece }[] = [];
+  for (const square of ALL_JUNGLE_FLIP_SQUARES) {
+    const piece = state.board[square];
+    if (piece) pieces.push({ square, piece });
+  }
+  if (pieces.length !== 2) return false;
+  const [a, b] = pieces;
+  if (a.piece.faceDown || b.piece.faceDown) return false; // identities not yet public
+  if (a.piece.color === b.piece.color) return false; // one ink only → elimination, handled above
+
+  const aBeatsB = jungleRankBeats(a.piece.role, b.piece.role);
+  const bBeatsA = jungleRankBeats(b.piece.role, a.piece.role);
+  if (aBeatsB && bBeatsA) return true; // equal rank (beats both ways) → trade-only → draw
+
+  const pursuer = aBeatsB ? a : b;
+  const evader = aBeatsB ? b : a;
+  const moverInk = jungleFlipMoverInk(state);
+  if (moverInk === null) return false; // colours not bound (can't happen with 2 revealed pieces)
+
+  const sameColour = jungleFlipSquareColor(pursuer.square) === jungleFlipSquareColor(evader.square);
+  const pursuerToMove = moverInk === pursuer.piece.color;
+  // Pursuer wins iff opposite-colour on its turn; every other case is a dead draw.
+  return pursuerToMove === sameColour;
+}
+
 function computeJungleFlipStatus(
   state: JungleFlipGameState,
   limit: number,
   repLimit: number,
+  adjudicateDeadPosition: boolean,
 ): JungleFlipGameStatus {
   if (state.noProgressClock >= limit)
     return { type: 'finished', winner: null, reason: 'no-progress' };
@@ -394,6 +457,10 @@ function computeJungleFlipStatus(
   if (enumerateJungleFlipMoves(state).length === 0) {
     return { type: 'finished', winner: oppositeJungleFlipSeat(seatToMove), reason: 'stalemate' };
   }
+  // Dead position: both sides still have a piece and a legal move, but the remaining
+  // material can never force a win. End it now instead of shuffling to a repetition.
+  if (adjudicateDeadPosition && jungleFlipIsDeadPosition(state))
+    return { type: 'finished', winner: null, reason: 'dead-position' };
   return { type: 'playing', turn: seatToMove };
 }
 
@@ -407,6 +474,7 @@ export function applyJungleFlipMove(
 
   const limit = opts.noProgressClockLimit ?? DEFAULT_JUNGLE_FLIP_NO_PROGRESS_PLY_LIMIT;
   const repLimit = opts.repetitionDrawCount ?? DEFAULT_JUNGLE_FLIP_REPETITION_DRAW_COUNT;
+  const adjudicateDeadPosition = opts.adjudicateDeadPosition ?? true;
 
   const board: JungleFlipBoard = { ...state.board };
   let firstColor = state.firstColor;
@@ -472,7 +540,7 @@ export function applyJungleFlipMove(
 
   const key = jungleFlipPositionKey(next);
   next.repCounts[key] = (next.repCounts[key] ?? 0) + 1;
-  next.status = computeJungleFlipStatus(next, limit, repLimit);
+  next.status = computeJungleFlipStatus(next, limit, repLimit, adjudicateDeadPosition);
   return next;
 }
 

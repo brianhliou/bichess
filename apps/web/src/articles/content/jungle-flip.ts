@@ -87,6 +87,10 @@ export const jungleFlipArticle: Article = {
           kind: 'paragraph',
           text: 'Games draw on threefold repetition, or when 40 half-moves (20 by each player) pass with no flip, capture, or trade.',
         },
+        {
+          kind: 'paragraph',
+          text: 'A game is also drawn the moment the pieces left on the board can no longer force a win — two survivors of equal rank, or a lone piece that can never corner the opponent’s last piece on the small board. These dead positions are settled as a draw right away rather than played out to the repetition count.',
+        },
       ],
     },
     {

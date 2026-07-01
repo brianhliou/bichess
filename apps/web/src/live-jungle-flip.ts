@@ -205,6 +205,8 @@ function jungleFlipReasonPhrase(reason: string): string {
       return 'no progress';
     case 'repetition':
       return 'repetition';
+    case 'dead-position':
+      return 'a dead position';
     case 'timeout':
       return 'timeout';
     case 'resignation':

@@ -102,7 +102,9 @@ test('equal rank is 同归于尽: BOTH pieces are removed and the attacker does 
     d4: up('black', 'cat'),
   });
   assert.ok(dests(s, 'a1').includes('a2'));
-  const next = applyJungleFlipMove(s, { from: 'a1', to: 'a2' });
+  // Isolate the trade mechanic from dead-position adjudication: the leftover dog-vs-cat
+  // is itself a dead draw, which is exercised separately in the dead-position test.
+  const next = applyJungleFlipMove(s, { from: 'a1', to: 'a2' }, { adjudicateDeadPosition: false });
   assert.equal(next.board.a1, undefined, 'attacker square emptied');
   assert.equal(next.board.a2, undefined, 'target square emptied');
   assert.deepEqual(next.captures, [
