@@ -731,6 +731,8 @@ const ZH_HANS: Record<string, string> = {
     '当对手无事可做时你获胜：既没有棋子可走，也没有棋子可翻。实际上，这意味着把对方拥有的一切吃掉或换掉。',
   'Games draw on threefold repetition, or when 40 half-moves (20 by each player) pass with no flip, capture, or trade.':
     '若同一局面出现三次，或连续 40 个半回合（每方 20 步）没有翻棋、吃子或同归于尽，则判和。',
+  'A game is also drawn the moment the pieces left on the board can no longer force a win — two survivors of equal rank, or a lone piece that can never corner the opponent’s last piece on the small board. These dead positions are settled as a draw right away rather than played out to the repetition count.':
+    '当盘面上剩下的棋子已无法取胜时，本局同样判和——例如两枚同级的棋子，或一枚在小棋盘上永远逼不住对方最后一子的孤子。这类死局会立即判和，而不必一直走到三次重复局面。',
   'Step through a game our bot played against itself. The two lions meet and both leave the board, an elephant runs through three pieces until it hits the other elephant and they cancel too, and the side left standing wins. Tiles flip to their dealt animal the first time they are turned over.':
     '逐步回放我们机器人左右互搏的一盘棋。两只狮子相遇、双双离场；一头大象连吃三子，直到撞上另一头大象、两象也同归于尽；最后还有棋子站着的一方获胜。棋子第一次被翻开时，会显示其发到的动物。',
   'Flip Jungle is playable on Mistboard: take on MistyJungleFlip, or challenge a friend. Jungle is the full 7×9 game these animals come from.':
@@ -1447,6 +1449,8 @@ const ZH_HANT: Record<string, string> = {
     '當對手無事可做時你獲勝：既沒有棋子可走，也沒有棋子可翻。實際上，這意味著把對方擁有的一切吃掉或換掉。',
   'Games draw on threefold repetition, or when 40 half-moves (20 by each player) pass with no flip, capture, or trade.':
     '若同一局面出現三次，或連續 40 個半回合（每方 20 步）沒有翻棋、吃子或同歸於盡，則判和。',
+  'A game is also drawn the moment the pieces left on the board can no longer force a win — two survivors of equal rank, or a lone piece that can never corner the opponent’s last piece on the small board. These dead positions are settled as a draw right away rather than played out to the repetition count.':
+    '當盤面上剩下的棋子已無法取勝時，本局同樣判和——例如兩枚同級的棋子，或一枚在小棋盤上永遠逼不住對方最後一子的孤子。這類死局會立即判和，而不必一直走到三次重複局面。',
   'Step through a game our bot played against itself. The two lions meet and both leave the board, an elephant runs through three pieces until it hits the other elephant and they cancel too, and the side left standing wins. Tiles flip to their dealt animal the first time they are turned over.':
     '逐步回放我們機器人左右互搏的一盤棋。兩隻獅子相遇、雙雙離場；一頭大象連吃三子，直到撞上另一頭大象、兩象也同歸於盡；最後還有棋子站著的一方獲勝。棋子第一次被翻開時，會顯示其發到的動物。',
   'Flip Jungle is playable on Mistboard: take on MistyJungleFlip, or challenge a friend. Jungle is the full 7×9 game these animals come from.':
