@@ -10,9 +10,12 @@
 //
 // Fixed-strength classical engine (no net). Strength is a NODE budget (positions
 // searched), not a time budget — so the bot plays the same strength on any CPU. A
-// movetime cap bounds latency. One versioned bot (v0.1.0). Unlike banqi, the binary
-// ignores trailing `moves` (the clock is carried in the FEN), so we never send a
-// repetition window — the engine's own search-internal repetition detection applies.
+// movetime cap bounds latency. One versioned bot. Unlike banqi, the binary ignores
+// trailing `moves` (the clock is carried in the FEN); game-history threefold context
+// goes as a `reps` tail of positions already seen twice. Since v0.4.0 the binary also
+// loads the ≤4 exact tablebase (WLD + distance-to-mate) that railpack downloads next to
+// it, and scores wins by distance — it converts won endgames by the shortest forced
+// line instead of shuffling a won position to the repetition draw.
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -20,7 +23,7 @@ import { runUciBestmove, UciEnginePool } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
-export const JUNGLE_FLIP_ENGINE_VERSION = '0.2.0';
+export const JUNGLE_FLIP_ENGINE_VERSION = '0.4.0';
 export const JUNGLE_FLIP_DEFAULT_ENGINE_ID = 'misty-jungle-flip';
 
 export type JungleFlipEngineTier = {
