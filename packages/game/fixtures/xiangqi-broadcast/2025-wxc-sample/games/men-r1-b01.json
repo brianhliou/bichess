@@ -1,0 +1,22 @@
+{
+  "schema": "mistboard.xiangqi.broadcast.v1",
+  "id": "2025-wxc-sample-men-r1-b01",
+  "tourSlug": "2025-wxc-sample",
+  "roundId": "men-r1",
+  "sourceBoardId": "men-r1-b01",
+  "boardNumber": 1,
+  "red": { "name": "Red Master", "federation": "CHN" },
+  "black": { "name": "Black Master", "federation": "SGP" },
+  "status": "complete",
+  "result": "1-0",
+  "moves": [
+    { "from": "h3", "to": "e3" },
+    { "from": "h8", "to": "e8" },
+    { "from": "b1", "to": "c3" },
+    { "from": "b10", "to": "c8" },
+    { "from": "i1", "to": "i2" },
+    { "from": "i10", "to": "i9" },
+    { "from": "a4", "to": "a5" },
+    { "from": "a7", "to": "a6" }
+  ]
+}

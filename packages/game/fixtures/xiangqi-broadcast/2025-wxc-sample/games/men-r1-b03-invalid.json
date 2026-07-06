@@ -1,0 +1,13 @@
+{
+  "schema": "mistboard.xiangqi.broadcast.v1",
+  "id": "2025-wxc-sample-men-r1-b03-invalid",
+  "tourSlug": "2025-wxc-sample",
+  "roundId": "men-r1",
+  "sourceBoardId": "men-r1-b03",
+  "boardNumber": 3,
+  "red": { "name": "Invalid Red", "federation": "CAN" },
+  "black": { "name": "Invalid Black", "federation": "VIE" },
+  "status": "live",
+  "result": "*",
+  "moves": [{ "from": "a7", "to": "a6" }]
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "mistboard.xiangqi.broadcast.v1",
+  "id": "2025-wxc-sample-men-r1-b02",
+  "tourSlug": "2025-wxc-sample",
+  "roundId": "men-r1",
+  "sourceBoardId": "men-r1-b02",
+  "boardNumber": 2,
+  "red": { "name": "Live Red", "federation": "MAS" },
+  "black": { "name": "Live Black", "federation": "USA" },
+  "status": "live",
+  "result": "*",
+  "moves": [
+    { "from": "h3", "to": "e3" },
+    { "from": "h8", "to": "e8" },
+    { "from": "b1", "to": "c3" },
+    { "from": "b10", "to": "c8" }
+  ]
+}

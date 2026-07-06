@@ -1,0 +1,252 @@
+import { XIANGQI_SPEC_ID } from './game-specs.js';
+import {
+  createInitialXiangqiState,
+  type XiangqiMove,
+  type XiangqiSquare,
+} from './variants-xiangqi.js';
+import {
+  applyStandardXiangqiMove,
+  getStandardXiangqiLegalMoves,
+} from './variants-xiangqi-standard.js';
+
+export const XIANGQI_BROADCAST_SCHEMA = 'mistboard.xiangqi.broadcast.v1' as const;
+
+export type XiangqiBroadcastResult = '*' | '1-0' | '0-1' | '1/2-1/2';
+
+export type XiangqiBroadcastBoardStatus = 'scheduled' | 'live' | 'complete';
+
+export type XiangqiBroadcastPlayerTag = {
+  name: string;
+  federation?: string;
+  title?: string;
+  sourceId?: string;
+};
+
+export type XiangqiBroadcastTour = {
+  schema: typeof XIANGQI_BROADCAST_SCHEMA;
+  slug: string;
+  name: string;
+  location?: string;
+  sourceUrl?: string;
+  startsAt?: string;
+  endsAt?: string;
+};
+
+export type XiangqiBroadcastRound = {
+  schema: typeof XIANGQI_BROADCAST_SCHEMA;
+  id: string;
+  tourSlug: string;
+  name: string;
+  startsAt?: string;
+  sourceUrl?: string;
+};
+
+export type XiangqiBroadcastBoard = {
+  schema: typeof XIANGQI_BROADCAST_SCHEMA;
+  id: string;
+  tourSlug: string;
+  roundId: string;
+  sourceBoardId: string;
+  boardNumber: number;
+  red: XiangqiBroadcastPlayerTag;
+  black: XiangqiBroadcastPlayerTag;
+  status: XiangqiBroadcastBoardStatus;
+  result: XiangqiBroadcastResult;
+  moves: XiangqiMove[];
+  sourceUrl?: string;
+};
+
+export type XiangqiBroadcastValidationResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; errors: string[] };
+
+export type XiangqiBroadcastReplayResult =
+  | {
+      ok: true;
+      boardId: string;
+      plies: number;
+      finalStatus: ReturnType<typeof createInitialXiangqiState>['status'];
+    }
+  | {
+      ok: false;
+      boardId: string;
+      ply: number;
+      move: XiangqiMove;
+      reason: string;
+    };
+
+const RESULTS = new Set<XiangqiBroadcastResult>(['*', '1-0', '0-1', '1/2-1/2']);
+const BOARD_STATUSES = new Set<XiangqiBroadcastBoardStatus>(['scheduled', 'live', 'complete']);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+export function isXiangqiBroadcastSquare(value: unknown): value is XiangqiSquare {
+  return typeof value === 'string' && /^[a-i](?:[1-9]|10)$/.test(value);
+}
+
+function validateSchema(value: Record<string, unknown>, path: string, errors: string[]): void {
+  if (value.schema !== XIANGQI_BROADCAST_SCHEMA) {
+    errors.push(`${path}.schema must be ${XIANGQI_BROADCAST_SCHEMA}`);
+  }
+}
+
+function validateOptionalString(
+  value: Record<string, unknown>,
+  key: string,
+  path: string,
+  errors: string[],
+): void {
+  if (value[key] !== undefined && typeof value[key] !== 'string') {
+    errors.push(`${path}.${key} must be a string when present`);
+  }
+}
+
+function validatePlayer(value: unknown, path: string, errors: string[]): XiangqiBroadcastPlayerTag {
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object`);
+    return { name: '' };
+  }
+  if (!nonEmptyString(value.name)) errors.push(`${path}.name must be a non-empty string`);
+  validateOptionalString(value, 'federation', path, errors);
+  validateOptionalString(value, 'title', path, errors);
+  validateOptionalString(value, 'sourceId', path, errors);
+  return value as XiangqiBroadcastPlayerTag;
+}
+
+function validateMove(value: unknown, path: string, errors: string[]): XiangqiMove {
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object`);
+    return { from: 'a1', to: 'a1' };
+  }
+  if (!isXiangqiBroadcastSquare(value.from)) errors.push(`${path}.from must be a valid square`);
+  if (!isXiangqiBroadcastSquare(value.to)) errors.push(`${path}.to must be a valid square`);
+  return value as XiangqiMove;
+}
+
+export function validateXiangqiBroadcastTour(
+  value: unknown,
+): XiangqiBroadcastValidationResult<XiangqiBroadcastTour> {
+  const errors: string[] = [];
+  if (!isRecord(value)) return { ok: false, errors: ['tour must be an object'] };
+  validateSchema(value, 'tour', errors);
+  if (!nonEmptyString(value.slug)) errors.push('tour.slug must be a non-empty string');
+  if (!nonEmptyString(value.name)) errors.push('tour.name must be a non-empty string');
+  validateOptionalString(value, 'location', 'tour', errors);
+  validateOptionalString(value, 'sourceUrl', 'tour', errors);
+  validateOptionalString(value, 'startsAt', 'tour', errors);
+  validateOptionalString(value, 'endsAt', 'tour', errors);
+  return errors.length ? { ok: false, errors } : { ok: true, value: value as XiangqiBroadcastTour };
+}
+
+export function validateXiangqiBroadcastRound(
+  value: unknown,
+): XiangqiBroadcastValidationResult<XiangqiBroadcastRound> {
+  const errors: string[] = [];
+  if (!isRecord(value)) return { ok: false, errors: ['round must be an object'] };
+  validateSchema(value, 'round', errors);
+  if (!nonEmptyString(value.id)) errors.push('round.id must be a non-empty string');
+  if (!nonEmptyString(value.tourSlug)) errors.push('round.tourSlug must be a non-empty string');
+  if (!nonEmptyString(value.name)) errors.push('round.name must be a non-empty string');
+  validateOptionalString(value, 'startsAt', 'round', errors);
+  validateOptionalString(value, 'sourceUrl', 'round', errors);
+  return errors.length
+    ? { ok: false, errors }
+    : { ok: true, value: value as XiangqiBroadcastRound };
+}
+
+export function validateXiangqiBroadcastBoard(
+  value: unknown,
+): XiangqiBroadcastValidationResult<XiangqiBroadcastBoard> {
+  const errors: string[] = [];
+  if (!isRecord(value)) return { ok: false, errors: ['board must be an object'] };
+  validateSchema(value, 'board', errors);
+  if (!nonEmptyString(value.id)) errors.push('board.id must be a non-empty string');
+  if (!nonEmptyString(value.tourSlug)) errors.push('board.tourSlug must be a non-empty string');
+  if (!nonEmptyString(value.roundId)) errors.push('board.roundId must be a non-empty string');
+  if (!nonEmptyString(value.sourceBoardId)) {
+    errors.push('board.sourceBoardId must be a non-empty string');
+  }
+  if (!Number.isInteger(value.boardNumber) || Number(value.boardNumber) < 1) {
+    errors.push('board.boardNumber must be a positive integer');
+  }
+  validatePlayer(value.red, 'board.red', errors);
+  validatePlayer(value.black, 'board.black', errors);
+  if (!BOARD_STATUSES.has(value.status as XiangqiBroadcastBoardStatus)) {
+    errors.push('board.status must be scheduled, live, or complete');
+  }
+  if (!RESULTS.has(value.result as XiangqiBroadcastResult)) {
+    errors.push('board.result must be *, 1-0, 0-1, or 1/2-1/2');
+  }
+  if (value.status === 'complete' && value.result === '*') {
+    errors.push('board.result must be decided when board.status is complete');
+  }
+  if (value.status !== 'complete' && value.result !== '*') {
+    errors.push('board.result must be * until board.status is complete');
+  }
+  if (!Array.isArray(value.moves)) {
+    errors.push('board.moves must be an array');
+  } else {
+    value.moves.forEach((move, index) => {
+      validateMove(move, `board.moves[${index}]`, errors);
+    });
+  }
+  validateOptionalString(value, 'sourceUrl', 'board', errors);
+  return errors.length
+    ? { ok: false, errors }
+    : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+export function validateXiangqiBroadcastBoards(
+  value: unknown,
+): XiangqiBroadcastValidationResult<XiangqiBroadcastBoard[]> {
+  if (!Array.isArray(value)) return { ok: false, errors: ['boards must be an array'] };
+  const boards: XiangqiBroadcastBoard[] = [];
+  const errors: string[] = [];
+  value.forEach((entry, index) => {
+    const result = validateXiangqiBroadcastBoard(entry);
+    if (result.ok) {
+      boards.push(result.value);
+    } else {
+      errors.push(...result.errors.map((error) => `boards[${index}]: ${error}`));
+    }
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: boards };
+}
+
+export function replayXiangqiBroadcastBoard(
+  board: XiangqiBroadcastBoard,
+): XiangqiBroadcastReplayResult {
+  let state = createInitialXiangqiState(board.id);
+  for (let i = 0; i < board.moves.length; i += 1) {
+    const move = board.moves[i]!;
+    const legal = getStandardXiangqiLegalMoves(state).some(
+      (candidate) => candidate.from === move.from && candidate.to === move.to,
+    );
+    if (!legal) {
+      return {
+        ok: false,
+        boardId: board.id,
+        ply: i + 1,
+        move,
+        reason: `illegal move at ply ${i + 1}: ${move.from}${move.to}`,
+      };
+    }
+    state = applyStandardXiangqiMove(state, move);
+  }
+  return {
+    ok: true,
+    boardId: board.id,
+    plies: board.moves.length,
+    finalStatus: state.status,
+  };
+}
+
+export function xiangqiBroadcastVariant(): typeof XIANGQI_SPEC_ID {
+  return XIANGQI_SPEC_ID;
+}

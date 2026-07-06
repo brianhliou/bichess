@@ -1,0 +1,9 @@
+{
+  "schema": "mistboard.xiangqi.broadcast.v1",
+  "slug": "2025-wxc-sample",
+  "name": "2025 World Xiangqi Championship Sample",
+  "location": "Local fixture",
+  "sourceUrl": "https://www.wxf-xiangqi.org/",
+  "startsAt": "2025-09-21T00:00:00.000Z",
+  "endsAt": "2025-09-27T00:00:00.000Z"
+}

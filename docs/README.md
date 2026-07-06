@@ -13,6 +13,7 @@ setup, tokens, and internal strategy in the git-ignored `docs-private/`.
 | [../README.md](../README.md) | Product overview and quick start. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor scope, local dev, tests, and PRs. |
 | [project-direction.md](project-direction.md) | Product focus, licensing, brand, and contribution fit. |
+| [xiangqi-broadcast-track.md](xiangqi-broadcast-track.md) | Lichess-style xiangqi tournament broadcast architecture, phases, and local testing plan. |
 | [dobutsu-chess-theme.md](dobutsu-chess-theme.md) | Snapshot of the Dobutsu chess theme experiment and why it should not ship as a xiangqi remap. |
 
 ## Architecture
