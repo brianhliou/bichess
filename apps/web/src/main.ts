@@ -126,6 +126,9 @@ const wantsForum =
   page === 'forum';
 const wantsLegacyPlay = path === '/play' || page === 'play';
 const wantsWatch = path === '/watch' || page === 'watch';
+const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
+const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
+const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
 const puzzleId = puzzleIdFromPath(path);
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
@@ -314,6 +317,31 @@ if (replaySample) {
   setTitleKey('nav.watch');
   void mountOrReport(() =>
     import('./watch-route.js').then(({ mountWatch }) => mountWatch(appRoot)),
+  );
+} else if (xiangqiBroadcastBoardId) {
+  setTitle('Xiangqi broadcast');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastBoard }) =>
+      mountXiangqiBroadcastBoard(appRoot, xiangqiBroadcastBoardId),
+    ),
+  );
+} else if (xiangqiBroadcastRound) {
+  setTitle('Xiangqi broadcast');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastRound }) =>
+      mountXiangqiBroadcastRound(
+        appRoot,
+        xiangqiBroadcastRound.tourSlug,
+        xiangqiBroadcastRound.roundId,
+      ),
+    ),
+  );
+} else if (xiangqiBroadcastTourSlug) {
+  setTitle('Xiangqi broadcast');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastTour }) =>
+      mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug),
+    ),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');
@@ -614,6 +642,27 @@ function liveRoomIdFromPath(value: string): string | null {
 
 function puzzleIdFromPath(value: string): string | null {
   const match = value.match(/^\/puzzles\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]!) : null;
+}
+
+function xiangqiBroadcastTourSlugFromPath(value: string): string | null {
+  const match = value.match(/^\/broadcast\/xiangqi\/([^/]+)$/);
+  if (!match || match[1] === 'board') return null;
+  return decodeURIComponent(match[1]!);
+}
+
+function xiangqiBroadcastRoundFromPath(value: string): {
+  tourSlug: string;
+  roundId: string;
+} | null {
+  const match = value.match(/^\/broadcast\/xiangqi\/([^/]+)\/round\/([^/]+)$/);
+  return match
+    ? { tourSlug: decodeURIComponent(match[1]!), roundId: decodeURIComponent(match[2]!) }
+    : null;
+}
+
+function xiangqiBroadcastBoardIdFromPath(value: string): string | null {
+  const match = value.match(/^\/broadcast\/xiangqi\/board\/([^/]+)$/);
   return match ? decodeURIComponent(match[1]!) : null;
 }
 

@@ -403,6 +403,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `landing-showcase.ts` | Homepage replay showcase catalog and hero POV selection for the landing replay loop |
 | `watch-route.ts` | `/watch` route mount: watch feed fetch/polling, replay mounting, status/empty state, channel links, and replay queue rendering. Loads `watch-route.css` |
 | `watch-route.css` | `/watch` route styles, including watch replay sizing, status, channel links, empty state, queue, and responsive route layout |
+| `xiangqi-broadcast.ts` | Public xiangqi tournament broadcast routes: tour, round, and board replay pages fed by `/api/xiangqi/broadcasts/*`; renders per-ply standard Xiangqi board history locally after load |
+| `xiangqi-broadcast.css` | Xiangqi broadcast route layout: tournament/round rows, board replay controls, move list, and responsive viewer polish |
 | `site-shell.ts` | Shared site chrome: `buildNav`, `buildFooter`, `buildLoadingState`, `buildNotice`, `fetchCurrentUser`, and `GITHUB_URL`. Loads `site-shell.css` |
 | `site-shell.css` | Shared site chrome styles for nav, mobile nav collapse, loading state, and footer; also loaded by live/learn routes that render site chrome directly |
 | `game-display.ts` | Shared game display contracts and formatters: `FeaturedGame`, `GameParticipant`, `displayParticipantName`, participant lookup, source labels, and known engine display names |

@@ -358,6 +358,9 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
   assert.equal(isClientRoute('/forum/redirect/post/post_123'), true);
+  assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample'), true);
+  assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample/round/men-r1'), true);
+  assert.equal(isClientRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), true);
   assert.equal(isClientRoute('/zh-hans/rules/dark-chess'), true);
   assert.equal(isClientRoute('/zh-hant/rules/dark-chess'), true);
   assert.equal(isClientRoute('/engine/random-engine'), true); // admin engine-profile page
@@ -396,6 +399,7 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/'), false);
   assert.equal(isReviewShellRoute('/patron'), false);
   assert.equal(isReviewShellRoute('/play'), false);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), false);
   assert.equal(isReviewShellRoute('/xiangqi/game/'), false); // no game id
   assert.equal(isReviewShellRoute('/articles/dark-chess-concepts'), false);
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
@@ -410,6 +414,7 @@ test('isClientRoute does not expose standalone Crossroads Chess play routes', ()
 test('isClientRoute rejects unknown paths', () => {
   assert.equal(isClientRoute('/does-not-exist'), false);
   assert.equal(isClientRoute('/api/games/recent'), false);
+  assert.equal(isClientRoute('/broadcast/xiangqi/board'), false);
   assert.equal(isClientRoute('/forum/general-discussion/extra'), false);
 });
 
