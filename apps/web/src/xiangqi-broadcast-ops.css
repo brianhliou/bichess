@@ -87,6 +87,31 @@
   cursor: pointer;
 }
 
+.xqb-ops-correction {
+  min-height: 34px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  padding: 7px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.xqb-ops-correction input {
+  margin: 0;
+}
+
+.xqb-ops-correction:has(input:disabled) {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .xqb-ops-button:disabled {
   cursor: default;
   opacity: 0.5;

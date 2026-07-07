@@ -128,6 +128,14 @@ function tourPanel(entry: OpsTour, body: HTMLElement): HTMLElement {
   view.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
   view.textContent = 'View';
   view.className = 'xqb-ops-link';
+  const correctionLabel = document.createElement('label');
+  correctionLabel.className = 'xqb-ops-correction';
+  const correction = document.createElement('input');
+  correction.type = 'checkbox';
+  correction.disabled = !entry.sourceUrl;
+  const correctionText = document.createElement('span');
+  correctionText.textContent = 'Allow corrections';
+  correctionLabel.append(correction, correctionText);
   const poll = document.createElement('button');
   poll.type = 'button';
   poll.textContent = 'Poll';
@@ -135,7 +143,7 @@ function tourPanel(entry: OpsTour, body: HTMLElement): HTMLElement {
   poll.disabled = !entry.sourceUrl;
   const result = document.createElement('span');
   result.className = 'xqb-ops-poll-result';
-  actions.append(view, poll, result);
+  actions.append(view, correctionLabel, poll, result);
   top.append(copy, actions);
 
   const stats = document.createElement('dl');
@@ -167,7 +175,7 @@ function tourPanel(entry: OpsTour, body: HTMLElement): HTMLElement {
   }
 
   poll.onclick = () => {
-    void runPoll(entry, poll, result, body);
+    void runPoll(entry, correction.checked, poll, result, body);
   };
 
   section.append(top, stats, source, logs);
@@ -176,6 +184,7 @@ function tourPanel(entry: OpsTour, body: HTMLElement): HTMLElement {
 
 async function runPoll(
   entry: OpsTour,
+  allowCorrection: boolean,
   button: HTMLButtonElement,
   result: HTMLElement,
   body: HTMLElement,
@@ -188,7 +197,7 @@ async function runPoll(
       {
         method: 'POST',
         headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ allowCorrection: false }),
+        body: JSON.stringify({ allowCorrection }),
       },
     );
     const payload = (await response.json()) as PollResponse;
