@@ -13,6 +13,10 @@ import {
   listXiangqiBroadcastSyncLogs,
 } from './persistence-xiangqi-broadcasts.js';
 import {
+  xiangqiBroadcastBoardStreamForApi,
+  xiangqiBroadcastRoundStreamForApi,
+} from './routes/xiangqi-broadcasts.js';
+import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastSourceFetch,
 } from './xiangqi-broadcast-poller.js';
@@ -273,6 +277,51 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(rounds[0]?.name, 'Round 1 Live');
     assert.equal((await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b01'))?.moves.length, 8);
     assert.equal((await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b02'))?.moves.length, 2);
+  });
+
+  test('source poller updates persisted broadcast stream snapshots', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+    await applyXiangqiBroadcastBoardUpdate({
+      ...fullBoard,
+      status: 'live',
+      result: '*',
+      moves: [],
+    });
+
+    const boardBefore = await xiangqiBroadcastBoardStreamForApi(fullBoard.id);
+    const roundBefore = await xiangqiBroadcastRoundStreamForApi(
+      fullBoard.tourSlug,
+      fullBoard.roundId,
+    );
+    const source = xiangqiBroadcastSourceResponse(pack, fixtureTape(), 16000, 'clean');
+    assert.equal(source.status, 200);
+    assert.ok(!('malformed' in source.body));
+    if ('malformed' in source.body) return;
+
+    const result = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      fetchImpl: sourceFetch(source.body),
+    });
+
+    assert.equal(result.ok, true);
+    const boardAfter = await xiangqiBroadcastBoardStreamForApi(fullBoard.id);
+    const roundAfter = await xiangqiBroadcastRoundStreamForApi(
+      fullBoard.tourSlug,
+      fullBoard.roundId,
+    );
+
+    assert.ok(boardBefore);
+    assert.ok(boardAfter);
+    assert.ok(roundBefore);
+    assert.ok(roundAfter);
+    assert.notEqual(boardBefore.version, boardAfter.version);
+    assert.notEqual(roundBefore.version, roundAfter.version);
+    assert.equal(boardBefore.payload.timeline.length, 0);
+    assert.equal(boardAfter.payload.timeline.length, 8);
+    assert.equal(roundBefore.payload.boards.length, 1);
+    assert.equal(roundAfter.payload.boards.length, 2);
   });
 
   test('source poller logs malformed HTTP and timeout failures', async () => {
