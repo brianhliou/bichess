@@ -63,6 +63,28 @@ export type XiangqiBroadcastImportResult = {
   errors: XiangqiBroadcastImportError[];
 };
 
+export type XiangqiBroadcastBoardUpdateStatus =
+  | 'created'
+  | 'unchanged'
+  | 'extended'
+  | 'updated'
+  | 'corrected';
+
+export type XiangqiBroadcastBoardUpdateResult =
+  | {
+      ok: true;
+      boardId: string;
+      status: XiangqiBroadcastBoardUpdateStatus;
+      plyCount: number;
+    }
+  | {
+      ok: false;
+      boardId?: string;
+      sourceBoardId?: string;
+      kind: string;
+      message: string;
+    };
+
 type Queryable = Pick<pg.Pool | pg.PoolClient, 'query'>;
 
 type TourRow = {
@@ -152,6 +174,17 @@ function boardFromRow(row: BoardRow): StoredXiangqiBroadcastBoard {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+async function getBoardById(
+  client: Queryable,
+  boardId: string,
+): Promise<StoredXiangqiBroadcastBoard | null> {
+  const { rows } = await client.query<BoardRow>(
+    `SELECT * FROM xiangqi_broadcast_boards WHERE id = $1`,
+    [boardId],
+  );
+  return rows[0] ? boardFromRow(rows[0]) : null;
 }
 
 function syncLogFromRow(row: SyncLogRow): XiangqiBroadcastSyncLog {
@@ -324,6 +357,146 @@ async function skipBoard(
     kind,
     message,
   };
+}
+
+function rejectedBoardUpdate(
+  error: XiangqiBroadcastImportError,
+): Extract<XiangqiBroadcastBoardUpdateResult, { ok: false }> {
+  return { ok: false, ...error };
+}
+
+function movesEqual(a: readonly XiangqiMove[], b: readonly XiangqiMove[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((move, index) => move.from === b[index]?.from && move.to === b[index]?.to)
+  );
+}
+
+function isMovePrefix(prefix: readonly XiangqiMove[], value: readonly XiangqiMove[]): boolean {
+  if (prefix.length > value.length) return false;
+  return movesEqual(prefix, value.slice(0, prefix.length));
+}
+
+function boardTagsEqual(
+  a: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
+  b: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
+): boolean {
+  return (
+    JSON.stringify(a.red) === JSON.stringify(b.red) &&
+    JSON.stringify(a.black) === JSON.stringify(b.black) &&
+    a.status === b.status &&
+    a.result === b.result &&
+    a.sourceUrl === b.sourceUrl
+  );
+}
+
+async function roundBelongsToTour(
+  client: Queryable,
+  roundId: string,
+  tourSlug: string,
+): Promise<boolean> {
+  const { rowCount } = await client.query(
+    `SELECT 1 FROM xiangqi_broadcast_rounds WHERE id = $1 AND tour_slug = $2`,
+    [roundId, tourSlug],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function applyXiangqiBroadcastBoardUpdate(
+  rawBoard: unknown,
+  options: { allowCorrection?: boolean; source?: string } = {},
+): Promise<XiangqiBroadcastBoardUpdateResult> {
+  return await withTransaction(async (client) => {
+    const boardResult = validateXiangqiBroadcastBoard(rawBoard);
+    if (!boardResult.ok) {
+      return rejectedBoardUpdate(
+        await skipBoard(client, rawBoard, 'schema_validation_failed', boardResult.errors[0]!, {
+          errors: boardResult.errors,
+          source: options.source,
+        }),
+      );
+    }
+
+    const board = boardResult.value;
+    if (!(await roundBelongsToTour(client, board.roundId, board.tourSlug))) {
+      return rejectedBoardUpdate(
+        await skipBoard(
+          client,
+          board,
+          'reference_validation_failed',
+          `unknown round ${board.roundId} for tour ${board.tourSlug}`,
+          { source: options.source },
+        ),
+      );
+    }
+
+    const replay = replayXiangqiBroadcastBoard(board);
+    if (!replay.ok) {
+      return rejectedBoardUpdate(
+        await skipBoard(client, board, 'illegal_move', replay.reason, {
+          ply: replay.ply,
+          move: replay.move,
+          source: options.source,
+        }),
+      );
+    }
+
+    const existing = await getBoardById(client, board.id);
+    if (!existing) {
+      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      return { ok: true, boardId: board.id, status: 'created', plyCount: replay.plies };
+    }
+
+    if (movesEqual(existing.moves, board.moves)) {
+      if (boardTagsEqual(existing, board)) {
+        return { ok: true, boardId: board.id, status: 'unchanged', plyCount: existing.plyCount };
+      }
+      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      return { ok: true, boardId: board.id, status: 'updated', plyCount: replay.plies };
+    }
+
+    if (isMovePrefix(existing.moves, board.moves)) {
+      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      return { ok: true, boardId: board.id, status: 'extended', plyCount: replay.plies };
+    }
+
+    if (isMovePrefix(board.moves, existing.moves)) {
+      return { ok: true, boardId: board.id, status: 'unchanged', plyCount: existing.plyCount };
+    }
+
+    if (options.allowCorrection) {
+      await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await appendSyncLog(client, {
+        tourSlug: board.tourSlug,
+        roundId: board.roundId,
+        boardId: board.id,
+        sourceBoardId: board.sourceBoardId,
+        severity: 'warning',
+        kind: 'corrected',
+        message: 'accepted explicit correction for non-prefix board update',
+        payload: {
+          previousPlyCount: existing.plyCount,
+          nextPlyCount: replay.plies,
+          source: options.source,
+        },
+      });
+      return { ok: true, boardId: board.id, status: 'corrected', plyCount: replay.plies };
+    }
+
+    return rejectedBoardUpdate(
+      await skipBoard(
+        client,
+        board,
+        'incompatible_update',
+        'incoming move list is neither a duplicate, stale prefix, nor legal extension',
+        {
+          previousPlyCount: existing.plyCount,
+          nextPlyCount: board.moves.length,
+          source: options.source,
+        },
+      ),
+    );
+  });
 }
 
 export async function importXiangqiBroadcastPack(input: {

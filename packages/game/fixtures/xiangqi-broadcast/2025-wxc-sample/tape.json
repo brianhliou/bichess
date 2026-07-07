@@ -1,0 +1,64 @@
+{
+  "schema": "mistboard.xiangqi.broadcast-tape.v1",
+  "tourSlug": "2025-wxc-sample",
+  "events": [
+    {
+      "atMs": 0,
+      "boardId": "2025-wxc-sample-men-r1-b01",
+      "moves": [],
+      "status": "live",
+      "result": "*"
+    },
+    {
+      "atMs": 0,
+      "boardId": "2025-wxc-sample-men-r1-b02",
+      "moves": [],
+      "status": "live",
+      "result": "*"
+    },
+    {
+      "atMs": 3000,
+      "boardId": "2025-wxc-sample-men-r1-b01",
+      "append": [{ "from": "h3", "to": "e3" }]
+    },
+    {
+      "atMs": 5000,
+      "boardId": "2025-wxc-sample-men-r1-b02",
+      "append": [{ "from": "h3", "to": "e3" }]
+    },
+    {
+      "atMs": 6000,
+      "boardId": "2025-wxc-sample-men-r1-b01",
+      "moves": [{ "from": "h3", "to": "e3" }]
+    },
+    {
+      "atMs": 9000,
+      "boardId": "2025-wxc-sample-men-r1-b01",
+      "append": [{ "from": "h8", "to": "e8" }]
+    },
+    {
+      "atMs": 11000,
+      "boardId": "2025-wxc-sample-men-r1-b02",
+      "append": [{ "from": "h8", "to": "e8" }]
+    },
+    {
+      "atMs": 15000,
+      "boardId": "2025-wxc-sample-men-r1-b01",
+      "append": [
+        { "from": "b1", "to": "c3" },
+        { "from": "b10", "to": "c8" },
+        { "from": "i1", "to": "i2" },
+        { "from": "i10", "to": "i9" },
+        { "from": "a4", "to": "a5" },
+        { "from": "a7", "to": "a6" }
+      ],
+      "status": "complete",
+      "result": "1-0"
+    },
+    {
+      "atMs": 17000,
+      "boardId": "2025-wxc-sample-men-r1-b02",
+      "append": [{ "from": "b1", "to": "c3" }, { "from": "b10", "to": "c8" }]
+    }
+  ]
+}

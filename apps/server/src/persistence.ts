@@ -303,12 +303,15 @@ export type {
   StoredXiangqiBroadcastBoard,
   StoredXiangqiBroadcastRound,
   StoredXiangqiBroadcastTour,
+  XiangqiBroadcastBoardUpdateResult,
+  XiangqiBroadcastBoardUpdateStatus,
   XiangqiBroadcastImportError,
   XiangqiBroadcastImportResult,
   XiangqiBroadcastSyncLog,
   XiangqiBroadcastSyncLogSeverity,
 } from './persistence-xiangqi-broadcasts.js';
 export {
+  applyXiangqiBroadcastBoardUpdate,
   getXiangqiBroadcastBoard,
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,

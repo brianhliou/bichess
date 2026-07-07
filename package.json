@@ -21,6 +21,8 @@
     "variant:catalog": "tsx scripts/variant-catalog.ts",
     "db:seed:variant-fixtures": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run seed:variant-fixtures --workspace @mistboard/server",
     "db:import:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run import:xiangqi-broadcast --workspace @mistboard/server --",
+    "db:simulate:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run simulate:xiangqi-broadcast --workspace @mistboard/server --",
+    "source:xiangqi-broadcast": "npm run source:xiangqi-broadcast --workspace @mistboard/server --",
     "db:test:ensure": "node scripts/ensure-test-database.mjs",
     "test:persistent": "node scripts/run-persistent-tests.mjs",
     "build": "node scripts/build.mjs",

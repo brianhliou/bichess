@@ -19,7 +19,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`draft960Variant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant (flagged/dev-only live room + `/xiangqi-spike`); cannon vision = field of fire |
-| `xiangqi-broadcast.ts` | Canonical xiangqi broadcast payload types, runtime validators, fixture replay validation, and the Mistboard coordinate schema for tournament broadcasts |
+| `xiangqi-broadcast.ts` | Canonical xiangqi broadcast payload/tape types, runtime validators, fixture replay validation, and the Mistboard coordinate schema for tournament broadcasts |
 | `xiangqi-vision-kernel.ts` | Geometry-parameterized FoW vision walks shared by the xiangqi-family kernels (full Xiangqi, Dark Mini Xiangqi, Crossroads Chess): the cannon screen-walk, horse blocked-leg walk, and rook/slider ray walk + `VisionAccum`/`emptyVision`, driven by a per-variant `VisionProbe`. Per-piece rules that genuinely differ (general/advisor/elephant/soldier/pawn) stay in each variant kernel |
 | `variants-shogi.ts` | Shogi rules kernel reserved for future hidden-information variants |
 | `events.ts` | `GameEvent` union type, `replayGameEvents` reducer, `GameProjection` |
@@ -197,6 +197,9 @@ Edit task → find file → open only that file.
 | `enqueue-engine-smoke.ts` | CLI: enqueue engine smoke |
 | `enqueue-engine-tournament.ts` | CLI: enqueue engine tournament |
 | `import-xiangqi-broadcast.ts` | CLI/helper for importing xiangqi broadcast fixture packs into Postgres, with optional `games/*.json` negative fixtures |
+| `simulate-xiangqi-broadcast.ts` | CLI: replay a xiangqi broadcast `tape.json` into local Postgres via the broadcast update boundary |
+| `serve-xiangqi-broadcast-source.ts` | CLI: serve a local xiangqi broadcast fixture source with clean/stale/malformed/error modes |
+| `xiangqi-broadcast-sim.ts` | Local xiangqi broadcast simulator core: tape frames, fake-source snapshots, and DB tape runner |
 | `import-corpus.ts` | CLI: import FoW game corpus |
 | `worker.ts` | Background worker entry point for async engine game execution |
 | `feedback-notify.ts` | Email notification on feedback submission |

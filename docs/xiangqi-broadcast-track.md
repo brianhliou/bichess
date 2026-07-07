@@ -217,6 +217,33 @@ Read APIs:
 
 Done means live broadcast behavior is reproducible without a real tournament.
 
+Local tape runner:
+
+```bash
+npm run db:simulate:xiangqi-broadcast -- \
+  --dir packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample \
+  --speed instant
+```
+
+Fake source server:
+
+```bash
+npm run source:xiangqi-broadcast -- \
+  --dir packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample \
+  --mode clean \
+  --port 3127
+```
+
+Source modes:
+
+- `clean`: current board snapshots at wall-clock or `?atMs=...`.
+- `stale`: snapshots lag the requested time by five simulated seconds.
+- `malformed`: HTTP 200 with an invalid body shape.
+- `error`: HTTP 500 fixture-source failure.
+
+The committed `tape.json` is deterministic and can be run instant, realtime,
+or accelerated by numeric `--speed`.
+
 ### M3: Public Viewer
 
 - Tournament page: event identity, schedule, active rounds, featured games.

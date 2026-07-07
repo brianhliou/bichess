@@ -6,6 +6,7 @@ import {
   validateXiangqiBroadcastBoard,
   validateXiangqiBroadcastBoards,
   validateXiangqiBroadcastRound,
+  validateXiangqiBroadcastTape,
   validateXiangqiBroadcastTour,
   xiangqiBroadcastVariant,
 } from './index.js';
@@ -51,6 +52,17 @@ test('valid xiangqi broadcast game fixtures replay through the standard rules en
   }
 });
 
+test('xiangqi broadcast tape fixture validates for local live simulation', () => {
+  const tape = validateXiangqiBroadcastTape(loadJson(new URL('tape.json', fixtureRoot)));
+  assert.equal(tape.ok, true, tape.ok ? undefined : tape.errors.join('\n'));
+  if (!tape.ok) return;
+
+  assert.equal(tape.value.tourSlug, '2025-wxc-sample');
+  assert.equal(tape.value.events.length, 9);
+  assert.equal(tape.value.events[0]?.atMs, 0);
+  assert.equal(tape.value.events.at(-1)?.atMs, 17000);
+});
+
 test('invalid xiangqi broadcast game fixtures fail with board and ply diagnostics', () => {
   const parsed = validateXiangqiBroadcastBoard(
     loadJson(new URL('games/men-r1-b03-invalid.json', fixtureRoot)),
@@ -86,5 +98,25 @@ test('xiangqi broadcast runtime validation rejects malformed payloads before rep
   assert.deepEqual(parsed.errors, [
     'board.result must be decided when board.status is complete',
     'board.moves[0].from must be a valid square',
+  ]);
+});
+
+test('xiangqi broadcast tape validation rejects ambiguous and unordered events', () => {
+  const parsed = validateXiangqiBroadcastTape({
+    schema: 'mistboard.xiangqi.broadcast-tape.v1',
+    tourSlug: '2025-wxc-sample',
+    events: [
+      { atMs: 10, boardId: 'b1', moves: [], append: [] },
+      { atMs: 5, boardId: '', result: '1-0', status: 'live' },
+    ],
+  });
+
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.deepEqual(parsed.errors, [
+    'tape.events[0] cannot include both moves and append',
+    'tape.events[1].atMs must be ordered ascending',
+    'tape.events[1].boardId must be a non-empty string',
+    'tape.events[1].result must be * until status is complete',
   ]);
 });

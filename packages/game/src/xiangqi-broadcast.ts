@@ -10,6 +10,7 @@ import {
 } from './variants-xiangqi-standard.js';
 
 export const XIANGQI_BROADCAST_SCHEMA = 'mistboard.xiangqi.broadcast.v1' as const;
+export const XIANGQI_BROADCAST_TAPE_SCHEMA = 'mistboard.xiangqi.broadcast-tape.v1' as const;
 
 export type XiangqiBroadcastResult = '*' | '1-0' | '0-1' | '1/2-1/2';
 
@@ -54,6 +55,21 @@ export type XiangqiBroadcastBoard = {
   result: XiangqiBroadcastResult;
   moves: XiangqiMove[];
   sourceUrl?: string;
+};
+
+export type XiangqiBroadcastTapeEvent = {
+  atMs: number;
+  boardId: string;
+  moves?: XiangqiMove[];
+  append?: XiangqiMove[];
+  status?: XiangqiBroadcastBoardStatus;
+  result?: XiangqiBroadcastResult;
+};
+
+export type XiangqiBroadcastTape = {
+  schema: typeof XIANGQI_BROADCAST_TAPE_SCHEMA;
+  tourSlug: string;
+  events: XiangqiBroadcastTapeEvent[];
 };
 
 export type XiangqiBroadcastValidationResult<T> =
@@ -129,6 +145,14 @@ function validateMove(value: unknown, path: string, errors: string[]): XiangqiMo
   return value as XiangqiMove;
 }
 
+function validateMoveList(value: unknown, path: string, errors: string[]): XiangqiMove[] {
+  if (!Array.isArray(value)) {
+    errors.push(`${path} must be an array`);
+    return [];
+  }
+  return value.map((move, index) => validateMove(move, `${path}[${index}]`, errors));
+}
+
 export function validateXiangqiBroadcastTour(
   value: unknown,
 ): XiangqiBroadcastValidationResult<XiangqiBroadcastTour> {
@@ -189,17 +213,63 @@ export function validateXiangqiBroadcastBoard(
   if (value.status !== 'complete' && value.result !== '*') {
     errors.push('board.result must be * until board.status is complete');
   }
-  if (!Array.isArray(value.moves)) {
-    errors.push('board.moves must be an array');
-  } else {
-    value.moves.forEach((move, index) => {
-      validateMove(move, `board.moves[${index}]`, errors);
-    });
-  }
+  validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+export function validateXiangqiBroadcastTape(
+  value: unknown,
+): XiangqiBroadcastValidationResult<XiangqiBroadcastTape> {
+  const errors: string[] = [];
+  if (!isRecord(value)) return { ok: false, errors: ['tape must be an object'] };
+  if (value.schema !== XIANGQI_BROADCAST_TAPE_SCHEMA) {
+    errors.push(`tape.schema must be ${XIANGQI_BROADCAST_TAPE_SCHEMA}`);
+  }
+  if (!nonEmptyString(value.tourSlug)) errors.push('tape.tourSlug must be a non-empty string');
+  if (!Array.isArray(value.events)) {
+    errors.push('tape.events must be an array');
+  } else {
+    let lastAtMs = -1;
+    value.events.forEach((event, index) => {
+      const path = `tape.events[${index}]`;
+      if (!isRecord(event)) {
+        errors.push(`${path} must be an object`);
+        return;
+      }
+      if (!Number.isInteger(event.atMs) || Number(event.atMs) < 0) {
+        errors.push(`${path}.atMs must be a non-negative integer`);
+      } else if (Number(event.atMs) < lastAtMs) {
+        errors.push(`${path}.atMs must be ordered ascending`);
+      } else {
+        lastAtMs = Number(event.atMs);
+      }
+      if (!nonEmptyString(event.boardId)) errors.push(`${path}.boardId must be a non-empty string`);
+      if (event.moves !== undefined) validateMoveList(event.moves, `${path}.moves`, errors);
+      if (event.append !== undefined) validateMoveList(event.append, `${path}.append`, errors);
+      if (event.moves !== undefined && event.append !== undefined) {
+        errors.push(`${path} cannot include both moves and append`);
+      }
+      if (
+        event.status !== undefined &&
+        !BOARD_STATUSES.has(event.status as XiangqiBroadcastBoardStatus)
+      ) {
+        errors.push(`${path}.status must be scheduled, live, or complete`);
+      }
+      if (event.result !== undefined && !RESULTS.has(event.result as XiangqiBroadcastResult)) {
+        errors.push(`${path}.result must be *, 1-0, 0-1, or 1/2-1/2`);
+      }
+      if (event.status === 'complete' && event.result === '*') {
+        errors.push(`${path}.result must be decided when status is complete`);
+      }
+      if (event.status !== undefined && event.status !== 'complete' && event.result !== undefined) {
+        if (event.result !== '*') errors.push(`${path}.result must be * until status is complete`);
+      }
+    });
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, value: value as XiangqiBroadcastTape };
 }
 
 export function validateXiangqiBroadcastBoards(

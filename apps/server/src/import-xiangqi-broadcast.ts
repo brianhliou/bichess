@@ -9,7 +9,7 @@
 // illegal single-game file there.
 
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import pg from 'pg';
 import { runMigrations } from './migrate.js';
@@ -28,6 +28,11 @@ type Args = {
 
 async function readJsonFile(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, 'utf-8')) as unknown;
+}
+
+export function resolveXiangqiBroadcastInputPath(path: string): string {
+  if (isAbsolute(path)) return path;
+  return resolve(process.env.INIT_CWD ?? process.cwd(), path);
 }
 
 function parseCliArgs(argv: string[]): Args {
@@ -52,17 +57,18 @@ export async function readXiangqiBroadcastFixturePack(
   dir: string,
   includeGameFiles = false,
 ): Promise<XiangqiBroadcastFixturePack> {
+  const fixtureDir = resolveXiangqiBroadcastInputPath(dir);
   const [tour, roundsRaw, boardsRaw] = await Promise.all([
-    readJsonFile(join(dir, 'tour.json')),
-    readJsonFile(join(dir, 'rounds.json')),
-    readJsonFile(join(dir, 'boards.json')),
+    readJsonFile(join(fixtureDir, 'tour.json')),
+    readJsonFile(join(fixtureDir, 'rounds.json')),
+    readJsonFile(join(fixtureDir, 'boards.json')),
   ]);
-  if (!Array.isArray(roundsRaw)) throw new Error(`${dir}/rounds.json must be an array`);
-  if (!Array.isArray(boardsRaw)) throw new Error(`${dir}/boards.json must be an array`);
+  if (!Array.isArray(roundsRaw)) throw new Error(`${fixtureDir}/rounds.json must be an array`);
+  if (!Array.isArray(boardsRaw)) throw new Error(`${fixtureDir}/boards.json must be an array`);
 
   const boards = [...boardsRaw];
   if (includeGameFiles) {
-    const gamesDir = join(dir, 'games');
+    const gamesDir = join(fixtureDir, 'games');
     const seen = new Set(
       boards
         .map((entry) =>

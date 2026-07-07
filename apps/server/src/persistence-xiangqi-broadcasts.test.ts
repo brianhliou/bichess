@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import {
+  applyXiangqiBroadcastBoardUpdate,
   getXiangqiBroadcastBoard,
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
@@ -10,6 +12,7 @@ import {
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastSyncLogs,
 } from './persistence-xiangqi-broadcasts.js';
+import { runXiangqiBroadcastTape } from './xiangqi-broadcast-sim.js';
 
 const FIXTURE_DIR = fileURLToPath(
   new URL('../../../packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample', import.meta.url),
@@ -17,6 +20,10 @@ const FIXTURE_DIR = fileURLToPath(
 
 async function fixturePack(includeGameFiles = false) {
   return await readXiangqiBroadcastFixturePack(FIXTURE_DIR, includeGameFiles);
+}
+
+function fixtureTape(): unknown {
+  return JSON.parse(readFileSync(`${FIXTURE_DIR}/tape.json`, 'utf-8')) as unknown;
 }
 
 definePersistenceTests('xiangqi broadcasts', () => {
@@ -93,5 +100,115 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(result.boardsSkipped, 1);
     assert.equal(result.errors[0]?.boardId, '2025-wxc-sample-men-r1-b03-invalid');
     assert.equal((await listXiangqiBroadcastBoards('men-r1')).length, 2);
+  });
+
+  test('live board updates create, dedupe, extend, ignore stale, and reject incompatible moves', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+
+    const emptyBoard: XiangqiBroadcastBoard = {
+      ...fullBoard,
+      status: 'live',
+      result: '*',
+      moves: [],
+    };
+    const onePly = { ...emptyBoard, moves: fullBoard.moves.slice(0, 1) };
+    const twoPly = { ...emptyBoard, moves: fullBoard.moves.slice(0, 2) };
+    const incompatible = {
+      ...emptyBoard,
+      moves: [fullBoard.moves[0]!, fullBoard.moves[2]!],
+    };
+
+    assert.deepEqual(await applyXiangqiBroadcastBoardUpdate(emptyBoard), {
+      ok: true,
+      boardId: fullBoard.id,
+      status: 'created',
+      plyCount: 0,
+    });
+    const duplicate = await applyXiangqiBroadcastBoardUpdate(emptyBoard);
+    assert.equal(duplicate.ok ? duplicate.status : duplicate.kind, 'unchanged');
+    const extended = await applyXiangqiBroadcastBoardUpdate(twoPly);
+    assert.equal(extended.ok ? extended.status : extended.kind, 'extended');
+    const stale = await applyXiangqiBroadcastBoardUpdate(onePly);
+    assert.equal(stale.ok ? stale.status : stale.kind, 'unchanged');
+
+    const rejected = await applyXiangqiBroadcastBoardUpdate(incompatible);
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.ok ? '' : rejected.kind, 'illegal_move');
+    assert.equal((await getXiangqiBroadcastBoard(fullBoard.id))?.moves.length, 2);
+  });
+
+  test('explicit correction can replace a non-prefix legal board update', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+
+    const sideLine: XiangqiBroadcastBoard = {
+      ...fullBoard,
+      status: 'live',
+      result: '*',
+      moves: [
+        { from: 'h3', to: 'e3' },
+        { from: 'h8', to: 'e8' },
+        { from: 'a1', to: 'a2' },
+      ],
+    };
+    const correction: XiangqiBroadcastBoard = {
+      ...fullBoard,
+      status: 'live',
+      result: '*',
+      moves: [
+        { from: 'h3', to: 'e3' },
+        { from: 'h8', to: 'e8' },
+        { from: 'b1', to: 'c3' },
+      ],
+    };
+
+    const created = await applyXiangqiBroadcastBoardUpdate(sideLine);
+    assert.equal(created.ok ? created.status : created.kind, 'created');
+    const rejected = await applyXiangqiBroadcastBoardUpdate(correction);
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.ok ? '' : rejected.kind, 'incompatible_update');
+
+    const corrected = await applyXiangqiBroadcastBoardUpdate(correction, { allowCorrection: true });
+    assert.equal(corrected.ok, true);
+    assert.equal(corrected.ok ? corrected.status : '', 'corrected');
+    assert.deepEqual((await getXiangqiBroadcastBoard(fullBoard.id))?.moves, correction.moves);
+
+    const logs = await listXiangqiBroadcastSyncLogs({ boardId: fullBoard.id });
+    assert.equal(
+      logs.some((log) => log.kind === 'corrected'),
+      true,
+    );
+  });
+
+  test('fixture tape runner applies a full local live simulation', async () => {
+    const pack = await fixturePack();
+    const result = await runXiangqiBroadcastTape({ pack, tape: fixtureTape(), speed: 'instant' });
+
+    assert.equal(result.framesApplied, 9);
+    assert.deepEqual(
+      result.updates.map((update) => (update.ok ? update.status : update.kind)),
+      [
+        'created',
+        'created',
+        'extended',
+        'extended',
+        'unchanged',
+        'extended',
+        'extended',
+        'extended',
+        'extended',
+      ],
+    );
+
+    const board1 = await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b01');
+    const board2 = await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b02');
+    assert.equal(board1?.status, 'complete');
+    assert.equal(board1?.result, '1-0');
+    assert.equal(board1?.moves.length, 8);
+    assert.equal(board2?.status, 'live');
+    assert.equal(board2?.moves.length, 4);
   });
 });
