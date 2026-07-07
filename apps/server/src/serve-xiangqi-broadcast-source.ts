@@ -18,9 +18,16 @@ type Args = {
   tape: string;
   mode: XiangqiBroadcastSourceMode;
   port: number;
+  timeoutDelayMs: number;
 };
 
-const MODES: readonly XiangqiBroadcastSourceMode[] = ['clean', 'stale', 'malformed', 'error'];
+const MODES: readonly XiangqiBroadcastSourceMode[] = [
+  'clean',
+  'stale',
+  'malformed',
+  'error',
+  'timeout',
+];
 
 async function readJsonFile(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, 'utf-8')) as unknown;
@@ -34,11 +41,12 @@ function parseCliArgs(argv: string[]): Args {
       tape: { type: 'string', default: 'tape.json' },
       mode: { type: 'string', default: 'clean' },
       port: { type: 'string', default: '3127' },
+      'timeout-delay-ms': { type: 'string', default: '30000' },
     },
   });
   if (!values.dir) {
     console.error(
-      'usage: serve-xiangqi-broadcast-source --dir <fixture-pack> [--tape tape.json] [--mode clean|stale|malformed|error] [--port 3127]',
+      'usage: serve-xiangqi-broadcast-source --dir <fixture-pack> [--tape tape.json] [--mode clean|stale|malformed|error|timeout] [--port 3127] [--timeout-delay-ms 30000]',
     );
     process.exit(1);
   }
@@ -51,11 +59,17 @@ function parseCliArgs(argv: string[]): Args {
     console.error('--port must be a positive integer');
     process.exit(1);
   }
+  const timeoutDelayMs = Number(values['timeout-delay-ms']);
+  if (!Number.isInteger(timeoutDelayMs) || timeoutDelayMs <= 0) {
+    console.error('--timeout-delay-ms must be a positive integer');
+    process.exit(1);
+  }
   return {
     dir: values.dir,
     tape: values.tape,
     mode: values.mode as XiangqiBroadcastSourceMode,
     port,
+    timeoutDelayMs,
   };
 }
 
@@ -67,44 +81,53 @@ async function main(): Promise<void> {
 
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
-    const atMs = Number(url.searchParams.get('atMs') ?? Date.now() - startedAt);
-    const source = xiangqiBroadcastSourceResponse(
-      pack,
-      tape,
-      Number.isFinite(atMs) ? atMs : 0,
-      args.mode,
-    );
-    response.setHeader('content-type', 'application/json');
+    const writeSourceResponse = () => {
+      const atMs = Number(url.searchParams.get('atMs') ?? Date.now() - startedAt);
+      const source = xiangqiBroadcastSourceResponse(
+        pack,
+        tape,
+        Number.isFinite(atMs) ? atMs : 0,
+        args.mode,
+      );
+      response.setHeader('content-type', 'application/json');
 
-    if (url.pathname === '/health') {
-      response.writeHead(200).end(JSON.stringify({ ok: true, mode: args.mode }));
+      if (url.pathname === '/health') {
+        response.writeHead(200).end(JSON.stringify({ ok: true, mode: args.mode }));
+        return;
+      }
+      if (source.status !== 200) {
+        response.writeHead(source.status).end(JSON.stringify(source.body));
+        return;
+      }
+      if ('malformed' in source.body) {
+        response.writeHead(200).end(JSON.stringify(source.body));
+        return;
+      }
+      if (url.pathname === '/tour.json') {
+        response.writeHead(200).end(JSON.stringify(source.body.tour));
+        return;
+      }
+      if (url.pathname === '/rounds.json') {
+        response.writeHead(200).end(JSON.stringify(source.body.rounds));
+        return;
+      }
+      if (url.pathname === '/boards.json') {
+        response.writeHead(200).end(JSON.stringify(source.body.boards));
+        return;
+      }
+      if (url.pathname === '/source.json') {
+        response.writeHead(200).end(JSON.stringify(source.body));
+        return;
+      }
+      response.writeHead(404).end(JSON.stringify({ error: 'not_found' }));
+    };
+
+    if (args.mode === 'timeout' && url.pathname !== '/health') {
+      setTimeout(writeSourceResponse, args.timeoutDelayMs).unref();
       return;
     }
-    if (source.status !== 200) {
-      response.writeHead(source.status).end(JSON.stringify(source.body));
-      return;
-    }
-    if ('malformed' in source.body) {
-      response.writeHead(200).end(JSON.stringify(source.body));
-      return;
-    }
-    if (url.pathname === '/tour.json') {
-      response.writeHead(200).end(JSON.stringify(source.body.tour));
-      return;
-    }
-    if (url.pathname === '/rounds.json') {
-      response.writeHead(200).end(JSON.stringify(source.body.rounds));
-      return;
-    }
-    if (url.pathname === '/boards.json') {
-      response.writeHead(200).end(JSON.stringify(source.body.boards));
-      return;
-    }
-    if (url.pathname === '/source.json') {
-      response.writeHead(200).end(JSON.stringify(source.body));
-      return;
-    }
-    response.writeHead(404).end(JSON.stringify({ error: 'not_found' }));
+
+    writeSourceResponse();
   });
 
   await new Promise<void>((resolve) => server.listen(args.port, resolve));

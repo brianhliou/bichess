@@ -319,4 +319,5 @@ export {
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastSyncLogs,
   listXiangqiBroadcastTours,
+  recordXiangqiBroadcastSyncLog,
 } from './persistence-xiangqi-broadcasts.js';

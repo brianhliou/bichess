@@ -12,7 +12,14 @@ import {
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastSyncLogs,
 } from './persistence-xiangqi-broadcasts.js';
-import { runXiangqiBroadcastTape } from './xiangqi-broadcast-sim.js';
+import {
+  pollXiangqiBroadcastSourceOnce,
+  type XiangqiBroadcastSourceFetch,
+} from './xiangqi-broadcast-poller.js';
+import {
+  runXiangqiBroadcastTape,
+  xiangqiBroadcastSourceResponse,
+} from './xiangqi-broadcast-sim.js';
 
 const FIXTURE_DIR = fileURLToPath(
   new URL('../../../packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample', import.meta.url),
@@ -24,6 +31,32 @@ async function fixturePack(includeGameFiles = false) {
 
 function fixtureTape(): unknown {
   return JSON.parse(readFileSync(`${FIXTURE_DIR}/tape.json`, 'utf-8')) as unknown;
+}
+
+function sourceFetch(body: unknown, status = 200): XiangqiBroadcastSourceFetch {
+  return async () => ({
+    ok: status >= 200 && status < 300,
+    status,
+    async json() {
+      return body;
+    },
+  });
+}
+
+function timeoutFetch(): XiangqiBroadcastSourceFetch {
+  return async (_url, init) =>
+    await new Promise((_, reject) => {
+      const rejectAbort = () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      };
+      if (init.signal?.aborted) {
+        rejectAbort();
+        return;
+      }
+      init.signal?.addEventListener('abort', rejectAbort, { once: true });
+    });
 }
 
 definePersistenceTests('xiangqi broadcasts', () => {
@@ -210,5 +243,66 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(board1?.moves.length, 8);
     assert.equal(board2?.status, 'live');
     assert.equal(board2?.moves.length, 4);
+  });
+
+  test('source poller imports tour rounds and live board snapshots', async () => {
+    const pack = await fixturePack();
+    const source = xiangqiBroadcastSourceResponse(pack, fixtureTape(), 16000, 'clean');
+    assert.equal(source.status, 200);
+    assert.ok(!('malformed' in source.body));
+    if ('malformed' in source.body) return;
+
+    const updatedBody = {
+      ...source.body,
+      rounds: [{ ...(source.body.rounds[0] as Record<string, unknown>), name: 'Round 1 Live' }],
+    };
+    const result = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      fetchImpl: sourceFetch(updatedBody),
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.ok ? result.roundsImported : 0, 1);
+    assert.equal(result.ok ? result.boardsSeen : 0, 2);
+    assert.deepEqual(
+      result.ok ? result.updates.map((update) => (update.ok ? update.status : update.kind)) : [],
+      ['created', 'created'],
+    );
+
+    const rounds = await listXiangqiBroadcastRounds('2025-wxc-sample');
+    assert.equal(rounds[0]?.name, 'Round 1 Live');
+    assert.equal((await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b01'))?.moves.length, 8);
+    assert.equal((await getXiangqiBroadcastBoard('2025-wxc-sample-men-r1-b02'))?.moves.length, 2);
+  });
+
+  test('source poller logs malformed HTTP and timeout failures', async () => {
+    const httpError = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      fetchImpl: sourceFetch({ error: 'fixture_source_error' }, 500),
+    });
+    assert.equal(httpError.ok, false);
+    assert.equal(httpError.ok ? '' : httpError.kind, 'source_http_error');
+
+    const malformed = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      fetchImpl: sourceFetch({ malformed: true, boards: { bad: true } }),
+    });
+    assert.equal(malformed.ok, false);
+    assert.equal(malformed.ok ? '' : malformed.kind, 'source_malformed');
+
+    const timedOut = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      timeoutMs: 1,
+      fetchImpl: timeoutFetch(),
+    });
+    assert.equal(timedOut.ok, false);
+    assert.equal(timedOut.ok ? '' : timedOut.kind, 'source_timeout');
+
+    const logs = await listXiangqiBroadcastSyncLogs({});
+    assert.deepEqual(logs.map((log) => log.kind).sort(), [
+      'source_http_error',
+      'source_malformed',
+      'source_timeout',
+    ]);
   });
 });

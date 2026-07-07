@@ -326,6 +326,21 @@ async function appendSyncLog(
   );
 }
 
+export async function recordXiangqiBroadcastSyncLog(input: {
+  tourSlug?: string;
+  roundId?: string;
+  boardId?: string;
+  sourceBoardId?: string;
+  severity: XiangqiBroadcastSyncLogSeverity;
+  kind: string;
+  message: string;
+  payload?: Record<string, unknown>;
+}): Promise<void> {
+  await withTransaction(async (client) => {
+    await appendSyncLog(client, input);
+  });
+}
+
 function rawString(value: unknown, key: string): string | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;

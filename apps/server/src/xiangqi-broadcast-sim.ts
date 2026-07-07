@@ -13,7 +13,7 @@ export type XiangqiBroadcastTapeFrame = {
   board: XiangqiBroadcastBoard;
 };
 
-export type XiangqiBroadcastSourceMode = 'clean' | 'stale' | 'malformed' | 'error';
+export type XiangqiBroadcastSourceMode = 'clean' | 'stale' | 'malformed' | 'error' | 'timeout';
 
 export type XiangqiBroadcastSourceResponse =
   | { status: 200; body: { tour: unknown; rounds: unknown[]; boards: XiangqiBroadcastBoard[] } }

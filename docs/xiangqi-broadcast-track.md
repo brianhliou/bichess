@@ -211,9 +211,10 @@ Read APIs:
 
 - Add event tape runner.
 - Add fake source HTTP server.
-- Add push simulator that posts board updates into the local app.
+- Add local source poller that writes source snapshots into persisted broadcast
+  state.
 - Add tests for duplicate payloads, legal extensions, corrections, and illegal
-  move rejection.
+  move rejection, malformed sources, HTTP failures, and timeouts.
 
 Done means live broadcast behavior is reproducible without a real tournament.
 
@@ -240,9 +241,25 @@ Source modes:
 - `stale`: snapshots lag the requested time by five simulated seconds.
 - `malformed`: HTTP 200 with an invalid body shape.
 - `error`: HTTP 500 fixture-source failure.
+- `timeout`: delays non-health responses long enough to exercise poller
+  timeouts.
 
 The committed `tape.json` is deterministic and can be run instant, realtime,
 or accelerated by numeric `--speed`.
+
+Source poller:
+
+```bash
+npm run db:poll:xiangqi-broadcast -- \
+  --source http://localhost:3127/source.json \
+  --once \
+  --timeout-ms 1000
+```
+
+Drop `--once` to keep polling. The poller imports tour/round metadata from the
+source snapshot, applies each board through the same persisted board-update
+boundary as the tape runner, and records HTTP, malformed, fetch, and timeout
+failures in sync logs.
 
 ### M3: Public Viewer
 
@@ -332,13 +349,14 @@ Load smoke:
 6. Add canonical JSON export.
 7. Add event tape runner.
 8. Add fake broadcast source server.
-9. Add authenticated local push endpoint.
-10. Build tournament and round viewer pages.
-11. Build board/theater viewer page on the standard xiangqi renderer.
-12. Add live update channel for broadcast boards.
-13. Add organizer sync log view.
-14. Add DhtmlXQ adapter.
-15. Add first WXF event adapter/proof import.
+9. Add local source poller.
+10. Add authenticated local push endpoint.
+11. Build tournament and round viewer pages.
+12. Build board/theater viewer page on the standard xiangqi renderer.
+13. Add live update channel for broadcast boards.
+14. Add organizer sync log view.
+15. Add DhtmlXQ adapter.
+16. Add first WXF event adapter/proof import.
 
 ## Recommended Defaults
 
