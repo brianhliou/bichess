@@ -1,0 +1,236 @@
+.xqb-ops-route {
+  background: var(--site-bg);
+}
+
+.xqb-ops-shell {
+  max-width: 1280px;
+  padding: 18px 18px 40px;
+}
+
+.xqb-ops-sub,
+.xqb-ops-status {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.xqb-ops-body {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xqb-ops-panel {
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xqb-ops-panel-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.xqb-ops-copy {
+  min-width: 0;
+}
+
+.xqb-ops-copy h2 {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.xqb-ops-copy p,
+.xqb-ops-source {
+  margin: 5px 0 0;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.xqb-ops-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xqb-ops-link,
+.xqb-ops-button {
+  min-height: 34px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xqb-ops-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.xqb-ops-link:hover,
+.xqb-ops-link:focus-visible,
+.xqb-ops-button:hover:not(:disabled),
+.xqb-ops-button:focus-visible:not(:disabled) {
+  border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+.xqb-ops-poll-result {
+  min-width: 150px;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.xqb-ops-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.xqb-ops-stats div {
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  padding: 9px 10px;
+}
+
+.xqb-ops-stats dt {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.xqb-ops-stats dd {
+  margin: 3px 0 0;
+  color: var(--site-heading);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.xqb-ops-source-missing {
+  color: var(--site-danger, #b3261e);
+}
+
+.xqb-ops-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xqb-ops-logs h3 {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.xqb-ops-logs ul {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+
+.xqb-ops-log {
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-bg);
+  padding: 9px 10px;
+}
+
+.xqb-ops-log div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xqb-ops-log span {
+  border-radius: 999px;
+  background: var(--site-panel-soft);
+  color: var(--site-muted);
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.xqb-ops-log strong {
+  color: var(--site-heading);
+  font-size: 12px;
+}
+
+.xqb-ops-log time {
+  margin-left: auto;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.xqb-ops-log p {
+  margin: 6px 0 0;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.xqb-ops-log-warning span {
+  background: #fff4d6;
+  color: #7a4d00;
+}
+
+.xqb-ops-log-error span {
+  background: #ffe6e2;
+  color: #9b1c0e;
+}
+
+@media (max-width: 760px) {
+  .xqb-ops-panel-top {
+    grid-template-columns: 1fr;
+  }
+
+  .xqb-ops-actions {
+    justify-content: flex-start;
+  }
+
+  .xqb-ops-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .xqb-ops-log time {
+    margin-left: 0;
+  }
+}

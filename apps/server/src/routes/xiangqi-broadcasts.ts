@@ -8,7 +8,18 @@ import {
   type XiangqiMove,
 } from '@mistboard/game';
 import * as persistence from './../persistence.js';
-import { type HttpApiContext, requireMethod, requirePersistence, writeJson } from './lib.js';
+import {
+  pollXiangqiBroadcastSourceOnce,
+  type XiangqiBroadcastPollResult,
+} from './../xiangqi-broadcast-poller.js';
+import {
+  type HttpApiContext,
+  readJsonBody,
+  requireAdminSession,
+  requireMethod,
+  requirePersistence,
+  writeJson,
+} from './lib.js';
 
 type BroadcastMoveTimelineEntry = {
   type: 'move-played';
@@ -42,6 +53,9 @@ export type XiangqiBroadcastApiPersistence = {
   listXiangqiBroadcastSyncLogs(
     input: Parameters<typeof persistence.listXiangqiBroadcastSyncLogs>[0],
   ): ReturnType<typeof persistence.listXiangqiBroadcastSyncLogs>;
+  recordXiangqiBroadcastSyncLog(
+    input: Parameters<typeof persistence.recordXiangqiBroadcastSyncLog>[0],
+  ): ReturnType<typeof persistence.recordXiangqiBroadcastSyncLog>;
 };
 
 const livePersistence: XiangqiBroadcastApiPersistence = {
@@ -51,6 +65,14 @@ const livePersistence: XiangqiBroadcastApiPersistence = {
   listXiangqiBroadcastBoards: (roundId) => persistence.listXiangqiBroadcastBoards(roundId),
   getXiangqiBroadcastBoard: (boardId) => persistence.getXiangqiBroadcastBoard(boardId),
   listXiangqiBroadcastSyncLogs: (input) => persistence.listXiangqiBroadcastSyncLogs(input),
+  recordXiangqiBroadcastSyncLog: (input) => persistence.recordXiangqiBroadcastSyncLog(input),
+};
+
+type XiangqiBroadcastPollSource = typeof pollXiangqiBroadcastSourceOnce;
+
+type ManualPollOptions = {
+  allowCorrection: boolean;
+  timeoutMs: number;
 };
 
 export async function xiangqiBroadcastIndexForApi(
@@ -91,6 +113,100 @@ export async function xiangqiBroadcastIndexForApi(
     }),
   );
   return { tours: entries };
+}
+
+export async function xiangqiBroadcastOpsIndexForApi(
+  deps: XiangqiBroadcastApiPersistence = livePersistence,
+) {
+  const tours = await deps.listXiangqiBroadcastTours();
+  const entries = await Promise.all(
+    tours.map(async (tour) => {
+      const [rounds, syncLogs] = await Promise.all([
+        deps.listXiangqiBroadcastRounds(tour.slug),
+        deps.listXiangqiBroadcastSyncLogs({ tourSlug: tour.slug }),
+      ]);
+      const boardsByRound = await Promise.all(
+        rounds.map((round) => deps.listXiangqiBroadcastBoards(round.id)),
+      );
+      const boards = boardsByRound.flat();
+      return {
+        tour,
+        sourceUrl: tour.sourceUrl ?? null,
+        roundCount: rounds.length,
+        boardCount: boards.length,
+        liveBoardCount: boards.filter((board) => board.status === 'live').length,
+        completeBoardCount: boards.filter((board) => board.status === 'complete').length,
+        scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
+        totalPlies: boards.reduce((sum, board) => sum + board.plyCount, 0),
+        updatedAt: latestDate([
+          tour.updatedAt,
+          ...rounds.map((round) => round.updatedAt),
+          ...boards.map((board) => board.updatedAt),
+        ]),
+        syncLogs: syncLogs.slice(0, 8).map((log) => ({
+          id: log.id,
+          tourSlug: log.tourSlug,
+          roundId: log.roundId,
+          boardId: log.boardId,
+          sourceBoardId: log.sourceBoardId,
+          severity: log.severity,
+          kind: log.kind,
+          message: log.message,
+          createdAt: log.createdAt,
+        })),
+      };
+    }),
+  );
+  return { tours: entries };
+}
+
+export async function manualXiangqiBroadcastPollForApi(
+  tourSlug: string,
+  options: ManualPollOptions,
+  deps: XiangqiBroadcastApiPersistence = livePersistence,
+  pollSource: XiangqiBroadcastPollSource = pollXiangqiBroadcastSourceOnce,
+): Promise<
+  | { ok: true; result: Extract<XiangqiBroadcastPollResult, { ok: true }> }
+  | { ok: false; status: 400 | 404 | 502; error: string; result?: XiangqiBroadcastPollResult }
+> {
+  const tour = await deps.getXiangqiBroadcastTour(tourSlug);
+  if (!tour) return { ok: false, status: 404, error: 'broadcast_not_found' };
+  if (!tour.sourceUrl) return { ok: false, status: 400, error: 'missing_source_url' };
+
+  const result = await pollSource({
+    sourceUrl: tour.sourceUrl,
+    allowCorrection: options.allowCorrection,
+    timeoutMs: options.timeoutMs,
+  });
+  if (!result.ok) {
+    await deps.recordXiangqiBroadcastSyncLog({
+      tourSlug: tour.slug,
+      severity: 'error',
+      kind: 'manual_poll_failed',
+      message: result.message,
+      payload: {
+        sourceUrl: result.sourceUrl,
+        errorKind: result.kind,
+        allowCorrection: options.allowCorrection,
+      },
+    });
+    return { ok: false, status: 502, error: result.kind, result };
+  }
+
+  await deps.recordXiangqiBroadcastSyncLog({
+    tourSlug: result.tourSlug,
+    severity: result.boardsFailed > 0 ? 'warning' : 'info',
+    kind: 'manual_poll_ok',
+    message: 'manual source poll completed',
+    payload: {
+      sourceUrl: result.sourceUrl,
+      roundsImported: result.roundsImported,
+      boardsSeen: result.boardsSeen,
+      boardsFailed: result.boardsFailed,
+      allowCorrection: options.allowCorrection,
+    },
+  });
+  return { ok: true, result };
 }
 
 export async function xiangqiBroadcastTourForApi(
@@ -263,6 +379,18 @@ function parseEventPollMs(parsedUrl: URL): number {
   return Math.min(Math.max(parsed, 250), 30_000);
 }
 
+function parseManualPollOptions(body: Record<string, unknown>): ManualPollOptions {
+  const rawTimeoutMs = body.timeoutMs;
+  const timeoutMs =
+    typeof rawTimeoutMs === 'number' && Number.isInteger(rawTimeoutMs)
+      ? Math.min(Math.max(rawTimeoutMs, 250), 30_000)
+      : 5_000;
+  return {
+    allowCorrection: body.allowCorrection === true,
+    timeoutMs,
+  };
+}
+
 function writeSseEvent<T>(
   response: ServerResponse,
   event: string,
@@ -333,6 +461,35 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (pathname === '/api/admin/xiangqi/broadcasts') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!(await requireAdminSession(request, response))) return true;
+    if (!requirePersistence(response)) return true;
+    writeJson(response, 200, await xiangqiBroadcastOpsIndexForApi());
+    return true;
+  }
+
+  const adminPollMatch = pathname.match(/^\/api\/admin\/xiangqi\/broadcasts\/([^/]+)\/poll$/);
+  if (adminPollMatch) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (!(await requireAdminSession(request, response))) return true;
+    if (!requirePersistence(response)) return true;
+    const body = await readJsonBody(request);
+    const result = await manualXiangqiBroadcastPollForApi(
+      decodeURIComponent(adminPollMatch[1]!),
+      parseManualPollOptions(body),
+    );
+    if (!result.ok) {
+      writeJson(response, result.status, {
+        error: result.error,
+        ...(result.result ? { result: result.result } : {}),
+      });
+      return true;
+    }
+    writeJson(response, 200, { result: result.result });
+    return true;
+  }
+
   const boardEventsMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/boards\/([^/]+)\/events$/);
   if (boardEventsMatch) {
     if (!requireMethod(request, response, 'GET')) return true;

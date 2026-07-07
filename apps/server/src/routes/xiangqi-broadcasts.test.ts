@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -10,11 +11,14 @@ import {
 } from '@mistboard/game';
 import type { StoredXiangqiBroadcastBoard } from '../persistence.js';
 import {
+  manualXiangqiBroadcastPollForApi,
+  tryHandle,
   type XiangqiBroadcastApiPersistence,
   xiangqiBroadcastBoardExportForApi,
   xiangqiBroadcastBoardForApi,
   xiangqiBroadcastBoardStreamForApi,
   xiangqiBroadcastIndexForApi,
+  xiangqiBroadcastOpsIndexForApi,
   xiangqiBroadcastRoundForApi,
   xiangqiBroadcastRoundStreamForApi,
   xiangqiBroadcastTourForApi,
@@ -76,6 +80,7 @@ function deps(
             },
           ]
         : [],
+    recordXiangqiBroadcastSyncLog: async () => {},
     ...overrides,
   };
 }
@@ -96,6 +101,112 @@ test('broadcast index API summarizes tournaments and sync status', async () => {
   assert.equal(entry.lastSyncLog?.kind, 'poll_ok');
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'payload'), false);
   assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'message'), false);
+});
+
+test('broadcast ops API exposes source and operator sync log detail', async () => {
+  const payload = await xiangqiBroadcastOpsIndexForApi(deps());
+
+  assert.equal(payload.tours.length, 1);
+  const entry = payload.tours[0]!;
+  assert.equal(entry.tour.slug, tour.slug);
+  assert.equal(entry.sourceUrl, tour.sourceUrl ?? null);
+  assert.equal(entry.boardCount, 1);
+  assert.equal(entry.syncLogs.length, 1);
+  assert.equal(entry.syncLogs[0]?.kind, 'poll_ok');
+  assert.equal(entry.syncLogs[0]?.message, 'source snapshot imported');
+  assert.equal(Object.hasOwn(entry.syncLogs[0] ?? {}, 'payload'), false);
+});
+
+test('manual broadcast poll uses configured tour source and records operator result', async () => {
+  const recorded: unknown[] = [];
+  const result = await manualXiangqiBroadcastPollForApi(
+    tour.slug,
+    { allowCorrection: true, timeoutMs: 750 },
+    deps({
+      recordXiangqiBroadcastSyncLog: async (input) => {
+        recorded.push(input);
+      },
+    }),
+    async (input) => ({
+      ok: true,
+      sourceUrl: input.sourceUrl,
+      tourSlug: tour.slug,
+      roundsImported: 1,
+      boardsSeen: 3,
+      boardsFailed: 1,
+      updates: [],
+    }),
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ok ? result.result.sourceUrl : '', tour.sourceUrl);
+  assert.equal(recorded.length, 1);
+  assert.deepEqual(recorded[0], {
+    tourSlug: tour.slug,
+    severity: 'warning',
+    kind: 'manual_poll_ok',
+    message: 'manual source poll completed',
+    payload: {
+      sourceUrl: tour.sourceUrl,
+      roundsImported: 1,
+      boardsSeen: 3,
+      boardsFailed: 1,
+      allowCorrection: true,
+    },
+  });
+});
+
+test('manual broadcast poll reports missing source before polling', async () => {
+  const result = await manualXiangqiBroadcastPollForApi(
+    tour.slug,
+    { allowCorrection: false, timeoutMs: 5_000 },
+    deps({
+      getXiangqiBroadcastTour: async (slug) =>
+        slug === tour.slug
+          ? { ...tour, sourceUrl: undefined, createdAt: new Date(0), updatedAt: new Date(0) }
+          : null,
+    }),
+    async () => {
+      throw new Error('poller should not run');
+    },
+  );
+
+  assert.deepEqual(result, { ok: false, status: 400, error: 'missing_source_url' });
+});
+
+test('manual broadcast poll records tour-scoped source failures', async () => {
+  const recorded: unknown[] = [];
+  const result = await manualXiangqiBroadcastPollForApi(
+    tour.slug,
+    { allowCorrection: false, timeoutMs: 1_000 },
+    deps({
+      recordXiangqiBroadcastSyncLog: async (input) => {
+        recorded.push(input);
+      },
+    }),
+    async (input) => ({
+      ok: false,
+      sourceUrl: input.sourceUrl,
+      kind: 'source_http_error',
+      message: 'source answered HTTP 500',
+    }),
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? '' : result.status, 502);
+  assert.deepEqual(recorded, [
+    {
+      tourSlug: tour.slug,
+      severity: 'error',
+      kind: 'manual_poll_failed',
+      message: 'source answered HTTP 500',
+      payload: {
+        sourceUrl: tour.sourceUrl,
+        errorKind: 'source_http_error',
+        allowCorrection: false,
+      },
+    },
+  ]);
 });
 
 test('broadcast tour API returns tour detail with rounds', async () => {
@@ -176,3 +287,79 @@ test('broadcast APIs return null for unknown records', async () => {
   assert.equal(await xiangqiBroadcastBoardForApi('missing', deps()), null);
   assert.equal(await xiangqiBroadcastBoardExportForApi('missing', deps()), null);
 });
+
+test('admin broadcast ops route requires admin before persistence in production', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    const response = captureResponse();
+    const handled = await tryHandle(
+      emptyCtx(),
+      { method: 'GET', headers: {} } as IncomingMessage,
+      response,
+      '/api/admin/xiangqi/broadcasts',
+      new URL('http://test.local/api/admin/xiangqi/broadcasts'),
+    );
+
+    assert.equal(handled, true);
+    assert.equal(response.statusCode, 403);
+    assert.deepEqual(JSON.parse(response.body), { error: 'admin_required' });
+  } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+  }
+});
+
+function emptyCtx() {
+  return {
+    rooms: new Map(),
+    lobbyTickets: new Map(),
+    lobbyQueue: [],
+    databaseRequired: false,
+    pveBuiltinEngineClientId: 'random-engine',
+    annotationsFile: '',
+    liveClockInitialMs: 60_000,
+    liveClockIncrementMs: 0,
+    createRoom: async () => {
+      throw new Error('unused');
+    },
+    reserveLiveEngineSeat: async () => null,
+    releaseLiveEngineReservation: () => {},
+    abandonRoom: async () => ({ ok: false, error: 'not_found' as const }),
+    inMemoryGameSummary: () => null,
+    isDraining: () => false,
+    drainDeadlineMs: () => null,
+    activeGameCount: () => 0,
+  };
+}
+
+type ResponseCapture = {
+  statusCode: number;
+  headers: Record<string, string | string[]>;
+  body: string;
+};
+
+function captureResponse(): ServerResponse & ResponseCapture {
+  const capture = {
+    statusCode: 200,
+    headers: {} as Record<string, string | string[]>,
+    body: '',
+    writeHead(statusCode: number, headers: Record<string, string | string[]> = {}) {
+      this.statusCode = statusCode;
+      this.headers = headers;
+      return this;
+    },
+    end(chunk?: string) {
+      if (chunk) this.body += chunk;
+      return this;
+    },
+    write(chunk: string) {
+      this.body += chunk;
+      return true;
+    },
+  };
+  return capture as unknown as ServerResponse & ResponseCapture;
+}
