@@ -39,6 +39,8 @@ type BroadcastBoardSummary = {
   plyCount?: number;
   moves?: XiangqiMove[];
   sourceUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type BroadcastBoardResponse = {
@@ -88,6 +90,11 @@ type BroadcastIndexResponse = {
   tours: BroadcastIndexEntry[];
 };
 
+type BroadcastStreamEnvelope<T> = {
+  version: string;
+  payload: T;
+};
+
 export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<void> {
   setBroadcastRoot(root, 'Loading broadcasts');
   try {
@@ -126,6 +133,7 @@ export async function mountXiangqiBroadcastRound(
       )}`,
     );
     root.replaceChildren(buildNav(), renderRound(data));
+    connectRoundStream(root, tourSlug, roundId, roundVersion(data));
   } catch (err) {
     renderError(root, err);
   }
@@ -141,6 +149,7 @@ export async function mountXiangqiBroadcastBoard(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
     );
     root.replaceChildren(buildNav(), renderBoardReplay(data));
+    connectBoardStream(root, boardId, boardVersion(data));
   } catch (err) {
     renderError(root, err);
   }
@@ -163,6 +172,56 @@ async function fetchJson<T>(url: string): Promise<T> {
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   root.replaceChildren(buildNav(), buildNotice('Broadcast unavailable', message));
+}
+
+function connectRoundStream(
+  root: HTMLElement,
+  tourSlug: string,
+  roundId: string,
+  initialVersion: string,
+): void {
+  if (!('EventSource' in window)) return;
+  const source = new EventSource(
+    `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(
+      roundId,
+    )}/events`,
+  );
+  let lastVersion = initialVersion;
+  source.addEventListener('round', (event) => {
+    const envelope = parseStreamEnvelope<BroadcastRoundResponse>(event);
+    if (!envelope || envelope.version === lastVersion) return;
+    lastVersion = envelope.version;
+    root.replaceChildren(buildNav(), renderRound(envelope.payload));
+  });
+  closeStreamOnPageExit(source);
+}
+
+function connectBoardStream(root: HTMLElement, boardId: string, initialVersion: string): void {
+  if (!('EventSource' in window)) return;
+  const source = new EventSource(
+    `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}/events`,
+  );
+  let lastVersion = initialVersion;
+  source.addEventListener('board', (event) => {
+    const envelope = parseStreamEnvelope<BroadcastBoardResponse>(event);
+    if (!envelope || envelope.version === lastVersion) return;
+    lastVersion = envelope.version;
+    root.replaceChildren(buildNav(), renderBoardReplay(envelope.payload));
+  });
+  closeStreamOnPageExit(source);
+}
+
+function closeStreamOnPageExit(source: EventSource): void {
+  window.addEventListener('pagehide', () => source.close(), { once: true });
+}
+
+function parseStreamEnvelope<T>(event: Event): BroadcastStreamEnvelope<T> | null {
+  if (!(event instanceof MessageEvent)) return null;
+  try {
+    return JSON.parse(event.data) as BroadcastStreamEnvelope<T>;
+  } catch {
+    return null;
+  }
 }
 
 function renderIndex(data: BroadcastIndexResponse): HTMLElement {
@@ -577,6 +636,37 @@ function freshnessLabel(entry: BroadcastIndexEntry): string | null {
     return `${severity} ${formatDate(entry.lastSyncLog.createdAt) ?? entry.lastSyncLog.kind}`;
   }
   return entry.updatedAt ? `Updated ${formatDate(entry.updatedAt)}` : null;
+}
+
+function boardVersion(data: BroadcastBoardResponse): string {
+  return streamVersion([
+    data.board.id,
+    data.board.updatedAt,
+    data.board.plyCount,
+    data.board.status,
+    data.board.result,
+    data.state.status.type,
+  ]);
+}
+
+function roundVersion(data: BroadcastRoundResponse): string {
+  return streamVersion([
+    timestamp(data.tour),
+    timestamp(data.round),
+    ...data.boards.map((board) =>
+      streamVersion([board.id, board.updatedAt, board.plyCount, board.status, board.result]),
+    ),
+  ]);
+}
+
+function timestamp(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const updatedAt = (value as { updatedAt?: unknown }).updatedAt;
+  return typeof updatedAt === 'string' ? updatedAt : undefined;
+}
+
+function streamVersion(values: Array<string | number | null | undefined>): string {
+  return values.map((value) => value ?? '').join('|');
 }
 
 function plyCount(board: BroadcastBoardSummary): number {

@@ -135,7 +135,7 @@ Edit task → find file → open only that file.
 | `routes/drop-mini-xiangqi-games.ts` | Drop Mini Xiangqi postgame/review API branch; exposes the finished open-information board, reserve history, and move timeline |
 | `routes/fortress-xiangqi-rooms.ts` | Fortress Xiangqi room-creation branch for `POST /api/rooms` (PvP + Fairy-Stockfish PvE; casual, rated-ready). Factory-bound (`variant-tenant/rooms-route.ts`; account-gated rated) |
 | `routes/fortress-xiangqi-games.ts` | Fortress Xiangqi postgame/review API branch; finished open-information 7x8 board, reserve history, and move timeline |
-| `routes/xiangqi-broadcasts.ts` | Xiangqi broadcast read APIs: tour detail, round boards, board replay payload, and canonical board export |
+| `routes/xiangqi-broadcasts.ts` | Xiangqi broadcast read APIs: tour detail, round boards, board replay payload, canonical board export, and SSE snapshot streams |
 | `routes/puzzles.ts` | Mini Xiangqi puzzle API: list/detail endpoints plus attempt validation for Mini and Drop Mini Xiangqi puzzle lines |
 | `routes/bots.ts` | Public bot directory/profile API (`/api/bots`, `/api/bots/:id`) filtered to playable enabled variants |
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
@@ -403,7 +403,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `landing-showcase.ts` | Homepage replay showcase catalog and hero POV selection for the landing replay loop |
 | `watch-route.ts` | `/watch` route mount: watch feed fetch/polling, replay mounting, status/empty state, channel links, and replay queue rendering. Loads `watch-route.css` |
 | `watch-route.css` | `/watch` route styles, including watch replay sizing, status, channel links, empty state, queue, and responsive route layout |
-| `xiangqi-broadcast.ts` | Public xiangqi tournament broadcast routes: index, tour, round, and board replay pages fed by `/api/xiangqi/broadcasts/*`; renders per-ply standard Xiangqi board history locally after load |
+| `xiangqi-broadcast.ts` | Public xiangqi tournament broadcast routes: index, tour, round, and board replay pages fed by `/api/xiangqi/broadcasts/*`; subscribes to SSE snapshot streams for round/board live updates |
 | `xiangqi-broadcast.css` | Xiangqi broadcast route layout: tournament index/status rows, round rows, board replay controls, move list, and responsive viewer polish |
 | `site-shell.ts` | Shared site chrome: `buildNav`, `buildFooter`, `buildLoadingState`, `buildNotice`, `fetchCurrentUser`, and `GITHUB_URL`. Loads `site-shell.css` |
 | `site-shell.css` | Shared site chrome styles for nav, mobile nav collapse, loading state, and footer; also loaded by live/learn routes that render site chrome directly |

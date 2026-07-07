@@ -13,8 +13,10 @@ import {
   type XiangqiBroadcastApiPersistence,
   xiangqiBroadcastBoardExportForApi,
   xiangqiBroadcastBoardForApi,
+  xiangqiBroadcastBoardStreamForApi,
   xiangqiBroadcastIndexForApi,
   xiangqiBroadcastRoundForApi,
+  xiangqiBroadcastRoundStreamForApi,
   xiangqiBroadcastTourForApi,
 } from './xiangqi-broadcasts.js';
 
@@ -114,6 +116,15 @@ test('broadcast round API returns only boards under the requested round', async 
   assert.equal(payload.boards[0]?.id, board.id);
 });
 
+test('broadcast round stream includes a stable version for reconnect comparisons', async () => {
+  const payload = await xiangqiBroadcastRoundStreamForApi(tour.slug, 'men-r1', deps());
+
+  assert.ok(payload);
+  assert.equal(payload.payload.round.id, 'men-r1');
+  assert.match(payload.version, /2025-wxc-sample-men-r1-b01/);
+  assert.match(payload.version, /complete/);
+});
+
 test('broadcast board API builds replay-compatible timeline and history', async () => {
   const payload = await xiangqiBroadcastBoardForApi(board.id, deps());
 
@@ -126,6 +137,28 @@ test('broadcast board API builds replay-compatible timeline and history', async 
   assert.equal(payload.history.truth.length, board.moves.length + 1);
   assert.deepEqual(payload.timeline[0]?.move, board.moves[0]);
   assert.equal(payload.views.truth.id, board.id);
+  assert.deepEqual(payload.board.updatedAt, storedBoard.updatedAt);
+});
+
+test('broadcast board stream version changes when persisted state changes', async () => {
+  const first = await xiangqiBroadcastBoardStreamForApi(board.id, deps());
+  const updatedBoard = {
+    ...storedBoard,
+    moves: storedBoard.moves.slice(0, 2),
+    plyCount: 2,
+    updatedAt: new Date(10_000),
+  };
+  const next = await xiangqiBroadcastBoardStreamForApi(
+    board.id,
+    deps({
+      getXiangqiBroadcastBoard: async (boardId) => (boardId === board.id ? updatedBoard : null),
+    }),
+  );
+
+  assert.ok(first);
+  assert.ok(next);
+  assert.notEqual(first.version, next.version);
+  assert.equal(next.payload.timeline.length, 2);
 });
 
 test('broadcast board export returns canonical coordinate JSON', async () => {

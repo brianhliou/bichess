@@ -22,6 +22,11 @@ type BroadcastHistorySnapshot = {
   view: StandardXiangqiPlayerView;
 };
 
+type BroadcastStreamEnvelope<T> = {
+  version: string;
+  payload: T;
+};
+
 export type XiangqiBroadcastApiPersistence = {
   listXiangqiBroadcastTours(): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
   getXiangqiBroadcastTour(slug: string): ReturnType<typeof persistence.getXiangqiBroadcastTour>;
@@ -116,6 +121,25 @@ export async function xiangqiBroadcastRoundForApi(
   return { tour, round, boards };
 }
 
+export async function xiangqiBroadcastRoundStreamForApi(
+  tourSlug: string,
+  roundId: string,
+  deps: XiangqiBroadcastApiPersistence = livePersistence,
+) {
+  const payload = await xiangqiBroadcastRoundForApi(tourSlug, roundId, deps);
+  if (!payload) return null;
+  return {
+    version: versionKey([
+      payload.tour.updatedAt,
+      payload.round.updatedAt,
+      ...payload.boards.map((board) =>
+        versionKey([board.id, board.updatedAt, board.plyCount, board.status, board.result]),
+      ),
+    ]),
+    payload,
+  };
+}
+
 export async function xiangqiBroadcastBoardForApi(
   boardId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
@@ -123,6 +147,25 @@ export async function xiangqiBroadcastBoardForApi(
   const board = await deps.getXiangqiBroadcastBoard(boardId);
   if (!board) return null;
   return buildXiangqiBroadcastBoardReplay(board);
+}
+
+export async function xiangqiBroadcastBoardStreamForApi(
+  boardId: string,
+  deps: XiangqiBroadcastApiPersistence = livePersistence,
+) {
+  const payload = await xiangqiBroadcastBoardForApi(boardId, deps);
+  if (!payload) return null;
+  return {
+    version: versionKey([
+      payload.board.id,
+      payload.board.updatedAt,
+      payload.board.plyCount,
+      payload.board.status,
+      payload.board.result,
+      payload.state.status.type,
+    ]),
+    payload,
+  };
 }
 
 export async function xiangqiBroadcastBoardExportForApi(
@@ -178,6 +221,8 @@ function buildXiangqiBroadcastBoardReplay(board: persistence.StoredXiangqiBroadc
       result: board.result,
       plyCount: board.plyCount,
       finalStatus: board.finalStatus,
+      createdAt: board.createdAt,
+      updatedAt: board.updatedAt,
       ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
     },
     state: {
@@ -201,6 +246,86 @@ function latestDate(values: Date[]): Date | null {
   return latest;
 }
 
+function versionKey(values: Array<Date | string | number | null | undefined>): string {
+  return values
+    .map((value) => {
+      if (value instanceof Date) return value.toISOString();
+      return value ?? '';
+    })
+    .join('|');
+}
+
+function parseEventPollMs(parsedUrl: URL): number {
+  const raw = parsedUrl.searchParams.get('pollMs');
+  if (!raw) return 1_500;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return 1_500;
+  return Math.min(Math.max(parsed, 250), 30_000);
+}
+
+function writeSseEvent<T>(
+  response: ServerResponse,
+  event: string,
+  envelope: BroadcastStreamEnvelope<T>,
+): void {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(envelope)}\n\n`);
+}
+
+function streamSnapshotEvents<T>(
+  request: IncomingMessage,
+  response: ServerResponse,
+  input: {
+    event: string;
+    pollMs: number;
+    initial: BroadcastStreamEnvelope<T>;
+    load(): Promise<BroadcastStreamEnvelope<T> | null>;
+  },
+): void {
+  let closed = false;
+  let polling = false;
+  let lastVersion = input.initial.version;
+
+  response.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-cache, no-transform',
+    connection: 'keep-alive',
+    'x-accel-buffering': 'no',
+  });
+  response.flushHeaders?.();
+  writeSseEvent(response, input.event, input.initial);
+
+  const poll = async () => {
+    if (closed || polling) return;
+    polling = true;
+    try {
+      const next = await input.load();
+      if (next && next.version !== lastVersion) {
+        lastVersion = next.version;
+        writeSseEvent(response, input.event, next);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      response.write(`event: stream-error\n`);
+      response.write(`data: ${JSON.stringify({ message })}\n\n`);
+    } finally {
+      polling = false;
+    }
+  };
+
+  const interval = setInterval(() => {
+    void poll();
+  }, input.pollMs);
+  interval.unref?.();
+
+  const close = () => {
+    closed = true;
+    clearInterval(interval);
+  };
+  request.on('close', close);
+  response.on('close', close);
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -208,6 +333,25 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  const boardEventsMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/boards\/([^/]+)\/events$/);
+  if (boardEventsMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const boardId = decodeURIComponent(boardEventsMatch[1]!);
+    const initial = await xiangqiBroadcastBoardStreamForApi(boardId);
+    if (!initial) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    streamSnapshotEvents(request, response, {
+      event: 'board',
+      pollMs: parseEventPollMs(_parsedUrl),
+      initial,
+      load: () => xiangqiBroadcastBoardStreamForApi(boardId),
+    });
+    return true;
+  }
+
   const boardExportMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/boards\/([^/]+)\/export$/);
   if (boardExportMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -233,6 +377,28 @@ export async function tryHandle(
       return true;
     }
     writeJson(response, 200, payload);
+    return true;
+  }
+
+  const roundEventsMatch = pathname.match(
+    /^\/api\/xiangqi\/broadcasts\/([^/]+)\/rounds\/([^/]+)\/events$/,
+  );
+  if (roundEventsMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const tourSlug = decodeURIComponent(roundEventsMatch[1]!);
+    const roundId = decodeURIComponent(roundEventsMatch[2]!);
+    const initial = await xiangqiBroadcastRoundStreamForApi(tourSlug, roundId);
+    if (!initial) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    streamSnapshotEvents(request, response, {
+      event: 'round',
+      pollMs: parseEventPollMs(_parsedUrl),
+      initial,
+      load: () => xiangqiBroadcastRoundStreamForApi(tourSlug, roundId),
+    });
     return true;
   }
 
