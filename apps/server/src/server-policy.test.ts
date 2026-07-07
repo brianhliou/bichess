@@ -358,6 +358,7 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
   assert.equal(isClientRoute('/forum/redirect/post/post_123'), true);
+  assert.equal(isClientRoute('/broadcast/xiangqi'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample/round/men-r1'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), true);

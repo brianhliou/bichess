@@ -13,6 +13,7 @@ import {
   type XiangqiBroadcastApiPersistence,
   xiangqiBroadcastBoardExportForApi,
   xiangqiBroadcastBoardForApi,
+  xiangqiBroadcastIndexForApi,
   xiangqiBroadcastRoundForApi,
   xiangqiBroadcastTourForApi,
 } from './xiangqi-broadcasts.js';
@@ -45,17 +46,55 @@ function deps(
   overrides: Partial<XiangqiBroadcastApiPersistence> = {},
 ): XiangqiBroadcastApiPersistence {
   return {
+    listXiangqiBroadcastTours: async () => [
+      { ...tour, createdAt: new Date(0), updatedAt: new Date(1_000) },
+    ],
     getXiangqiBroadcastTour: async (slug) =>
-      slug === tour.slug ? { ...tour, createdAt: new Date(0), updatedAt: new Date(0) } : null,
+      slug === tour.slug ? { ...tour, createdAt: new Date(0), updatedAt: new Date(1_000) } : null,
     listXiangqiBroadcastRounds: async (tourSlug) =>
       tourSlug === tour.slug
-        ? rounds.map((round) => ({ ...round, createdAt: new Date(0), updatedAt: new Date(0) }))
+        ? rounds.map((round) => ({ ...round, createdAt: new Date(0), updatedAt: new Date(2_000) }))
         : [],
     listXiangqiBroadcastBoards: async (roundId) => (roundId === board.roundId ? [storedBoard] : []),
     getXiangqiBroadcastBoard: async (boardId) => (boardId === board.id ? storedBoard : null),
+    listXiangqiBroadcastSyncLogs: async (input) =>
+      input.tourSlug === tour.slug
+        ? [
+            {
+              id: 1,
+              tourSlug: tour.slug,
+              roundId: null,
+              boardId: null,
+              sourceBoardId: null,
+              severity: 'info',
+              kind: 'poll_ok',
+              message: 'source snapshot imported',
+              payload: {},
+              createdAt: new Date(3_000),
+            },
+          ]
+        : [],
     ...overrides,
   };
 }
+
+test('broadcast index API summarizes tournaments and sync status', async () => {
+  const payload = await xiangqiBroadcastIndexForApi(deps());
+
+  assert.equal(payload.tours.length, 1);
+  const entry = payload.tours[0]!;
+  assert.equal(entry.tour.slug, tour.slug);
+  assert.equal(entry.roundCount, 1);
+  assert.equal(entry.boardCount, 1);
+  assert.equal(entry.liveBoardCount, 0);
+  assert.equal(entry.completeBoardCount, 1);
+  assert.equal(entry.scheduledBoardCount, 0);
+  assert.equal(entry.totalPlies, board.moves.length);
+  assert.deepEqual(entry.updatedAt, new Date(2_000));
+  assert.equal(entry.lastSyncLog?.kind, 'poll_ok');
+  assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'payload'), false);
+  assert.equal(Object.hasOwn(entry.lastSyncLog ?? {}, 'message'), false);
+});
 
 test('broadcast tour API returns tour detail with rounds', async () => {
   const payload = await xiangqiBroadcastTourForApi(tour.slug, deps());

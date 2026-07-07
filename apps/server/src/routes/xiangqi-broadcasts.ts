@@ -23,6 +23,7 @@ type BroadcastHistorySnapshot = {
 };
 
 export type XiangqiBroadcastApiPersistence = {
+  listXiangqiBroadcastTours(): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
   getXiangqiBroadcastTour(slug: string): ReturnType<typeof persistence.getXiangqiBroadcastTour>;
   listXiangqiBroadcastRounds(
     tourSlug: string,
@@ -33,14 +34,59 @@ export type XiangqiBroadcastApiPersistence = {
   getXiangqiBroadcastBoard(
     boardId: string,
   ): ReturnType<typeof persistence.getXiangqiBroadcastBoard>;
+  listXiangqiBroadcastSyncLogs(
+    input: Parameters<typeof persistence.listXiangqiBroadcastSyncLogs>[0],
+  ): ReturnType<typeof persistence.listXiangqiBroadcastSyncLogs>;
 };
 
 const livePersistence: XiangqiBroadcastApiPersistence = {
+  listXiangqiBroadcastTours: () => persistence.listXiangqiBroadcastTours(),
   getXiangqiBroadcastTour: (slug) => persistence.getXiangqiBroadcastTour(slug),
   listXiangqiBroadcastRounds: (tourSlug) => persistence.listXiangqiBroadcastRounds(tourSlug),
   listXiangqiBroadcastBoards: (roundId) => persistence.listXiangqiBroadcastBoards(roundId),
   getXiangqiBroadcastBoard: (boardId) => persistence.getXiangqiBroadcastBoard(boardId),
+  listXiangqiBroadcastSyncLogs: (input) => persistence.listXiangqiBroadcastSyncLogs(input),
 };
+
+export async function xiangqiBroadcastIndexForApi(
+  deps: XiangqiBroadcastApiPersistence = livePersistence,
+) {
+  const tours = await deps.listXiangqiBroadcastTours();
+  const entries = await Promise.all(
+    tours.map(async (tour) => {
+      const [rounds, syncLogs] = await Promise.all([
+        deps.listXiangqiBroadcastRounds(tour.slug),
+        deps.listXiangqiBroadcastSyncLogs({ tourSlug: tour.slug }),
+      ]);
+      const boardsByRound = await Promise.all(
+        rounds.map((round) => deps.listXiangqiBroadcastBoards(round.id)),
+      );
+      const boards = boardsByRound.flat();
+      return {
+        tour,
+        roundCount: rounds.length,
+        boardCount: boards.length,
+        liveBoardCount: boards.filter((board) => board.status === 'live').length,
+        completeBoardCount: boards.filter((board) => board.status === 'complete').length,
+        scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
+        totalPlies: boards.reduce((sum, board) => sum + board.plyCount, 0),
+        updatedAt: latestDate([
+          tour.updatedAt,
+          ...rounds.map((round) => round.updatedAt),
+          ...boards.map((board) => board.updatedAt),
+        ]),
+        lastSyncLog: syncLogs[0]
+          ? {
+              severity: syncLogs[0].severity,
+              kind: syncLogs[0].kind,
+              createdAt: syncLogs[0].createdAt,
+            }
+          : null,
+      };
+    }),
+  );
+  return { tours: entries };
+}
 
 export async function xiangqiBroadcastTourForApi(
   tourSlug: string,
@@ -147,6 +193,14 @@ function buildXiangqiBroadcastBoardReplay(board: persistence.StoredXiangqiBroadc
   };
 }
 
+function latestDate(values: Date[]): Date | null {
+  let latest: Date | null = null;
+  for (const value of values) {
+    if (!latest || value.getTime() > latest.getTime()) latest = value;
+  }
+  return latest;
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -195,6 +249,13 @@ export async function tryHandle(
       return true;
     }
     writeJson(response, 200, payload);
+    return true;
+  }
+
+  if (pathname === '/api/xiangqi/broadcasts') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    writeJson(response, 200, await xiangqiBroadcastIndexForApi());
     return true;
   }
 

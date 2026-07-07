@@ -126,6 +126,7 @@ const wantsForum =
   page === 'forum';
 const wantsLegacyPlay = path === '/play' || page === 'play';
 const wantsWatch = path === '/watch' || page === 'watch';
+const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
@@ -317,6 +318,13 @@ if (replaySample) {
   setTitleKey('nav.watch');
   void mountOrReport(() =>
     import('./watch-route.js').then(({ mountWatch }) => mountWatch(appRoot)),
+  );
+} else if (wantsXiangqiBroadcastIndex) {
+  setTitle('Xiangqi broadcasts');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastIndex }) =>
+      mountXiangqiBroadcastIndex(appRoot),
+    ),
   );
 } else if (xiangqiBroadcastBoardId) {
   setTitle('Xiangqi broadcast');

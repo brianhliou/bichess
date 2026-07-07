@@ -66,6 +66,38 @@ type BroadcastRoundResponse = {
   boards: BroadcastBoardSummary[];
 };
 
+type BroadcastSyncLogSummary = {
+  severity: 'info' | 'warning' | 'error';
+  kind: string;
+  createdAt: string;
+};
+
+type BroadcastIndexEntry = {
+  tour: XiangqiBroadcastTour;
+  roundCount: number;
+  boardCount: number;
+  liveBoardCount: number;
+  completeBoardCount: number;
+  scheduledBoardCount: number;
+  totalPlies: number;
+  updatedAt: string | null;
+  lastSyncLog: BroadcastSyncLogSummary | null;
+};
+
+type BroadcastIndexResponse = {
+  tours: BroadcastIndexEntry[];
+};
+
+export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<void> {
+  setBroadcastRoot(root, 'Loading broadcasts');
+  try {
+    const data = await fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts');
+    root.replaceChildren(buildNav(), renderIndex(data));
+  } catch (err) {
+    renderError(root, err);
+  }
+}
+
 export async function mountXiangqiBroadcastTour(
   root: HTMLElement,
   tourSlug: string,
@@ -131,6 +163,34 @@ async function fetchJson<T>(url: string): Promise<T> {
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   root.replaceChildren(buildNav(), buildNotice('Broadcast unavailable', message));
+}
+
+function renderIndex(data: BroadcastIndexResponse): HTMLElement {
+  const main = broadcastShell();
+  main.append(
+    heroSection({
+      eyebrow: 'Xiangqi broadcast',
+      title: 'Tournament broadcasts',
+      meta: [`${data.tours.length} tournaments`],
+    }),
+  );
+
+  const section = document.createElement('section');
+  section.className = 'xqb-section';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Broadcasts';
+  const list = document.createElement('div');
+  list.className = 'xqb-list';
+  for (const entry of data.tours) list.append(tourRow(entry));
+  if (data.tours.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'xqb-empty';
+    empty.textContent = 'No broadcasts are available yet.';
+    list.append(empty);
+  }
+  section.append(heading, list);
+  main.append(section);
+  return main;
 }
 
 function renderTour(data: BroadcastTourResponse): HTMLElement {
@@ -346,6 +406,41 @@ function heroSection(input: {
   return section;
 }
 
+function tourRow(entry: BroadcastIndexEntry): HTMLElement {
+  const row = document.createElement('a');
+  row.className = 'xqb-row xqb-tour-row';
+  row.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
+
+  const copy = document.createElement('span');
+  copy.className = 'xqb-row-copy';
+  const name = document.createElement('strong');
+  name.textContent = entry.tour.name;
+  const meta = document.createElement('span');
+  meta.textContent = [
+    entry.tour.location,
+    dateRange(entry.tour.startsAt, entry.tour.endsAt),
+    `${entry.roundCount} rounds`,
+  ]
+    .filter(Boolean)
+    .join(' / ');
+  copy.append(name, meta);
+
+  const status = document.createElement('span');
+  status.className = 'xqb-status xqb-tour-status';
+  status.textContent = [
+    `${entry.boardCount} boards`,
+    entry.liveBoardCount > 0 ? `${entry.liveBoardCount} live` : null,
+    entry.completeBoardCount > 0 ? `${entry.completeBoardCount} complete` : null,
+    `${entry.totalPlies} plies`,
+    freshnessLabel(entry),
+  ]
+    .filter(Boolean)
+    .join(' / ');
+
+  row.append(copy, status, chevron());
+  return row;
+}
+
 function boardRow(board: BroadcastBoardSummary): HTMLElement {
   const row = document.createElement('a');
   row.className = 'xqb-row xqb-board-row';
@@ -469,6 +564,19 @@ function statusLabel(status: XiangqiGameStatus): string {
     return `${result} by ${status.reason}`;
   }
   return `Aborted: ${status.reason}`;
+}
+
+function freshnessLabel(entry: BroadcastIndexEntry): string | null {
+  if (entry.lastSyncLog) {
+    const severity =
+      entry.lastSyncLog.severity === 'error'
+        ? 'Sync error'
+        : entry.lastSyncLog.severity === 'warning'
+          ? 'Sync warning'
+          : 'Synced';
+    return `${severity} ${formatDate(entry.lastSyncLog.createdAt) ?? entry.lastSyncLog.kind}`;
+  }
+  return entry.updatedAt ? `Updated ${formatDate(entry.updatedAt)}` : null;
 }
 
 function plyCount(board: BroadcastBoardSummary): number {
