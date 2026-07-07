@@ -299,3 +299,21 @@ export type {
   SiteStats,
 } from './persistence-site-stats.js';
 export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
+export type {
+  StoredXiangqiBroadcastBoard,
+  StoredXiangqiBroadcastRound,
+  StoredXiangqiBroadcastTour,
+  XiangqiBroadcastImportError,
+  XiangqiBroadcastImportResult,
+  XiangqiBroadcastSyncLog,
+  XiangqiBroadcastSyncLogSeverity,
+} from './persistence-xiangqi-broadcasts.js';
+export {
+  getXiangqiBroadcastBoard,
+  getXiangqiBroadcastTour,
+  importXiangqiBroadcastPack,
+  listXiangqiBroadcastBoards,
+  listXiangqiBroadcastRounds,
+  listXiangqiBroadcastSyncLogs,
+  listXiangqiBroadcastTours,
+} from './persistence-xiangqi-broadcasts.js';

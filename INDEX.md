@@ -19,6 +19,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`draft960Variant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant (flagged/dev-only live room + `/xiangqi-spike`); cannon vision = field of fire |
+| `xiangqi-broadcast.ts` | Canonical xiangqi broadcast payload types, runtime validators, fixture replay validation, and the Mistboard coordinate schema for tournament broadcasts |
 | `xiangqi-vision-kernel.ts` | Geometry-parameterized FoW vision walks shared by the xiangqi-family kernels (full Xiangqi, Dark Mini Xiangqi, Crossroads Chess): the cannon screen-walk, horse blocked-leg walk, and rook/slider ray walk + `VisionAccum`/`emptyVision`, driven by a per-variant `VisionProbe`. Per-piece rules that genuinely differ (general/advisor/elephant/soldier/pawn) stay in each variant kernel |
 | `variants-shogi.ts` | Shogi rules kernel reserved for future hidden-information variants |
 | `events.ts` | `GameEvent` union type, `replayGameEvents` reducer, `GameProjection` |
@@ -134,6 +135,7 @@ Edit task → find file → open only that file.
 | `routes/drop-mini-xiangqi-games.ts` | Drop Mini Xiangqi postgame/review API branch; exposes the finished open-information board, reserve history, and move timeline |
 | `routes/fortress-xiangqi-rooms.ts` | Fortress Xiangqi room-creation branch for `POST /api/rooms` (PvP + Fairy-Stockfish PvE; casual, rated-ready). Factory-bound (`variant-tenant/rooms-route.ts`; account-gated rated) |
 | `routes/fortress-xiangqi-games.ts` | Fortress Xiangqi postgame/review API branch; finished open-information 7x8 board, reserve history, and move timeline |
+| `routes/xiangqi-broadcasts.ts` | Xiangqi broadcast read APIs: tour detail, round boards, board replay payload, and canonical board export |
 | `routes/puzzles.ts` | Mini Xiangqi puzzle API: list/detail endpoints plus attempt validation for Mini and Drop Mini Xiangqi puzzle lines |
 | `routes/bots.ts` | Public bot directory/profile API (`/api/bots`, `/api/bots/:id`) filtered to playable enabled variants |
 | `bot-profile-policy.ts` | Shared bot profile policy: public bot id parsing and playable-variant filtering for bot directory/profile surfaces |
@@ -160,6 +162,7 @@ Edit task → find file → open only that file.
 | `persistence-forum.ts` | Forum category/topic/post/report persistence: visible lists, search, topic detail, create topic, add reply, edit/move/moderate, report lifecycle, and recent-write counters for API rate limits |
 | `persistence-feedback.ts` | Feedback persistence |
 | `persistence-site-stats.ts` | Site statistics query |
+| `persistence-xiangqi-broadcasts.ts` | Xiangqi broadcast persistence: tour/round/board upserts, legal replay validation import, sync logs, and read queries |
 | `persistence-puzzles.ts` | Daily puzzle selection persistence (`daily_puzzle_selections`): deterministic day-based pick for the homepage slot plus a persisted override, over Mini/Drop Mini Xiangqi puzzle lines |
 | `persistence-test-support.ts` | Shared Postgres test harness: migration, truncation reset, DB URL gating, and persistence test helpers |
 | `test-database-url.ts` | Persistent-test database URL guard: prefers `TEST_DATABASE_URL`, refuses the local dev DB by default, and allows an explicit destructive-test override |
@@ -193,6 +196,7 @@ Edit task → find file → open only that file.
 | `enqueue-engine-games.ts` | CLI: enqueue engine games |
 | `enqueue-engine-smoke.ts` | CLI: enqueue engine smoke |
 | `enqueue-engine-tournament.ts` | CLI: enqueue engine tournament |
+| `import-xiangqi-broadcast.ts` | CLI/helper for importing xiangqi broadcast fixture packs into Postgres, with optional `games/*.json` negative fixtures |
 | `import-corpus.ts` | CLI: import FoW game corpus |
 | `worker.ts` | Background worker entry point for async engine game execution |
 | `feedback-notify.ts` | Email notification on feedback submission |

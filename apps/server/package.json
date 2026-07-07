@@ -22,6 +22,7 @@
     "seed:watch": "tsx src/import-corpus.ts --dir ../web/public/replay-samples --corpus local-watch-fixture --white-name \"Mistboard Engine (white)\" --black-name \"Mistboard Engine (black)\" --mode eve",
     "generate:variant-fixtures": "tsx src/generate-variant-fixtures.ts",
     "seed:variant-fixtures": "tsx src/seed-variant-fixtures.ts",
+    "import:xiangqi-broadcast": "tsx src/import-xiangqi-broadcast.ts",
     "import-corpus": "tsx src/import-corpus.ts",
     "engine:enqueue": "tsx src/enqueue-engine-games.ts",
     "engine:enqueue-smoke": "tsx src/enqueue-engine-smoke.ts",

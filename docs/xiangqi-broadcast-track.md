@@ -190,6 +190,23 @@ legal xiangqi.
 
 Done means Mistboard can publish completed tournament records.
 
+Local import command:
+
+```bash
+npm run db:import:xiangqi-broadcast -- \
+  --dir packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample
+```
+
+Add `--include-game-files` to also ingest `games/*.json`, including the
+intentionally illegal fixture used to exercise sync-log failures.
+
+Read APIs:
+
+- `GET /api/xiangqi/broadcasts/:tourSlug`
+- `GET /api/xiangqi/broadcasts/:tourSlug/rounds/:roundId`
+- `GET /api/xiangqi/broadcasts/boards/:boardId`
+- `GET /api/xiangqi/broadcasts/boards/:boardId/export`
+
 ### M2: Local Live Simulation
 
 - Add event tape runner.
