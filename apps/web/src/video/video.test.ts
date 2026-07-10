@@ -30,6 +30,34 @@ describe('expandTimeline', () => {
     expect(timeline.segmentStartsMs.a).toBe(0);
   });
 
+  it('stretches still holds proportionally but keeps animation and blink rhythm', () => {
+    const plan = basePlan([
+      {
+        id: 'a',
+        durationMs: 10_000,
+        steps: [
+          {
+            kind: 'position',
+            position: [{ square: 'e5', color: 'red', role: 'chariot' }],
+            holdMs: 300,
+          },
+          { kind: 'move', from: 'e5', to: 'e9', durationMs: 200, holdAfterMs: 300 },
+        ],
+      },
+    ]);
+    const timeline = expandTimeline(plan);
+    expect(timeline.totalMs).toBeCloseTo(10_000, 5);
+    // Animation frames keep 1000/30 ms each; both holds scale by the same factor.
+    const animation = timeline.shots.filter((shot) => shot.moving !== null);
+    for (const shot of animation) expect(shot.durationMs).toBeCloseTo(1000 / 30, 5);
+    const stills = timeline.shots.filter((shot) => shot.moving === null);
+    expect(stills.length).toBe(2);
+    expect(stills[1]!.durationMs / stills[0]!.durationMs).toBeCloseTo(1, 5);
+    // The landing sound moved with the stretched pre-move hold.
+    const preMoveHold = stills[0]!.durationMs;
+    expect(timeline.soundEvents[0]?.atMs).toBeCloseTo(preMoveHold + 200, 5);
+  });
+
   it('lets long steps extend past the target (never cuts an animation)', () => {
     const plan = basePlan([
       {

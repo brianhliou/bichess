@@ -29,11 +29,14 @@ function defaultResolver(publicPath: string): Buffer {
   return readFileSync(path.join(publicDir, `.${publicPath}`));
 }
 
-export function rasterizeSvg(svg: string): Buffer {
+export function rasterizeSvg(svg: string, scale = 1): Buffer {
   const resvg = new Resvg(inlinePieceImages(svg), {
     // System fonts cover the CJK river label (this pipeline runs on the
     // recording machine, not in CI).
     font: { loadSystemFonts: true, defaultFontFamily: 'Helvetica' },
+    // Supersample: piece art is 1024px source; rasterizing the canvas at 2x
+    // (4K frames) keeps it sharp where 1:1 1080p rendering visibly softened.
+    ...(scale !== 1 ? { fitTo: { mode: 'zoom' as const, value: scale } } : {}),
   });
   return resvg.render().asPng();
 }

@@ -66,6 +66,11 @@ export type ScenePlan = {
   /** Canvas background behind the board. */
   background: string;
   perspective?: XiangqiColor;
+  /** Frame supersampling: PNGs render at width*scale (default 2 → 4K frames
+   *  from a 1080p layout; piece art is 1024px source, so 2x stays sharp). */
+  renderScale?: number;
+  /** Small corner wordmark (e.g. "mistboard.com"). Omit for none. */
+  watermark?: string;
   segments: readonly SceneSegment[];
 };
 

@@ -64,6 +64,10 @@ export function renderShotSvg(plan: ScenePlan, shot: Shot): string {
   const tx = (plan.width - BOARD_WIDTH * scale) / 2;
   const ty = (plan.height - BOARD_HEIGHT * scale) / 2;
 
+  const watermark = plan.watermark
+    ? `<text x="${plan.width - 28}" y="${plan.height - 26}" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="rgba(255,255,255,0.30)" letter-spacing="1">${escapeXml(plan.watermark)}</text>`
+    : '';
+
   return [
     `<svg width="${plan.width}" height="${plan.height}" viewBox="0 0 ${plan.width} ${plan.height}" xmlns="http://www.w3.org/2000/svg">`,
     `<style>${VIDEO_BOARD_STYLE}</style>`,
@@ -71,8 +75,17 @@ export function renderShotSvg(plan: ScenePlan, shot: Shot): string {
     `<g transform="translate(${round2(tx)} ${round2(ty)}) scale(${round2(scale)})">`,
     boardSvg,
     `</g>`,
+    watermark,
     `</svg>`,
   ].join('');
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }
 
 /** Video overlays live in board viewBox coordinates, injected inside the board

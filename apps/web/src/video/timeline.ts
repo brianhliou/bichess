@@ -71,6 +71,13 @@ const EMPTY_OVERLAYS: OverlayState = {
   flash: null,
 };
 
+/** Segment-local shot with stretch metadata: still holds absorb narration
+ *  time proportionally; animation frames and flash blinks keep their rhythm. */
+type PendingShot = Omit<Shot, 'durationMs'> & {
+  durationMs: number;
+  stretchable: boolean;
+};
+
 export function expandTimeline(plan: ScenePlan): Timeline {
   const frameMs = 1000 / plan.fps;
   const shots: Shot[] = [];
@@ -82,18 +89,23 @@ export function expandTimeline(plan: ScenePlan): Timeline {
   let overlays: OverlayState = EMPTY_OVERLAYS;
   let clockMs = 0;
 
-  const push = (shot: Omit<Shot, 'durationMs'>, durationMs: number): void => {
-    if (durationMs <= 0) return;
-    shots.push({ ...shot, durationMs });
-    clockMs += durationMs;
-  };
-  const still = (durationMs: number): void =>
-    push({ board, lastMove, overlays, moving: null }, durationMs);
-
   for (const segment of plan.segments) {
-    const segmentStart = clockMs;
-    segmentStartsMs[segment.id] = segmentStart;
+    segmentStartsMs[segment.id] = clockMs;
     const targetMs = segment.durationMs;
+
+    const pending: PendingShot[] = [];
+    // Sound boundaries: fire when the shot at this index starts.
+    const pendingSounds: Array<{ beforeShotIndex: number; sound: 'move' | 'capture' }> = [];
+    const push = (
+      shot: Omit<Shot, 'durationMs'>,
+      durationMs: number,
+      stretchable: boolean,
+    ): void => {
+      if (durationMs <= 0) return;
+      pending.push({ ...shot, durationMs, stretchable });
+    };
+    const still = (durationMs: number): void =>
+      push({ board, lastMove, overlays, moving: null }, durationMs, true);
 
     for (const step of segment.steps) {
       switch (step.kind) {
@@ -132,10 +144,11 @@ export function expandTimeline(plan: ScenePlan): Timeline {
                 moving: { piece, from: step.from, to: step.to, t: easeInOut(i / frameCount) },
               },
               frameMs,
+              false,
             );
           }
           const sound = step.sound ?? (capture ? 'capture' : 'move');
-          if (sound !== 'none') soundEvents.push({ atMs: clockMs, sound });
+          if (sound !== 'none') pendingSounds.push({ beforeShotIndex: pending.length, sound });
           board = { ...boardWithout, [step.to]: piece };
           lastMove = { from: step.from, to: step.to };
           still(step.holdAfterMs ?? DEFAULT_MOVE_HOLD_AFTER_MS);
@@ -145,12 +158,16 @@ export function expandTimeline(plan: ScenePlan): Timeline {
           const holdMs = step.holdMs ?? DEFAULT_FLASH_HOLD_MS;
           const on: OverlayState = { ...overlays, flash: { from: step.from, to: step.to } };
           const off: OverlayState = { ...overlays, flash: null };
-          // Two blinks, then hold lit for the remainder.
+          // Two blinks (fixed rhythm), then hold lit for the remainder.
           const blink = Math.min(280, holdMs / 5);
           for (const state of [on, off, on, off, on]) {
-            push({ board, lastMove, overlays: state, moving: null }, blink);
+            push({ board, lastMove, overlays: state, moving: null }, blink, false);
           }
-          push({ board, lastMove, overlays: on, moving: null }, Math.max(0, holdMs - blink * 5));
+          push(
+            { board, lastMove, overlays: on, moving: null },
+            Math.max(0, holdMs - blink * 5),
+            true,
+          );
           overlays = off;
           break;
         }
@@ -191,8 +208,50 @@ export function expandTimeline(plan: ScenePlan): Timeline {
       }
     }
 
-    const elapsed = clockMs - segmentStart;
-    if (elapsed < targetMs) still(targetMs - elapsed);
+    // Stretch: distribute any deficit vs the target across the segment's
+    // still holds proportionally, so visuals pace across the narration
+    // instead of front-loading and going dead. No stretchable shots (or an
+    // empty segment) falls back to one tail hold.
+    const elapsed = pending.reduce((sum, shot) => sum + shot.durationMs, 0);
+    const deficit = targetMs - elapsed;
+    if (deficit > 0) {
+      const flexible = pending
+        .filter((shot) => shot.stretchable)
+        .reduce((sum, shot) => sum + shot.durationMs, 0);
+      if (flexible > 0) {
+        const factor = (flexible + deficit) / flexible;
+        for (const shot of pending) {
+          if (shot.stretchable) shot.durationMs *= factor;
+        }
+      } else {
+        pending.push({
+          board,
+          lastMove,
+          overlays,
+          moving: null,
+          durationMs: deficit,
+          stretchable: true,
+        });
+      }
+    }
+
+    let soundCursor = 0;
+    pending.forEach((shot, index) => {
+      while (
+        soundCursor < pendingSounds.length &&
+        pendingSounds[soundCursor]!.beforeShotIndex === index
+      ) {
+        soundEvents.push({ atMs: clockMs, sound: pendingSounds[soundCursor]!.sound });
+        soundCursor += 1;
+      }
+      const { stretchable: _stretchable, ...rest } = shot;
+      shots.push(rest);
+      clockMs += shot.durationMs;
+    });
+    while (soundCursor < pendingSounds.length) {
+      soundEvents.push({ atMs: clockMs, sound: pendingSounds[soundCursor]!.sound });
+      soundCursor += 1;
+    }
   }
 
   return { shots, soundEvents, segmentStartsMs, totalMs: clockMs };

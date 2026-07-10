@@ -33,13 +33,14 @@ export function writeFrameBundle(
   const lines: string[] = ['ffconcat version 1.0'];
   let lastFile: string | null = null;
 
+  const renderScale = plan.renderScale ?? 2;
   timeline.shots.forEach((shot, index) => {
     const svg = renderShotSvg(plan, shot);
     const hash = createHash('sha256').update(svg).digest('hex').slice(0, 16);
     let file = written.get(hash);
     if (!file) {
       file = path.join(framesDir, `${hash}.png`);
-      writeFileSync(file, rasterizeSvg(svg));
+      writeFileSync(file, rasterizeSvg(svg, renderScale));
       written.set(hash, file);
     }
     lines.push(`file '${file}'`);
