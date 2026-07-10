@@ -6,6 +6,8 @@ dist
 *.log
 .DS_Store
 apps/web/.vite
+apps/web/.video-out
+apps/web/.video-cache
 .venv
 __pycache__
 *.egg-info

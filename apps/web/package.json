@@ -11,6 +11,7 @@
     "test": "node scripts/learn-interface-smoke.mjs",
     "test:dark-xiangqi:persistent": "node scripts/dark-xiangqi-persistent-smoke.mjs",
     "test:unit": "vitest run",
+    "video:frames": "tsx src/video/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "predev": "node ../../scripts/ensure-packages-built.mjs",
@@ -24,7 +25,9 @@
     "posthog-js": "^1.372.9"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "happy-dom": "^20.9.0",
+    "tsx": "^4.23.0",
     "typescript": "^5.8.0",
     "vite": "^6.0.0",
     "vitest": "^4.1.6"
