@@ -23,7 +23,7 @@ import { runUciBestmove, UciEnginePool } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
-export const JUNGLE_FLIP_ENGINE_VERSION = '0.4.0';
+export const JUNGLE_FLIP_ENGINE_VERSION = '0.5.0';
 export const JUNGLE_FLIP_DEFAULT_ENGINE_ID = 'misty-jungle-flip';
 
 export type JungleFlipEngineTier = {
@@ -128,7 +128,28 @@ export type JungleFlipEngineOptions = {
   // one as a threefold draw. Older binaries ignore the trailing token (state_from_fen reads
   // only the leading FEN fields), so this is backward-compatible.
   repSeedFens?: readonly string[];
+  // Decimal seed passed as `JF_TIE_SEED` to break exact-value root ties (mainly the opening
+  // flip). Omit to let the binary self-seed from entropy (varied but non-reproducible). A
+  // stable per-game value (see jungleFlipTieSeed) gives variety AND exact replay. Unknown to
+  // pre-tie-break binaries, which ignore the env var, so this is backward-compatible.
+  tieSeed?: string;
 };
+
+/**
+ * Deterministic per-game tie-break seed for the engine's `JF_TIE_SEED`, derived from the
+ * (persisted) room id: tied choices vary across games yet replay exactly for a given game,
+ * with no extra state to store. FNV-1a 64-bit as a decimal string; never "0" (the engine
+ * reserves 0 as the "off"/legacy-deterministic sentinel).
+ */
+export function jungleFlipTieSeed(roomId: string): string {
+  const mask = 0xffffffffffffffffn;
+  const prime = 0x100000001b3n;
+  let hash = 0xcbf29ce484222325n;
+  for (let i = 0; i < roomId.length; i++) {
+    hash = ((hash ^ BigInt(roomId.charCodeAt(i))) * prime) & mask;
+  }
+  return (hash === 0n ? 1n : hash).toString();
+}
 
 /**
  * Build the UCI `position` command. A non-empty rep seed is appended as
@@ -161,6 +182,7 @@ export async function jungleFlipLiveEngineMove(
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
+      tieSeed: opts.tieSeed,
     });
   } finally {
     release();
@@ -188,5 +210,6 @@ export function jungleFlipEngineMove(
     commands,
     timeoutMs: movetimeCapMs + 4000,
     timeoutMessage: 'jungle-flip-engine move timed out',
+    env: opts.tieSeed ? { JF_TIE_SEED: opts.tieSeed } : undefined,
   });
 }

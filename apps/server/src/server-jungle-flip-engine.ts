@@ -35,6 +35,7 @@ import {
   JUNGLE_FLIP_ENGINE_VERSION,
   jungleFlipEngineTierFor,
   jungleFlipLiveEngineMove,
+  jungleFlipTieSeed,
 } from './jungle-flip-engine.js';
 import {
   engineUciToJungleFlipMove,
@@ -180,7 +181,14 @@ export async function playJungleFlipEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JungleFlipMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: () =>
-      jungleFlipLiveEngineMove(engineId, fen, { nodes: tier.nodes, movetimeCapMs, repSeedFens }),
+      jungleFlipLiveEngineMove(engineId, fen, {
+        nodes: tier.nodes,
+        movetimeCapMs,
+        repSeedFens,
+        // Stable per-game seed so tied choices (mainly the opening flip) vary across games
+        // but replay exactly for this room; no extra state to persist (see jungleFlipTieSeed).
+        tieSeed: jungleFlipTieSeed(room.id),
+      }),
     validate: (uci) => {
       const parsed = engineUciToJungleFlipMove(uci);
       return parsed && isJungleFlipLegalMove(room.projection.state, parsed) ? parsed : null;

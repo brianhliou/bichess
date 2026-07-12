@@ -163,6 +163,8 @@ export type RunUciBestmoveArgs = {
   timeoutMs: number;
   /** Error message used when the move times out. */
   timeoutMessage: string;
+  /** Extra env vars merged over the parent env for the spawned process (e.g. a seed). */
+  env?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -173,9 +175,12 @@ export type RunUciBestmoveArgs = {
  * through a `UciEnginePool`.
  */
 export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null> {
-  const { bin, commands, timeoutMs, timeoutMessage } = args;
+  const { bin, commands, timeoutMs, timeoutMessage, env } = args;
   return new Promise<string | null>((resolveMove, reject) => {
-    const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(bin, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    });
     let buf = '';
     let settled = false;
     const advertisedOptions = new Set<string>();
