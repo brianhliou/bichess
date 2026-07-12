@@ -6,7 +6,7 @@ import {
   type JungleFlipGameState,
   type JungleFlipMove,
 } from '@mistboard/game';
-import { buildJungleFlipPositionCommand } from './jungle-flip-engine.js';
+import { buildJungleFlipPositionCommand, jungleFlipTieSeed } from './jungle-flip-engine.js';
 import {
   engineUciToJungleFlipMove,
   jungleFlipMoveToEngineUci,
@@ -167,4 +167,19 @@ test('jungle-flip position command appends a ;-delimited reps seed, omits it whe
     buildJungleFlipPositionCommand('B r - 0 1', ['A r - 0 1', 'C b - 2 2']),
     'position fen B r - 0 1 reps A r - 0 1;C b - 2 2',
   );
+});
+
+test('jungle-flip tie seed: stable per room, varies across rooms, never the "off" sentinel', () => {
+  const a = jungleFlipTieSeed('room-abc');
+  // Deterministic: the same room replays identically.
+  assert.equal(a, jungleFlipTieSeed('room-abc'));
+  // Distinct rooms get distinct seeds (variety across games).
+  assert.notEqual(a, jungleFlipTieSeed('room-abd'));
+  // Always a decimal u64 string, and never "0" (0 = the engine's legacy-deterministic off).
+  for (const id of ['', '0', 'room-abc', 'x'.repeat(64)]) {
+    const s = jungleFlipTieSeed(id);
+    assert.match(s, /^[0-9]+$/);
+    assert.notEqual(s, '0');
+    assert.ok(BigInt(s) <= 0xffffffffffffffffn);
+  }
 });
