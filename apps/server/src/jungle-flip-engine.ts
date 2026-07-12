@@ -23,7 +23,7 @@ import { runUciBestmove, UciEnginePool } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
-export const JUNGLE_FLIP_ENGINE_VERSION = '0.4.0';
+export const JUNGLE_FLIP_ENGINE_VERSION = '0.5.0';
 export const JUNGLE_FLIP_DEFAULT_ENGINE_ID = 'misty-jungle-flip';
 
 export type JungleFlipEngineTier = {
