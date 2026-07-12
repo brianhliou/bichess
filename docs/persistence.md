@@ -126,7 +126,8 @@ Local dev DB (Docker Postgres on `localhost:5435`):
 
 ```bash
 npm run dev                # persistent by default: db:up + db:migrate + server/web pair
-npm run db:seed:qa         # every local fixture: profiles + variant games + watch feed + QA gap-fillers
+npm run dev:lab            # explicit parked/experimental variant profile
+npm run db:seed:qa         # product fixtures: profiles + live variant games + watch + QA gap-fillers
 npm run test:persistent
 ```
 
@@ -134,8 +135,11 @@ npm run test:persistent
 starts the shared `mistboard-postgres` container (creating it via `docker
 compose` only when it does not already exist), so it works from a git worktree
 without the "container name already in use" conflict, and fails loudly if Docker
-is not running. `npm run dev:memory` is the no-Postgres path. The individual
-seeders still run standalone: `db:seed:profiles`, `db:seed:watch`,
+is not running. `npm run dev:memory` is the no-Postgres path. The default
+variant seeder follows `config/product-profile.json` and removes only retired
+rows owned by its `variant-postgame-fixture` corpus. Use
+`db:seed:variant-fixtures:lab` to load every committed variant fixture. The
+individual seeders still run standalone: `db:seed:profiles`, `db:seed:watch`,
 `db:seed:variant-fixtures`, `db:seed:qa-fixtures`.
 
 Multiple sessions share one Postgres: set `MISTBOARD_DEV_PORT_BASE` (default

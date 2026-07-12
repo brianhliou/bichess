@@ -19,43 +19,28 @@
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serverFlagsForProfile } from './product-profile.mjs';
+import { currentWorktreeRole } from './worktree-role.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const concurrentlyBin = resolve(repoRoot, 'node_modules', '.bin', 'concurrently');
 
 const memory = process.argv.includes('--memory');
+const profile = process.argv.includes('--lab') ? 'lab' : 'product';
 const serverScript = memory ? 'dev' : 'dev:persistent';
 
-// Local dev defaults: variant flags ON so room creation and PvE work out of
-// the box. Prod reads these from Railway env; a fresh `npm run dev` in a
-// clean shell otherwise boots flag-off and room creation rejects with e.g.
-// `xiangqi_disabled` (surfaced in the UI as "Could not start an engine
-// game"). Explicit env always wins: export MISTBOARD_XIANGQI_ENABLED=false
-// to exercise the gated-off path. Rated + lobby chat are deliberately NOT
-// defaulted — those are launch decisions, and dev should match prod's
-// posture on them unless opted in.
-const DEV_DEFAULT_TRUE_FLAGS = [
-  'MISTBOARD_XIANGQI_ENABLED',
-  'MISTBOARD_DARK_XIANGQI_ENABLED',
-  'MISTBOARD_DARK_MINI_XIANGQI_ENABLED',
-  'MISTBOARD_FORTRESS_XIANGQI_ENABLED',
-  'MISTBOARD_JIEQI_ENABLED',
-  'MISTBOARD_BANQI_ENABLED',
-  'MISTBOARD_LUZHANQI_ENABLED',
-  'MISTBOARD_REVEAL_CHESS_ENABLED',
-  'MISTBOARD_CROSSROADS_CHESS_ENABLED',
-  'MISTBOARD_DARK_CROSSROADS_CHESS_ENABLED',
-  'MISTBOARD_DARK_SHOGI_ENABLED',
-  'MISTBOARD_DARK_CRAZYHOUSE_ENABLED',
-  'MISTBOARD_KRIEGSPIEL_ENABLED',
-  'MISTBOARD_JUNGLE_ENABLED',
-  'MISTBOARD_JUNGLE_FLIP_ENABLED',
-  'MISTBOARD_CORRESPONDENCE_ENABLED',
-];
-
 const childEnv = { ...process.env };
-for (const flag of DEV_DEFAULT_TRUE_FLAGS) {
+for (const flag of serverFlagsForProfile(profile)) {
   if (childEnv[flag] === undefined) childEnv[flag] = 'true';
+}
+if (profile === 'lab' && childEnv.VITE_MISTBOARD_LAB_ENABLED === undefined) {
+  childEnv.VITE_MISTBOARD_LAB_ENABLED = 'true';
+}
+
+if (currentWorktreeRole(repoRoot) === 'control') {
+  console.warn(
+    'dev: shared control worktree detected. For concurrent write work, create an isolated task worktree with npm run worktree:new -- <slug> --prepare.',
+  );
 }
 
 const base = parsePortBase(process.env.MISTBOARD_DEV_PORT_BASE);
@@ -67,7 +52,7 @@ const serverCommand = `env PORT=${serverPort} npm run ${serverScript} --workspac
 const webCommand = `env PORT=${webPort} MISTBOARD_DEV_API_URL=${devApiUrl} npm run dev --workspace @mistboard/web`;
 
 console.log(
-  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}); ` +
+  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}, ${profile}); ` +
     `set MISTBOARD_DEV_PORT_BASE to run a second session on other ports.`,
 );
 

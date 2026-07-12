@@ -7,7 +7,8 @@
 //
 //   env DATABASE_URL=... tsx src/seed-variant-fixtures.ts [--dir <dir>]
 //
-// Idempotent: duplicate (room_id, seq) inserts are skipped, so re-runs are safe.
+// Product profile is the default; --profile lab seeds every committed fixture.
+// Product runs also remove retired rows owned by this seeder's corpus id.
 
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -37,8 +38,7 @@ import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
-// biome-ignore lint/suspicious/noExplicitAny: cross-variant harness; tenants carry
-// their own concrete Color/Move/State types and are driven through `any` here.
+// biome-ignore lint/suspicious/noExplicitAny: cross-variant harness; tenants carry opaque types.
 const TENANTS: any[] = [
   jungleTenant,
   jungleFlipTenant,
@@ -122,8 +122,14 @@ async function seedFile(dir: string, file: string): Promise<string> {
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
-    options: { dir: { type: 'string', default: 'fixtures/variant-postgame' } },
+    options: {
+      dir: { type: 'string', default: 'fixtures/variant-postgame' },
+      profile: { type: 'string', default: 'product' },
+    },
   });
+  if (values.profile !== 'product' && values.profile !== 'lab') {
+    throw new Error('--profile must be product or lab');
+  }
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is required');
@@ -131,6 +137,10 @@ async function main(): Promise<void> {
   }
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
   const dir = resolve(repoRoot, 'apps/server', values.dir);
+  const productProfile = JSON.parse(
+    await readFile(resolve(repoRoot, 'config/product-profile.json'), 'utf8'),
+  ) as { gameSpecIds: string[] };
+  const productSpecIds = new Set(productProfile.gameSpecIds);
 
   const migrationClient = new pg.Client({ connectionString: databaseUrl });
   await migrationClient.connect();
@@ -141,12 +151,16 @@ async function main(): Promise<void> {
   }
   init(databaseUrl);
 
-  const files = (await readdir(dir)).filter((f) => f.endsWith('.jsonl')).sort();
+  const allFiles = (await readdir(dir)).filter((f) => f.endsWith('.jsonl')).sort();
+  const files =
+    values.profile === 'lab'
+      ? allFiles
+      : allFiles.filter((file) => productSpecIds.has(file.replace(/\.jsonl$/, '')));
   if (files.length === 0) {
     console.error(`no .jsonl fixtures in ${dir}`);
     process.exit(1);
   }
-  console.log(`seeding ${files.length} variant fixture(s) from ${values.dir}`);
+  console.log(`seeding ${files.length} ${values.profile} variant fixture(s) from ${values.dir}`);
   let failures = 0;
   for (const file of files) {
     try {
@@ -157,9 +171,43 @@ async function main(): Promise<void> {
       console.error(`  FAIL ${file.padEnd(28)} ${(err as Error).message}`);
     }
   }
+  if (failures === 0 && values.profile === 'product') {
+    const pruned = await pruneRetiredProductFixtures(databaseUrl, productSpecIds);
+    console.log(`  prune retired seed-owned fixtures: ${pruned}`);
+  }
   await close();
   if (failures > 0) process.exit(1);
   console.log('\ndone.');
+}
+
+async function pruneRetiredProductFixtures(
+  databaseUrl: string,
+  productSpecIds: ReadonlySet<string>,
+): Promise<number> {
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    const retired = await client.query<{ room_id: string }>(
+      `SELECT room_id
+         FROM games
+        WHERE corpus_id = 'variant-postgame-fixture'
+          AND NOT (variant = ANY($1::text[]))`,
+      [[...productSpecIds]],
+    );
+    const roomIds = retired.rows.map((row) => row.room_id);
+    if (roomIds.length > 0) {
+      await client.query('DELETE FROM games WHERE room_id = ANY($1::text[])', [roomIds]);
+      await client.query('DELETE FROM events WHERE room_id = ANY($1::text[])', [roomIds]);
+    }
+    await client.query('COMMIT');
+    return roomIds.length;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
 }
 
 void main();

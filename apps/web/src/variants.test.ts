@@ -156,7 +156,7 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('shows local rating surfaces without disabled Crossroads, Reveal, and Kriegspiel variants', () => {
+  it('shows only product-profile variants on default local rating surfaces', () => {
     // Xiangqi pivot: canonical order (xiangqi anchors, then the flip/animal
     // cluster, then the fog trio), and drop-mini is off the rating grids.
     expect(leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
@@ -168,8 +168,6 @@ describe('web variant launch registry', () => {
       JIEQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
     ]);
     expect(profileRatingVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
@@ -180,8 +178,6 @@ describe('web variant launch registry', () => {
       JIEQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
     ]);
     expect(enabledVariants.map((v) => v.gameSpecId)).not.toContain(DARK_SHOGI_SPEC_ID);
     expect(variantMiniIdForGameSpec(DARK_SHOGI_SPEC_ID)).toBe('dark-shogi');

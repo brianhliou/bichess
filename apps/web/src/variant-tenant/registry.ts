@@ -39,8 +39,11 @@ import {
 import {
   correspondenceEnabled,
   crossroadsChessEnabled,
+  darkCrazyhouseEnabled,
   darkCrossroadsChessEnabled,
+  darkMiniXiangqiEnabled,
   darkShogiEnabled,
+  dropMiniXiangqiEnabled,
   fortressXiangqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -148,7 +151,6 @@ const XIANGQI_CAPABILITIES_BASE = {
 } as const;
 
 const alwaysEnabled = () => true;
-const darkCrazyhouseLandingEnabled = () => import.meta.env.VITE_DARK_CRAZYHOUSE_ENABLED === 'true';
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -324,7 +326,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       defaultEngineId: 'python-fdx-v1.0',
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: darkMiniXiangqiEnabled,
     },
   },
   {
@@ -366,7 +368,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: dropMiniXiangqiEnabled,
       // Ordered strongest-first so the toughest opponent sits at the top of the picker.
       engineOptions: [
         {
@@ -679,7 +681,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: darkMiniXiangqiEnabled,
       engineOptions: [
         {
           id: 'python-dmx-v1.0',
@@ -728,7 +730,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: dropMiniXiangqiEnabled,
       engineOptions: [
         {
           id: 'fairy-stockfish-drop-mini-xiangqi-very-strong',
@@ -1078,7 +1080,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkCrazyhouseLandingEnabled,
+      acceptsDeepLink: darkCrazyhouseEnabled,
     },
   },
   {

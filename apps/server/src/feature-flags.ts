@@ -35,11 +35,11 @@ export function darkMiniXiangqiEnabled(): boolean {
   return process.env.MISTBOARD_DARK_MINI_XIANGQI_ENABLED === 'true';
 }
 
-// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves). Public
-// by default; keep this helper so existing tenant and route code can use the
-// same shape as still-gated variants.
+// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves) is a
+// parked lab surface. Existing postgames remain readable, while new rooms need
+// an explicit lab/runtime opt-in.
 export function dropMiniXiangqiEnabled(): boolean {
-  return true;
+  return process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED === 'true';
 }
 
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket) live rooms. Server-side opt-in,

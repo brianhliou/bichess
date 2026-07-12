@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import {
   applyDropMiniXiangqiMove,
   createInitialDropMiniXiangqiState,
@@ -21,6 +21,13 @@ import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './variant-ten
 
 type DropMiniEngineRoom = Parameters<typeof playDropMiniXiangqiEngineMoveIfReady>[1];
 type DropMiniEngineContext = Parameters<typeof playDropMiniXiangqiEngineMoveIfReady>[0];
+
+const dropMiniFlagBefore = process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED;
+process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED = 'true';
+after(() => {
+  if (dropMiniFlagBefore === undefined) delete process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED;
+  else process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED = dropMiniFlagBefore;
+});
 
 // The live move source is Fairy-Stockfish (a subprocess), so the unit tests cover
 // the deterministic, FSF-free surface: seat detection, scheduling gating, and the

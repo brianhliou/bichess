@@ -536,14 +536,15 @@ describe('landing play panel', () => {
   });
 
   it('creates a Drop Mini Xiangqi engine room from a deep link with the selected built-in tier', async () => {
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxqd_engine' });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
-    // Drop Mini is hidden from the browse picker post-pivot; the engine flow is
-    // still reachable by deep link (its Fairy-Stockfish tiers stay selectable).
+    // Drop Mini is hidden from the product picker; the lab profile keeps its
+    // deep-link engine flow and Fairy-Stockfish tiers available.
     window.history.replaceState(null, '', '/?play=computer&gameSpecId=drop-mini-xiangqi');
     maybeOpenPlayDeepLink([]);
     expect(softLinkedVariantLabel()).toBe('Drop Mini Xiangqi');
@@ -918,9 +919,10 @@ describe('landing play panel', () => {
     expect(window.location.search).toBe('');
   });
 
-  it('selects a Dark Mini Xiangqi deep link from the baseline picker', async () => {
+  it('selects a Dark Mini Xiangqi deep link in the lab profile', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_soft' });
@@ -967,9 +969,10 @@ describe('landing play panel', () => {
     expect(card?.querySelector('svg[data-mini-id="kriegspiel"]')).not.toBeNull();
   });
 
-  it('selects a rated Dark Mini Xiangqi lobby deep link from the baseline picker', async () => {
+  it('selects a rated Dark Mini Xiangqi lobby deep link in the lab profile', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     setRatedModeEnabled(true);
     setResolvedSignedIn(true);
     const fetchSpy = lobbyFetchSpy();

@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { currentWorktreeRole } from './worktree-role.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(__filename), '..');
@@ -147,8 +148,19 @@ function printList(items, emptyText) {
 }
 
 function printStatus() {
+  const role = currentWorktreeRole(REPO_ROOT);
+  console.log('## Workspace role');
+  if (role === 'control') {
+    console.log('shared control worktree');
+    console.log(
+      'agent note: keep this tree clean. Before write work, run npm run worktree:new -- <slug> --prepare and continue in the new path.',
+    );
+  } else {
+    console.log('isolated task worktree');
+  }
+
   const { branch, files, buckets } = statusSummary();
-  console.log('## Git');
+  console.log('\n## Git');
   console.log(branch);
   if (files.length === 0) {
     console.log('clean worktree');

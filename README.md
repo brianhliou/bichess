@@ -44,9 +44,10 @@ npm run dev
 Open `http://localhost:3000`.
 
 `npm run dev` is persistent by default: it starts a local Postgres in Docker,
-applies migrations, and runs the server + web pair against it. No Docker? Run
-`npm run dev:memory` for the in-memory path (DB-backed pages like `/watch` and
-profiles are dark).
+applies migrations, and runs the server + web pair with the live product
+variants. Use `npm run dev:lab` for parked variant work. No Docker? Run
+`npm run dev:memory` or `npm run dev:lab:memory` for the in-memory path
+(DB-backed pages like `/watch` and profiles are dark).
 
 Useful checks:
 
@@ -56,8 +57,9 @@ npm run typecheck
 npm run verify -- --changed
 ```
 
-Load the local QA fixtures (public profiles, watch feed, variant sample games,
-plus an admin account, inbox threads, and a seeded xiangqi ladder):
+Load the product-shaped local QA fixtures (public profiles, watch feed, live
+variant sample games, plus an admin account, inbox threads, and a seeded
+xiangqi ladder):
 
 ```bash
 npm run db:seed:qa
