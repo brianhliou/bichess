@@ -88,6 +88,21 @@ describe('ElephantChess xiangqi import', () => {
     if (!gapPlans[0]!.ok) assert.match(gapPlans[0]!.reason, /not contiguous/);
   });
 
+  it('validates moves beyond local automatic draw adjudications', async () => {
+    const moves = ['b0c2', 'b9c7', 'c2b0', 'c7b9', 'b0c2', 'b9c7', 'c2b0', 'c7b9', 'a3a4'];
+    const input = Readable.from(
+      HEADER + moves.map((move, index) => row('repetition-policy', index, move)).join(''),
+    );
+    const plans = [];
+    for await (const plan of parseElephantChessCsv(input, 'repetition-policy.csv')) {
+      plans.push(plan);
+    }
+
+    assert.equal(plans.length, 1);
+    assert.equal(plans[0]!.ok, true);
+    if (plans[0]!.ok) assert.equal(plans[0]!.game.moves.length, moves.length);
+  });
+
   it('summarizes results, ratings, categories, duplicates, and rejection reasons', async () => {
     const first =
       HEADER + row('first', 0, 'h2e2') + row('first', 1, 'h7e7') + row('bad', 0, 'z9z8');

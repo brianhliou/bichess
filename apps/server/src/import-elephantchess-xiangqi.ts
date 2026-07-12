@@ -19,6 +19,7 @@ import { parseArgs } from 'node:util';
 import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
+  isLegalMove,
   isStandardXiangqiLegalMove,
   pikafishUciToXiangqiSquares,
   type XiangqiMove,
@@ -277,10 +278,38 @@ function normalizeElephantChessMoves(
     const token = rows[index]!.move;
     const squares = pikafishUciToXiangqiSquares(token);
     const move = squares ? { from: squares.from, to: squares.to } : null;
-    if (!move || state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) {
-      return { moves, error: `move ${index + 1} (${token}) is not legal as uci-0indexed` };
+    if (state.status.type !== 'playing') {
+      return {
+        moves,
+        error: `move ${index + 1} (${token}) follows terminal ${state.status.type} status (${state.status.reason})`,
+      };
     }
+    if (!move || !isStandardXiangqiLegalMove(state, move)) {
+      const detail = move
+        ? isLegalMove(state, move)
+          ? 'pseudo-legal but fails check-aware legality'
+          : `not pseudo-legal; source=${JSON.stringify(state.board[move.from] ?? null)}`
+        : 'invalid coordinates';
+      return {
+        moves,
+        error: `move ${index + 1} (${token}) is not legal as uci-0indexed (${detail})`,
+      };
+    }
+    const mover = state.status.turn;
     state = applyStandardXiangqiMove(state, move);
+    // Historical sources may use federation-specific repetition/chase rules or
+    // a different no-capture limit. Keep check-aware move validation, but do
+    // not reject an otherwise legal source game because Mistboard would have
+    // automatically adjudicated a draw at this position.
+    if (
+      state.status.type === 'finished' &&
+      (state.status.reason === 'repetition' || state.status.reason === 'progress-clock')
+    ) {
+      state = {
+        ...state,
+        status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' },
+      };
+    }
     moves.push(move);
   }
   return { moves };
