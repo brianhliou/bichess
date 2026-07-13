@@ -17,8 +17,9 @@ import {
   createEngineGameTask,
   createExperimentJob,
 } from './engine-experiments.js';
+import { upsertBuiltinEngineVersions } from './engine-registry.js';
 import { botVsBotEnabled } from './feature-flags.js';
-import { getPool } from './persistence-db.js';
+import { getPool, withTransaction } from './persistence-db.js';
 import {
   type BotVsBotLane,
   type BotVsBotPairing,
@@ -121,43 +122,51 @@ async function lastBotVsBotEnqueueAtMs(): Promise<number | null> {
 // Live enqueue: one job + one task per game, shaped exactly like the enqueue CLI
 // so the worker's xiangqi runner picks it up unchanged. The lane is recorded on
 // the job so Phase 3 calibration can query only calibration-lane games.
+//
+// All three writes run in ONE transaction: engine_game_tasks.white/black_engine_id
+// are FKs to engine_versions, so the engines MUST be registered before the task
+// insert (like the enqueue CLI does) or it throws. Transactional so a failed task
+// insert rolls the job back too — otherwise an orphan job would poison the
+// rolling-24h rate limiter (which keys off eve_jobs) and block generation for a day.
 async function enqueueLiveGame(input: EnqueueBotVsBotGameInput): Promise<void> {
-  const pool = getPool();
-  const job = await createExperimentJob(pool, {
-    purpose: 'calibration',
-    targetGames: 1,
-    config: {
-      variant: 'xiangqi',
-      source: 'bot-vs-bot-scheduler',
-      lane: input.lane,
-      pairing: {
-        kind:
-          input.pairing.redEngineId === input.pairing.blackEngineId
-            ? 'self-play'
-            : 'engine-vs-engine',
+  await withTransaction(async (tx) => {
+    await upsertBuiltinEngineVersions(tx, [input.pairing.redEngineId, input.pairing.blackEngineId]);
+    const job = await createExperimentJob(tx, {
+      purpose: 'calibration',
+      targetGames: 1,
+      config: {
+        variant: 'xiangqi',
+        source: 'bot-vs-bot-scheduler',
+        lane: input.lane,
+        pairing: {
+          kind:
+            input.pairing.redEngineId === input.pairing.blackEngineId
+              ? 'self-play'
+              : 'engine-vs-engine',
+          white_engine_id: input.pairing.redEngineId,
+          black_engine_id: input.pairing.blackEngineId,
+        },
+      },
+      createdBy: 'bot-vs-bot-scheduler',
+    });
+    await createEngineGameTask(tx, {
+      jobId: job.id,
+      gameIndex: 0,
+      priority: 0,
+      whiteEngineId: input.pairing.redEngineId,
+      blackEngineId: input.pairing.blackEngineId,
+      seed: input.seed,
+      timeControl: { kind: 'none' },
+      openingPolicy: { kind: 'standard' },
+      artifactPolicy: {},
+      resourcePolicy: { providers: ['local', 'railway'], concurrency: 1 },
+      config: {
+        variant: 'xiangqi',
+        max_plies: input.maxPlies,
         white_engine_id: input.pairing.redEngineId,
         black_engine_id: input.pairing.blackEngineId,
       },
-    },
-    createdBy: 'bot-vs-bot-scheduler',
-  });
-  await createEngineGameTask(pool, {
-    jobId: job.id,
-    gameIndex: 0,
-    priority: 0,
-    whiteEngineId: input.pairing.redEngineId,
-    blackEngineId: input.pairing.blackEngineId,
-    seed: input.seed,
-    timeControl: { kind: 'none' },
-    openingPolicy: { kind: 'standard' },
-    artifactPolicy: {},
-    resourcePolicy: { providers: ['local', 'railway'], concurrency: 1 },
-    config: {
-      variant: 'xiangqi',
-      max_plies: input.maxPlies,
-      white_engine_id: input.pairing.redEngineId,
-      black_engine_id: input.pairing.blackEngineId,
-    },
+    });
   });
 }
 
