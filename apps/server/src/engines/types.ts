@@ -42,6 +42,8 @@ export type EngineId =
   | 'fairy-stockfish-crossroads-very-strong'
   // Fairy-Stockfish (standard Xiangqi human-strength profiles)
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
+  | 'random-legal-xiangqi'
   // Pikafish (Jieqi)
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'

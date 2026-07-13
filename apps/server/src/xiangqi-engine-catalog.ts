@@ -13,6 +13,12 @@ import {
   XIANGQI_PLAYABLE_ENGINES as XIANGQI_PIKAFISH_PLAYABLE_ENGINES,
   type XiangqiEngineTier as XiangqiPikafishEngineTier,
 } from './xiangqi-pikafish-engine.js';
+import {
+  isXiangqiRandomEngine,
+  XIANGQI_RANDOM_ENGINE_VERSION,
+  type XiangqiRandomEngineTier,
+  xiangqiRandomEngineTierFor,
+} from './xiangqi-random-engine.js';
 
 export {
   XIANGQI_ENGINE_VERSION,
@@ -21,7 +27,10 @@ export {
   xiangqiSquareToPikafish,
 } from './xiangqi-pikafish-engine.js';
 
-export type XiangqiEngineTier = XiangqiPikafishEngineTier | XiangqiFsfEngineTier;
+export type XiangqiEngineTier =
+  | XiangqiPikafishEngineTier
+  | XiangqiFsfEngineTier
+  | XiangqiRandomEngineTier;
 
 // The list is weakest-first within each family. The experimental FSF profile is
 // deliberately separate and honestly named; Pikafish identities remain stable.
@@ -47,7 +56,11 @@ export const XIANGQI_PUBLIC_ENGINES: readonly XiangqiEngineTier[] = [
 export const XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-xiangqi-level-4';
 
 export function xiangqiEngineTierFor(engineId: string | undefined): XiangqiEngineTier | null {
-  return xiangqiFsfEngineTierFor(engineId) ?? pikafishXiangqiEngineTierFor(engineId);
+  return (
+    xiangqiFsfEngineTierFor(engineId) ??
+    pikafishXiangqiEngineTierFor(engineId) ??
+    xiangqiRandomEngineTierFor(engineId)
+  );
 }
 
 export function isXiangqiEngineClientId(clientId: string | undefined): boolean {
@@ -60,6 +73,7 @@ export function xiangqiEngineDisplayName(engineId: string): string {
 
 export function xiangqiEngineVersion(clientId: string | undefined): string | null {
   if (xiangqiFsfEngineTierFor(clientId)) return XIANGQI_FSF_ENGINE_VERSION;
+  if (isXiangqiRandomEngine(clientId)) return XIANGQI_RANDOM_ENGINE_VERSION;
   return isPikafishXiangqiEngineClientId(clientId) ? XIANGQI_ENGINE_VERSION : null;
 }
 
@@ -68,6 +82,13 @@ export function xiangqiLiveEngineMove(
   moves: string[],
   opts: { movetimeMs?: number } = {},
 ): Promise<string | null> {
+  // The random floor bot has no UCI subprocess; the EvE runner's move provider
+  // picks its move directly. Reaching here means a caller mis-routed it.
+  if (isXiangqiRandomEngine(engineId)) {
+    throw new Error(
+      'random-legal-xiangqi has no UCI move provider (handle it in the move provider)',
+    );
+  }
   return xiangqiFsfEngineTierFor(engineId)
     ? xiangqiFsfLiveEngineMove(engineId, moves, opts)
     : pikafishXiangqiLiveEngineMove(engineId, moves, opts);

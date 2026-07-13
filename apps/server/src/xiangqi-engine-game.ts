@@ -10,6 +10,7 @@ import {
   xiangqiEngineTierFor,
   xiangqiLiveEngineMove,
 } from './xiangqi-engine-catalog.js';
+import { isXiangqiRandomEngine, xiangqiRandomMoveUci } from './xiangqi-random-engine.js';
 import type { XiangqiEvent } from './xiangqi-runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -153,6 +154,10 @@ function requiredTier(engineId: string): XiangqiEngineTier {
 }
 
 async function defaultMoveProvider(request: XiangqiGameMoveRequest): Promise<string | null> {
+  // The random floor bot plays a uniformly random legal move in-process — no UCI.
+  if (isXiangqiRandomEngine(request.engineId)) {
+    return xiangqiRandomMoveUci(request.legalMoves);
+  }
   return xiangqiLiveEngineMove(request.engineId, request.history, {
     movetimeMs: request.tier.movetimeMs,
   });

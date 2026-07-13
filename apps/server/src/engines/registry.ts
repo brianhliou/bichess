@@ -1,6 +1,10 @@
 import type pg from 'pg';
 import { XIANGQI_FSF_ENGINE_VERSION, XIANGQI_FSF_PLAYABLE_ENGINES } from '../xiangqi-fsf-engine.js';
 import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
+import {
+  XIANGQI_RANDOM_ENGINE_ID,
+  XIANGQI_RANDOM_ENGINE_VERSION,
+} from '../xiangqi-random-engine.js';
 import { BUILTIN_ENGINES } from './builtin/index.js';
 import type { EngineClientId, EngineDefinition, EngineId } from './types.js';
 
@@ -620,6 +624,25 @@ const CROSSROADS_CHESS_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// Uniformly-random legal-move xiangqi bot: the calibration floor / 0-Elo anchor.
+// EvE-only (the xiangqi runner's move provider plays it in-process), so it is NOT
+// in any *_PLAYABLE list and never appears in the live PvE picker.
+const XIANGQI_RANDOM_ENGINES: Record<string, EngineDefinition> = {
+  [XIANGQI_RANDOM_ENGINE_ID]: {
+    id: XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'xiangqi',
+    configHash: `random-legal-xiangqi-${XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-xiangqi-${XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move standard-Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+};
+
 const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   XIANGQI_FSF_PLAYABLE_ENGINES.map((tier) => [
     tier.id,
@@ -851,6 +874,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...PYTHON_ENGINES,
   ...CROSSROADS_CHESS_ENGINES,
   ...XIANGQI_FSF_ENGINES,
+  ...XIANGQI_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,
