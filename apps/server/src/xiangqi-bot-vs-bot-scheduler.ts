@@ -7,8 +7,10 @@
 //
 // Gated by botVsBotEnabled() (read at tick time so ops can flip it without a
 // restart). Generation is deliberately independent of xiangqiEnabled(), which
-// controls /watch visibility — see #196. Pairing is a single fixed pair for now
-// (Phase 1); the content/calibration two-lane policy lands in Phase 2.
+// controls /watch visibility — see #196. Pairing is delegated to the two-lane
+// policy (content vs calibration) in xiangqi-bot-vs-bot-pairing.ts; set both
+// MISTBOARD_BOT_VS_BOT_RED_ENGINE and _BLACK_ENGINE to force a fixed pair
+// (demos/tests) instead.
 
 import {
   countActiveEngineGameTasks,
@@ -17,6 +19,12 @@ import {
 } from './engine-experiments.js';
 import { botVsBotEnabled } from './feature-flags.js';
 import { getPool } from './persistence-db.js';
+import {
+  type BotVsBotLane,
+  type BotVsBotPairing,
+  pickPairing,
+  xiangqiBotLadder,
+} from './xiangqi-bot-vs-bot-pairing.js';
 
 const TICK_MS = 30_000;
 
@@ -24,15 +32,16 @@ export const BOT_VS_BOT_MIN_TARGET = 1;
 export const BOT_VS_BOT_MAX_TARGET = 20;
 export const BOT_VS_BOT_DEFAULT_TARGET = 2;
 export const BOT_VS_BOT_DEFAULT_MAX_PLIES = 300;
-export const BOT_VS_BOT_DEFAULT_RED_ENGINE = 'fairy-stockfish-xiangqi-level-7';
-export const BOT_VS_BOT_DEFAULT_BLACK_ENGINE = 'fairy-stockfish-xiangqi-level-8';
-
-export type BotVsBotPairing = { redEngineId: string; blackEngineId: string };
+export const BOT_VS_BOT_DEFAULT_CALIBRATION_RATIO = 0.3;
 
 export type BotVsBotSchedulerConfig = {
   targetActive: number;
   maxPlies: number;
-  pairing: BotVsBotPairing;
+  calibrationRatio: number;
+  ladder: string[];
+  // When set, every game uses this exact pair (labelled content) — overrides the
+  // two-lane policy. Both engine env vars must be present to force it.
+  forcedPairing: BotVsBotPairing | null;
 };
 
 export function clampBotVsBotTarget(value: unknown): number {
@@ -41,21 +50,29 @@ export function clampBotVsBotTarget(value: unknown): number {
   return Math.min(Math.max(Math.trunc(n), BOT_VS_BOT_MIN_TARGET), BOT_VS_BOT_MAX_TARGET);
 }
 
+export function clampCalibrationRatio(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number.parseFloat(String(value ?? ''));
+  if (!Number.isFinite(n)) return BOT_VS_BOT_DEFAULT_CALIBRATION_RATIO;
+  return Math.min(1, Math.max(0, n));
+}
+
 export function botVsBotConfigFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): BotVsBotSchedulerConfig {
   const maxPlies = Number.parseInt(env.MISTBOARD_BOT_VS_BOT_MAX_PLIES ?? '', 10);
+  const red = env.MISTBOARD_BOT_VS_BOT_RED_ENGINE;
+  const black = env.MISTBOARD_BOT_VS_BOT_BLACK_ENGINE;
   return {
     targetActive: clampBotVsBotTarget(env.MISTBOARD_BOT_VS_BOT_TARGET),
     maxPlies: Number.isFinite(maxPlies) && maxPlies > 0 ? maxPlies : BOT_VS_BOT_DEFAULT_MAX_PLIES,
-    pairing: {
-      redEngineId: env.MISTBOARD_BOT_VS_BOT_RED_ENGINE ?? BOT_VS_BOT_DEFAULT_RED_ENGINE,
-      blackEngineId: env.MISTBOARD_BOT_VS_BOT_BLACK_ENGINE ?? BOT_VS_BOT_DEFAULT_BLACK_ENGINE,
-    },
+    calibrationRatio: clampCalibrationRatio(env.MISTBOARD_BOT_VS_BOT_CALIBRATION_RATIO),
+    ladder: xiangqiBotLadder(),
+    forcedPairing: red && black ? { redEngineId: red, blackEngineId: black } : null,
   };
 }
 
 export type EnqueueBotVsBotGameInput = {
+  lane: BotVsBotLane;
   pairing: BotVsBotPairing;
   maxPlies: number;
   seed: string;
@@ -66,11 +83,13 @@ export type BotVsBotSchedulerDeps = {
   config(): BotVsBotSchedulerConfig;
   countActiveTasks(): Promise<number>;
   enqueueGame(input: EnqueueBotVsBotGameInput): Promise<void>;
+  random(): number;
   now(): number;
 };
 
 // Live enqueue: one job + one task per game, shaped exactly like the enqueue CLI
-// so the worker's xiangqi runner picks it up unchanged.
+// so the worker's xiangqi runner picks it up unchanged. The lane is recorded on
+// the job so Phase 3 calibration can query only calibration-lane games.
 async function enqueueLiveGame(input: EnqueueBotVsBotGameInput): Promise<void> {
   const pool = getPool();
   const job = await createExperimentJob(pool, {
@@ -79,6 +98,7 @@ async function enqueueLiveGame(input: EnqueueBotVsBotGameInput): Promise<void> {
     config: {
       variant: 'xiangqi',
       source: 'bot-vs-bot-scheduler',
+      lane: input.lane,
       pairing: {
         kind:
           input.pairing.redEngineId === input.pairing.blackEngineId
@@ -115,6 +135,7 @@ const liveDeps: BotVsBotSchedulerDeps = {
   config: () => botVsBotConfigFromEnv(),
   countActiveTasks: () => countActiveEngineGameTasks(getPool(), { variant: 'xiangqi' }),
   enqueueGame: (input) => enqueueLiveGame(input),
+  random: () => Math.random(),
   now: () => Date.now(),
 };
 
@@ -123,6 +144,16 @@ export type BotVsBotScheduler = {
   start(): void;
   stop(): void;
 };
+
+// Pick lane + pairing for one game: a forced pair (labelled content) short-
+// circuits the policy, otherwise delegate to the two-lane picker.
+function chooseGame(
+  config: BotVsBotSchedulerConfig,
+  random: () => number,
+): { lane: BotVsBotLane; pairing: BotVsBotPairing } {
+  if (config.forcedPairing) return { lane: 'content', pairing: config.forcedPairing };
+  return pickPairing(random, config.ladder, config.calibrationRatio);
+}
 
 export function createBotVsBotScheduler(deps: BotVsBotSchedulerDeps = liveDeps): BotVsBotScheduler {
   let ticking = false;
@@ -138,24 +169,26 @@ export function createBotVsBotScheduler(deps: BotVsBotSchedulerDeps = liveDeps):
       const deficit = config.targetActive - active;
       if (deficit <= 0) return;
 
-      let enqueued = 0;
+      const laneCounts: Record<BotVsBotLane, number> = { content: 0, calibration: 0 };
       for (let index = 0; index < deficit; index++) {
+        const { lane, pairing } = chooseGame(config, deps.random);
         await deps.enqueueGame({
-          pairing: config.pairing,
+          lane,
+          pairing,
           maxPlies: config.maxPlies,
           // Distinct per game so stochastic engines diverge; not security-sensitive.
           seed: `${deps.now()}${index}`,
         });
-        enqueued++;
+        laneCounts[lane]++;
       }
       console.log(
         JSON.stringify({
           level: 'info',
           kind: 'bot_vs_bot_enqueued',
-          enqueued,
+          enqueued: deficit,
           activeBefore: active,
           targetActive: config.targetActive,
-          pairing: config.pairing,
+          laneCounts,
           at: deps.now(),
         }),
       );
