@@ -20,8 +20,10 @@ const gameCount = positiveInteger(args.games ?? process.env.ENGINE_GAMES, 3);
 const maxPlies = positiveInteger(args.maxPlies ?? process.env.ENGINE_MAX_PLIES, 160);
 const purpose = purposeFrom(args.purpose ?? process.env.ENGINE_PURPOSE, 'smoke');
 const seed = args.seed ?? process.env.ENGINE_SEED ?? Date.now().toString();
-const whiteEngineId = args.white ?? process.env.ENGINE_WHITE_ENGINE ?? latest.white;
-const blackEngineId = args.black ?? process.env.ENGINE_BLACK_ENGINE ?? latest.black;
+const variant = variantFrom(args.variant ?? process.env.ENGINE_VARIANT ?? 'dark-chess');
+const engineDefaults = defaultEnginesFor(variant, latest);
+const whiteEngineId = args.white ?? process.env.ENGINE_WHITE_ENGINE ?? engineDefaults.white;
+const blackEngineId = args.black ?? process.env.ENGINE_BLACK_ENGINE ?? engineDefaults.black;
 const priority = integer(args.priority ?? process.env.ENGINE_PRIORITY, 0);
 const providers = csv(args.providers ?? process.env.ENGINE_PROVIDERS ?? 'local,railway');
 const timeControl = parseEngineTimeControl(
@@ -72,7 +74,7 @@ try {
         artifactPolicy,
         resourcePolicy: { providers, concurrency: 1 },
         config: {
-          variant: 'dark-chess',
+          variant,
           max_plies: maxPlies,
           white_engine_id: whiteEngineId,
           black_engine_id: blackEngineId,
@@ -92,6 +94,7 @@ try {
         gameCount,
         seed,
         maxPlies,
+        variant,
         whiteEngineId,
         blackEngineId,
         providers,
@@ -130,6 +133,7 @@ type CliArgs = {
   purpose?: string;
   seed?: string;
   timeControl?: string;
+  variant?: string;
   white?: string;
 };
 
@@ -152,6 +156,7 @@ function parseArgs(values: string[]): CliArgs {
       case 'purpose':
       case 'seed':
       case 'time-control':
+      case 'variant':
       case 'white':
         parsed[toCamel(rawKey)] = value;
         break;
@@ -167,6 +172,28 @@ function toCamel(key: string): keyof CliArgs {
   if (key === 'max-plies') return 'maxPlies';
   if (key === 'time-control') return 'timeControl';
   return key as keyof CliArgs;
+}
+
+type EngineTaskVariant = 'dark-chess' | 'draft960' | 'xiangqi';
+
+function variantFrom(value: string): EngineTaskVariant {
+  if (value === 'dark-chess' || value === 'draft960' || value === 'xiangqi') return value;
+  throw new Error(
+    `unsupported --variant ${JSON.stringify(value)} (expected dark-chess | draft960 | xiangqi)`,
+  );
+}
+
+// Default engine ids per variant. dark-chess/draft960 keep the latest builtin
+// pairing; xiangqi has no builtin "latest" so default to a cross-tier FSF pair
+// (exercises the ladder and needs no Pikafish binary). Override with --white/--black.
+function defaultEnginesFor(
+  variant: EngineTaskVariant,
+  latest: { white: string; black: string },
+): { white: string; black: string } {
+  if (variant === 'xiangqi') {
+    return { white: 'fairy-stockfish-xiangqi-level-7', black: 'fairy-stockfish-xiangqi-level-8' };
+  }
+  return { white: latest.white, black: latest.black };
 }
 
 function positiveInteger(value: string | undefined, fallback: number): number {
