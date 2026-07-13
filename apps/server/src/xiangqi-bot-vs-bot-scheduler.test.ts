@@ -13,6 +13,7 @@ import {
 
 const NOW = 1_700_000_000_000;
 const HOUR = 3_600_000;
+const MINUTE = 60_000;
 
 // dailyMax 24 → one game every hour; forced pair keeps pairing deterministic.
 const FORCED: BotVsBotSchedulerConfig = {
@@ -25,7 +26,11 @@ const FORCED: BotVsBotSchedulerConfig = {
 };
 
 function harness(
-  overrides: Partial<BotVsBotSchedulerDeps> & { active?: number; lastAt?: number | null } = {},
+  overrides: Partial<BotVsBotSchedulerDeps> & {
+    active?: number;
+    lastAt?: number | null;
+    lastSuccess?: number | null;
+  } = {},
 ) {
   const enqueued: EnqueueBotVsBotGameInput[] = [];
   let active = overrides.active ?? 0;
@@ -34,6 +39,7 @@ function harness(
     config: overrides.config ?? (() => FORCED),
     countActiveTasks: overrides.countActiveTasks ?? (async () => active),
     lastEnqueueAt: overrides.lastEnqueueAt ?? (async () => overrides.lastAt ?? null),
+    lastSuccessAt: overrides.lastSuccessAt ?? (async () => overrides.lastSuccess ?? null),
     enqueueGame:
       overrides.enqueueGame ??
       (async (input) => {
@@ -75,10 +81,11 @@ test('does nothing when disabled (does not even count)', async () => {
   assert.equal(counted, false);
 });
 
-test('rate limit: skips when the last enqueue is within the min interval', async () => {
-  // dailyMax 2 → 12h spacing; last game 1h ago → too soon.
+test('daily cadence: skips when the last SUCCESS is within the interval', async () => {
+  // dailyMax 2 → 12h spacing; last successful game 1h ago → too soon.
   const { deps, enqueued } = harness({
     active: 0,
+    lastSuccess: NOW - HOUR,
     lastAt: NOW - HOUR,
     config: () => ({ ...FORCED, dailyMax: 2 }),
   });
@@ -86,19 +93,44 @@ test('rate limit: skips when the last enqueue is within the min interval', async
   assert.equal(enqueued.length, 0);
 });
 
-test('rate limit: enqueues once the interval has elapsed', async () => {
+test('daily cadence: enqueues once the interval since the last SUCCESS has elapsed', async () => {
   const { deps, enqueued } = harness({
     active: 0,
-    lastAt: NOW - 13 * HOUR, // > 12h
+    lastSuccess: NOW - 13 * HOUR, // > 12h
+    lastAt: NOW - 13 * HOUR, // past the retry cooldown too
     config: () => ({ ...FORCED, dailyMax: 2 }),
   });
   await createBotVsBotScheduler(deps).tick();
   assert.equal(enqueued.length, 1);
 });
 
-test('rate limit: the very first game enqueues immediately (no prior game)', async () => {
+test('a FAILED game does not blackhole the day: no success, but retries after the cooldown', async () => {
+  // The failure case that used to block 12h: an attempt happened but produced no
+  // successful game. dailyMax 2 (12h). Attempt 5 min ago → still in the cooldown.
+  const soon = harness({
+    active: 0,
+    lastSuccess: null,
+    lastAt: NOW - 5 * MINUTE,
+    config: () => ({ ...FORCED, dailyMax: 2 }),
+  });
+  await createBotVsBotScheduler(soon.deps).tick();
+  assert.equal(soon.enqueued.length, 0, 'within retry cooldown → wait');
+
+  // Same failure, attempt 20 min ago → past the 15-min cooldown → retries (NOT 12h).
+  const later = harness({
+    active: 0,
+    lastSuccess: null,
+    lastAt: NOW - 20 * MINUTE,
+    config: () => ({ ...FORCED, dailyMax: 2 }),
+  });
+  await createBotVsBotScheduler(later.deps).tick();
+  assert.equal(later.enqueued.length, 1, 'past cooldown, no success → retry');
+});
+
+test('the very first game enqueues immediately (no success, no attempt)', async () => {
   const { deps, enqueued } = harness({
     active: 0,
+    lastSuccess: null,
     lastAt: null,
     config: () => ({ ...FORCED, dailyMax: 1 }),
   });
