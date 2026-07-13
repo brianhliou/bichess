@@ -27,17 +27,26 @@ import {
 } from './xiangqi-bot-vs-bot-pairing.js';
 
 const TICK_MS = 30_000;
+const DAY_MS = 86_400_000;
 
 export const BOT_VS_BOT_MIN_TARGET = 1;
 export const BOT_VS_BOT_MAX_TARGET = 20;
 export const BOT_VS_BOT_DEFAULT_TARGET = 2;
 export const BOT_VS_BOT_DEFAULT_MAX_PLIES = 300;
 export const BOT_VS_BOT_DEFAULT_CALIBRATION_RATIO = 0.3;
+// Games per rolling 24h. Deliberately low so we ladder up from a trickle rather
+// than saturating the worker; raise MISTBOARD_BOT_VS_BOT_DAILY_MAX to scale.
+export const BOT_VS_BOT_DEFAULT_DAILY_MAX = 2;
+export const BOT_VS_BOT_MIN_DAILY_MAX = 1;
+export const BOT_VS_BOT_MAX_DAILY_MAX = 5_000;
 
 export type BotVsBotSchedulerConfig = {
   targetActive: number;
   maxPlies: number;
   calibrationRatio: number;
+  // Max games to enqueue per rolling 24h. The scheduler spaces games ~24h/dailyMax
+  // apart, so this is both the daily quota and the pacing knob.
+  dailyMax: number;
   ladder: string[];
   // When set, every game uses this exact pair (labelled content) — overrides the
   // two-lane policy. Both engine env vars must be present to force it.
@@ -48,6 +57,12 @@ export function clampBotVsBotTarget(value: unknown): number {
   const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
   if (!Number.isFinite(n)) return BOT_VS_BOT_DEFAULT_TARGET;
   return Math.min(Math.max(Math.trunc(n), BOT_VS_BOT_MIN_TARGET), BOT_VS_BOT_MAX_TARGET);
+}
+
+export function clampBotVsBotDailyMax(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(n)) return BOT_VS_BOT_DEFAULT_DAILY_MAX;
+  return Math.min(Math.max(Math.trunc(n), BOT_VS_BOT_MIN_DAILY_MAX), BOT_VS_BOT_MAX_DAILY_MAX);
 }
 
 export function clampCalibrationRatio(value: unknown): number {
@@ -66,6 +81,7 @@ export function botVsBotConfigFromEnv(
     targetActive: clampBotVsBotTarget(env.MISTBOARD_BOT_VS_BOT_TARGET),
     maxPlies: Number.isFinite(maxPlies) && maxPlies > 0 ? maxPlies : BOT_VS_BOT_DEFAULT_MAX_PLIES,
     calibrationRatio: clampCalibrationRatio(env.MISTBOARD_BOT_VS_BOT_CALIBRATION_RATIO),
+    dailyMax: clampBotVsBotDailyMax(env.MISTBOARD_BOT_VS_BOT_DAILY_MAX),
     ladder: xiangqiBotLadder(),
     forcedPairing: red && black ? { redEngineId: red, blackEngineId: black } : null,
   };
@@ -82,10 +98,25 @@ export type BotVsBotSchedulerDeps = {
   enabled(): boolean;
   config(): BotVsBotSchedulerConfig;
   countActiveTasks(): Promise<number>;
+  // Epoch-ms of the most recent scheduler enqueue, or null if none yet. Drives
+  // the rolling-24h rate limit; read from the DB so it survives restarts/deploys.
+  lastEnqueueAt(): Promise<number | null>;
   enqueueGame(input: EnqueueBotVsBotGameInput): Promise<void>;
   random(): number;
   now(): number;
 };
+
+// Epoch-ms of the newest scheduler-sourced job, or null. DB-backed so a restart
+// doesn't reset the pacing and re-burst.
+async function lastBotVsBotEnqueueAtMs(): Promise<number | null> {
+  const { rows } = await getPool().query<{ at: number | null }>(
+    `SELECT EXTRACT(EPOCH FROM MAX(created_at)) * 1000 AS at
+       FROM eve_jobs
+      WHERE config->>'source' = 'bot-vs-bot-scheduler'`,
+  );
+  const at = rows[0]?.at;
+  return at === null || at === undefined ? null : Number(at);
+}
 
 // Live enqueue: one job + one task per game, shaped exactly like the enqueue CLI
 // so the worker's xiangqi runner picks it up unchanged. The lane is recorded on
@@ -134,6 +165,7 @@ const liveDeps: BotVsBotSchedulerDeps = {
   enabled: () => botVsBotEnabled(),
   config: () => botVsBotConfigFromEnv(),
   countActiveTasks: () => countActiveEngineGameTasks(getPool(), { variant: 'xiangqi' }),
+  lastEnqueueAt: () => lastBotVsBotEnqueueAtMs(),
   enqueueGame: (input) => enqueueLiveGame(input),
   random: () => Math.random(),
   now: () => Date.now(),
@@ -165,31 +197,31 @@ export function createBotVsBotScheduler(deps: BotVsBotSchedulerDeps = liveDeps):
     ticking = true;
     try {
       const config = deps.config();
+      // Concurrency ceiling: never exceed targetActive games in flight.
       const active = await deps.countActiveTasks();
-      const deficit = config.targetActive - active;
-      if (deficit <= 0) return;
+      if (active >= config.targetActive) return;
 
-      const laneCounts: Record<BotVsBotLane, number> = { content: 0, calibration: 0 };
-      for (let index = 0; index < deficit; index++) {
-        const { lane, pairing } = chooseGame(config, deps.random);
-        await deps.enqueueGame({
-          lane,
-          pairing,
-          maxPlies: config.maxPlies,
-          // Distinct per game so stochastic engines diverge; not security-sensitive.
-          seed: `${deps.now()}${index}`,
-        });
-        laneCounts[lane]++;
-      }
+      // Rolling-24h rate limit: space games ~24h/dailyMax apart. One game per
+      // eligible tick — at low dailyMax this trickles a handful a day; at high
+      // dailyMax the interval shrinks below the tick and it simply keeps the
+      // queue topped to targetActive.
+      const minIntervalMs = DAY_MS / config.dailyMax;
+      const lastAt = await deps.lastEnqueueAt();
+      const now = deps.now();
+      if (lastAt !== null && now - lastAt < minIntervalMs) return;
+
+      const { lane, pairing } = chooseGame(config, deps.random);
+      await deps.enqueueGame({ lane, pairing, maxPlies: config.maxPlies, seed: `${now}` });
       console.log(
         JSON.stringify({
           level: 'info',
           kind: 'bot_vs_bot_enqueued',
-          enqueued: deficit,
+          lane,
           activeBefore: active,
           targetActive: config.targetActive,
-          laneCounts,
-          at: deps.now(),
+          dailyMax: config.dailyMax,
+          minIntervalMs,
+          at: now,
         }),
       );
     } catch (error) {
