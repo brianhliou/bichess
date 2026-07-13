@@ -243,6 +243,23 @@
   font-size: 13px;
 }
 
+/* Game info: a provenance definition list (source / event / date / flags). */
+.review-provenance {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px 8px;
+  font-size: 13px;
+}
+.review-provenance dt {
+  color: var(--site-muted);
+}
+.review-provenance dd {
+  margin: 0;
+  color: var(--site-fg, inherit);
+}
+
 /* Move times: per-ply bars, colored by side, growing from a shared baseline. */
 .review-move-times {
   display: flex;

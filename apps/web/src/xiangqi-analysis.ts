@@ -7,15 +7,14 @@
 // surface). This file only supplies the ingress: the client ceval sweep, the
 // minimal meta card (no players), and the "Import game" affordance.
 
-import { type XiangqiGameStatus, type XiangqiMove, xiangqiMoveToFsfUci } from '@mistboard/game';
+import type { XiangqiGameStatus, XiangqiMove } from '@mistboard/game';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import './xiangqi-analysis.css';
-import { createCeval } from './review/engine/ceval.js';
-import { computeGameAnalysis, type GameAnalysis, type PlyEval } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
+import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
 import { importXiangqiGame } from './review/xiangqi-import.js';
 import { mountXiangqiReview, type XiangqiReviewHandle } from './review/xiangqi-review.js';
 import {
@@ -23,10 +22,6 @@ import {
   xiangqiReplayViewAtPly,
 } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
-
-// Depth for the whole-game sweep. Shallower than the live panel's interactive
-// search so N+1 sequential evaluations stay tolerable on a client.
-const ANALYSIS_SWEEP_DEPTH = 12;
 
 function statusSummary(status: XiangqiGameStatus, plyCount: number): string {
   if (plyCount === 0) return 'Play a move, or import a game';
@@ -53,38 +48,6 @@ export function mountXiangqiAnalysis(
   opts: XiangqiAnalysisOptions = {},
 ): void {
   const replay = buildXiangqiReplayFromMoves(moves);
-  const engineMovesUci = replay.moves.map((move) => xiangqiMoveToFsfUci(move));
-
-  // Roomless: the whole-game analysis is a client ceval sweep over the mainline.
-  async function runClientAnalysis(
-    onProgress: (done: number, total: number) => void,
-  ): Promise<GameAnalysis> {
-    const handle = createCeval('xiangqi');
-    const plies: PlyEval[] = [];
-    try {
-      for (let ply = 0; ply <= replay.maxPly; ply += 1) {
-        const update = await handle.evaluate({
-          movesUci: engineMovesUci.slice(0, ply),
-          multiPv: 1,
-          maxDepth: ANALYSIS_SWEEP_DEPTH,
-        });
-        const best = update.lines[0];
-        const redToMove = ply % 2 === 0;
-        const cp = best?.scoreCp ?? null;
-        const mate = best?.mate ?? null;
-        plies.push({
-          ply,
-          cp: cp === null ? null : redToMove ? cp : -cp,
-          mate: mate === null ? null : redToMove ? mate : -mate,
-          best: best?.pvUci[0] ?? null,
-        });
-        onProgress(ply, replay.maxPly);
-      }
-    } finally {
-      handle.dispose();
-    }
-    return computeGameAnalysis({ engineId: 'fairy-stockfish', depth: ANALYSIS_SWEEP_DEPTH, plies });
-  }
 
   const finalStatus = xiangqiReplayViewAtPly(replay, replay.maxPly).status;
   const metaCard = createGameMetaCard({
@@ -124,12 +87,9 @@ export function mountXiangqiAnalysis(
     // Pass the raw moves so the review's tree truncates an illegal seed itself and
     // surfaces the notice (the legal prefix drives the client sweep above).
     moves,
-    // Roomless import: whole-game analysis is a client ceval sweep. Only offered
-    // once there is a game to analyse.
-    analysis:
-      replay.maxPly >= 1
-        ? { requestLabel: 'Analyse the whole game', run: runClientAnalysis }
-        : null,
+    // Roomless import: whole-game analysis is a client ceval sweep (shared with the
+    // historical library). Null when there is no game yet to analyse.
+    analysis: buildXiangqiClientAnalysisSource(replay),
   });
 }
 

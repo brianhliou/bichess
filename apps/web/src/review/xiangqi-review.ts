@@ -112,6 +112,10 @@ export type XiangqiReviewConfig = {
   players?: { red?: string; black?: string };
   /** Show the "Crosstable" underboard tab (a head-to-head record — a stub for now). */
   showCrosstable?: boolean;
+  /** Prebuilt provenance panel (source / event / date / flags …). When present, a
+   *  "Game info" underboard tab renders it. The historical-library caller supplies
+   *  it; played/analysis surfaces leave it undefined. */
+  provenance?: HTMLElement;
 };
 
 /** Handle returned by mountXiangqiReview: lets a caller snapshot the current tree
@@ -295,6 +299,8 @@ export function mountXiangqiReview(
   const shareFenInput = document.createElement('input');
   const shareMovesInput = document.createElement('textarea');
   const underboardEl = underboardPanel(underboardBody, {
+    hasAnalysis: Boolean(config.analysis),
+    provenance: config.provenance,
     moveTimes: config.moveTimes,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
     shareFenInput,
@@ -357,7 +363,8 @@ export function mountXiangqiReview(
     boards: [{ key: 'truth', el: boardWrap, tier: 'primary' }],
     boardAspect: 552 / 612,
     boardCols: 9,
-    underboard: config.analysis ? underboardEl : undefined,
+    underboard:
+      config.analysis || config.provenance || config.showCrosstable ? underboardEl : undefined,
     underboardOverflows: true,
     enginePanel: enginePanel.el,
     moves: moveTree.el,
@@ -551,6 +558,11 @@ export function mountXiangqiReview(
 }
 
 type UnderboardOptions = {
+  /** Include the "Computer analysis" tab. False for surfaces with no whole-game
+   *  analysis (e.g. the historical library), so they don't lead with an empty chart. */
+  hasAnalysis?: boolean;
+  /** Prebuilt provenance panel → a "Game info" tab. */
+  provenance?: HTMLElement;
   moveTimes?: number[];
   /** Present = show the Crosstable tab; the names label its stub. */
   players?: { red?: string; black?: string };
@@ -565,9 +577,13 @@ type UnderboardTab = { id: string; label: string; body: HTMLElement };
 // Crosstable / Share & export) over a shared body. Computer analysis is the live
 // chart body; the others are built here. Tabs that have no data are omitted.
 function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptions): HTMLElement {
-  const tabDefs: UnderboardTab[] = [
-    { id: 'analysis', label: 'Computer analysis', body: analysisBody },
-  ];
+  const tabDefs: UnderboardTab[] = [];
+  if (opts.hasAnalysis) {
+    tabDefs.push({ id: 'analysis', label: 'Computer analysis', body: analysisBody });
+  }
+  if (opts.provenance) {
+    tabDefs.push({ id: 'info', label: 'Game info', body: opts.provenance });
+  }
   if (opts.moveTimes && opts.moveTimes.length > 0) {
     tabDefs.push({ id: 'times', label: 'Move times', body: moveTimesBody(opts.moveTimes) });
   }
