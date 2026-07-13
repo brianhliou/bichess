@@ -135,6 +135,16 @@ export function correspondenceEnabled(): boolean {
   return process.env.MISTBOARD_CORRESPONDENCE_ENABLED === 'true';
 }
 
+// Automated bot-vs-bot (engine-vs-engine) game generation. Server-side opt-in,
+// default off. This gates only GENERATION of EvE games (the in-server scheduler
+// that tops up a backlog of xiangqi EvE tasks for the worker to drain). It is
+// deliberately independent of xiangqiEnabled(), which gates whether those games
+// become VISIBLE in the /watch Engines channel — so games can be pre-generated
+// to warm the feed before the xiangqi launch flag flips. See #196.
+export function botVsBotEnabled(): boolean {
+  return process.env.MISTBOARD_BOT_VS_BOT_ENABLED === 'true';
+}
+
 // Global lobby chat on the homepage (gate-cleared 2026-07-02, ships OFF).
 // This env flag is also the kill switch: flipping it off in Railway and
 // redeploying disables reads and posts in one move (the widget hides itself
