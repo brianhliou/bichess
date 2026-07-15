@@ -10,7 +10,12 @@ describe('parseMistyUpdate', () => {
     const json = '{"lines":[{"uci":"a0b0","cp":-220,"depth":1},{"uci":"d3d3","cp":-50,"depth":1}]}';
     const update = parseMistyUpdate(json, 360_000);
     expect(update.lines).toHaveLength(2);
-    expect(update.lines[0]).toMatchObject({ multipv: 1, scoreCp: -220, mate: null, pvUci: ['a0b0'] });
+    expect(update.lines[0]).toMatchObject({
+      multipv: 1,
+      scoreCp: -220,
+      mate: null,
+      pvUci: ['a0b0'],
+    });
     expect(update.lines[1]).toMatchObject({ multipv: 2, scoreCp: -50, pvUci: ['d3d3'] });
     expect(update.depth).toBe(1);
     expect(update.nodes).toBe(360_000);
