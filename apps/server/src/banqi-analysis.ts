@@ -303,8 +303,12 @@ async function poolMeanWin(
   const total = entries.reduce((sum, e) => sum + e.count, 0);
   const wins = await Promise.all(
     entries.map((entry) => {
-      // Counterfactual: this face-down square is (entry.color, entry.role) instead. applyBanqiMove
-      // reveals it on the flip (and binds first-mover ink at ply 0).
+      // Counterfactual: the flipped square is (entry.color, entry.role) instead of its true tile.
+      // The MULTISET of hidden pieces is FIXED — we only relocate which one lies under move.from —
+      // so we SWAP move.from's identity with a donor face-down square that holds `entry`, moving
+      // the true tile (`source`) there. Relabeling move.from ALONE would change the global counts
+      // (an off-colour draw adds a phantom piece of that ink and drops a real one of the other),
+      // which materially unbalances the position by ~2 pieces and inflates the pool-mean baseline.
       const cf: BanqiGameState = {
         ...state,
         board: {
@@ -312,6 +316,18 @@ async function poolMeanWin(
           [move.from]: { color: entry.color, role: entry.role, faceDown: true },
         },
       };
+      if (entry.color !== source.color || entry.role !== source.role) {
+        const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+          (sq) =>
+            sq !== move.from &&
+            state.board[sq]?.faceDown === true &&
+            state.board[sq]?.color === entry.color &&
+            state.board[sq]?.role === entry.role,
+        );
+        // `entry` is drawn from the hidden tiles OTHER than move.from (which holds `source` ≠
+        // `entry`), so a donor always exists; guard defensively regardless.
+        if (donor) cf.board[donor] = { color: source.color, role: source.role, faceDown: true };
+      }
       return moverWinAfter(applyBanqiMove(cf, move), mover, evalPosition);
     }),
   );
@@ -382,7 +398,10 @@ export async function analyzeBanqiDecisions(
 
 // Cache engine id for the decomposition blob — a DIFFERENT engine_id than the basic analysis, so
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
-export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}`;
+// The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
+// to invalidate cached decisions when the pool-mean math changes without an engine change. d2 =
+// pool-rebalance fix (counterfactuals preserve the hidden multiset; earlier rows were luck-biased).
+export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+d2`;
 
 export type BanqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<BanqiDecision[] | null>;

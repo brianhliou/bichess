@@ -240,6 +240,32 @@ test('analyzeJungleFlipDecisions: only flip plies, per-mover POV, flat eval => z
   }
 });
 
+// Mirror poolMeanWin's counterfactual EXACTLY: relabel the flipped square to `entry`, then swap a
+// donor face-down tile holding `entry` to the true `source` tile so the hidden multiset is preserved
+// (an off-ink draw must NOT add a phantom piece). The mock evals key on these FENs. Mirrors banqi.
+function jungleFlipCounterfactualCf(
+  state: ReturnType<typeof createInitialJungleFlipState>,
+  from: JungleFlipMove['from'],
+  entry: { color: JungleFlipColor; role: JungleFlipPieceRole },
+  source: { color: JungleFlipColor; role: JungleFlipPieceRole },
+): ReturnType<typeof createInitialJungleFlipState> {
+  const cf = {
+    ...state,
+    board: { ...state.board, [from]: { color: entry.color, role: entry.role, faceDown: true } },
+  };
+  if (entry.color !== source.color || entry.role !== source.role) {
+    const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+      (sq) =>
+        sq !== from &&
+        state.board[sq]?.faceDown === true &&
+        state.board[sq]?.color === entry.color &&
+        state.board[sq]?.role === entry.role,
+    );
+    if (donor) cf.board[donor] = { color: source.color, role: source.role, faceDown: true };
+  }
+  return cf;
+}
+
 test('analyzeJungleFlipDecisions: playedWin is the TRUE pool-weighted mean over BOTH inks; realizedWin is the actual tile', async () => {
   const deal = STANDARD_JUNGLE_FLIP_DEAL;
   const state0 = createInitialJungleFlipState('t', deal);
@@ -258,7 +284,7 @@ test('analyzeJungleFlipDecisions: playedWin is the TRUE pool-weighted mean over 
   }
   const fenToCp = new Map<string, number>();
   for (const [key, entry] of pool) {
-    const cf = { ...state0, board: { ...state0.board, [flip.from]: { ...entry, faceDown: true } } };
+    const cf = jungleFlipCounterfactualCf(state0, flip.from, entry, source);
     fenToCp.set(jungleFlipStateToEngineFen(applyJungleFlipMove(cf, flip)), keyCp.get(key)!);
   }
 
@@ -289,14 +315,12 @@ test('analyzeJungleFlipDecisions: a better candidate flip lifts bestWin above pl
   const flips = getJungleFlipLegalMoves(state0).filter((m) => m.from === m.to);
   const played = flips[0]!;
   const better = flips[1]!;
+  const betterSource = state0.board[better.from]!;
   const pool = flipPool(deal);
 
   const betterFens = new Set<string>();
   for (const entry of pool.values()) {
-    const cf = {
-      ...state0,
-      board: { ...state0.board, [better.from]: { ...entry, faceDown: true } },
-    };
+    const cf = jungleFlipCounterfactualCf(state0, better.from, entry, betterSource);
     betterFens.add(jungleFlipStateToEngineFen(applyJungleFlipMove(cf, better)));
   }
   const decisions = await analyzeJungleFlipDecisions([played], deal, {

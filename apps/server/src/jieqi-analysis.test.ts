@@ -238,6 +238,33 @@ test('analyzeJieqiDecisions: only reveal plies, per-mover POV, flat eval => zero
   }
 });
 
+// Mirror poolMeanWin's counterfactual EXACTLY: relabel the reveal square to `role`, then swap a
+// donor dark tile of the mover holding `role` to the true `sourceRole`, so the mover's hidden-role
+// multiset is preserved. The mock evals key on these FENs, so build them the same way the source does.
+function jieqiCounterfactualCf(
+  state: ReturnType<typeof createInitialJieqiState>,
+  from: JieqiMove['from'],
+  role: JieqiPieceRole,
+  sourceRole: JieqiPieceRole,
+  mover: 'red' | 'black',
+): ReturnType<typeof createInitialJieqiState> {
+  const cf = {
+    ...state,
+    board: { ...state.board, [from]: { color: mover, role, faceDown: true } },
+  };
+  if (role !== sourceRole) {
+    const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+      (sq) =>
+        sq !== from &&
+        state.board[sq]?.faceDown === true &&
+        state.board[sq]?.color === mover &&
+        state.board[sq]?.role === role,
+    );
+    if (donor) cf.board[donor] = { color: mover, role: sourceRole, faceDown: true };
+  }
+  return cf;
+}
+
 test('analyzeJieqiDecisions: playedWin is the TRUE pool-weighted mean; realizedWin is the actual role', async () => {
   const deal = STANDARD_JIEQI_DEAL;
   const { move, uci } = firstRevealMove(deal); // red's first reveal (ply 1)
@@ -258,10 +285,7 @@ test('analyzeJieqiDecisions: playedWin is the TRUE pool-weighted mean; realizedW
   };
   const fenToCp = new Map<string, number>();
   for (const role of pool.keys()) {
-    const cf = {
-      ...state0,
-      board: { ...state0.board, [move.from]: { color: 'red' as const, role, faceDown: true } },
-    };
+    const cf = jieqiCounterfactualCf(state0, move.from, role, actualRole, 'red');
     fenToCp.set(jieqiStateToPikafishFen(applyJieqiMove(cf, move)), roleCp[role]);
   }
 
@@ -292,16 +316,14 @@ test('analyzeJieqiDecisions: a better candidate lifts bestWin above playedWin (d
   const reveals = getJieqiLegalMoves(state0).filter((m) => state0.board[m.from]?.faceDown === true);
   const played = reveals[0]!;
   const better = reveals[1]!;
+  const betterRole = state0.board[better.from]!.role;
   const pool = redPool(deal);
 
   // Every post-move FEN reachable by playing `better` (across the pool) scores well for the mover
   // (very negative side-to-move cp -> high mover win% after negation); everything else scores low.
   const betterFens = new Set<string>();
   for (const role of pool.keys()) {
-    const cf = {
-      ...state0,
-      board: { ...state0.board, [better.from]: { color: 'red' as const, role, faceDown: true } },
-    };
+    const cf = jieqiCounterfactualCf(state0, better.from, role, betterRole, 'red');
     betterFens.add(jieqiStateToPikafishFen(applyJieqiMove(cf, better)));
   }
   const decisions = await analyzeJieqiDecisions([played], deal, {

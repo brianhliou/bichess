@@ -218,6 +218,33 @@ test('analyzeBanqiDecisions: only flip plies, per-mover POV, flat eval => zero l
   }
 });
 
+// Mirror poolMeanWin's counterfactual EXACTLY: relabel the flipped square to `entry`, then swap a
+// donor face-down tile holding `entry` to the true `source` tile, so the hidden multiset is
+// preserved (an off-ink draw must NOT add a phantom piece). The mock evals key on these FENs, so
+// they have to be built the same way the source builds them.
+function banqiCounterfactualCf(
+  state: ReturnType<typeof createInitialBanqiState>,
+  from: BanqiMove['from'],
+  entry: { color: BanqiColor; role: BanqiPieceRole },
+  source: { color: BanqiColor; role: BanqiPieceRole },
+): ReturnType<typeof createInitialBanqiState> {
+  const cf = {
+    ...state,
+    board: { ...state.board, [from]: { color: entry.color, role: entry.role, faceDown: true } },
+  };
+  if (entry.color !== source.color || entry.role !== source.role) {
+    const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+      (sq) =>
+        sq !== from &&
+        state.board[sq]?.faceDown === true &&
+        state.board[sq]?.color === entry.color &&
+        state.board[sq]?.role === entry.role,
+    );
+    if (donor) cf.board[donor] = { color: source.color, role: source.role, faceDown: true };
+  }
+  return cf;
+}
+
 test('analyzeBanqiDecisions: playedWin is the TRUE pool-weighted mean over BOTH inks; realizedWin is the actual tile', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state0 = createInitialBanqiState('t', deal);
@@ -239,10 +266,7 @@ test('analyzeBanqiDecisions: playedWin is the TRUE pool-weighted mean over BOTH 
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   for (const [key, entry] of pool) {
-    const cf = {
-      ...state0,
-      board: { ...state0.board, [flip.from]: { ...entry, faceDown: true } },
-    };
+    const cf = banqiCounterfactualCf(state0, flip.from, entry, source);
     fenToCp.set(banqiStateToEngineFen(applyBanqiMove(cf, flip)), keyCp.get(key)!);
   }
 
@@ -267,22 +291,55 @@ test('analyzeBanqiDecisions: playedWin is the TRUE pool-weighted mean over BOTH 
   assert.equal(d.playedRank, 1);
 });
 
+test('analyzeBanqiDecisions: counterfactuals preserve material — an off-ink draw adds no phantom piece', async () => {
+  // Regression for the pool-rebalance bug: poolMeanWin used to relabel the flipped square WITHOUT
+  // rebalancing the hidden pool, so an off-ink counterfactual gained ~2 pieces of phantom material
+  // and inflated the baseline (a first-flip advisor read as -11% luck when it was really ~neutral).
+  // With the multiset-preserving swap, EVERY first-flip counterfactual is materially even, so a pure
+  // material-imbalance eval scores 0 for all of them and the pool-mean is exactly 50. On the old
+  // code the off-ink halves score ±, so playedWin would land far from 50.
+  const deal = STANDARD_BANQI_DEAL;
+  const state0 = createInitialBanqiState('t', deal);
+  const flip = getBanqiLegalMoves(state0).find((m) => m.from === m.to)!;
+  const redMinusBlack = (fen: string): number => {
+    const [boardF = '', , poolF = ''] = fen.split(' ');
+    let bal = 0;
+    for (const ch of boardF) {
+      if (ch === 'X' || ch === '/' || (ch >= '0' && ch <= '9')) continue;
+      if (ch >= 'A' && ch <= 'Z') bal += 1;
+      else if (ch >= 'a' && ch <= 'z') bal -= 1;
+    }
+    for (const m of poolF.matchAll(/([A-Za-z])(\d+)/g)) {
+      bal += m[1]! >= 'A' && m[1]! <= 'Z' ? Number(m[2]) : -Number(m[2]);
+    }
+    return bal;
+  };
+  const decisions = await analyzeBanqiDecisions([flip], deal, {
+    bestMove: async () => banqiMoveToEngineUci(flip),
+    evalPosition: async (fen) => ({ cp: 300 * redMinusBlack(fen), mate: null }),
+  });
+  const d = decisions[0]!;
+  assert.ok(
+    Math.abs(d.playedWin - 50) < 1e-6,
+    `balanced counterfactuals => playedWin 50, got ${d.playedWin}`,
+  );
+  assert.ok(Math.abs(d.realizedWin - 50) < 1e-6);
+});
+
 test('analyzeBanqiDecisions: a better candidate flip lifts bestWin above playedWin (decision loss)', async () => {
   const deal = STANDARD_BANQI_DEAL;
   const state0 = createInitialBanqiState('t', deal);
   const flips = getBanqiLegalMoves(state0).filter((m) => m.from === m.to);
   const played = flips[0]!;
   const better = flips[1]!;
+  const betterSource = state0.board[better.from]!;
   const pool = flipPool(deal);
 
   // Every post-move FEN reachable by playing `better` (across the pool) scores well for the mover
   // (very negative side-to-move cp -> high mover win% after negation); everything else scores low.
   const betterFens = new Set<string>();
   for (const entry of pool.values()) {
-    const cf = {
-      ...state0,
-      board: { ...state0.board, [better.from]: { ...entry, faceDown: true } },
-    };
+    const cf = banqiCounterfactualCf(state0, better.from, entry, betterSource);
     betterFens.add(banqiStateToEngineFen(applyBanqiMove(cf, better)));
   }
   const decisions = await analyzeBanqiDecisions([played], deal, {

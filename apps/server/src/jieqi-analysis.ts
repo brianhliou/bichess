@@ -331,11 +331,27 @@ async function poolMeanWin(
   const roles = [...pool.keys()];
   const wins = await Promise.all(
     roles.map((role) => {
-      // Counterfactual: this dark square is `role` instead. applyJieqiMove reveals it on the move.
+      // Counterfactual: this dark square is `role` instead of its true role. The MULTISET of the
+      // mover's remaining hidden roles is FIXED — we only relocate which one lies under move.from —
+      // so we SWAP move.from's role with a donor dark tile of the mover that holds `role`, moving
+      // the true role (`source.role`) there. Relabeling move.from ALONE would change the hidden-role
+      // counts (adding a phantom `role` and dropping a real `source.role`), skewing the baseline.
       const cf: JieqiGameState = {
         ...state,
         board: { ...state.board, [move.from]: { color: mover, role, faceDown: true } },
       };
+      if (role !== source.role) {
+        const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+          (sq) =>
+            sq !== move.from &&
+            state.board[sq]?.faceDown === true &&
+            state.board[sq]?.color === mover &&
+            state.board[sq]?.role === role,
+        );
+        // `role` is drawn from the mover's hidden tiles OTHER than move.from (which holds
+        // `source.role` ≠ `role`), so a donor always exists; guard defensively regardless.
+        if (donor) cf.board[donor] = { color: mover, role: source.role, faceDown: true };
+      }
       return moverWinAfter(applyJieqiMove(cf, move), mover, evalPosition);
     }),
   );
@@ -407,7 +423,10 @@ export async function analyzeJieqiDecisions(
 
 // Cache engine id for the decomposition blob — a DIFFERENT engine_id than the basic analysis, so
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
-export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ENGINE_VERSION}`;
+// The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
+// to invalidate cached decisions when the pool-mean math changes without an engine change. d2 =
+// pool-rebalance fix (counterfactuals preserve the mover's hidden-role multiset).
+export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ENGINE_VERSION}+d2`;
 
 export type JieqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<JieqiDecision[] | null>;
