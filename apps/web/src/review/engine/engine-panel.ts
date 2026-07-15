@@ -4,14 +4,13 @@
 // the postgame's ply navigation; scores are normalised to Red's POV so the gauge
 // reads the same regardless of whose turn it is.
 import {
-  CEVAL_ENGINE_NAME,
   type CevalHandle,
   type CevalLine,
   type CevalUpdate,
   type CevalVariant,
+  cevalEngineName,
   cevalSupported,
   createCeval,
-  preloadEngine,
 } from './ceval.js';
 import './engine-panel.css';
 import type { EvalBar } from './eval-bar.js';
@@ -45,7 +44,8 @@ type Side = 'red' | 'black';
 const DEBOUNCE_MS = 150;
 
 export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
-  const supported = cevalSupported();
+  const supported = cevalSupported(opts.variant);
+  const engineName = cevalEngineName(opts.variant);
   // Mutable so the settings popover can retune them live.
   let multiPv = opts.multiPv ?? 3;
   let maxDepth = opts.maxDepth ?? 18;
@@ -150,8 +150,8 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       opts.evalBar?.setEval(cp, mate);
     }
     meta.textContent = update.depth
-      ? `${CEVAL_ENGINE_NAME} · depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
-      : `${CEVAL_ENGINE_NAME} · thinking…`;
+      ? `${engineName} · depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
+      : `${engineName} · thinking…`;
     lines.replaceChildren(...update.lines.map((line) => renderLine(line, side, formatMove)));
     opts.onLines?.(update.lines);
   }
@@ -160,7 +160,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     if (!on || !supported) return;
     const moves = currentMoves;
     const side = sideToMove(moves);
-    meta.textContent = `${CEVAL_ENGINE_NAME} · loading…`;
+    meta.textContent = `${engineName} · loading…`;
     opts.evalBar?.setLoading();
     void handle!
       .evaluate({
@@ -193,8 +193,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     on = true;
     syncToggle();
     opts.evalBar?.setIdle(false);
-    meta.textContent = `${CEVAL_ENGINE_NAME} · loading…`;
-    void preloadEngine()
+    meta.textContent = `${engineName} · loading…`;
+    void handle
+      .preload()
       .then(() => {
         if (on) evaluateNow();
       })

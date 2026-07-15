@@ -8,6 +8,8 @@
 // lazy — importing the module in a non-isolated page (or a test) does nothing until
 // evaluate()/preloadEngine() is called.
 
+import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
+
 const ENGINE_BASE = '/engine/fairy-stockfish/';
 // The vendored FSF assets live in public/ and are NOT content-hashed like the Vite
 // bundle, so the CDN caches them by bare path for hours (max-age=14400) and a copy
@@ -30,8 +32,10 @@ const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_
 /** Human label for the engine, shown in the analysis panel. */
 export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
 
-/** Variants the vendored engine can evaluate. Both run on one shared instance. */
-export type CevalVariant = 'xiangqi' | 'fortressxiangqi';
+/** Variants a client engine can evaluate. `xiangqi`/`fortressxiangqi` run on the shared
+ *  Fairy-Stockfish instance below; `banqi` runs on a separate Misty wasm backend
+ *  (misty-ceval.ts) — createCeval() dispatches by variant. */
+export type CevalVariant = 'xiangqi' | 'fortressxiangqi' | 'banqi';
 
 export interface CevalLine {
   /** 1-based rank within MultiPV (1 = best). */
@@ -72,6 +76,8 @@ export interface CevalRequest {
 
 export interface CevalHandle {
   readonly variant: CevalVariant;
+  /** Warm the engine ahead of the first evaluate (load + init). Idempotent. */
+  preload(): Promise<void>;
   /** Evaluate a position; resolves with the deepest update reached. */
   evaluate(req: CevalRequest): Promise<CevalUpdate>;
   /** Halt the current search (the pending evaluate never resolves). */
@@ -79,13 +85,22 @@ export interface CevalHandle {
   dispose(): void;
 }
 
-/** True only when SharedArrayBuffer is usable — i.e. the page is cross-origin isolated. */
-export function cevalSupported(): boolean {
+/** Whether the client engine for `variant` can run in this page. The Fairy-Stockfish
+ *  variants need SharedArrayBuffer (cross-origin isolation); the single-threaded Misty
+ *  wasm variants (banqi) do not, so they are always supported. Called with no argument,
+ *  it reports the FSF requirement (back-compat). */
+export function cevalSupported(variant?: CevalVariant): boolean {
+  if (variant && isMistyCevalVariant(variant)) return true;
   return (
     typeof SharedArrayBuffer === 'function' &&
     typeof crossOriginIsolated === 'boolean' &&
     crossOriginIsolated === true
   );
+}
+
+/** Human label for the engine backing `variant`. */
+export function cevalEngineName(variant: CevalVariant): string {
+  return mistyEngineName(variant) ?? CEVAL_ENGINE_NAME;
 }
 
 // --- low-level engine (singleton) ---------------------------------------------
@@ -277,6 +292,10 @@ class Ceval implements CevalHandle {
 
   constructor(readonly variant: CevalVariant) {}
 
+  preload(): Promise<void> {
+    return preloadEngine();
+  }
+
   async evaluate(req: CevalRequest): Promise<CevalUpdate> {
     const core = await engine();
     this.stop(); // supersede any in-flight search
@@ -369,5 +388,6 @@ class Ceval implements CevalHandle {
 }
 
 export function createCeval(variant: CevalVariant): CevalHandle {
+  if (isMistyCevalVariant(variant)) return new MistyCeval(variant);
   return new Ceval(variant);
 }

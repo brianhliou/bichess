@@ -81,7 +81,13 @@ export interface TreeBoardFactoryOptions<Move, View, Color> {
 export interface EnginePresentation<Truth, Arrow> {
   /** Which ceval engine the local engine panel loads. */
   panelVariant: CevalVariant;
-  /** Engine FEN for a truth state (the Share tab). */
+  /** How the panel is fed each position. `'moves'` (default): replay engine UCI from the
+   *  start position — the Fairy-Stockfish variants. `'fen'`: hand the engine the per-node
+   *  redacted FEN with no move list — the Misty flip variants (banqi), whose engine takes a
+   *  full position FEN and must never see more than the as-played info-state. */
+  positionMode?: 'moves' | 'fen';
+  /** Engine FEN for a truth state. Drives the Share tab, and — when positionMode is
+   *  `'fen'` — the per-node position fed to the engine panel. */
   fen(truth: Truth): string;
   /** Prettify a PV move (engine UCI) for the engine panel. */
   formatPvMove(uci: string): string;
@@ -621,7 +627,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // engine is on (stale-arrow clear); the explicit paintOverlays below then
     // repaints for the new node (engine/analysis arrows + the node's user shapes),
     // covering the engine-off case where setPosition fires no onLines.
-    enginePanel?.setPosition(uciTo(node));
+    // `'fen'` engines (Misty flip variants) take the per-node redacted FEN with no move
+    // list; `'moves'` engines (Fairy-Stockfish) replay engine UCI from the start position.
+    if (enginePanel) {
+      if (presentation.engine?.positionMode === 'fen') {
+        enginePanel.setPosition([], presentation.engine.fen(node.truth));
+      } else {
+        enginePanel.setPosition(uciTo(node));
+      }
+    }
     paintOverlays();
     annotationEditor?.setAnnotations(node.annotations);
     moveTree.setCurrent(currentPath);

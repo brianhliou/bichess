@@ -1,4 +1,5 @@
 export * from './analysis.js';
+export * from './banqi-fen.js';
 export * from './bughouse.js';
 export * from './bughouse-engine-protocol.js';
 export * from './chess960.js';

@@ -1,17 +1,18 @@
 // Flip Xiangqi (banqi) review surface: the banqi presentation bundle over the
-// generic tree-review controller (mountTreeReview). Banqi has a hidden deal but no
-// client engine, so `engine: null` — the eval gauge and engine panel are omitted,
-// but the interactive branching board (flip + move), move tree, control bar, and
-// replay all work. Unlike jungle/xiangqi the adapter is DEAL-BOUND (a factory over
-// the reconstructed deal), so the presentation is built per-game rather than held
-// as a module constant.
+// generic tree-review controller (mountTreeReview). The client engine is the in-browser
+// MistyBanqi wasm build (a Misty ceval backend, fed the per-node redacted FEN), so the
+// eval gauge + MultiPV panel light up alongside the interactive branching board (flip +
+// move), move tree, control bar, and replay. Unlike jungle/xiangqi the adapter is
+// DEAL-BOUND (a factory over the reconstructed deal), so the presentation is built
+// per-game rather than held as a module constant.
 
-import type {
-  BanqiDeal,
-  BanqiGameState,
-  BanqiMove,
-  BanqiPlayerView,
-  BanqiSeat,
+import {
+  type BanqiDeal,
+  type BanqiGameState,
+  type BanqiMove,
+  type BanqiPlayerView,
+  type BanqiSeat,
+  banqiStateToEngineFen,
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
@@ -30,17 +31,42 @@ export type BanqiReviewConfig = TreeReviewConfig<BanqiMove>;
 /** Handle returned by mountBanqiReview: snapshot the current tree to persist it. */
 export type BanqiReviewHandle = TreeReviewHandle;
 
-// Banqi has no client engine and the renderer has no overlay layer, so Arrow/Marker
-// are unused (setArrows/setMarkers are no-ops); the shapeTo* hooks are never invoked
-// but the type requires them, so they pass the shape through opaquely. Banqi is
-// symmetric-info — the same board shows to both seats — so `perspective` never
-// changes the render (the Flip control is a visual no-op here, kept for parity).
+/** Engine PV move (redacted engine UCI, e.g. "a0b0" or a flip "e0e0") -> display coords.
+ *  A flip renders as a bare coordinate ("e1"), matching the move-list notation; a move as
+ *  "from-to" ("a1-b1"). Ranks are 0-indexed in engine UCI, 1-indexed on the board. */
+function formatBanqiEngineMove(uci: string): string {
+  if (uci.length < 4) return uci;
+  const toDisplay = (sq: string): string => {
+    const rank = Number(sq[1]);
+    return Number.isNaN(rank) ? sq : `${sq[0]}${rank + 1}`;
+  };
+  const from = toDisplay(uci.slice(0, 2));
+  const to = toDisplay(uci.slice(2, 4));
+  return from === to ? from : `${from}-${to}`;
+}
+
+// The banqi renderer has no board-overlay layer, so engine arrows are omitted (the
+// engine* hooks return []); the eval gauge + MultiPV panel still light up. The shapeTo*
+// hooks are never invoked but the type requires them, so they pass the shape through
+// opaquely. Banqi is symmetric-info — the same board shows to both seats — so
+// `perspective` never changes the render (the Flip control is a visual no-op here).
 function makeBanqiPresentation(
   adapter: VariantTreeAdapter<BanqiMove, BanqiGameState, BanqiPlayerView>,
 ): TreePresentation<BanqiMove, BanqiGameState, BanqiPlayerView, BanqiSeat, unknown, unknown> {
   return {
     adapter,
-    engine: null,
+    // Client engine: the in-browser MistyBanqi wasm (single-shot MultiPV). It is fed the
+    // per-node REDACTED FEN (positionMode 'fen') — face-down tiles as X — so the client
+    // engine never sees more than the as-played info-state, same boundary as the server.
+    engine: {
+      panelVariant: 'banqi',
+      positionMode: 'fen',
+      fen: banqiStateToEngineFen,
+      formatPvMove: formatBanqiEngineMove,
+      // No board-overlay layer in the banqi renderer → no on-board engine arrows.
+      engineArrowsFromLines: () => [],
+      bestMoveArrow: () => [],
+    },
     // The analysis engine's best move is 0-indexed UCI with flips as from===to; render it in
     // board coords ("b3 flip") for the "… was best" advice line, not the raw "B2-B2".
     formatBestMove: formatFlipVariantBestMove,
