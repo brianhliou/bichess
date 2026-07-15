@@ -12,7 +12,13 @@
 //    so evaluate() resolves with one update rather than streaming depth-by-depth.
 //  - FEN-per-position, not moves-from-startpos: a flip variant's position is fed as a
 //    redacted FEN (face-down tiles as X); the panel supplies initialFen, movesUci is empty.
-import type { CevalHandle, CevalLine, CevalRequest, CevalUpdate, CevalVariant } from './ceval.js';
+import type {
+  CevalHandle,
+  CevalLine,
+  CevalRequest,
+  CevalUpdate,
+  CevalVariant,
+} from './ceval-types.js';
 
 // Vendored wasm assets live in public/ (like the FSF build) and are cache-busted by this
 // version query. The worker's own imports are unversioned (bare path), so the main thread

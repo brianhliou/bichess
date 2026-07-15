@@ -8,7 +8,19 @@
 // lazy — importing the module in a non-isolated page (or a test) does nothing until
 // evaluate()/preloadEngine() is called.
 
+// The ceval contract types live in ceval-types.ts (so the Misty backend can share them
+// without a circular import); imported for local use and re-exported below for existing
+// `from './ceval.js'` importers.
+import type {
+  CevalHandle,
+  CevalLine,
+  CevalRequest,
+  CevalUpdate,
+  CevalVariant,
+} from './ceval-types.js';
 import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
+
+export type { CevalHandle, CevalLine, CevalRequest, CevalUpdate, CevalVariant };
 
 const ENGINE_BASE = '/engine/fairy-stockfish/';
 // The vendored FSF assets live in public/ and are NOT content-hashed like the Vite
@@ -31,59 +43,6 @@ const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_
 
 /** Human label for the engine, shown in the analysis panel. */
 export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
-
-/** Variants a client engine can evaluate. `xiangqi`/`fortressxiangqi` run on the shared
- *  Fairy-Stockfish instance below; `banqi` runs on a separate Misty wasm backend
- *  (misty-ceval.ts) — createCeval() dispatches by variant. */
-export type CevalVariant = 'xiangqi' | 'fortressxiangqi' | 'banqi';
-
-export interface CevalLine {
-  /** 1-based rank within MultiPV (1 = best). */
-  multipv: number;
-  depth: number;
-  /** Centipawns, side-to-move POV; null when `mate` is set. */
-  scoreCp: number | null;
-  /** Signed moves-to-mate, side-to-move POV; null otherwise. */
-  mate: number | null;
-  /** Principal variation, engine UCI. */
-  pvUci: string[];
-}
-
-export interface CevalUpdate {
-  depth: number;
-  seldepth: number;
-  nodes: number;
-  nps: number;
-  /** Lines sorted ascending by multipv. Scores are from the side-to-move POV. */
-  lines: CevalLine[];
-}
-
-export interface CevalRequest {
-  /** Move history from the base position, in engine UCI. */
-  movesUci: string[];
-  /** Base position as an engine FEN. Omit to analyse from the standard start
-   *  position (the review board's whole-game replay); set it to analyse a
-   *  mid-game position that has no start-position move list, e.g. a mined puzzle
-   *  that begins partway through a game. `movesUci` are then applied on top. */
-  initialFen?: string;
-  /** Number of ranked lines to return (default 1). */
-  multiPv?: number;
-  /** Cap search depth; the engine streams shallower updates first (default 18). */
-  maxDepth?: number;
-  /** Progressive callback fired as depth increases (throttled). */
-  onUpdate?: (update: CevalUpdate) => void;
-}
-
-export interface CevalHandle {
-  readonly variant: CevalVariant;
-  /** Warm the engine ahead of the first evaluate (load + init). Idempotent. */
-  preload(): Promise<void>;
-  /** Evaluate a position; resolves with the deepest update reached. */
-  evaluate(req: CevalRequest): Promise<CevalUpdate>;
-  /** Halt the current search (the pending evaluate never resolves). */
-  stop(): void;
-  dispose(): void;
-}
 
 /** Whether the client engine for `variant` can run in this page. The Fairy-Stockfish
  *  variants need SharedArrayBuffer (cross-origin isolation); the single-threaded Misty
