@@ -27,6 +27,14 @@ describe('Dark Xiangqi board svg', () => {
     expect(svg).not.toContain('xq-live-border');
   });
 
+  it('keeps the background and fog full-bleed for responsive wrapper clipping', () => {
+    const svg = renderDarkXiangqiBoardSvg(viewFixture());
+
+    expect(svg).toContain('<rect class="xq-live-bg" x="0" y="0" width="552" height="612"/>');
+    expect(svg).not.toMatch(/class="xq-live-bg"[^>]*\srx=/);
+    expect(svg).toContain('width="552" height="612" rx="0" fill="white"');
+  });
+
   it('keeps shrouded pieces role-neutral in the DOM', () => {
     const svg = renderDarkXiangqiBoardSvg(viewFixture());
 

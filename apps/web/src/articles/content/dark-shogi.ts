@@ -346,7 +346,7 @@ export const darkShogiArticle: Article = {
           kind: 'cta',
           buttons: [
             { label: 'Shogi Rules', href: '/rules/shogi', emphasis: 'secondary' },
-            { label: 'Fog Chess', href: '/rules/dark-chess', emphasis: 'secondary' },
+            { label: 'Fog Chess', href: '/rules/fog-chess', emphasis: 'secondary' },
             { label: 'All rules', href: '/rules', emphasis: 'secondary' },
           ],
         } as ArticleBlock,

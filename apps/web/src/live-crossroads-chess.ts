@@ -222,7 +222,7 @@ export function bootstrapCrossroadsChessLiveRoom(): void {
     );
   }
 
-  refs = createLiveLayout(app, { debugRequested: false });
+  refs = createLiveLayout(app, { debugRequested: false, roomId: room });
   setLiveLayoutGameSpec(app, 'crossroads-chess');
   setBoardFamily('chess');
   boardHost = refs.board;
@@ -699,16 +699,8 @@ function renderMoves(liveRefs: LiveRefs): void {
       renderAll();
     };
   }
-  if (state.moves.length === 0) {
-    const row = document.createElement('li');
-    row.className = 'move-row';
-    const empty = document.createElement('span');
-    empty.className = 'move-empty';
-    empty.textContent = 'No moves yet';
-    row.append(empty);
-    liveRefs.moveList.append(row);
-    return;
-  }
+  // Zero moves renders an empty list (lichess parity): no placeholder row.
+  if (state.moves.length === 0) return;
   for (let i = 0; i < state.moves.length; i += 2) {
     const row = document.createElement('li');
     row.className = 'move-row';

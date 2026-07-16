@@ -20,7 +20,7 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'fortress-xiangqi': true,
   xiangqi: true,
   'dark-xiangqi': true,
-  'dark-shogi': true,
+  'dark-shogi': false,
   'dark-omega': false,
   jieqi: true,
   banqi: true,
@@ -33,6 +33,13 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
+const HIDDEN_RULES_SLUGS = new Set(['shogi', 'shogi4']);
+const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
+  'flip-xiangqi': 'banqi',
+  'fog-chess': 'dark-chess',
+  'fog-xiangqi': 'dark-xiangqi',
+  'reveal-xiangqi': 'jieqi',
+};
 
 export function isGameSpecId(value: string): value is GameSpecId {
   return gameSpecIds.has(value);
@@ -43,15 +50,24 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
 }
 
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
-  return !isGameSpecId(slug) || variantPublicSurfaceEnabled(slug);
+  if (HIDDEN_RULES_SLUGS.has(slug)) return false;
+  const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
+  return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
 }
 
 export function rulesHrefPublicSurfaceEnabled(href: string | undefined): boolean {
-  const specId = gameSpecIdFromRulesHref(href);
-  return specId === null || variantPublicSurfaceEnabled(specId);
+  const slug = rulesSlugFromHref(href);
+  return slug === null || rulesSlugPublicSurfaceEnabled(slug);
 }
 
 export function gameSpecIdFromRulesHref(href: string | undefined): GameSpecId | null {
+  const slug = rulesSlugFromHref(href);
+  if (slug === null) return null;
+  const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
+  return isGameSpecId(gameSpecId) ? gameSpecId : null;
+}
+
+function rulesSlugFromHref(href: string | undefined): string | null {
   if (!href) return null;
   let pathname: string;
   try {
@@ -61,6 +77,5 @@ export function gameSpecIdFromRulesHref(href: string | undefined): GameSpecId | 
   }
   const match = pathname.match(/^\/rules\/([^/]+)$/);
   if (!match) return null;
-  const slug = decodeURIComponent(match[1]);
-  return isGameSpecId(slug) ? slug : null;
+  return decodeURIComponent(match[1]);
 }

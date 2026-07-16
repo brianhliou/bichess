@@ -8,7 +8,7 @@
 }
 
 .account-shell {
-  width: min(560px, calc(100% - 24px));
+  width: min(600px, calc(100% - 24px));
 }
 
 .account-settings-auth-route {
@@ -22,9 +22,13 @@
   width: 100%;
 }
 
+.account-settings-auth-route .site-nav-auth {
+  display: none;
+}
+
 .account-settings-auth-route .account-shell {
   justify-self: center;
-  width: min(560px, calc(100% - 24px));
+  width: min(600px, calc(100% - 24px));
   margin-inline: 0;
 }
 
@@ -48,29 +52,35 @@
 }
 
 .account-settings-shell {
+  --account-settings-accent: hsl(20, 96%, 44%);
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 12px;
   align-items: start;
-  width: min(1120px, calc(100% - 24px));
+  width: min(1300px, calc(100% - 32px));
 }
 
 .account-settings-rail {
   display: grid;
-  gap: 6px;
+  gap: 0;
+  justify-items: stretch;
 }
 
 .account-settings-rail-link {
   display: block;
   border-radius: 4px;
   color: var(--site-muted);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
-  padding: 11px 14px;
+  padding: 10px 20px 10px 12px;
   text-decoration: none;
   transition:
     background 140ms ease,
     color 140ms ease;
+}
+
+.account-settings-rail-separator {
+  height: 2em;
 }
 
 .account-settings-rail-link:hover,
@@ -87,57 +97,202 @@
 }
 
 .account-panel,
-.profile-header,
-.profile-ratings,
-.profile-games,
-.profile-rating-spotlight,
-.profile-tabs,
-.profile-activity-panel {
+.profile-overview,
+.profile-tabs {
   border: 1px solid var(--site-border);
-  border-radius: 3px;
+  border-radius: var(--site-radius);
   background: var(--site-panel);
   box-shadow: 0 2px 2px color-mix(in srgb, var(--site-shadow) 24%, transparent);
 }
 
-.account-panel,
-.profile-header {
+.account-panel {
   padding: 22px;
 }
 
+.account-panel.account-settings-panel {
+  min-height: 100%;
+  padding: clamp(30px, 4vh, 40px) clamp(24px, 3.5vw, 50px) clamp(32px, 4vh, 44px);
+  border: 0;
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--site-shadow) 35%, transparent);
+}
+
+.account-panel.account-settings-panel > .site-section-heading {
+  margin: 0 0 clamp(30px, 4vh, 44px);
+  color: var(--account-settings-accent);
+  font-size: clamp(30px, 2.5vw, 38px);
+  line-height: 1.2;
+}
+
+.account-panel.account-settings-panel > .site-section-heading:has(+ .account-copy) {
+  margin-bottom: 10px;
+}
+
+.account-panel.account-settings-panel > .site-section-heading + .account-copy {
+  margin: 0 0 34px;
+}
+
 .account-auth-panel {
-  padding: clamp(28px, 4vw, 44px);
+  padding: clamp(28px, 4vw, 48px);
   border-radius: 8px;
   box-shadow:
     0 1px 2px color-mix(in srgb, var(--site-shadow) 26%, transparent),
     0 18px 46px color-mix(in srgb, var(--site-shadow) 16%, transparent);
 }
 
-.profile-header {
-  position: relative;
+/* ── Merged overview card: identity + actions across the top, then the rating
+   graph (2/3) beside the stat readouts (1/3). ─────────────────────────────── */
+.profile-overview {
   overflow: hidden;
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--site-accent-soft) 58%, transparent),
-      transparent 46%
-    ),
-    linear-gradient(
-      180deg,
-      var(--site-panel) 0%,
-      color-mix(in srgb, var(--site-panel-soft) 72%, var(--site-panel)) 100%
-    );
 }
 
-.profile-header::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 5px;
-  background: linear-gradient(180deg, var(--site-accent), #4f8edb 54%, #d6af4e);
+.profile-overview-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--site-border-soft);
 }
 
-.profile-header > * {
-  position: relative;
+.profile-identity {
+  min-width: 0;
+}
+
+.profile-identity-handle {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.profile-overview-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+/* The graph column. */
+.profile-rating-spotlight {
+  min-width: 0;
+  padding: 16px 18px 14px;
+}
+
+/* The descriptive "user profile text" column (lichess right third). */
+.profile-overview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 1px solid var(--site-border-soft);
+  padding: 18px 20px;
+}
+
+.profile-side-name {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.profile-side-line {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.profile-side-bio {
+  color: var(--site-text);
+  white-space: pre-wrap;
+}
+
+.profile-side-links {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-side-links a {
+  display: block;
+  overflow: hidden;
+  color: var(--site-link);
+  font-size: 13px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-side-links a:hover,
+.profile-side-links a:focus-visible {
+  text-decoration: underline;
+}
+
+.profile-side-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-side-stat-label {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.profile-side-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.profile-side-thumb {
+  flex: 0 0 auto;
+  display: block;
+  line-height: 0;
+}
+
+/* Counts strip under the username (lichess user-infos row). */
+.profile-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 12px;
+}
+
+.profile-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.profile-count-value {
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-count-label {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Action buttons ride the top strip; drop the standalone-row top margin. */
+.profile-overview-top .profile-relation-actions,
+.profile-overview-top .profile-owner-actions {
+  flex: 0 0 auto;
+  margin-top: 2px;
 }
 
 .account-eyebrow {
@@ -150,45 +305,7 @@
   text-transform: uppercase;
 }
 
-.account-auth-tabs {
-  display: flex;
-  gap: 0;
-  margin: -6px 0 24px;
-  border-bottom: 1px solid var(--site-border-soft);
-}
-
-.account-auth-tab {
-  flex: 1 1 0;
-  padding: 9px 14px 11px;
-  text-align: center;
-  text-decoration: none;
-  font-size: clamp(20px, 3.5vw, 26px);
-  font-weight: 400;
-  color: var(--site-muted);
-  border-bottom: 2px solid transparent;
-  transition:
-    color 140ms ease,
-    border-color 140ms ease;
-}
-
-.account-auth-tab:hover,
-.account-auth-tab:focus-visible {
-  color: var(--site-text);
-}
-
-.account-auth-tab:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--site-focus);
-  outline: none;
-}
-
-.account-auth-tab.active {
-  color: var(--site-accent);
-  font-weight: 800;
-  border-bottom-color: var(--site-accent);
-}
-
-.account-auth-panel .account-eyebrow,
-.account-auth-panel .site-section-heading {
+.account-auth-panel .account-eyebrow {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -198,12 +315,19 @@
   white-space: nowrap;
 }
 
+.account-auth-panel .site-section-heading {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 700;
+}
+
 .account-auth-panel .account-copy {
-  margin: 0 auto;
+  margin: 10px auto 0;
   text-align: center;
   color: var(--site-muted);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .account-panel .site-section-heading,
@@ -406,7 +530,8 @@
 
 .account-form input,
 .account-field input,
-.account-field select {
+.account-field select,
+.account-field textarea {
   min-width: 100%;
   min-height: 40px;
   border: 1px solid var(--site-border);
@@ -415,6 +540,11 @@
   color: var(--site-text);
   font: inherit;
   padding: 8px 10px;
+}
+
+.account-field textarea {
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .account-form input:focus,
@@ -426,6 +556,11 @@
 
 .account-settings-form {
   display: grid;
+}
+
+.account-public-profile-form {
+  gap: 24px;
+  max-width: 900px;
 }
 
 .account-settings-summary {
@@ -461,31 +596,157 @@
   font-size: 13px;
 }
 
+.account-session-settings {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+  color: var(--site-muted);
+}
+
+.account-session-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-session-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  border-top: 1px solid var(--site-border-soft);
+  padding: 16px 0;
+}
+
+.account-session-row:last-child {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.account-session-details {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.account-session-details strong {
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.account-session-details span {
+  font-size: 12px;
+}
+
+.account-session-current {
+  border-radius: 999px;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.account-session-revoke,
+.account-session-revoke-others {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.account-session-revoke-others {
+  justify-self: start;
+}
+
+.account-close-consequences {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding-left: 20px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.account-close-form {
+  gap: 18px;
+  max-width: 720px;
+}
+
+.account-close-acknowledgement {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: var(--site-text);
+  font-size: 13px;
+}
+
+.account-close-acknowledgement input {
+  margin-top: 2px;
+}
+
+.account-danger-button {
+  justify-self: start;
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, #c63d3d 70%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, #c63d3d 14%, var(--site-panel));
+  color: color-mix(in srgb, #e35d5d 88%, var(--site-text));
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 12px;
+}
+
+.account-danger-button:hover:not(:disabled),
+.account-danger-button:focus-visible {
+  border-color: #c63d3d;
+  background: color-mix(in srgb, #c63d3d 22%, var(--site-panel));
+  outline: 2px solid color-mix(in srgb, #c63d3d 28%, transparent);
+}
+
+.account-close-complete {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 15px;
+}
+
 .account-display-settings {
   display: grid;
-  margin-top: 22px;
-  border-top: 1px solid var(--site-border-soft);
+  margin-top: 0;
 }
 
 .account-preference-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(88px, max-content);
-  align-items: center;
-  gap: 24px;
-  border-bottom: 1px solid var(--site-border-soft);
-  padding: 16px 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 0 0 clamp(28px, 3vw, 42px);
 }
 
 .account-preference-copy {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
   min-width: 0;
+}
+
+.account-preference-copy::after {
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--account-settings-accent) 72%, transparent),
+    color-mix(in srgb, var(--account-settings-accent) 8%, transparent)
+  );
+  content: "";
 }
 
 .account-preference-title {
   color: var(--site-text);
-  font-size: 15px;
-  font-weight: 650;
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(17px, 1.45vw, 21px);
+  font-weight: 300;
+  line-height: 1.25;
 }
 
 .account-preference-help {
@@ -493,6 +754,79 @@
   color: var(--site-muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.account-preference-options {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  overflow: hidden;
+  min-height: 44px;
+  border-radius: var(--site-radius);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--site-shadow) 42%, transparent);
+}
+
+.account-preference-option {
+  display: grid;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.account-preference-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account-preference-option span {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 10px 14px;
+  border-left: 1px solid var(--site-border);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--site-panel-soft) 55%, var(--site-panel)),
+    var(--site-panel-soft)
+  );
+  color: var(--site-muted);
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.2;
+  text-align: center;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.account-preference-option:first-child span {
+  border-left: 0;
+}
+
+.account-preference-option input:checked + span {
+  background: color-mix(in srgb, var(--site-muted) 24%, var(--site-panel));
+  color: var(--site-heading);
+  box-shadow: inset 0 2px 5px color-mix(in srgb, var(--site-shadow) 46%, transparent);
+  font-weight: 700;
+}
+
+.account-preference-option:hover span {
+  color: var(--site-heading);
+}
+
+.account-preference-option input:focus-visible + span {
+  outline: 3px solid var(--site-focus);
+  outline-offset: -3px;
+}
+
+.account-preference-option input:disabled + span {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .account-preference-select {
@@ -564,6 +898,62 @@
   transform: translateX(22px);
 }
 
+.account-notification-settings {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--site-text);
+  font-size: 14px;
+}
+
+.account-notification-settings th,
+.account-notification-settings td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.account-notification-settings thead th {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.account-notification-settings thead th:first-child,
+.account-notification-settings tbody th {
+  width: 50%;
+  text-align: left;
+}
+
+.account-notification-settings tbody th {
+  font-weight: 400;
+}
+
+.account-notification-settings tbody tr:nth-child(odd) {
+  background: color-mix(in srgb, var(--site-panel-soft) 48%, transparent);
+}
+
+.account-notification-settings td {
+  position: relative;
+  width: 25%;
+  text-align: center;
+}
+
+.account-notification-settings .account-preference-help {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account-notification-unavailable {
+  color: var(--site-muted);
+}
+
 .account-field {
   display: grid;
   gap: 6px;
@@ -596,15 +986,75 @@
 
 .account-auth-panel .account-form {
   display: grid;
-  gap: 18px;
-  margin-top: 26px;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.account-auth-stage {
+  display: grid;
+  gap: 14px;
+}
+
+.account-auth-stage[hidden] {
+  display: none;
+}
+
+.account-auth-new-account,
+.account-auth-code-prompt,
+.account-auth-code-timing {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.account-auth-code-prompt {
+  color: var(--site-text);
+}
+
+.account-auth-code-timing[data-state="expired"] {
+  color: var(--site-danger, #c0392b);
+}
+
+.account-auth-code-stage input[name="code"] {
+  text-align: center;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2em;
+}
+
+.account-auth-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin-top: -4px;
+}
+
+.account-auth-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.account-auth-field-label {
+  color: var(--site-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.account-auth-field-help {
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .account-auth-panel .account-form input {
   min-width: 100%;
-  min-height: 54px;
+  min-height: 56px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--site-accent-soft) 72%, var(--site-panel));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--site-border) 42%, transparent);
   color: var(--site-text);
@@ -618,14 +1068,19 @@
   outline-offset: 2px;
 }
 
-.account-auth-panel .account-form input[hidden] {
-  display: none;
+.account-auth-panel .account-form input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--site-danger, #c0392b) 76%, transparent);
+}
+
+.account-auth-panel .account-form input:read-only {
+  color: var(--site-muted);
+  cursor: default;
 }
 
 .account-auth-panel .account-form .landing-setup-start {
   width: 100%;
-  min-height: 54px;
-  border-radius: 16px;
+  min-height: 56px;
+  border-radius: 10px;
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--site-accent) 86%, #49a48e),
@@ -650,17 +1105,100 @@
 }
 
 .account-auth-panel .account-status {
-  min-height: 1.35em;
-  text-align: center;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--site-panel-soft);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.account-auth-panel .account-status[data-state="success"] {
+  color: var(--site-text);
+  box-shadow: inset 3px 0 0 var(--site-accent);
+}
+
+.account-auth-panel .account-status[data-state="error"] {
+  color: var(--site-danger, #c0392b);
+  box-shadow: inset 3px 0 0 var(--site-danger, #c0392b);
+}
+
+.account-auth-reset {
+  border: 0;
+  background: transparent;
+  color: var(--site-accent-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.account-auth-reset:disabled {
+  color: var(--site-muted);
+  cursor: wait;
+  text-decoration: none;
+}
+
+.account-auth-reset:hover,
+.account-auth-reset:focus-visible {
+  text-decoration: underline;
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.account-auth-principles {
+  margin-top: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 6px;
+  background: var(--site-panel-soft);
+}
+
+.account-auth-principles summary {
+  color: var(--site-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.account-auth-principles-body {
+  margin-top: 14px;
+}
+
+.account-auth-principles h2 {
+  margin: 0 0 9px;
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.account-auth-principles ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 19px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.account-auth-principles li::marker {
+  color: var(--site-accent);
 }
 
 .account-auth-panel .account-legal {
-  margin-top: 2px;
+  margin-top: 0;
   text-align: center;
 }
 
 .profile-header-meta {
-  line-height: 1.6;
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .profile-handle,
@@ -691,7 +1229,7 @@
   color: #d4645d;
 }
 
-/* Patron badge: a warm cosmetic thank-you with a paw glyph, links to /patron. */
+/* Patron badge: a warm cosmetic thank-you with the shared mist-heart mark. */
 .profile-role-patron {
   gap: 4px;
   background: color-mix(in srgb, #e0a94b 20%, var(--site-panel));
@@ -699,15 +1237,12 @@
   text-decoration: none;
 }
 
-.profile-patron-paw {
+.profile-patron-icon {
   display: inline-flex;
-  width: 12px;
-  height: 12px;
-}
-
-.profile-patron-paw svg {
-  width: 100%;
-  height: 100%;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  background: url("/icons/mist-heart.png") center / contain no-repeat;
 }
 
 .profile-role-patron:hover {
@@ -755,54 +1290,123 @@
   text-transform: uppercase;
 }
 
-.profile-rating-spotlight {
-  overflow: hidden;
-}
-
-.profile-rating-spotlight-header {
-  padding: 18px 20px 8px;
-}
-
-.profile-rating-spotlight h2 {
-  margin: 0;
-  color: var(--site-heading);
-  font-size: 21px;
-  font-weight: 650;
-}
-
-.profile-rating-current {
+/* Graph column head: the variant + current rating on the left, the range
+   toggle on the right. */
+.profile-chart-head {
   display: flex;
-  align-items: end;
-  gap: 12px;
-  padding: 0 20px 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 8px;
 }
 
-.profile-rating-current-value {
+.profile-chart-headline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.profile-chart-variant {
   color: var(--site-heading);
-  font-size: 34px;
-  font-weight: 750;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.profile-chart-value {
+  color: var(--site-heading);
+  font-size: 26px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
-.profile-rating-current-detail {
-  padding-bottom: 4px;
+.profile-chart-value-unrated {
   color: var(--site-muted);
-  font-size: 13px;
+  font-size: 18px;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.profile-chart-value-empty {
+  color: var(--site-muted);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.profile-chart-detail {
+  color: var(--site-muted);
+  font-size: 12px;
   font-weight: 600;
+}
+
+/* Segmented range control (1M · 3M · … · ALL). */
+/* Flat text range toggle (lichess navigator idiom): no pill container. */
+.profile-chart-ranges {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.profile-chart-range {
+  min-width: 28px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.profile-chart-range:hover {
+  color: var(--site-heading);
+}
+
+.profile-chart-range:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+.profile-chart-range-active {
+  color: var(--site-accent-strong);
+  background: var(--site-accent-soft);
 }
 
 .profile-rating-chart {
   position: relative;
-  min-height: 152px;
-  border-top: 1px solid var(--site-border-soft);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--site-panel-soft) 58%, transparent),
-      transparent
-    ),
-    var(--site-panel);
+  min-height: 150px;
+}
+
+/* Range slider under the chart, with year labels bracketing the span. */
+.profile-chart-slider {
+  margin-top: 6px;
+}
+
+.profile-chart-no-slider .profile-chart-slider {
+  display: none;
+}
+
+.profile-chart-slider-input {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--site-accent);
+}
+
+.profile-chart-slider-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .profile-rating-chart svg {
@@ -816,12 +1420,26 @@
   stroke-width: 1;
 }
 
+.profile-rating-chart-area {
+  stroke: none;
+}
+
+.profile-rating-chart-fill-top {
+  stop-color: var(--site-accent);
+  stop-opacity: 0.22;
+}
+
+.profile-rating-chart-fill-bottom {
+  stop-color: var(--site-accent);
+  stop-opacity: 0;
+}
+
 .profile-rating-chart-line {
   fill: none;
   stroke: var(--site-accent);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 3;
+  stroke-width: 2.5;
 }
 
 .profile-rating-chart-dot {
@@ -832,32 +1450,46 @@
 
 .profile-rating-chart-label {
   fill: var(--site-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-rating-chart-axis {
+  fill: var(--site-muted);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .profile-rating-chart-empty {
   position: absolute;
-  right: 18px;
-  bottom: 14px;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--site-muted);
   font-size: 12px;
   font-weight: 600;
 }
 
+/* The rail rides transparently on the page field (no card, no visible heading),
+   lichess-style. */
 .profile-ratings {
   margin-top: 0;
   padding: 0;
-  overflow: hidden;
 }
 
-.profile-ratings h2 {
-  margin: 0;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--site-border-soft);
-  color: var(--site-heading);
-  font-size: 17px;
-  font-weight: 500;
+.profile-ratings-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .profile-ratings-empty {
@@ -870,30 +1502,28 @@
 .profile-ratings-rail {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
-/* One variant row: compact marker beside the variant name, rating, and
-   games count. */
+/* One variant row (lichess rail idiom): a small marker, the variant name over
+   its rating + games on one line, and a trailing chevron. Compact rows keep the
+   whole rail scannable. */
 .profile-rating-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 10px 8px 12px;
   border: 0;
-  border-bottom: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.profile-rating-row:last-child {
-  border-bottom: none;
-}
-
 .profile-rating-row:hover {
-  background: var(--site-zebra);
+  background: var(--site-hover);
 }
 
 .profile-rating-row:focus-visible {
@@ -901,9 +1531,10 @@
   outline-offset: -2px;
 }
 
-.profile-rating-row-selected {
-  background: color-mix(in srgb, var(--site-accent-soft) 58%, var(--site-panel));
-  box-shadow: inset 4px 0 0 var(--site-accent);
+.profile-rating-row-selected,
+.profile-rating-row-selected:hover {
+  background: color-mix(in srgb, var(--site-accent-soft) 62%, var(--site-panel));
+  box-shadow: inset 3px 0 0 var(--site-accent);
 }
 
 /* Never-played variants sit back so the rail reads intentional; played rows
@@ -913,10 +1544,10 @@
 }
 
 .profile-rating-thumb {
-  flex: 0 0 80px;
+  flex: 0 0 32px;
   display: flex;
-  width: 80px;
-  height: 80px;
+  width: 32px;
+  height: 32px;
 }
 
 .profile-rating-thumb svg {
@@ -930,6 +1561,7 @@
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .profile-rating-name {
@@ -940,30 +1572,38 @@
   text-transform: uppercase;
 }
 
+/* Rating and games count on one line. */
+.profile-rating-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
 .profile-rating-value {
   color: var(--site-heading);
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .profile-rating-q {
   margin-left: 1px;
   color: var(--site-muted);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .profile-rating-value-empty {
   color: color-mix(in srgb, var(--site-muted) 55%, transparent);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .profile-rating-value-unrated {
   color: var(--site-muted);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   font-style: italic;
 }
@@ -972,6 +1612,99 @@
   color: var(--site-muted);
   font-size: 12px;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Trailing chevron: a quiet affordance that brightens on hover/selection. */
+.profile-rating-chevron {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--site-muted) 60%, transparent);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.profile-rating-row:hover .profile-rating-chevron,
+.profile-rating-row-selected .profile-rating-chevron {
+  color: var(--site-accent);
+}
+
+/* Puzzle ratings: a second block inside the ratings card, one row per attempted
+   variant. Simpler than the game rows (no board thumb): variant name and solved
+   count stack on the left, the rating sits on the right. */
+.profile-puzzle-ratings {
+  border-top: 1px solid var(--site-border);
+}
+
+.profile-puzzle-ratings h2 {
+  margin: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+  color: var(--site-heading);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.profile-puzzle-rail {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-puzzle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.profile-puzzle-row:last-child {
+  border-bottom: none;
+}
+
+.profile-puzzle-name {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--site-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-puzzle-games {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.profile-puzzle-value {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  justify-self: end;
+  color: var(--site-heading);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  /* Below the two-column comfort width, the overview stacks its graph over the
+     stat readouts; the left divider becomes a top one and the stats go back to
+     a row. */
+  .profile-overview-body {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-overview-side {
+    border-left: 0;
+    border-top: 1px solid var(--site-border-soft);
+  }
 }
 
 @media (max-width: 720px) {
@@ -984,6 +1717,8 @@
   }
 }
 
+/* Activity / Games tabs over one full-width column. Games owns a second-level
+   switch so Saved reads as a game-list filter, not a peer of Activity. */
 .profile-tabs {
   overflow: hidden;
 }
@@ -995,16 +1730,21 @@
 }
 
 .profile-tab {
-  flex: 0 0 auto;
-  min-height: 42px;
-  padding: 0 18px;
+  flex: 1 1 0;
+  min-height: 46px;
+  padding: 0 20px;
   border: 0;
   border-right: 1px solid var(--site-border-soft);
   background: var(--site-panel-soft);
   color: var(--site-muted);
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
   cursor: pointer;
+}
+
+.profile-tab:last-child {
+  border-right: 0;
 }
 
 .profile-tab:hover,
@@ -1024,37 +1764,83 @@
   box-shadow: inset 0 -3px 0 var(--site-accent);
 }
 
-/* Total game count riding the Games tab (lichess angle-tab parity). */
+/* The total game count riding the Games tab (lichess angle-tab parity). */
 .profile-tab-count {
   color: var(--site-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.profile-tabs > section {
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+.profile-tabs > .profile-activity-panel,
+.profile-tabs > .profile-games-group,
+.profile-games-group > .profile-games {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
 }
 
-.profile-tabs > section[hidden] {
+.profile-tabs > [hidden],
+.profile-games-group > [hidden] {
   display: none;
 }
 
-.profile-games {
-  margin-top: 0;
-  padding: 0;
-  overflow: hidden;
+.profile-games-subtab-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--site-border-soft);
+  background: var(--site-panel-soft);
 }
 
-.profile-activity-panel h2 {
-  margin: 0;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--site-border-soft);
+.profile-games-subtab {
+  min-height: 64px;
+  padding: 9px 16px 10px;
+  border: 0;
+  border-right: 1px solid var(--site-border-soft);
+  background: transparent;
+  color: var(--site-muted);
+  text-align: center;
+  cursor: pointer;
+}
+
+.profile-games-subtab:last-child {
+  border-right: 0;
+}
+
+.profile-games-subtab:hover,
+.profile-games-subtab:focus-visible {
+  background: var(--site-hover);
   color: var(--site-heading);
-  font-size: 17px;
-  font-weight: 500;
+}
+
+.profile-games-subtab:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+
+.profile-games-subtab[aria-selected="true"] {
+  background: var(--site-panel);
+  color: var(--site-heading);
+  box-shadow: inset 0 -3px 0 var(--site-accent);
+}
+
+.profile-games-subtab-count,
+.profile-games-subtab-label {
+  display: block;
+}
+
+.profile-games-subtab-count {
+  font-size: 18px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.profile-games-subtab-label {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 
 .profile-activity-summary-list {
@@ -1139,15 +1925,6 @@
   color: #b24d46;
 }
 
-.profile-games h2 {
-  margin: 0;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--site-border-soft);
-  color: var(--site-heading);
-  font-size: 17px;
-  font-weight: 500;
-}
-
 .profile-games .landing-games-empty {
   margin: 0;
   padding: 18px 16px;
@@ -1218,6 +1995,14 @@
 
 .profile-game-row-draw {
   --profile-game-tone: #4f8edb;
+}
+
+.profile-game-row-neutral {
+  --profile-game-tone: #d29a35;
+}
+
+.profile-game-outcome-neutral {
+  font-size: 18px;
 }
 
 .profile-game-body,
@@ -1826,9 +2611,10 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 800px) {
   .account-settings-shell {
     grid-template-columns: 1fr;
+    row-gap: 10px;
   }
 
   .account-settings-rail {
@@ -1840,8 +2626,31 @@
   }
 
   .account-settings-rail-link {
+    position: relative;
     flex: 0 0 auto;
+    padding: 10px;
+    font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
     white-space: nowrap;
+  }
+
+  .account-settings-rail-link.active {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .account-settings-rail-link.active::after {
+    position: absolute;
+    right: 8px;
+    bottom: 0;
+    left: 8px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--site-accent);
+    content: "";
+  }
+
+  .account-settings-rail-separator {
+    display: none;
   }
 
   .account-settings-summary-row {
@@ -1849,9 +2658,49 @@
     gap: 3px;
   }
 
+  .account-session-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .account-session-current,
+  .account-session-revoke {
+    justify-self: start;
+  }
+
   .account-preference-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
+  }
+
+  .account-panel.account-settings-panel {
+    padding: 28px 20px;
+  }
+
+  .account-panel.account-settings-panel > .site-section-heading {
+    margin-bottom: 34px;
+  }
+
+  .account-panel.account-settings-panel > .site-section-heading:has(+ .account-copy) {
+    margin-bottom: 8px;
+  }
+
+  .account-preference-copy {
+    gap: 12px;
+  }
+
+  .account-preference-options {
+    min-height: 44px;
+  }
+
+  .account-preference-option span {
+    padding: 9px 8px;
+    font-size: 14px;
+  }
+
+  .account-notification-settings th,
+  .account-notification-settings td {
+    padding: 12px 8px;
   }
 
   .account-preference-select {

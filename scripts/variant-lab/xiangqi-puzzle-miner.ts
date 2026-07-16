@@ -9,13 +9,16 @@
 //      POV) and leaves the opponent (the solver) winning (>= --win-cp or mate),
 //      skipping the opening (--min-ply) and already-decided positions
 //      (--decided-cp).
-//   2. VERIFY (expensive, candidates only): re-search the post-blunder position
-//      at --verify-nodes MultiPV(2); require the best line still winning AND
-//      unique (>= --unique-gap-cp over the second line, or the only mate). The
-//      solution line comes from the PV (solver moves + scripted replies),
-//      truncated to an odd length (mates run to the terminal state), then the
-//      whole line is kernel-replayed and the puzzle re-validated with
-//      validateStandardXiangqiPuzzle before it is accepted.
+//   2. VERIFY (expensive, candidates only): extend the solution ONE solver ply
+//      at a time, re-searching MultiPV(2) at a --verify-depth floor at each
+//      solver position. A solver move is kept only if it is uniquely correct by
+//      the winning-floor gate (isXiangqiSolverMoveUnique: best keeps a clear win
+//      AND the runner-up either loses the win or trails by --material-gap-cp);
+//      the defender reply is the engine's best (its uniqueness is not required).
+//      The line stops at the first non-unique solver move, at mate, or at the
+//      ply cap, always ending on the solver's move — so puzzles are born clean
+//      rather than trusting one PV. The whole line is then kernel-replayed and
+//      re-validated with validateStandardXiangqiPuzzle before it is accepted.
 //
 // All decision logic lives in packages/game/src/puzzles-xiangqi-mining.ts
 // (engine-free, unit-tested); this driver owns the Pikafish subprocesses, the
@@ -59,9 +62,10 @@ import {
   detectXiangqiBlunderCandidates,
   importXiangqiGame,
   isStandardXiangqiLegalMove,
-  isXiangqiUniquelyWinning,
+  isXiangqiSolverMoveUnique,
   pikafishUciToXiangqiSquares,
   positionRepetitionKey,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveLabel,
   type XiangqiGameState,
   type XiangqiMove,
@@ -87,6 +91,10 @@ type CliOptions = {
   winCp: number;
   decidedCp: number;
   uniqueGapCp: number;
+  verifyDepth: number;
+  winHi: number;
+  winLo: number;
+  materialGapCp: number;
   minPly: number;
   maxSolutionPlies: number;
   minSolutionPlies: number;
@@ -97,7 +105,19 @@ type CliOptions = {
   net: string | null;
 };
 
-type MinerGame = { id: string; moves: XiangqiMove[] };
+type MinerGame = {
+  id: string;
+  moves: XiangqiMove[];
+  // Denormalized attribution (db mode only) — copied onto each puzzle's
+  // sourceGame so the "From game" card renders without hosting the game.
+  meta?: {
+    event?: string | null;
+    playedOn?: string | null;
+    result?: string | null;
+    redName?: string | null;
+    blackName?: string | null;
+  };
+};
 
 type MinedPuzzleRecord = {
   puzzle: XiangqiPuzzle;
@@ -141,6 +161,10 @@ const { values } = parseArgs({
     'win-cp': { type: 'string', default: '250' },
     'decided-cp': { type: 'string', default: '800' },
     'unique-gap-cp': { type: 'string', default: '150' },
+    'verify-depth': { type: 'string', default: '20' },
+    'win-hi': { type: 'string', default: '0.80' },
+    'win-lo': { type: 'string', default: '0.60' },
+    'material-gap-cp': { type: 'string', default: '250' },
     'min-ply': { type: 'string', default: '8' },
     'max-solution-plies': { type: 'string', default: '7' },
     'min-solution-plies': { type: 'string', default: '3' },
@@ -173,6 +197,10 @@ const options: CliOptions = {
   winCp: parsePositiveInt(values['win-cp'], 250),
   decidedCp: parsePositiveInt(values['decided-cp'], 800),
   uniqueGapCp: parsePositiveInt(values['unique-gap-cp'], 150),
+  verifyDepth: parsePositiveInt(values['verify-depth'], 20),
+  winHi: Number.parseFloat(values['win-hi'] ?? '0.80'),
+  winLo: Number.parseFloat(values['win-lo'] ?? '0.60'),
+  materialGapCp: parsePositiveInt(values['material-gap-cp'], 250),
   minPly: parseNonNegativeInt(values['min-ply'], 8),
   maxSolutionPlies: parsePositiveInt(values['max-solution-plies'], 7),
   minSolutionPlies: parsePositiveInt(values['min-solution-plies'], 3),
@@ -259,7 +287,12 @@ class PikafishEngine {
     await this.#request(['ucinewgame', 'isready'], (l) => l.startsWith('readyok'));
   }
 
-  async analyze(movesUci: string[], nodes: number, multipv: number): Promise<ScoredLine[]> {
+  async analyze(
+    movesUci: string[],
+    nodes: number,
+    multipv: number,
+    depth?: number,
+  ): Promise<ScoredLine[]> {
     const cmds: string[] = [];
     if (multipv !== this.#multipv) {
       cmds.push(`setoption name MultiPV value ${multipv}`);
@@ -267,7 +300,31 @@ class PikafishEngine {
     }
     const position =
       movesUci.length > 0 ? `position startpos moves ${movesUci.join(' ')}` : 'position startpos';
-    cmds.push(position, `go nodes ${nodes}`);
+    // A depth floor (not just a node cap) keeps best-vs-second ordering stable:
+    // too-low search mis-orders the top moves and makes the uniqueness gap lie.
+    const go = depth ? `go depth ${depth} nodes ${nodes}` : `go nodes ${nodes}`;
+    cmds.push(position, go);
+    const lines = await this.#request(cmds, (l) => l.startsWith('bestmove'));
+    return parseScoredLines(lines);
+  }
+
+  // Analyze a standalone position (FEN), not a game-history move list. The
+  // uniqueness verify uses this so the miner judges each puzzle from exactly the
+  // position a solver sees — history-free, matching the audit tool (#185) — and
+  // so its verdict does not drift from the served puzzle's real eval.
+  async analyzeFen(
+    fen: string,
+    nodes: number,
+    multipv: number,
+    depth?: number,
+  ): Promise<ScoredLine[]> {
+    const cmds: string[] = [];
+    if (multipv !== this.#multipv) {
+      cmds.push(`setoption name MultiPV value ${multipv}`);
+      this.#multipv = multipv;
+    }
+    const go = depth ? `go depth ${depth} nodes ${nodes}` : `go nodes ${nodes}`;
+    cmds.push(`position fen ${fen}`, go);
     const lines = await this.#request(cmds, (l) => l.startsWith('bestmove'));
     return parseScoredLines(lines);
   }
@@ -343,7 +400,19 @@ async function loadDbGames(opts: CliOptions): Promise<MinerGame[]> {
     const games: MinerGame[] = [];
     for (const id of window) {
       const row = await getHistoricalXiangqiGame(id);
-      if (row && row.moves.length >= opts.plyMin) games.push({ id: row.id, moves: row.moves });
+      if (row && row.moves.length >= opts.plyMin) {
+        games.push({
+          id: row.id,
+          moves: row.moves,
+          meta: {
+            event: row.eventName ?? null,
+            playedOn: row.playedOn ?? null,
+            result: row.result ?? null,
+            redName: row.redNameRaw ?? null,
+            blackName: row.blackNameRaw ?? null,
+          },
+        });
+      }
     }
     return games;
   } finally {
@@ -457,35 +526,16 @@ async function mineGame(
   const candidates = detectXiangqiBlunderCandidates(scans, moveCount, opts);
   metrics.candidates += candidates.length;
 
-  // Phase 2: deep verify on candidates only.
+  // Phase 2: deep verify on candidates only, extending the solution one solver
+  // ply at a time and stopping at the first non-unique move (born-clean lines).
   const records: MinedPuzzleRecord[] = [];
   for (const candidate of candidates) {
     if (records.length >= opts.perGame) break;
     const postBlunderState = states[candidate.ply + 1] as XiangqiGameState;
-    const lines = await engine.analyze(uciMoves.slice(0, candidate.ply + 1), opts.verifyNodes, 2);
-    metrics.verifyEvals += 1;
-    const verifyLines: XiangqiVerifyLine[] = [];
-    for (const line of lines) {
-      const cp = xiangqiUciScoreToCp(line.score);
-      if (cp !== null) verifyLines.push({ scoreCp: cp, mate: line.score.mate });
-    }
-    if (!isXiangqiUniquelyWinning(verifyLines, opts)) {
-      bumpReject(metrics, 'not-unique-or-not-winning');
-      continue;
-    }
-    const pvUci = lines[0]?.pvUci ?? [];
-    const pv: XiangqiMove[] = [];
-    let pvParsed = true;
-    for (const token of pvUci) {
-      const squares = pikafishUciToXiangqiSquares(token);
-      if (!squares) {
-        pvParsed = false;
-        break;
-      }
-      pv.push({ from: squares.from, to: squares.to });
-    }
-    if (!pvParsed) {
-      bumpReject(metrics, 'pv-parse');
+    const built = await buildGatedLine(engine, postBlunderState, opts);
+    metrics.verifyEvals += built.evals;
+    if (!built.ok) {
+      bumpReject(metrics, built.reason);
       continue;
     }
     const result = assembleMinedXiangqiPuzzle(
@@ -493,9 +543,10 @@ async function mineGame(
         gameId: game.id,
         blunderPly: candidate.ply,
         postBlunderState,
-        pv,
-        verifyScore: verifyLines[0] as XiangqiVerifyLine,
+        pv: built.pv,
+        verifyScore: built.verifyScore,
         swingCp: candidate.swingCp,
+        sourceMeta: game.meta,
       },
       { maxSolutionPlies: opts.maxSolutionPlies, minSolutionPlies: opts.minSolutionPlies },
     );
@@ -518,11 +569,98 @@ async function mineGame(
       gameId: game.id,
       blunderPly: candidate.ply,
       swingCp: candidate.swingCp,
-      verifyBestCp: (verifyLines[0] as XiangqiVerifyLine).scoreCp,
-      verifySecondCp: verifyLines[1]?.scoreCp ?? null,
+      verifyBestCp: built.verifyScore.scoreCp,
+      verifySecondCp: built.secondScoreCp,
     });
   }
   return records;
+}
+
+type GatedLineResult =
+  | {
+      ok: true;
+      pv: XiangqiMove[];
+      verifyScore: XiangqiVerifyLine;
+      secondScoreCp: number | null;
+      evals: number;
+    }
+  | { ok: false; reason: string; evals: number };
+
+// Extend a solution line from the post-blunder position, verifying uniqueness at
+// EVERY solver ply (MultiPV 2 at a depth floor) instead of trusting one PV. The
+// solver move must be uniquely correct by the winning-floor gate; the defender
+// reply is the engine's best (its uniqueness is not required). The line stops at
+// the first non-unique solver move, at mate, or at the ply cap, and always ends
+// on the solver's move.
+async function buildGatedLine(
+  engine: PikafishEngine,
+  postBlunderState: XiangqiGameState,
+  opts: CliOptions,
+): Promise<GatedLineResult> {
+  const gate = { winHi: opts.winHi, winLo: opts.winLo, materialGapCp: opts.materialGapCp };
+  const pv: XiangqiMove[] = [];
+  let cur: XiangqiGameState = postBlunderState;
+  let firstScore: XiangqiVerifyLine | null = null;
+  let firstSecondCp: number | null = null;
+  let evals = 0;
+  while (pv.length < opts.maxSolutionPlies) {
+    if (cur.status.type !== 'playing') break;
+    const lines = await engine.analyzeFen(
+      standardXiangqiEngineFen(cur),
+      opts.verifyNodes,
+      2,
+      opts.verifyDepth,
+    );
+    evals += 1;
+    const vlines: XiangqiVerifyLine[] = [];
+    for (const line of lines) {
+      const cp = xiangqiUciScoreToCp(line.score);
+      if (cp !== null) vlines.push({ scoreCp: cp, mate: line.score.mate });
+    }
+    const best = vlines[0];
+    const second = vlines[1];
+    const firstSolverPly = pv.length === 0;
+    if (firstSolverPly) {
+      firstScore = best ?? null;
+      firstSecondCp = second?.scoreCp ?? null;
+    }
+    if (!isXiangqiSolverMoveUnique(best, second, gate)) {
+      if (firstSolverPly) return { ok: false, reason: 'not-unique-or-not-winning', evals };
+      break; // line ends on the last committed solver move
+    }
+    const solverTok = lines[0]?.pvUci[0];
+    const sq = solverTok ? pikafishUciToXiangqiSquares(solverTok) : null;
+    if (!sq || !solverTok) return { ok: false, reason: 'pv-parse', evals };
+    const solverMove: XiangqiMove = { from: sq.from, to: sq.to };
+    if (!isStandardXiangqiLegalMove(cur, solverMove))
+      return { ok: false, reason: 'pv-illegal', evals };
+    pv.push(solverMove);
+    cur = applyStandardXiangqiMove(cur, solverMove);
+    if (cur.status.type !== 'playing') break; // mate: line ends on the solver move
+    if (pv.length >= opts.maxSolutionPlies) break;
+    // Defender reply: the engine's best defense (uniqueness not required of it).
+    const replyLines = await engine.analyzeFen(
+      standardXiangqiEngineFen(cur),
+      opts.verifyNodes,
+      1,
+      opts.verifyDepth,
+    );
+    evals += 1;
+    const replyTok = replyLines[0]?.pvUci[0];
+    const rsq = replyTok ? pikafishUciToXiangqiSquares(replyTok) : null;
+    if (!rsq || !replyTok) break;
+    const replyMove: XiangqiMove = { from: rsq.from, to: rsq.to };
+    if (!isStandardXiangqiLegalMove(cur, replyMove)) break;
+    pv.push(replyMove);
+    cur = applyStandardXiangqiMove(cur, replyMove);
+    if (cur.status.type !== 'playing') {
+      pv.pop(); // a defender move that ends the game is not a puzzle ply
+      break;
+    }
+  }
+  if (pv.length % 2 === 0) pv.pop(); // guarantee the line ends on the solver's move
+  if (pv.length < 1 || !firstScore) return { ok: false, reason: 'too-short', evals };
+  return { ok: true, pv, verifyScore: firstScore, secondScoreCp: firstSecondCp, evals };
 }
 
 function bumpReject(metrics: Metrics, reason: string): void {
@@ -531,7 +669,7 @@ function bumpReject(metrics: Metrics, reason: string): void {
 
 // ── Output ───────────────────────────────────────────────────────────────────
 
-function renderMinedModule(puzzles: readonly XiangqiPuzzle[]): string {
+export function renderMinedModule(puzzles: readonly XiangqiPuzzle[]): string {
   const header = `// Generated by the standard-xiangqi puzzle miner
 // (scripts/variant-lab/xiangqi-puzzle-miner.ts, \`--emit-module\`). Do not
 // hand-edit; re-run the miner and let it overwrite this file.
@@ -572,7 +710,15 @@ type MinedXiangqiPuzzle = {
     | { type: 'checkmate'; winner?: XiangqiColor }
     | { type: 'winning-advantage'; winner?: XiangqiColor; centipawns?: number };
   themes: MinedXiangqiPuzzleTheme[];
-  sourceGame?: { gameId: string; ply: number };
+  sourceGame?: {
+    gameId: string;
+    ply: number;
+    event?: string;
+    playedOn?: string;
+    result?: string;
+    redName?: string;
+    blackName?: string;
+  };
 };
 
 export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = `;
@@ -755,7 +901,8 @@ Corpus:
 Engine:
   --concurrency N         Parallel engine workers (per-game granularity). Default: 4.
   --scan-nodes N          Phase-1 node budget per position (MultiPV 2). Default: 60000.
-  --verify-nodes N        Phase-2 node budget per candidate (MultiPV 2). Default: 600000.
+  --verify-nodes N        Phase-2 node budget per verify search (MultiPV 2). Default: 600000.
+  --verify-depth N        Phase-2 depth floor per solver ply (stable ordering). Default: 20.
   --binary PATH           Pikafish binary override (default: pikafishXiangqiPath()).
   --net PATH              NNUE net override (default: pikafish.nnue beside the binary).
 
@@ -763,7 +910,10 @@ Detection:
   --swing-cp N            Min eval the game move lost vs the engine best. Default: 250.
   --win-cp N              Min post-blunder eval for the solver (or mate). Default: 250.
   --decided-cp N          Skip positions already at |eval| >= N pre-blunder. Default: 800.
-  --unique-gap-cp N       Min best-vs-second gap in the verify pass. Default: 150.
+  --unique-gap-cp N       (legacy) Min best-vs-second gap; the per-ply gate below supersedes it. Default: 150.
+  --win-hi F              Per-ply gate: min win prob for the best solver line. Default: 0.80.
+  --win-lo F              Per-ply gate: a runner-up at/below this win prob has lost the win. Default: 0.60.
+  --material-gap-cp N     Per-ply gate: a runner-up trailing best by >= N cp is wrong even if winning. Default: 250.
   --min-ply N             Skip game plies before N (opening filter). Default: 8.
   --max-solution-plies N  Solution-line cap (normalized to odd). Default: 7.
   --min-solution-plies N  Minimum solution plies. Default: 3.
@@ -776,4 +926,8 @@ Output:
 The last stdout line is always a metrics JSON object (kind=xiangqi-puzzle-mine-metrics).`);
 }
 
-await main();
+// Only run when invoked directly (tsx scripts/.../xiangqi-puzzle-miner.ts), not
+// when imported for its exports (e.g. renderMinedModule in a backfill script).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await main();
+}

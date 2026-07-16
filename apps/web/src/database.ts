@@ -6,11 +6,13 @@
 import './database.css';
 import { findTimeControl } from '@mistboard/game';
 import {
-  displayParticipantName,
   type FeaturedGame,
+  matchupLabel,
   sourceLabel,
   variantDisplayLabel,
 } from './game-display.js';
+import { buildNav } from './site-shell.js';
+import { webVariantTenantForRoomId } from './variant-tenant/registry.js';
 
 type GameRow = FeaturedGame & {
   initialMs?: number | null;
@@ -96,7 +98,7 @@ export async function mountDatabase(root: HTMLElement): Promise<void> {
   resultsHost.className = 'database-results-host';
 
   shell.append(heading, sub, filtersHost, summaryHost, resultsHost);
-  root.append(shell);
+  root.append(buildNav(), shell);
 
   let filters = readFilters();
 
@@ -389,12 +391,24 @@ function buildResults(data: QueryResponse, onApply: (next: Filters) => void): HT
   return wrap;
 }
 
+// Review-link target for a database row. Variant-tenant games (xiangqi / jungle
+// / crossroads / ... families) replay only under their own postgame route: the
+// legacy /game/:id review shell knows only the chess-shell event union and 403s
+// on their event log (`game_not_public`). Resolve the tenant by room-id prefix
+// and link to its postgame mount (gameRouteBase). Chess-family games and tenants
+// without a postgame surface keep the legacy /game/:id.
+export function databaseReviewHref(roomId: string): string {
+  const tenant = webVariantTenantForRoomId(roomId);
+  const routeBase = tenant?.gameRouteBase ?? tenant?.reviewRouteBase ?? null;
+  return routeBase
+    ? `${routeBase}/${encodeURIComponent(roomId)}`
+    : `/game/${encodeURIComponent(roomId)}`;
+}
+
 function buildGameRow(game: GameRow): HTMLElement {
   const link = document.createElement('a');
   link.className = 'database-row';
-  link.href = isCrossroadsChessVariant(game.variant)
-    ? `/crossroads-chess/game/${encodeURIComponent(game.roomId)}`
-    : `/game/${encodeURIComponent(game.roomId)}`;
+  link.href = databaseReviewHref(game.roomId);
 
   const tag = document.createElement('span');
   const tone = resultTone(game.result);
@@ -427,8 +441,7 @@ function buildGameRow(game: GameRow): HTMLElement {
 }
 
 export function databaseMatchupLabel(game: FeaturedGame): string {
-  const secondSeat = isCrossroadsChessVariant(game.variant) ? 'red' : 'black';
-  return `${displayParticipantName(game, 'white')} vs ${displayParticipantName(game, secondSeat)}`;
+  return matchupLabel(game);
 }
 
 function buildPager(data: QueryResponse, onApply: (next: Filters) => void): HTMLElement | null {
@@ -563,10 +576,6 @@ function resultLabel(result: string): string {
 
 // Variant labelling lives in game-display.ts (variantDisplayLabel), shared with
 // the homepage showcase caption.
-
-function isCrossroadsChessVariant(variant: string): boolean {
-  return variant === 'crossroads-chess' || variant === 'dual-chess';
-}
 
 function terminationLabel(termination: string): string {
   return termination

@@ -3,9 +3,8 @@
  * sweeper hands the approaching, un-warned games to sweepDeadlineWarnings; this
  * module decides whether the per-game lead has been reached, sends the warning
  * through the shared Resend helper, and marks the row so it sends once per
- * deadline. v0 has no settings toggle — a warning about your own active game is
- * transactional. The turn nudge is deferred (see the track doc), and per-ply
- * email is never done.
+ * deadline. The candidate query honors the account's deadline-email preference;
+ * the turn nudge is deferred, and per-ply email is never done.
  */
 
 import { DAY_MS } from '@mistboard/game';

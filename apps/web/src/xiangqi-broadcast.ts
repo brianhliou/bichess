@@ -15,6 +15,7 @@ import './xiangqi-broadcast.css';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
 
 type BroadcastMoveTimelineEntry = {
@@ -131,7 +132,9 @@ export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<voi
   setBroadcastRoot(root, 'Loading broadcasts');
   try {
     const data = await fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts');
-    root.replaceChildren(buildNav(), renderIndex(data));
+    const paint = (): void => root.replaceChildren(buildNav(), renderIndex(data));
+    paint();
+    installBroadcastAppearanceRefresh(paint);
   } catch (err) {
     renderError(root, err);
   }
@@ -146,7 +149,9 @@ export async function mountXiangqiBroadcastTour(
     const data = await fetchJson<BroadcastTourResponse>(
       `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}`,
     );
-    root.replaceChildren(buildNav(), renderTour(data));
+    const paint = (): void => root.replaceChildren(buildNav(), renderTour(data));
+    paint();
+    installBroadcastAppearanceRefresh(paint);
   } catch (err) {
     renderError(root, err);
   }
@@ -159,13 +164,18 @@ export async function mountXiangqiBroadcastRound(
 ): Promise<void> {
   setBroadcastRoot(root, 'Loading round');
   try {
-    const data = await fetchJson<BroadcastRoundResponse>(
+    let data = await fetchJson<BroadcastRoundResponse>(
       `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(
         roundId,
       )}`,
     );
-    root.replaceChildren(buildNav(), renderRound(data));
-    connectRoundStream(root, tourSlug, roundId, roundVersion(data));
+    const paint = (): void => root.replaceChildren(buildNav(), renderRound(data));
+    paint();
+    installBroadcastAppearanceRefresh(paint);
+    connectRoundStream(tourSlug, roundId, roundVersion(data), (next) => {
+      data = next;
+      paint();
+    });
   } catch (err) {
     renderError(root, err);
   }
@@ -177,12 +187,19 @@ export async function mountXiangqiBroadcastBoard(
 ): Promise<void> {
   setBroadcastRoot(root, 'Loading board');
   try {
-    const data = await fetchJson<BroadcastBoardResponse>(
+    let data = await fetchJson<BroadcastBoardResponse>(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
     );
     const context = await fetchBoardRoundContext(data.board.tourSlug, data.board.roundId);
-    root.replaceChildren(buildNav(), renderBoardReplay(data, context));
-    connectBoardStream(root, boardId, boardVersion(data), context, data.timeline.length);
+    const paint = (animateHeadAdvance = false): void => {
+      root.replaceChildren(buildNav(), renderBoardReplay(data, context, { animateHeadAdvance }));
+    };
+    paint();
+    installBroadcastAppearanceRefresh(() => paint());
+    connectBoardStream(boardId, boardVersion(data), data.timeline.length, (next, animate) => {
+      data = next;
+      paint(animate);
+    });
   } catch (err) {
     renderError(root, err);
   }
@@ -225,10 +242,10 @@ function renderError(root: HTMLElement, err: unknown): void {
 }
 
 function connectRoundStream(
-  root: HTMLElement,
   tourSlug: string,
   roundId: string,
   initialVersion: string,
+  onRound: (data: BroadcastRoundResponse) => void,
 ): void {
   if (!('EventSource' in window)) return;
   const source = new EventSource(
@@ -241,17 +258,16 @@ function connectRoundStream(
     const envelope = parseStreamEnvelope<BroadcastRoundResponse>(event);
     if (!envelope || envelope.version === lastVersion) return;
     lastVersion = envelope.version;
-    root.replaceChildren(buildNav(), renderRound(envelope.payload));
+    onRound(envelope.payload);
   });
   closeStreamOnPageExit(source);
 }
 
 function connectBoardStream(
-  root: HTMLElement,
   boardId: string,
   initialVersion: string,
-  context: BroadcastRoundResponse | null,
   initialPlyCount: number,
+  onBoard: (data: BroadcastBoardResponse, animateHeadAdvance: boolean) => void,
 ): void {
   if (!('EventSource' in window)) return;
   const source = new EventSource(
@@ -270,18 +286,22 @@ function connectBoardStream(
     const headAdvance =
       nextPlyCount > lastPlyCount && !new URLSearchParams(window.location.search).get('ply');
     lastPlyCount = nextPlyCount;
-    // The round context from mount time is reused so the side rail and round
-    // switcher survive stream re-renders without extra fetches.
-    root.replaceChildren(
-      buildNav(),
-      renderBoardReplay(envelope.payload, context, { animateHeadAdvance: headAdvance }),
-    );
+    onBoard(envelope.payload, headAdvance);
   });
   closeStreamOnPageExit(source);
 }
 
 function closeStreamOnPageExit(source: EventSource): void {
   window.addEventListener('pagehide', () => source.close(), { once: true });
+}
+
+function installBroadcastAppearanceRefresh(paint: () => void): void {
+  window.addEventListener(xiangqiAppearanceChangedEvent, paint);
+  window.addEventListener(
+    'pagehide',
+    () => window.removeEventListener(xiangqiAppearanceChangedEvent, paint),
+    { once: true },
+  );
 }
 
 function parseStreamEnvelope<T>(event: Event): BroadcastStreamEnvelope<T> | null {

@@ -95,11 +95,44 @@
 .review-move-list__move--current:hover {
   background: var(--site-accent, #3b73c4);
 }
+/* Judgment glyph (?!/?/??) in its own non-shrinking slot so a tight row (e.g. a reveal that also
+   carries a luck badge) truncates the move label, never the glyph. */
 .review-move-list__suffix {
+  flex: 0 0 auto;
+  margin-left: 3px;
+  font-weight: 700;
+  white-space: nowrap;
   color: var(--site-muted);
+}
+.review-move-list__suffix:empty {
+  margin-left: 0;
 }
 .review-move-list__move--current .review-move-list__suffix {
   color: inherit;
+}
+/* Inline luck badge for a chance (jieqi reveal) move: the reveal's variance vs its average
+   outcome, shown but never graded. 0 = the average piece in the bag. Empty when the move is not a
+   reveal (collapses to nothing). */
+.review-move-list__luck {
+  flex: 0 0 auto;
+  margin-left: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.review-move-list__luck--lucky {
+  color: #1e8449;
+}
+.review-move-list__luck--unlucky {
+  color: #c0392b;
+}
+.review-move-list__luck--even {
+  color: var(--site-muted);
+}
+/* On the highlighted current move, keep the badge legible against the accent fill. */
+.review-move-list__move--current .review-move-list__luck {
+  color: inherit;
+  opacity: 0.95;
 }
 /* Engine-judgment colour hooks (filled by the analysis phases). */
 .review-move--blunder {

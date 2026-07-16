@@ -4,7 +4,14 @@
 
 import type { BoardSpec, CompositionLayout } from '@mistboard/board-render';
 import type { LiveBoardsOptions, SteppedBoardsOptions } from '@mistboard/board-render/interactive';
-import type { BanqiDeal, BanqiSeat, JungleColor, JungleFlipDeal, Square } from '@mistboard/game';
+import type {
+  BanqiDeal,
+  BanqiSeat,
+  GameSpecId,
+  JungleColor,
+  JungleFlipDeal,
+  Square,
+} from '@mistboard/game';
 import type { ChessReplaySpec } from '../chess-replay.js';
 import type { CrossroadsReplaySpec } from '../crossroads-chess-replay.js';
 import type { DropMiniXiangqiReplaySpec } from '../drop-mini-xiangqi-replay.js';
@@ -317,9 +324,11 @@ export type ArticleThumbnail =
   | SvgArticleThumbnail
   | ImageArticleThumbnail;
 
-export type Article = {
+type ArticleBase = {
   slug: string;
-  kind: 'rules' | 'article';
+  // Public article URLs may use a reader-facing name while the game keeps a
+  // stable protocol/database id (for example flip-xiangqi -> banqi).
+  gameSpecId?: GameSpecId;
   // Rules articles: the game is live on Mistboard today (drives the
   // playable / not-yet grouping in the variant rail). Omit when the page
   // is a reference for a game we do not host yet.
@@ -344,3 +353,14 @@ export type Article = {
   boardFamily?: 'chess' | 'xiangqi' | 'shogi';
   sections: ArticleSection[];
 };
+
+export type Article = ArticleBase &
+  (
+    | { kind: 'rules' }
+    | {
+        kind: 'article';
+        // Explicit so the official-only view stays fail-closed when community
+        // authors are introduced later.
+        publisher: 'mistboard' | 'community';
+      }
+  );

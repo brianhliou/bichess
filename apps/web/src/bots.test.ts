@@ -95,7 +95,7 @@ describe('bot pages', () => {
     );
     expect(root.textContent).toContain('Searches hidden positions');
     expect(root.querySelector('.bot-card-rating-value')?.textContent).toBe('1,812');
-    expect(root.querySelector('.bot-rating-strip')?.textContent).toContain('Half-Flip Chess Rapid');
+    expect(root.querySelector('.bot-rating-strip')?.textContent).toContain('Flip Xiangqi Rapid');
     expect(root.textContent).not.toContain('Draft960');
     expect(root.querySelector<HTMLAnchorElement>('.bot-card-title')?.href).toContain(
       '/bot/misty-dark-chess',
@@ -118,9 +118,9 @@ describe('bot pages', () => {
     expect(root.querySelector('.bot-profile-rating')?.textContent).toContain('1,812');
     expect(root.querySelector('.bot-profile-rating')?.textContent).toContain('48 rated games');
     expect(root.querySelector('.bot-profile-rating')?.textContent).toContain(
-      'Half-Flip Chess · Rapid',
+      'Flip Xiangqi · Rapid',
     );
-    expect(root.querySelector('.bot-profile-variants')?.textContent).toContain('Half-Flip Chess');
+    expect(root.querySelector('.bot-profile-variants')?.textContent).toContain('Flip Xiangqi');
   });
 
   it('opens a setup dialog before creating a bot game', async () => {

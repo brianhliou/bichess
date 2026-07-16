@@ -31,6 +31,12 @@ const KINDS: SoundKind[] = [
   'draw',
   'low-time',
   'game-start',
+  'learn-take',
+  'learn-failure',
+  'level-start',
+  'level-end',
+  'stage-start',
+  'stage-end',
 ];
 
 // Curated from a density scan of public/replay-samples (2026-06-10): the

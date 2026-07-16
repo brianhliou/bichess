@@ -161,7 +161,6 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     notate: (move) => `${move.from}-${move.to}`,
     isMoveEvent: isJungleMoveEvent,
   },

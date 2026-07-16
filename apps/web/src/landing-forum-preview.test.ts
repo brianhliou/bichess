@@ -16,7 +16,7 @@ describe('landing forum preview', () => {
               title: 'First topic',
               category: {
                 slug: 'general-discussion',
-                name: 'General Chess Discussion',
+                name: 'General Games Discussion',
               },
               latestPost: {
                 post: { id: 'post_2' },
@@ -60,7 +60,7 @@ describe('landing forum preview', () => {
     expect(rows.length).toBe(2);
     expect(rows[0]?.getAttribute('href')).toBe('/forum/t/topic_1/first-topic?page=2#post_post_2');
     expect(rows[0]?.textContent).toContain('First topic');
-    expect(rows[0]?.textContent).toContain('General Chess Discussion');
+    expect(rows[0]?.textContent).toContain('General Games Discussion');
     expect(rows[0]?.textContent).toContain('Alice');
     expect(rows[0]?.textContent).toContain('25');
     // The row itself is the only link: no nested anchors per topic.

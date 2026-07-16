@@ -46,6 +46,7 @@ import * as puzzlesRoute from './routes/puzzles.js';
 import * as relationsRoute from './routes/relations.js';
 import * as revealChessGamesRoute from './routes/reveal-chess-games.js';
 import * as roomsRoute from './routes/rooms.js';
+import * as studiesRoute from './routes/studies.js';
 import * as titlesRoute from './routes/titles.js';
 import * as usersRoute from './routes/users.js';
 import * as xiangqiBroadcastsRoute from './routes/xiangqi-broadcasts.js';
@@ -121,6 +122,7 @@ export const routes: RouteModule[] = [
   coachesRoute,
   usersRoute,
   leaderboardRoute,
+  studiesRoute,
 ];
 
 export async function handleApiRequest(

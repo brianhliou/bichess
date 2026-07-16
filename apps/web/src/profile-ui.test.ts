@@ -142,7 +142,7 @@ describe('profile game rows', () => {
     expect(row.textContent).toContain('Win');
     expect(row.textContent).toContain('vs MistyBanqi - Strongest');
     expect(row.textContent).not.toContain('vs White');
-    expect(row.textContent).toContain('Half-Flip Chess');
+    expect(row.textContent).toContain('Flip Xiangqi');
     expect(row.textContent).toContain('Black');
   });
 

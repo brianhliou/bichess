@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { firstPartyBotForEngine, firstPartyBotForId } from './first-party-bots.js';
-import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-pikafish-engine.js';
+import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
 test('first-party Jieqi and Crossroads bot profiles expose three levels', () => {
   assert.equal(firstPartyBotForEngine('pikafish-jieqi-amateur')?.id, 'pika-jieqi-amateur');
@@ -53,5 +53,5 @@ test('retired xiangqi engine ids attribute to the absorbing level profiles', () 
 
   assert.equal(firstPartyBotForId('pikafish-xiangqi-amateur')?.displayName, 'Pikafish - Level 2');
   assert.equal(firstPartyBotForId('pikafish-xiangqi')?.displayName, 'Pikafish - Level 5');
-  assert.equal(firstPartyBotForId('pikafish-xiangqi-strongest')?.displayName, 'Pikafish - Level 8');
+  assert.equal(firstPartyBotForId('pikafish-xiangqi-strongest')?.displayName, 'Pikafish');
 });

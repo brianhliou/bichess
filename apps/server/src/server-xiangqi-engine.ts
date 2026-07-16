@@ -34,23 +34,22 @@ import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
 import {
   isXiangqiEngineClientId,
-  XIANGQI_ENGINE_VERSION,
   xiangqiEngineTierFor,
+  xiangqiEngineVersion,
   xiangqiLiveEngineMove,
   xiangqiMoveToPikafishUci,
-} from './xiangqi-pikafish-engine.js';
+} from './xiangqi-engine-catalog.js';
 
 // Re-export the engine metadata so the tenant, registration, and rooms route
 // resolve these from this module (matching the Fortress layout).
 export {
   isXiangqiEngineClientId,
   XIANGQI_DEFAULT_ENGINE_ID,
-  XIANGQI_ENGINE_VERSION,
   XIANGQI_PLAYABLE_ENGINES,
   type XiangqiEngineTier,
   xiangqiEngineDisplayName,
   xiangqiEngineVersion,
-} from './xiangqi-pikafish-engine.js';
+} from './xiangqi-engine-catalog.js';
 
 const CLOCK_SAFETY_MS = 1_000;
 const MIN_MOVETIME_MS = 50;
@@ -169,7 +168,7 @@ export async function playXiangqiEngineMoveIfReady(
       variant: 'xiangqi',
       roomId: room.id,
       engineId,
-      engineVersion: XIANGQI_ENGINE_VERSION,
+      engineVersion: xiangqiEngineVersion(engineId) ?? 'unknown',
       movetimeMs,
       tier,
       ply: history.length,

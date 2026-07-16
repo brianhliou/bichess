@@ -106,12 +106,62 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     activeEngineId: 'fairy-stockfish-fortress-xiangqi-very-strong',
     defaultGameSpecId: 'fortress-xiangqi',
   },
-  // Standard-xiangqi 8-level Pikafish ladder (mirrors XIANGQI_PLAYABLE_ENGINES
-  // in xiangqi-pikafish-engine.ts). The retired amateur/strong/strongest tiers
+  // Standard-Xiangqi engine identities. FSF's eight levels form the public
+  // human ladder; lower Pikafish levels remain registered for history and EvE,
+  // while only the strongest Pikafish profile is public. The retired
+  // amateur/strong/strongest tiers
   // were absorbed into the matching levels: their bot ids continue as the
   // Level 2/5/8 profiles (migration-056 convention, so existing URLs and
   // historical game attribution stay stable) and their engine ids resolve via
   // attributionEngineIds (the Misty convention for retired engine versions).
+  {
+    id: 'fairy-stockfish-xiangqi-level-1',
+    displayName: 'Fairy-Stockfish - Level 1',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-1',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-2',
+    displayName: 'Fairy-Stockfish - Level 2',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-2',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-3',
+    displayName: 'Fairy-Stockfish - Level 3',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-3',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-4',
+    displayName: 'Fairy-Stockfish - Level 4',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-4',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-5',
+    displayName: 'Fairy-Stockfish - Level 5',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-5',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-6',
+    displayName: 'Fairy-Stockfish - Level 6',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-6',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-7',
+    displayName: 'Fairy-Stockfish - Level 7',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-7',
+    defaultGameSpecId: 'xiangqi',
+  },
+  {
+    id: 'fairy-stockfish-xiangqi-level-8',
+    displayName: 'Fairy-Stockfish - Level 8',
+    activeEngineId: 'fairy-stockfish-xiangqi-level-8',
+    defaultGameSpecId: 'xiangqi',
+  },
   {
     id: 'pikafish-xiangqi-level-1',
     displayName: 'Pikafish - Level 1',
@@ -158,7 +208,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   {
     id: 'pikafish-xiangqi-strongest',
-    displayName: 'Pikafish - Level 8',
+    displayName: 'Pikafish',
     activeEngineId: 'pikafish-xiangqi-level-8',
     attributionEngineIds: ['pikafish-xiangqi-strongest'],
     defaultGameSpecId: 'xiangqi',

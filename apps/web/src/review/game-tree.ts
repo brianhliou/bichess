@@ -57,6 +57,44 @@ export interface NodeEval {
   depth: number;
 }
 
+/** A single text annotation on a node. Author-keyed (lila-style): the persistence
+ *  layer keeps one comment per author, so `by` identifies the writer (account id;
+ *  omitted for anonymous/local edits). This is USER content — distinct from the
+ *  derived `eval` — and is what a study persists. */
+export interface NodeComment {
+  by?: string;
+  text: string;
+}
+
+/** A drawn board annotation. 'circle' marks a single square (`orig`); 'arrow' runs
+ *  `orig`→`dest`. `brush` is a colour key ('green' | 'red' | 'blue' | 'yellow').
+ *  Squares are the variant's own square strings (e.g. xiangqi 'e3'). */
+export interface NodeShape {
+  kind: 'arrow' | 'circle';
+  brush: string;
+  orig: string;
+  dest?: string;
+}
+
+/** Per-node gamebook/lesson override (lila gamebook): `hint` is an on-demand tip
+ *  for the move to find; `deviation` is shown when the learner leaves this line. */
+export interface NodeGamebook {
+  hint?: string;
+  deviation?: string;
+}
+
+/** User-authored annotations carried on a tree node. All fields optional; an absent
+ *  field means "none". `glyphs` are user-set NAG codes, kept DISTINCT from the
+ *  engine judgment glyph the move list derives from analysis (they must not collide
+ *  — the move list shows the user glyph if set, else the engine one). Persisted by
+ *  a study; rebuilt verbatim on load (tree-serialize.ts). */
+export interface NodeAnnotations {
+  comments?: NodeComment[];
+  shapes?: NodeShape[];
+  glyphs?: number[];
+  gamebook?: NodeGamebook;
+}
+
 export interface GameTreeNode<Move, Truth> {
   readonly id: NodeId;
   /** The move that produced this node; null at the root. */
@@ -72,6 +110,9 @@ export interface GameTreeNode<Move, Truth> {
   readonly label: string;
   /** Engine/analysis eval, filled lazily by an EngineBackend pass. */
   eval?: NodeEval;
+  /** User-authored annotations (comments/shapes/glyphs/gamebook). Undefined = none.
+   *  Persisted by a study, not derived; mutated in place via GameTree.annotateAt. */
+  annotations?: NodeAnnotations;
 }
 
 /** The per-variant mechanics the tree needs. Every function is a thin wrapper over
@@ -95,6 +136,12 @@ export interface VariantTreeAdapter<Move, Truth, View> {
   moveKey(move: Move): NodeId;
   /** Move in the engine's UCI dialect, for feeding an EngineBackend. */
   toEngineUci(move: Move): string;
+  /** Reconstruct a move from its canonical UCI token — the inverse of moveKey /
+   *  toEngineUci — given the parent truth for disambiguation context. Returns null
+   *  if the token does not parse to a move. Used to rebuild a persisted tree
+   *  (tree-serialize.ts); the seed/played path never needs it. Legality from the
+   *  parent position is NOT checked here (addMove does that on rebuild). */
+  fromUci(uci: string, parentTruth: Truth): Move | null;
   /** Documents view-count + engine-mode intent; the surface still authoritatively
    *  gates on `gameSpecForId(id).visibility`. 'fog' selects the server engine
    *  backend + the second (god) eval bar. */
@@ -131,6 +178,11 @@ export interface GameTree<Move, Truth, View> {
   deleteAt(path: TreePath): void;
   /** Make `path`'s branch the main line up to the root (promote to children[0]). */
   promoteToMainline(path: TreePath): void;
+  /** Merge an annotation patch into the node at `path` (field-level replace: each
+   *  provided field overwrites; pass `[]` to clear an array field). Returns false
+   *  if the path does not resolve. This is the study authoring primitive — set a
+   *  comment / shapes / glyphs / gamebook on any node, mainline or variation. */
+  annotateAt(path: TreePath, patch: NodeAnnotations): boolean;
 
   // ---- rendering ----
   /** Projected board views for a node, memoised on the node. */
@@ -221,6 +273,13 @@ export function createGameTree<Move, Truth, View>(
     }
   }
 
+  function annotateAt(path: TreePath, patch: NodeAnnotations): boolean {
+    const node = nodeAt(path);
+    if (!node) return false;
+    node.annotations = { ...node.annotations, ...patch };
+    return true;
+  }
+
   function project(node: GameTreeNode<Move, Truth>): ProjectedView<View>[] {
     let cached = viewCache.get(node);
     if (!cached) {
@@ -258,6 +317,7 @@ export function createGameTree<Move, Truth, View>(
     addMove,
     deleteAt,
     promoteToMainline,
+    annotateAt,
     project,
   };
 }

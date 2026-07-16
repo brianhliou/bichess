@@ -8,7 +8,7 @@
  * moves-to-go — so the bot always tried to burn the fixed tier cap regardless of
  * how much clock it had. This mirrors the moves-to-go + increment model the
  * FoW/dark family already uses (`server-dark-xiangqi-engine.ts` `budgetFor`,
- * `live-engine.ts` `computePythonPerMoveBudgetMs`), so all three families share
+ * `fow-engine-budget.ts` `computeEngineBudget`), so all three families share
  * one time-management model.
  *
  * For the node-budgeted FSF/Rust engines, the returned `computeBudgetMs` is a

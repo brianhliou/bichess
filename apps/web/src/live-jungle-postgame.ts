@@ -1,31 +1,19 @@
-import {
-  createInitialJungleBoard,
-  type JungleBoard,
-  type JungleColor,
-  type JungleGameStatus,
-  type JungleMove,
-  type JunglePlayerView,
-  type JungleSquare,
+import type {
+  JungleColor,
+  JungleGameStatus,
+  JungleMove,
+  JunglePlayerView,
+  JungleSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
 import { jungleEnabled } from './feature-flags.js';
-import { junglePieceGhostSvg, renderJungleBoardSvg } from './jungle-render.js';
-import { createPane } from './replay-board.js';
-import { createShareButton } from './replay-meta.js';
-import { capturedByDiff } from './review/captured-diff.js';
-import { fillCapturedPoolWith } from './review/captured-pool.js';
-import { createFlankCaptures } from './review/flank-captures.js';
-import { createMoveList } from './review/move-list.js';
-import { mountReviewLayout } from './review/review-layout.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { buildReviewMeta, labelize, reviewResultLabel } from './review/game-review-meta.js';
+import { mountJungleReview } from './review/jungle-review.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
-
-// Jungle's perfect-information view carries no captured list, so derive it by
-// diffing the standard opening against the current board.
-const JUNGLE_INITIAL_PIECES = Object.values(createInitialJungleBoard()).filter(
-  (piece): piece is NonNullable<typeof piece> => Boolean(piece),
-);
 
 // Postgame review for Jungle. Jungle is PERFECT-INFORMATION: the board was always
 // fully visible, so there is one review surface and one per-ply history (no
@@ -48,6 +36,12 @@ export type JunglePostgameResponse = {
     visibility: string;
     initialMs: number | null;
     incrementMs: number | null;
+    players?: Array<{
+      color: string;
+      name: string;
+      rating: number | null;
+      kind: 'account' | 'guest' | 'engine';
+    }>;
   };
   state: {
     status: JungleGameStatus;
@@ -67,8 +61,6 @@ export type JunglePostgameResponse = {
   view: JunglePlayerView;
   history: JungleSnapshot[];
 };
-
-type JungleMoveEntry = { move: JungleMove; ply: number; color: JungleColor };
 
 type LoadResult =
   | { ok: true; postgame: JunglePostgameResponse }
@@ -110,82 +102,68 @@ export function junglePostgameApiUrl(roomId: string): string {
 }
 
 function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): void {
-  const pane = createPane('', 'truth', false, 'single');
-  pane.boardEl.classList.add('jungle-postgame-board', 'jungle-live-board');
-  // Flank layout: capture columns beside the board (opponent top-left, near side
-  // bottom-right) so the board keeps its full height. Reparent the board into the
-  // flank host at its original position.
-  const flankAnchor = pane.boardEl.nextSibling;
-  const flankParent = pane.boardEl.parentElement;
-  const flank = createFlankCaptures(pane.boardEl);
-  flankParent?.insertBefore(flank.host, flankAnchor);
-
-  const moves: JungleMoveEntry[] = postgame.timeline
-    .filter(
-      (entry): entry is typeof entry & { move: JungleMove; ply: number; color: JungleColor } =>
-        entry.type === 'move-played' &&
-        !!entry.move &&
-        typeof entry.ply === 'number' &&
-        !!entry.color,
-    )
-    .map((entry) => ({ move: entry.move, ply: entry.ply, color: entry.color }));
-
-  const moveList = createMoveList(
-    moves.map((entry) => ({ ply: entry.ply, label: `${entry.move.from}-${entry.move.to}` })),
-    { title: 'Moves' },
+  // Jungle is perfect-information, so the tree reconstructs every position from the
+  // move list client-side (it matches the server truth). The server per-ply
+  // snapshots are used only by the watch adapter (junglePostgameViewAtPly below).
+  const moveEvents = postgame.timeline.filter(
+    (entry): entry is typeof entry & { move: JungleMove } =>
+      entry.type === 'move-played' && !!entry.move,
   );
+  const moves = moveEvents.map((entry) => entry.move);
+
+  // Per-ply elapsed time from consecutive event timestamps (the server persists no
+  // per-move clock, so the first ply's delta is measured from the earliest event).
+  let prevAt = postgame.timeline[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const moveTimes = moveEvents.map((entry) => {
+    const delta = Math.max(0, entry.at - prevAt);
+    prevAt = entry.at;
+    return delta;
+  });
+  const hasMoveTimes = moveTimes.some((ms) => ms > 0);
+
+  const gamePlayers = postgame.game.players ?? [];
+  const playerNames = {
+    red: gamePlayers.find((p) => p.color === 'red')?.name,
+    black: gamePlayers.find((p) => p.color === 'black')?.name,
+  };
+
+  const status = `${reviewResultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
+    markerId: 'jungle',
+    variantName: 'Jungle Chess',
+    game: postgame.game,
+    status,
+  });
 
   root.replaceChildren(buildNav());
-  mountReviewLayout(root, {
+  mountJungleReview(root, {
     pageClassName: 'jungle-review',
     ariaLabel: 'Jungle postgame',
     title: 'Jungle Chess',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    actions: jungleActions(postgame),
-    moves: moveList.el,
-    boards: [{ key: 'truth', el: pane.el, tier: 'primary' }],
-    boardAspect: 366 / 462,
-    boardCols: 7,
-    maxPly: junglePostgameMaxPly(postgame),
-    renderBoards({ ply, flipped }) {
-      const orientation: JungleColor = flipped ? 'black' : 'red';
-      const view = junglePostgameViewAtPly(postgame, ply) ?? postgame.view;
-      pane.boardEl.innerHTML = renderJungleBoardSvg(view.board as JungleBoard, {
-        perspective: orientation,
-        lastMove: view.lastMove ?? null,
-      });
-      const current = Object.values(view.board).filter(
-        (piece): piece is NonNullable<typeof piece> => Boolean(piece),
-      );
-      const captured = capturedByDiff(JUNGLE_INITIAL_PIECES, current);
-      const opponent: JungleColor = orientation === 'red' ? 'black' : 'red';
-      flank.leftColumn.replaceChildren();
-      flank.rightColumn.replaceChildren();
-      fillCapturedPoolWith(flank.leftColumn, captured, orientation, junglePieceGhostSvg);
-      fillCapturedPoolWith(flank.rightColumn, captured, opponent, junglePieceGhostSvg);
-    },
-    renderMoves({ ply }, jump) {
-      moveList.update(ply, jump);
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
+    moves,
+    moveTimes: hasMoveTimes ? moveTimes : undefined,
+    players: playerNames,
+    showCrosstable: true,
+    // Server-side MistyJungle whole-game analysis, DB-cached: an already-analysed
+    // game loads straight from cache on open (a GET that never computes). Requesting
+    // a fresh compute is account-gated (the server rejects anon POSTs), so a
+    // signed-out visitor gets a sign-in CTA instead of a request that would 401.
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? 'Request computer analysis'
+        : 'Sign in to request analysis',
+      fetchCached: () => fetchCachedGameAnalysis('jungle', postgame.game.roomId),
+      run: isLikelySignedIn()
+        ? () => requestGameAnalysis('jungle', postgame.game.roomId)
+        : () => {
+            window.location.assign('/account');
+            return new Promise<never>(() => {});
+          },
     },
   });
-}
-
-function jungleActions(postgame: JunglePostgameResponse): HTMLElement {
-  const actions = document.createElement('div');
-  actions.className = 'review-actions';
-  const share = createShareButton();
-  const home = reviewActionLink('Home', '/');
-  const room = reviewActionLink('Room', `/room/${encodeURIComponent(postgame.game.roomId)}`);
-  actions.append(share, home, room);
-  return actions;
-}
-
-function reviewActionLink(label: string, href: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'review-action-link';
-  link.href = href;
-  link.textContent = label;
-  return link;
 }
 
 // Exported for the Mistboard TV watch adapter (watch-jungle-replay.ts), which
@@ -206,12 +184,6 @@ export function junglePostgameViewAtPly(
 
 export function junglePostgameMaxPly(postgame: JunglePostgameResponse): number {
   return Math.max(postgame.game.plyCount, ...postgame.history.map((s) => s.ply), 0);
-}
-
-function resultLabel(result: string): string {
-  if (result === 'red-wins') return 'Red won';
-  if (result === 'black-wins') return 'Black won';
-  return 'Draw';
 }
 
 export function initialPlyFromSearch(search: string): number | null {
@@ -257,28 +229,6 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
   } catch {
     return null;
   }
-}
-
-function timeControlLabel(postgame: JunglePostgameResponse): string {
-  const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
-  const incrementMs = postgame.game.incrementMs ?? postgame.state.timeControl?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return 'Untimed';
-  return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
-}
-
-function clockLabel(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function labelize(value: string): string {
-  return value
-    .split('-')
-    .filter(Boolean)
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
 }
 
 // Referenced to keep the JungleSquare import meaningful for downstream typing of

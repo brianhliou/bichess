@@ -40,7 +40,21 @@ the engine, not a privileged data channel from the server.
    live policy. First-party Python engines fail closed: no random move is
    attributed to them when the engine service or engine code fails.
 
-4. **Game end.** When the server observes a terminal state, the final
+4. **Post-move observation (optional).** Immediately after applying the
+   engine's move and BEFORE the opponent replies, the server MAY push the
+   engine its own-move observation via `POST /internal/engine/observe`
+   (`EngineObservationPush`, `observation.kind === 'own_move'`). This mirrors
+   fog-of-war UIs where you see your new vantage the instant you move, and lets
+   a stateful engine advance its belief and think on the opponent's clock
+   (pondering). It is **opt-in and additive**: an engine that does not implement
+   the observe endpoint still plays correctly, because the same `own_move`
+   observation also arrives in its next `EngineTurnRequest`. An engine that
+   handles both MUST dedupe by `ply` so it does not apply the observation twice.
+   The push expects only an `EngineObservationAck` (`{ received: true }`); no
+   move is requested, and no reservation is required. A failed push never
+   affects the game.
+
+5. **Game end.** When the server observes a terminal state, the final
    observation has a non-null `game_over` field. No further `EngineTurnRequest`
    is sent. The engine MAY tear down session state.
 
@@ -221,6 +235,16 @@ returns an `EngineTurnResponse` JSON body. Authentication uses a shared
 `MISTBOARD_INTERNAL_ENGINE_TOKEN` bearer token in addition to private
 networking. The request body stays protocol-only; server timing is carried in
 the `x-mistboard-engine-timeout-ms` header.
+
+An engine endpoint implements one required route and one optional route:
+
+- `POST /internal/engine/turn` (required) — takes an `EngineTurnRequest`,
+  returns an `EngineTurnResponse` with a legal move.
+- `POST /internal/engine/observe` (optional) — takes an `EngineObservationPush`
+  (the mover's own-move observation), returns an `EngineObservationAck`. Bearer
+  auth, no reservation. Implement it to observe your own move immediately and
+  ponder on the opponent's clock; skip it and you still get the same
+  observation in your next turn request.
 
 Live admission is bounded by reservations. Web creates a reservation through
 `POST /internal/engine/reservations` before creating a first-party Python PvE

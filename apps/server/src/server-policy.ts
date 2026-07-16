@@ -76,13 +76,18 @@ export function isClientRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
     normalized === '/about' ||
-    normalized === '/learn' ||
+    // The legacy /learn hub is intentionally NOT here: it is gated off in the
+    // web build (learnEnabled), so a prod direct hit falls through to the
+    // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
+    // ungated xiangqi course) stays a client route.
+    normalized === '/learn/xiangqi' ||
     normalized === '/rules' ||
     normalized === '/zh-hans/rules' ||
     normalized === '/zh-hant/rules' ||
     normalized === '/play' ||
     normalized === '/watch' ||
     normalized === '/videos' ||
+    normalized === '/streamer' ||
     normalized === '/puzzles' ||
     normalized === '/source' ||
     normalized === '/contact' ||
@@ -90,6 +95,9 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/faq' ||
     normalized === '/terms' ||
     normalized === '/privacy' ||
+    normalized === '/contribute' ||
+    normalized === '/thanks' ||
+    normalized === '/lag' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
@@ -155,6 +163,11 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/kriegspiel/game/') ||
     normalized.startsWith('/fortress-xiangqi/game/') ||
     normalized.startsWith('/game/') ||
+    // Study browse index (/study) + a persisted study (/study/:id). The :id page
+    // serves the review SPA shell + mounts the ceval engine, so it is also a
+    // review-shell route (COOP/COEP) below; the bare index is a plain client page.
+    normalized === '/study' ||
+    /^\/study\/[A-Za-z0-9]+$/.test(normalized) ||
     // Standalone analysis board (/analysis/:variant), fed by a move list rather
     // than a room. Serves the review SPA shell and mounts the ceval engine, so it
     // must also be a review-shell route (COOP/COEP) below.
@@ -170,20 +183,32 @@ export function isClientRoute(pathname: string): boolean {
 }
 
 // Review-shell document routes: the postgame board at /game/:id and each
-// /<variant>/game/:id, plus the standalone analysis board /analysis/:variant.
-// These serve the review SPA shell, which can mount the in-browser analysis
-// engine (WASM threads → SharedArrayBuffer → requires cross-origin isolation).
-// server-http sends COOP/COEP on exactly these responses so the isolation stays
-// scoped to the review surface. Live /room/ routes are deliberately excluded:
-// the engine is postgame-only, and isolation there would buy nothing. Keep the
-// single optional variant segment in sync with the /<variant>/game/ tenants in
-// isClientRoute above.
+// /<variant>/game/:id, the standalone analysis board /analysis/:variant, study
+// pages, and the puzzle trainer /puzzles(/:id). These serve a SPA shell that can
+// mount the in-browser analysis engine (WASM threads, SharedArrayBuffer, which
+// requires cross-origin isolation). server-http sends COOP/COEP on exactly these
+// responses so the isolation stays scoped to these surfaces. Live /room/ routes
+// are deliberately excluded: the engine is postgame-only, and isolation there
+// would buy nothing.
+//
+// Both /puzzles (the list) and /puzzles/:id are included: cross-origin isolation
+// is fixed at document-load time and client-side pushState navigation between
+// puzzles does not re-request the document, so whichever puzzle URL the user
+// first loads must already carry the headers for the post-completion engine to
+// run. COEP is `credentialless` (see server-http), so isolating the puzzle page
+// does not force CORP on its cross-origin subresources.
+//
+// Keep the single optional variant segment in sync with the /<variant>/game/
+// tenants in isClientRoute above.
 export function isReviewShellRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
     /^(?:\/[a-z0-9-]+)?\/game\/[^/]+$/.test(normalized) ||
     /^\/historical-xiangqi\/game\/[^/]+$/.test(normalized) ||
-    /^\/analysis\/[a-z0-9-]+$/.test(normalized)
+    /^\/analysis\/[a-z0-9-]+$/.test(normalized) ||
+    /^\/study\/[A-Za-z0-9]+$/.test(normalized) ||
+    normalized === '/puzzles' ||
+    /^\/puzzles\/[^/]+$/.test(normalized)
   );
 }
 

@@ -1,0 +1,118 @@
+/* Gamebook (interactive-lesson) player: board + coach panel. */
+
+.gamebook__header {
+  max-width: 1100px;
+  margin: 0.5rem auto 0;
+  padding: 0 1rem;
+}
+.gamebook__title {
+  margin: 0;
+}
+.gamebook__summary {
+  margin: 0.25rem 0 0;
+  opacity: 0.7;
+}
+
+.gamebook {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.gamebook__aside {
+  flex: 0 0 100%;
+}
+
+.gamebook__board {
+  flex: 1 1 460px;
+  max-width: min(70vh, 560px);
+}
+
+.gamebook__coach {
+  flex: 1 1 260px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.3));
+  border-radius: 12px;
+  background: var(--c-bg-elevated, rgba(128, 128, 128, 0.06));
+}
+
+.gamebook__mascot {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.gamebook__bubble {
+  position: relative;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: var(--c-bg, rgba(255, 255, 255, 0.5));
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.25));
+  min-height: 3.5rem;
+}
+.gamebook__coach[data-state="bad"] .gamebook__bubble {
+  border-color: #b91c1c;
+}
+.gamebook__coach[data-state="end"] .gamebook__bubble {
+  border-color: #15803d;
+}
+
+.gamebook__comment {
+  margin: 0;
+}
+.gamebook__comment:empty {
+  display: none;
+}
+
+.gamebook__feedback {
+  margin: 0.4rem 0 0;
+  font-weight: 600;
+}
+.gamebook__coach[data-state="bad"] .gamebook__feedback {
+  color: #b91c1c;
+  font-weight: 400;
+}
+.gamebook__coach[data-state="end"] .gamebook__feedback {
+  color: #15803d;
+}
+
+.gamebook__hint {
+  margin: 0;
+  font-style: italic;
+  opacity: 0.85;
+}
+.gamebook__hint:empty {
+  display: none;
+}
+
+.gamebook__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gamebook__btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.4));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.gamebook__btn[hidden] {
+  display: none;
+}
+.gamebook__btn--primary {
+  background: var(--c-accent, #3893e8);
+  border-color: var(--c-accent, #3893e8);
+  color: #fff;
+}

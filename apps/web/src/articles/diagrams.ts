@@ -50,6 +50,11 @@ import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
 import articleSnapshotFog from '../article-snapshot-fog.json' with { type: 'json' };
 import articleSnapshotFogBlack from '../article-snapshot-fog-black.json' with { type: 'json' };
 import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+} from '../xiangqi-board-geometry.js';
+import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import {
   DEFAULT_XIANGQI_PIECE_SET,
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
@@ -90,14 +95,17 @@ export {
 export { SHOGI4_GAME_STEPS, SHOGI4_GAME_TITLE } from '../shogi4-sample-game.js';
 export {
   JUNGLE_FLIP_MUTUAL,
+  JUNGLE_FLIP_CAPTURE,
+  JUNGLE_FLIP_MOVE,
+  JUNGLE_FLIP_REVEAL,
   JUNGLE_FLIP_SETUP,
-  JUNGLE_FLIP_TURN,
   JUNGLE_LION_JUMP,
   JUNGLE_RAT_BLOCKS,
   JUNGLE_RANK_LADDER,
   JUNGLE_RAT_ELEPHANT,
   JUNGLE_RAT_SWIMS,
   JUNGLE_START_BOARD,
+  JUNGLE_TIGER_JUMP,
   JUNGLE_TRAP,
 } from '../jungle-rules-diagrams.js';
 
@@ -1289,10 +1297,61 @@ export const XQ_PIECE_SIZE = tokenPieceSize(XQ_CELL);
 export const XQ_FOG_OVERLAP = 0.5;
 export const XQ_VIEWBOX_PAD = 4;
 export const XQ_BOARD_RADIUS = 8;
-export const XQ_BOARD_STROKE = '#8b5a24';
-export const XQ_BOARD_STROKE_WIDTH = 1.5;
 
 export const XQ_START = createInitialXiangqiState('article-xiangqi-start');
+
+// The classic intersection layout: pieces sit on the 31px grid crossings.
+const XQ_INTERSECTION_GEO: XiangqiBoardGeometry = {
+  fileCount: 9,
+  rankCount: 10,
+  cell: XQ_CELL,
+  margin: XQ_MARGIN,
+  riverGap: 0,
+};
+// The "Square grid" (cell) layout: pieces sit inside squares. A slightly smaller
+// cell + river gap fit a full 9x10 grid inside the SAME board box (XQ_BOARD_W x
+// XQ_BOARD_H), so every diagram's outer size and multi-board offsets are
+// unchanged — only where points/lines land differs. Shares the transform math
+// with the live board via xiangqiBoardPoint (single source of truth).
+const XQ_CELL_SIZE = 30;
+const XQ_CELL_RIVER_GAP = 10;
+const XQ_CELL_GEO: XiangqiBoardGeometry = {
+  fileCount: 9,
+  rankCount: 10,
+  cell: XQ_CELL_SIZE,
+  margin: XQ_CELL_SIZE / 2,
+  riverGap: XQ_CELL_RIVER_GAP,
+};
+// Center the (smaller) square grid inside the fixed board box.
+const XQ_CELL_PAD_X = (XQ_BOARD_W - XQ_CELL_GEO.fileCount * XQ_CELL_SIZE) / 2;
+const XQ_CELL_PAD_Y =
+  (XQ_BOARD_H - (XQ_CELL_GEO.rankCount * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP)) / 2;
+const XQ_CELL_PIECE_SIZE = tokenPieceSize(XQ_CELL_SIZE);
+
+// The layout a diagram render is currently producing. Diagram SVGs come from
+// synchronous render thunks; the geometry helpers read this the same way the
+// piece layers read activeXiangqiPieceSet. A repaint re-runs the thunk inside
+// withXiangqiBoardLayout, so a settings switch (Square grid) flips every diagram.
+export let activeXiangqiBoardLayout: XiangqiBoardLayout = 'intersection';
+
+export function withXiangqiBoardLayout(layout: XiangqiBoardLayout, render: () => string): string {
+  const previous = activeXiangqiBoardLayout;
+  activeXiangqiBoardLayout = layout;
+  try {
+    return render();
+  } finally {
+    activeXiangqiBoardLayout = previous;
+  }
+}
+
+// Piece disc size + fog half-cell for the active layout (the square grid uses a
+// slightly smaller cell than the intersection board).
+function xqPieceSize(): number {
+  return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_SIZE : XQ_PIECE_SIZE;
+}
+function xqHalfCell(): number {
+  return (activeXiangqiBoardLayout === 'cell' ? XQ_CELL_SIZE : XQ_CELL) / 2;
+}
 
 export function xqPoint(
   file: number,
@@ -1301,11 +1360,18 @@ export function xqPoint(
   x0: number,
   y0: number,
 ): { x: number; y: number } {
-  const row = perspective === 'red' ? 10 - rank : rank - 1;
-  return {
-    x: x0 + XQ_MARGIN + file * XQ_CELL,
-    y: y0 + XQ_MARGIN + row * XQ_CELL,
-  };
+  if (activeXiangqiBoardLayout === 'cell') {
+    return xiangqiBoardPoint(
+      file,
+      rank,
+      perspective,
+      'cell',
+      XQ_CELL_GEO,
+      x0 + XQ_CELL_PAD_X,
+      y0 + XQ_CELL_PAD_Y,
+    );
+  }
+  return xiangqiBoardPoint(file, rank, perspective, 'intersection', XQ_INTERSECTION_GEO, x0, y0);
 }
 
 export function xqCoord(square: XiangqiSquare): { file: number; rank: number } {
@@ -1340,6 +1406,58 @@ export function withXiangqiPieceSet(set: XiangqiPieceSet, render: () => string):
 }
 
 export function xqBoardGrid(x0: number, y0: number, perspective: XiangqiColor): string {
+  return activeXiangqiBoardLayout === 'cell'
+    ? xqCellBoardGrid(x0, y0, perspective)
+    : xqIntersectionBoardGrid(x0, y0, perspective);
+}
+
+// Palace diagonals (the general's-palace cue) + the mid-river label. Shared by
+// both layouts; every endpoint comes from xqPoint, so it lands correctly whether
+// pieces sit on intersections or in cells.
+function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): string {
+  const parts: string[] = [];
+  for (const palace of [
+    { fileMin: 3, fileMax: 5, rankBack: 1 },
+    { fileMin: 3, fileMax: 5, rankBack: 8 },
+  ]) {
+    const topRank = palace.rankBack === 1 ? 3 : 10;
+    const bottomRank = palace.rankBack;
+    const a = xqPoint(palace.fileMin, topRank, perspective, x0, y0);
+    const b = xqPoint(palace.fileMax, bottomRank, perspective, x0, y0);
+    const c = xqPoint(palace.fileMax, topRank, perspective, x0, y0);
+    const d = xqPoint(palace.fileMin, bottomRank, perspective, x0, y0);
+    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`);
+    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`);
+  }
+  // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
+  const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
+  const riverX = xqPoint(4, 1, perspective, x0, y0).x;
+  parts.push(
+    `<text x="${riverX}" y="${riverY + 1}" font-family="serif" font-size="16" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">楚 河   漢 界</text>`,
+  );
+  return parts.join('');
+}
+
+// Square-grid layout: pieces sit inside cells, so the grid is drawn as one square
+// per point instead of crossing lines. The board box is unchanged.
+function xqCellBoardGrid(x0: number, y0: number, perspective: XiangqiColor): string {
+  const half = XQ_CELL_SIZE / 2;
+  const parts: string[] = [
+    `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
+  ];
+  for (let file = 0; file < 9; file += 1) {
+    for (let rank = 1; rank <= 10; rank += 1) {
+      const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+      parts.push(
+        `<rect x="${x - half}" y="${y - half}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" class="xq-diagram-line" fill="none" stroke-width="1"/>`,
+      );
+    }
+  }
+  parts.push(xqPalaceAndRiver(x0, y0, perspective));
+  return parts.join('');
+}
+
+function xqIntersectionBoardGrid(x0: number, y0: number, perspective: XiangqiColor): string {
   const parts: string[] = [
     `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
   ];
@@ -1362,27 +1480,8 @@ export function xqBoardGrid(x0: number, y0: number, perspective: XiangqiColor): 
       parts.push(`<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`);
     }
   }
-  for (const palace of [
-    { fileMin: 3, fileMax: 5, rankBack: 1 },
-    { fileMin: 3, fileMax: 5, rankBack: 8 },
-  ]) {
-    const topRank = palace.rankBack === 1 ? 3 : 10;
-    const bottomRank = palace.rankBack;
-    const a = xqPoint(palace.fileMin, topRank, perspective, x0, y0);
-    const b = xqPoint(palace.fileMax, bottomRank, perspective, x0, y0);
-    const c = xqPoint(palace.fileMax, topRank, perspective, x0, y0);
-    const d = xqPoint(palace.fileMin, bottomRank, perspective, x0, y0);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`);
-  }
-  parts.push(
-    `<text x="${left + 4 * XQ_CELL}" y="${(riverTop + riverBottom) / 2 + 1}" font-family="serif" font-size="16" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">楚 河   漢 界</text>`,
-  );
+  parts.push(xqPalaceAndRiver(x0, y0, perspective));
   return parts.join('');
-}
-
-export function xqBoardBorder(x0: number, y0: number): string {
-  return `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`;
 }
 
 export function xqFogLayer(
@@ -1401,10 +1500,13 @@ export function xqFogLayer(
       if (visible.has(sq)) continue;
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
       const visualRow = xqVisualRow(rank, perspective);
-      const left = file === 0 ? x0 : x - XQ_CELL / 2 - XQ_FOG_OVERLAP;
-      const right = file === 8 ? x0 + XQ_BOARD_W : x + XQ_CELL / 2 + XQ_FOG_OVERLAP;
-      const top = visualRow === 0 ? y0 : y - XQ_CELL / 2 - XQ_FOG_OVERLAP;
-      const bottom = visualRow === 9 ? y0 + XQ_BOARD_H : y + XQ_CELL / 2 + XQ_FOG_OVERLAP;
+      const half = xqHalfCell();
+      // Outer edges clamp to the board box (fog is clipped to it either way); the
+      // interior half-cell tracks the active layout's cell size.
+      const left = file === 0 ? x0 : x - half - XQ_FOG_OVERLAP;
+      const right = file === 8 ? x0 + XQ_BOARD_W : x + half + XQ_FOG_OVERLAP;
+      const top = visualRow === 0 ? y0 : y - half - XQ_FOG_OVERLAP;
+      const bottom = visualRow === 9 ? y0 + XQ_BOARD_H : y + half + XQ_FOG_OVERLAP;
       parts.push(`M ${left} ${top} H ${right} V ${bottom} H ${left} Z`);
     }
   }
@@ -1467,10 +1569,11 @@ export function xqPiecesLayer(
       if (!piece) return '';
       const { file, rank } = xqCoord(sq as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+      const size = xqPieceSize();
       return renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
-        x: x - XQ_PIECE_SIZE / 2,
-        y: y - XQ_PIECE_SIZE / 2,
-        size: XQ_PIECE_SIZE,
+        x: x - size / 2,
+        y: y - size / 2,
+        size,
         shrouded,
         shroudedStyle,
       });
@@ -1515,8 +1618,9 @@ export function xqZoneHighlights(x0: number, y0: number, perspective: XiangqiCol
     const h = Math.abs(hi.y - lo.y) + pad * 2;
     parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#2563eb" opacity="0.13" rx="5"/>`);
   }
-  const left = x0 + XQ_MARGIN;
-  const right = left + 8 * XQ_CELL;
+  const half = xqHalfCell();
+  const left = xqPoint(0, 5, perspective, x0, y0).x - half;
+  const right = xqPoint(8, 5, perspective, x0, y0).x + half;
   const ya = xqPoint(0, 5, perspective, x0, y0).y;
   const yb = xqPoint(0, 6, perspective, x0, y0).y;
   parts.push(
@@ -1553,7 +1657,6 @@ export function xqBoardSvg(opts: {
     xqPiecesLayer(opts.state, view, opts.x, boardY, perspective, opts.shroudedStyle),
     xqArrowLayer(opts.arrows, opts.x, boardY, perspective),
     opts.overlay ?? '',
-    xqBoardBorder(opts.x, boardY),
   ].join('');
 }
 
@@ -1683,7 +1786,6 @@ export function miniXqBoardSvg(opts: {
     mxqGridLayer(),
     mxqMarkerLayer(opts.dots ?? [], opts.captures ?? []),
     mxqPiecesLayer(opts.board),
-    `<rect x="0" y="0" width="${MXQ_BOARD_W}" height="${MXQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`,
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${w}px" viewBox="0 0 ${w} ${h}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="Mini Xiangqi board"><g transform="translate(${XQ_VIEWBOX_PAD} ${XQ_VIEWBOX_PAD})">${body}</g></svg>`;
 }
@@ -1760,7 +1862,6 @@ export function miniXqFogBoardSvg(view: MiniXiangqiPlayerView, clipId: string): 
     mxqGridLayer(),
     mxqFogLayer(view, clipId),
     mxqViewPiecesLayer(view),
-    `<rect x="0" y="0" width="${MXQ_BOARD_W}" height="${MXQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`,
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${w}px" viewBox="0 0 ${w} ${h}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="Dark Mini Xiangqi board"><g transform="translate(${XQ_VIEWBOX_PAD} ${XQ_VIEWBOX_PAD})">${body}</g></svg>`;
 }
@@ -1781,9 +1882,6 @@ export function mxqBoardCell(opts: {
   } else {
     layers.push(mxqPiecesLayer(opts.state.board));
   }
-  layers.push(
-    `<rect x="0" y="0" width="${MXQ_BOARD_W}" height="${MXQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`,
-  );
   return `<g transform="translate(${opts.x} 0)"><text x="${MXQ_BOARD_W / 2}" y="11" font-family="system-ui, sans-serif" font-size="11" font-weight="700" class="xq-diagram-title" text-anchor="middle">${opts.label}</text><g transform="translate(0 20)">${layers.join('')}</g></g>`;
 }
 
@@ -2348,7 +2446,6 @@ export const XQ_DARK_XIANGQI_THUMBNAIL = () => xqSvg(
     xqBoardGrid(0, 0, 'red'),
     xqFogLayer(XQ_START_RED, 0, 0, 'red', 'xq-fog-dark-xiangqi-thumbnail'),
     xqPiecesLayer(XQ_START, XQ_START_RED, 0, 0, 'red'),
-    xqBoardBorder(0, 0),
   ].join(''),
 );
 
@@ -2396,7 +2493,6 @@ export const JIEQI_RULES_THUMBNAIL = () => xqSvg(
   [
     xqBoardGrid(0, 0, 'red'),
     xqPiecesLayer(XQ_START, JIEQI_START_VIEW, 0, 0, 'red', 'back'),
-    xqBoardBorder(0, 0),
   ].join(''),
 );
 
@@ -2587,40 +2683,10 @@ export function banqiBoardGrid(x0: number, y0: number): string {
     const y = top + r * BANQI_CELL;
     parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`);
   }
-  // Half-xiangqi furniture (matches the live board): the bottom palace's
-  // diagonals (files d-f, ranks 1-3) and the soldier/cannon starting-point
-  // brackets. Drawn on the line intersections; pieces still sit in the cells.
-  const pt = (col: number, row: number) => ({ x: left + col * BANQI_CELL, y: top + row * BANQI_CELL });
-  for (const [a, b] of [
-    [pt(3, 2), pt(5, 4)],
-    [pt(5, 2), pt(3, 4)],
-  ]) {
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`);
-  }
-  const mark = (col: number, row: number): void => {
-    const { x, y } = pt(col, row);
-    const gap = 3;
-    const len = 5;
-    for (const sx of [-1, 1]) {
-      if (col + sx < 0 || col + sx > BANQI_COLS) continue;
-      for (const sy of [-1, 1]) {
-        if (row + sy < 0 || row + sy > BANQI_ROWS) continue;
-        const px = x + sx * gap;
-        const py = y + sy * gap;
-        parts.push(
-          `<line x1="${px}" y1="${py}" x2="${px + sx * len}" y2="${py}" class="xq-diagram-line" stroke-width="1"/>`,
-        );
-        parts.push(
-          `<line x1="${px}" y1="${py}" x2="${px}" y2="${py + sy * len}" class="xq-diagram-line" stroke-width="1"/>`,
-        );
-      }
-    }
-  };
-  for (const col of [0, 2, 4, 6, 8]) mark(col, 1); // soldiers, rank 4
-  for (const col of [1, 7]) mark(col, 2); // cannons, rank 3
-  parts.push(
-    `<rect x="${x0}" y="${y0}" width="${BANQI_BOARD_W}" height="${BANQI_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`,
-  );
+  // A plain 4x8 grid — deliberately no palace diagonals or soldier/cannon start
+  // brackets. Banqi keeps none of those rules, the article prose says pieces sit
+  // in the squares (not on xiangqi intersections), and the live board
+  // (renderBanqiBoardSvg) draws no furniture either. Keep these consistent.
   return parts.join('');
 }
 
@@ -2797,9 +2863,8 @@ export const BANQI_RANK_LADDER = () => {
     BANQI_PAIR_W,
     BANQI_BOARD_H + 80,
     [
-      `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">TAIWAN RANK LADDER</text>`,
+      `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">CAPTURE RANK LADDER</text>`,
       `<rect x="${L}" y="${T}" width="${BANQI_BOARD_W}" height="${BANQI_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
-      `<rect x="${L}" y="${T}" width="${BANQI_BOARD_W}" height="${BANQI_BOARD_H}" rx="${XQ_BOARD_RADIUS}" fill="none" stroke="${XQ_BOARD_STROKE}" stroke-width="${XQ_BOARD_STROKE_WIDTH}"/>`,
       ...ladder.map(({ role, label, targetOnly }, index) => {
         const cx = pieceX(index);
         const marker = targetOnly

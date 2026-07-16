@@ -26,6 +26,7 @@ import {
   type Color,
   type EngineClock,
   type EngineObservation,
+  type EngineObservationPush,
   type EngineSessionIdInputs,
   type EngineTurnRequest,
   type GameEvent,
@@ -376,5 +377,43 @@ export function buildEngineTurnRequest(args: {
     legalMoves: legalMovesFor(state, engineColor),
     observationTranscript: transcript,
     latestObservationDelta,
+  };
+}
+
+/**
+ * Build the post-move observation PUSH for the engine that just moved, so it can
+ * observe its own move (new vantage) immediately and think on the opponent's
+ * clock. `prevState` is the state the engine moved FROM; `nextState` is AFTER
+ * the move is applied. The observation is built through the same redaction path
+ * as the turn transcript (`buildObservationForPly`), so no hidden truth leaks.
+ */
+export function buildEngineObservationPush(args: {
+  gameId: string;
+  engineId: string;
+  engineColor: Color;
+  prevState: GameState;
+  nextState: GameState;
+  move: Move;
+  /** Ply count AFTER the move. */
+  ply: number;
+  gameSpecId?: string;
+}): EngineObservationPush {
+  const { gameId, engineId, engineColor, prevState, nextState, move, ply, gameSpecId } = args;
+  const observation = buildObservationForPly({
+    prevState,
+    nextState,
+    move,
+    perspective: engineColor,
+    ply,
+  });
+  return {
+    protocolVersion: '1',
+    gameId,
+    engineId,
+    ...(gameSpecId ? { gameSpecId } : {}),
+    sessionId: buildSessionId({ gameId, engineId, color: engineColor }),
+    color: engineColor,
+    ply,
+    observation,
   };
 }

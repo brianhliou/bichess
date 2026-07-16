@@ -1,4 +1,5 @@
 export * from './analysis.js';
+export * from './banqi-fen.js';
 export * from './bughouse.js';
 export * from './bughouse-engine-protocol.js';
 export * from './chess960.js';
@@ -6,7 +7,10 @@ export * from './clocks.js';
 export * from './engine-protocol.js';
 export * from './events.js';
 export * from './game-specs.js';
+export * from './jungle-fen.js';
+export * from './jungle-flip-fen.js';
 export * from './notation.js';
+export * from './puzzle-short-code.js';
 export * from './puzzles-fortress-xiangqi.js';
 export * from './puzzles-jungle.js';
 export * from './puzzles-mini-xiangqi.js';

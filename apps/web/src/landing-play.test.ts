@@ -12,19 +12,18 @@ import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
 // Xiangqi pivot (2026-07): the open xiangqi anchors lead, the approachable
-// flip/animal cluster follows (Banqi, Jungle, Flip Jungle, Jieqi), then the
-// fog trio. The mini xiangqi trio (mini/dark-mini/drop-mini) plus
+// flip/animal cluster follows (Banqi, Jungle, Flip Jungle), then Fortress and
+// Jieqi, then the fog pair. The mini xiangqi trio, Fog Shogi, plus
 // dark-crazyhouse are hidden from menus (offerInMenu=false) — they remain
-// reachable only by deep link.
+// reachable only by deep link when their development flag is enabled.
 const BASELINE_PICKER_SPECS = [
-  'fortress-xiangqi',
   'banqi',
   'jungle',
   'jungle-flip',
+  'fortress-xiangqi',
   'jieqi',
   'dark-xiangqi',
   'dark-chess',
-  'dark-shogi',
 ];
 
 describe('landing play panel', () => {
@@ -182,11 +181,7 @@ describe('landing play panel', () => {
         '.landing-variant-card[data-game-spec="dark-xiangqi"] span[data-variant-marker-id="dark-xiangqi"]',
       ),
     ).not.toBeNull();
-    expect(
-      document.querySelector(
-        '.landing-variant-card[data-game-spec="dark-shogi"] span[data-variant-marker-id="dark-shogi"]',
-      ),
-    ).not.toBeNull();
+    expect(document.querySelector('.landing-variant-card[data-game-spec="dark-shogi"]')).toBeNull();
   });
 
   it('starts setup on Variant and shows all offered variants together', () => {
@@ -541,14 +536,15 @@ describe('landing play panel', () => {
   });
 
   it('creates a Drop Mini Xiangqi engine room from a deep link with the selected built-in tier', async () => {
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxqd_engine' });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
-    // Drop Mini is hidden from the browse picker post-pivot; the engine flow is
-    // still reachable by deep link (its Fairy-Stockfish tiers stay selectable).
+    // Drop Mini is hidden from the product picker; the lab profile keeps its
+    // deep-link engine flow and Fairy-Stockfish tiers available.
     window.history.replaceState(null, '', '/?play=computer&gameSpecId=drop-mini-xiangqi');
     maybeOpenPlayDeepLink([]);
     expect(softLinkedVariantLabel()).toBe('Drop Mini Xiangqi');
@@ -899,7 +895,7 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play the engine');
     selectModalVariant('dark-xiangqi');
-    expect(document.querySelector('.landing-variant-control')?.textContent).toBe('Misty DXQ 1.0');
+    expect(document.querySelector('.landing-variant-control')?.textContent).toBe('Misty DXQ 1.1');
     clickModalColor('Black');
     clickModalButton('Start game');
     await flushPromises();
@@ -923,9 +919,10 @@ describe('landing play panel', () => {
     expect(window.location.search).toBe('');
   });
 
-  it('selects a Dark Mini Xiangqi deep link from the baseline picker', async () => {
+  it('selects a Dark Mini Xiangqi deep link in the lab profile', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_soft' });
@@ -972,9 +969,10 @@ describe('landing play panel', () => {
     expect(card?.querySelector('svg[data-mini-id="kriegspiel"]')).not.toBeNull();
   });
 
-  it('selects a rated Dark Mini Xiangqi lobby deep link from the baseline picker', async () => {
+  it('selects a rated Dark Mini Xiangqi lobby deep link in the lab profile', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
+    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     setRatedModeEnabled(true);
     setResolvedSignedIn(true);
     const fetchSpy = lobbyFetchSpy();
@@ -1122,11 +1120,8 @@ describe('landing play panel', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     setRoomNavigator(() => {});
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Challenge a friend');
-    selectModalVariant('dark-shogi');
+    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-shogi');
+    maybeOpenPlayDeepLink([]);
 
     expect(modalColorOptions()).toEqual([
       { label: 'Sente', glyph: '☗', classes: 'landing-color-glyph black shogi' },

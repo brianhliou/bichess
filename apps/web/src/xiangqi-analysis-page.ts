@@ -1,8 +1,8 @@
 // Entry page for the standalone /analysis/xiangqi route. Lichess-shaped: opens the
 // interactive board at the START POSITION by default (empty tree — play moves and
 // branch straight away). A shareable ?moves= link seeds the board from an imported
-// game; the importer auto-detects the notation (coordinate, 0-indexed
-// UCI/ICCS/UCCI, WXF, Chinese). The "Import game" affordance lives on the board.
+// game; the parser auto-detects coordinate, 0-indexed UCI/ICCS/UCCI, WXF, and
+// Chinese notation.
 
 import { importXiangqiGame } from './review/xiangqi-import.js';
 import { mountXiangqiAnalysis } from './xiangqi-analysis.js';

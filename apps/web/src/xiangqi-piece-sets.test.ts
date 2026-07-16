@@ -3,6 +3,7 @@ import type { XiangqiPiece } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
+  internationalFlatTreasureMarks,
   internationalTreasureMarks,
   renderXiangqiPieceGlyphed,
   xiangqiGlyph,
@@ -48,6 +49,7 @@ describe('xiangqiGlyph', () => {
 
   it('keeps an initial fallback for the image sets', () => {
     expect(xiangqiGlyph('international', 'red', 'general')).toBe('G');
+    expect(xiangqiGlyph('international-flat', 'red', 'general')).toBe('G');
     expect(xiangqiGlyph('international', 'black', 'elephant')).toBe('E');
     expect(xiangqiGlyph('animal-dobutsu', 'red', 'general')).toBe('G');
     expect(xiangqiGlyph('animal-dobutsu', 'black', 'elephant')).toBe('E');
@@ -92,6 +94,31 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(general).not.toContain('<text');
   });
 
+  it('renders the Chess-style prototype from the international art without a disc', () => {
+    const general = renderXiangqiPieceGlyphed(redGeneral, 'international-flat', {});
+    expect(general).toContain('/piece-sets/xiangqi/international-flat/red-general.png?v=1');
+    expect(general).toContain('x="-26.38" y="-26.38" width="152.76" height="152.76"');
+    expect(general).toContain('style="filter:none"');
+    expect(general).not.toContain('<circle');
+    expect(general).not.toContain('fill="#fef0d7"');
+  });
+
+  it('fits the Chess-style elephant and cannon to their silhouettes', () => {
+    const elephant = renderXiangqiPieceGlyphed(
+      { color: 'red', role: 'elephant' },
+      'international-flat',
+      {},
+    );
+    const cannon = renderXiangqiPieceGlyphed(
+      { color: 'red', role: 'cannon' },
+      'international-flat',
+      {},
+    );
+
+    expect(elephant).toContain('x="-23.7" y="-26.7" width="147.4" height="147.4"');
+    expect(cannon).toContain('x="-35.4" y="-35.4" width="170.8" height="170.8"');
+  });
+
   it('keeps the international soldier at native size while larger art fills more of the disc', () => {
     const soldier = renderXiangqiPieceGlyphed(
       { color: 'red', role: 'soldier' },
@@ -117,6 +144,13 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(red).toContain('stroke="#c30d0d"');
     expect(black).toContain('stroke="#202427"');
     expect(red).not.toContain('M38 38 L62 38');
+  });
+
+  it('renders the Chess-style Fortress treasure without a disc', () => {
+    const treasure = internationalFlatTreasureMarks('red');
+    expect(treasure).toContain('/piece-sets/xiangqi/international-flat/red-treasure.png?v=1');
+    expect(treasure).toContain('width="152.76" height="152.76"');
+    expect(treasure).not.toContain('<circle');
   });
 
   it('renders a distinct symbol for advisor and elephant', () => {
@@ -207,6 +241,7 @@ describe('xiangqiPreviewGlyph', () => {
     expect(xiangqiPreviewGlyph('western')).toBe('G');
     expect(xiangqiPreviewGlyph('symbols')).toBe('★');
     expect(xiangqiPreviewGlyph('international')).toBe('G');
+    expect(xiangqiPreviewGlyph('international-flat')).toBe('G');
     expect(xiangqiPreviewGlyph('animal-dobutsu')).toBe('G');
   });
 });
@@ -219,6 +254,12 @@ describe('xiangqiPieceTilePreview', () => {
     if (international.kind === 'svg') {
       expect(international.markup).toContain('/piece-sets/xiangqi/international/red-general.png');
       expect(international.markup).not.toContain('stroke="#c2261e"');
+    }
+    const chessStyle = xiangqiPieceTilePreview('international-flat');
+    expect(chessStyle.kind).toBe('svg');
+    if (chessStyle.kind === 'svg') {
+      expect(chessStyle.markup).toContain('/piece-sets/xiangqi/international-flat/red-general.png');
+      expect(chessStyle.markup).not.toContain('<circle');
     }
     const dobutsu = xiangqiPieceTilePreview('animal-dobutsu');
     expect(dobutsu.kind).toBe('svg');

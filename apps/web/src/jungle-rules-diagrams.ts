@@ -159,10 +159,11 @@ const RANK_LABEL: Record<JunglePieceRole, string> = {
 };
 export const JUNGLE_RANK_LADDER = (() => {
   const slot = 80;
-  const token = 62;
+  const token = 50;
   const topPad = 6;
-  const cy = topPad + token / 2;
-  const labelY = topPad + token + 16;
+  const redCy = topPad + token / 2;
+  const blueCy = redCy + 48;
+  const labelY = blueCy + token / 2 + 17;
   const width = RANK_ORDER.length * slot;
   const height = labelY + 8;
   const shadowId = 'jungle-rank-shadow';
@@ -172,11 +173,12 @@ export const JUNGLE_RANK_LADDER = (() => {
   const cells = RANK_ORDER.map((role, i) => {
     const cx = i * slot + slot / 2;
     return [
-      framedTokenSvg({ cx, cy, size: token, ink: 'red', role, filterId: shadowId }),
+      framedTokenSvg({ cx, cy: redCy, size: token, ink: 'red', role, filterId: shadowId }),
+      framedTokenSvg({ cx, cy: blueCy, size: token, ink: 'black', role, filterId: shadowId }),
       `<text x="${cx}" y="${labelY}" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600">${RANK_LABEL[role]}</text>`,
     ].join('');
   }).join('');
-  const svg = `<svg class="jungle-rank-ladder" viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="The eight Jungle animals in rank order, strongest to weakest"><defs>${jungleShadowFilterDef(shadowId)}</defs>${cells}</svg>`;
+  const svg = `<svg class="jungle-rank-ladder" viewBox="0 0 ${width} ${height}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="The red and blue Jungle animals in rank order, strongest to weakest"><defs>${jungleShadowFilterDef(shadowId)}</defs>${cells}</svg>`;
   return responsive(svg, 680);
 })();
 
@@ -204,9 +206,24 @@ const FLIP_SETUP_BOARD: JungleFlipRenderBoard = {
 };
 export const JUNGLE_FLIP_SETUP = flipDiagram('-flip-setup', FLIP_SETUP_BOARD, {}, 380);
 
-// Mid-game: a couple of identities revealed, the rest still face-down. The red wolf
-// can flip a neighbour or step to an empty square.
-const FLIP_TURN_BOARD: JungleFlipRenderBoard = {
+const FLIP_REVEAL_BOARD: JungleFlipRenderBoard = {
+  a1: FACE_DOWN,
+  b1: FACE_DOWN,
+  c1: FACE_DOWN,
+  d1: FACE_DOWN,
+  a2: FACE_DOWN,
+  b2: FACE_DOWN,
+  c2: FACE_DOWN,
+  d2: FACE_DOWN,
+};
+export const JUNGLE_FLIP_REVEAL = flipDiagram(
+  '-flip-reveal',
+  FLIP_REVEAL_BOARD,
+  { selected: 'b2' },
+  300,
+);
+
+const FLIP_MOVE_BOARD: JungleFlipRenderBoard = {
   a1: FACE_DOWN,
   d1: FACE_DOWN,
   b2: { faceDown: false, color: 'red', role: 'wolf' },
@@ -216,11 +233,24 @@ const FLIP_TURN_BOARD: JungleFlipRenderBoard = {
   d4: FACE_DOWN,
   b4: FACE_DOWN,
 };
-export const JUNGLE_FLIP_TURN = flipDiagram(
-  '-flip-turn',
-  FLIP_TURN_BOARD,
+export const JUNGLE_FLIP_MOVE = flipDiagram(
+  '-flip-move',
+  FLIP_MOVE_BOARD,
   { selected: 'b2', targets: ['b3'] },
-  380,
+  300,
+);
+
+const FLIP_CAPTURE_BOARD: JungleFlipRenderBoard = {
+  a1: FACE_DOWN,
+  d4: FACE_DOWN,
+  b2: { faceDown: false, color: 'red', role: 'lion' },
+  b3: { faceDown: false, color: 'black', role: 'wolf' },
+};
+export const JUNGLE_FLIP_CAPTURE = flipDiagram(
+  '-flip-capture',
+  FLIP_CAPTURE_BOARD,
+  { selected: 'b2', targets: ['b3'] },
+  300,
 );
 
 // Equal ranks trade off the board (同归于尽): the red wolf and the black wolf meet,
@@ -235,5 +265,15 @@ export const JUNGLE_FLIP_MUTUAL = flipDiagram(
   '-flip-mutual',
   FLIP_MUTUAL_BOARD,
   { selected: 'b2', targets: ['b3'] },
-  380,
+  300,
+);
+
+const TIGER_JUMP_BOARD: JungleBoard = {
+  a5: { color: 'red', role: 'tiger' },
+};
+export const JUNGLE_TIGER_JUMP = jungleDiagram(
+  '-tiger-jump',
+  TIGER_JUMP_BOARD,
+  { selected: 'a5', targets: ['d5'] },
+  440,
 );

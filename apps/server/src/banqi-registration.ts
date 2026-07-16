@@ -1,9 +1,8 @@
 /**
  * Banqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. No rematch flow and no lobby surface yet — the lobby
- * route answers banqi_not_integrated while the flag is on. PvP, live-clock only
- * (PvE and correspondence come later). Imported for side effects by
- * variant-tenant/register-tenants.ts.
+ * binding, and hydration. No rematch flow yet. Matchmaking is casual random-seat
+ * (unrated); PvP, live-clock only (PvE and correspondence come later). Imported
+ * for side effects by variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
@@ -11,6 +10,7 @@ import type { BanqiCreatorPreference, BanqiRuntimeRoom } from './banqi-runtime.j
 import { banqiTenant } from './banqi-tenant.js';
 import * as persistence from './persistence.js';
 import { handleBanqiCreate, requestsBanqi } from './routes/banqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   type BanqiLiveRoomCreation,
   type BanqiRoomEngineSeat,
@@ -68,7 +68,7 @@ registerVariantTenant({
   watch: {
     channelId: 'banqi',
     family: 'xiangqi',
-    label: 'Half-Flip Chess',
+    label: 'Flip Xiangqi',
     legacyVariants: ['banqi'],
   },
   ownsSpecRouting: true,
@@ -95,6 +95,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleBanqiCreate({ ...ctx, createBanqiRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createBanqiRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`banqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

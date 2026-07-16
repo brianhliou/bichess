@@ -5,6 +5,9 @@
 export function formatEval(cp: number | null, mate: number | null): string {
   if (mate != null) return `${mate > 0 ? '#' : '-#'}${Math.abs(mate)}`;
   if (cp == null) return '–';
+  // The server encodes an already-checkmated position (mate 0) as a decisive
+  // ±30000cp — render it as the checkmate it is, not as "+300.0".
+  if (Math.abs(cp) >= 30000) return cp > 0 ? '#' : '-#';
   const v = cp / 100;
   return `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
 }

@@ -10,12 +10,14 @@ import {
   type FortressXiangqiMove,
   type FortressXiangqiPuzzle,
   fortressXiangqiPuzzleById,
+  fortressXiangqiPuzzleNextMove,
   fortressXiangqiPuzzleSideToMove,
   JUNGLE_PUZZLES,
   JUNGLE_SPEC_ID,
   type JungleMove,
   type JunglePuzzle,
   junglePuzzleById,
+  junglePuzzleNextMove,
   junglePuzzleSideToMove,
   MINI_XIANGQI_PUZZLES,
   MINI_XIANGQI_SPEC_ID,
@@ -23,8 +25,11 @@ import {
   type MiniXiangqiPuzzleMove,
   type MiniXiangqiPuzzleVariant,
   miniXiangqiPuzzleById,
+  miniXiangqiPuzzleNextMove,
   miniXiangqiPuzzleSideToMove,
+  resolvePuzzleShortCode,
   standardXiangqiPuzzleById,
+  standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
@@ -54,9 +59,13 @@ type PublicPuzzleVariant =
   | typeof XIANGQI_SPEC_ID;
 type PublicPuzzleMove = MiniXiangqiPuzzleMove | FortressXiangqiMove | JungleMove | XiangqiMove;
 
+// Fortress is omitted from the discoverable pool (list + random) while the
+// variant is demoted and its puzzles await a re-mine with the per-ply
+// uniqueness gate. Its puzzles stay resolvable by id/short-code below
+// (puzzleByExactId/allPuzzleIds), so existing links do not hard-404. Re-add the
+// Fortress spread here when the re-mined corpus lands.
 const ALL_PUZZLES: readonly PublicPuzzle[] = [
   ...MINI_XIANGQI_PUZZLES,
-  ...FORTRESS_XIANGQI_PUZZLES,
   ...JUNGLE_PUZZLES,
   ...XIANGQI_PUZZLES,
 ];
@@ -73,6 +82,10 @@ type PuzzleSummary = {
 
 type PuzzleDetail = PuzzleSummary & {
   initial: PublicPuzzle['initial'];
+  // Denormalized attribution for the "From game" card (standard-xiangqi mined
+  // puzzles only). The source game itself is not hosted until license-cleared,
+  // so this is display metadata, not a link target.
+  sourceGame?: XiangqiPuzzle['sourceGame'];
 };
 
 export async function tryHandle(
@@ -161,6 +174,33 @@ export async function tryHandle(
     return true;
   }
 
+  // Solution-exposure endpoint (lichess "view solution" / "get a hint"). This is
+  // the ONLY route that returns solution move data; the detail + attempt routes
+  // stay solution-hidden. `mode:'solution'` returns the full line; `mode:'hint'`
+  // returns just the next correct move for the given played-ply count. Either
+  // action books a FAILED rated attempt for the user (idempotent per user+puzzle
+  // via ON CONFLICT DO NOTHING, so a prior wrong-move fail or a later solve is a
+  // rating no-op — first terminal action wins, matching lichess).
+  const revealMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/reveal$/);
+  if (revealMatch) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    const puzzle = puzzleById(decodeURIComponent(revealMatch[1]!));
+    if (!puzzle) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const body = await readJsonBody(request);
+    const rated = body.rated !== false;
+    const rating = await recordOutcomeRating(request, puzzle, false, rated);
+    if (body.mode === 'hint') {
+      const move = puzzleNextMove(puzzle, parsePlayedPlyCount(body.playedPlyCount));
+      writeJson(response, 200, { move, ...(rating ? { rating } : {}) });
+      return true;
+    }
+    writeJson(response, 200, { solution: puzzle.solution, ...(rating ? { rating } : {}) });
+    return true;
+  }
+
   const detailMatch = pathname.match(/^\/api\/puzzles\/([^/]+)$/);
   if (!detailMatch) return false;
   if (!requireMethod(request, response, 'GET')) return true;
@@ -174,13 +214,40 @@ export async function tryHandle(
   return true;
 }
 
-function puzzleById(id: string): PublicPuzzle | null {
+// Ids of every puzzle resolvable below, built once for short-code inversion.
+// Keep the four registries in sync with puzzleByExactId().
+let allPuzzleIdsCache: string[] | null = null;
+function allPuzzleIds(): string[] {
+  if (!allPuzzleIdsCache) {
+    allPuzzleIdsCache = [
+      ...MINI_XIANGQI_PUZZLES,
+      ...FORTRESS_XIANGQI_PUZZLES,
+      ...JUNGLE_PUZZLES,
+      ...XIANGQI_PUZZLES,
+    ].map((puzzle) => puzzle.id);
+  }
+  return allPuzzleIdsCache;
+}
+
+function puzzleByExactId(id: string): PublicPuzzle | null {
   return (
     miniXiangqiPuzzleById(id) ??
     fortressXiangqiPuzzleById(id) ??
     junglePuzzleById(id) ??
     standardXiangqiPuzzleById(id)
   );
+}
+
+// Accepts either a full puzzle id (the URL slug today) or a lichess-style short
+// code (e.g. "bMpKA", shown in the puzzle info card). Full ids resolve directly;
+// only when that misses do we invert a short code — resolvePuzzleShortCode
+// short-circuits on anything that is not code-shaped, so this stays cheap for
+// the common full-id path.
+function puzzleById(id: string): PublicPuzzle | null {
+  const direct = puzzleByExactId(id);
+  if (direct) return direct;
+  const fullId = resolvePuzzleShortCode(id, allPuzzleIds());
+  return fullId ? puzzleByExactId(fullId) : null;
 }
 
 function puzzleSideToMove(puzzle: PublicPuzzle): ReturnType<typeof miniXiangqiPuzzleSideToMove> {
@@ -201,6 +268,32 @@ function attemptPuzzle(puzzle: PublicPuzzle, moves: PublicPuzzleMove[]) {
     return attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]);
   }
   return attemptMiniXiangqiPuzzleLine(puzzle, moves as MiniXiangqiPuzzleMove[]);
+}
+
+// The next scripted move for a played-ply count (solver move on even plies,
+// scripted defender reply on odd). Reads `puzzle.solution` generically via the
+// per-variant helpers. Fail-closed: a new registry needs an explicit branch.
+function puzzleNextMove(puzzle: PublicPuzzle, playedPlyCount: number): PublicPuzzleMove | null {
+  if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) {
+    return fortressXiangqiPuzzleNextMove(puzzle, playedPlyCount);
+  }
+  if (puzzle.variant === JUNGLE_SPEC_ID) {
+    return junglePuzzleNextMove(puzzle, playedPlyCount);
+  }
+  if (puzzle.variant === XIANGQI_SPEC_ID) {
+    return standardXiangqiPuzzleNextMove(puzzle, playedPlyCount);
+  }
+  return miniXiangqiPuzzleNextMove(puzzle, playedPlyCount);
+}
+
+// Non-negative ply count the client has already played (used to pick the hint's
+// target move). Malformed/negative/out-of-range values fall back to 0 (the
+// puzzle's first move), never an exception.
+function parsePlayedPlyCount(value: unknown): number {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 64) {
+    return value;
+  }
+  return 0;
 }
 
 type PuzzleAttempt = ReturnType<typeof attemptPuzzle>;
@@ -230,13 +323,28 @@ async function recordAttemptRating(
 ): Promise<PuzzleAttemptRating | null> {
   const outcome = attemptOutcome(attempt);
   if (outcome === null) return null;
+  return recordOutcomeRating(request, puzzle, outcome, rated);
+}
+
+// Book a single terminal outcome (solved/failed) for a signed-in user. The
+// puzzle_attempts primary key makes this idempotent per (user, puzzle): only the
+// FIRST terminal outcome moves ratings, so a wrong-move fail followed by a
+// reveal, or a reveal followed by a completed line, records once and returns
+// firstAttempt=false / ratingChanged=false on the repeat. Anon users and
+// persistence-off return null (no rating).
+async function recordOutcomeRating(
+  request: IncomingMessage,
+  puzzle: PublicPuzzle,
+  solved: boolean,
+  rated: boolean,
+): Promise<PuzzleAttemptRating | null> {
   const user = await currentAccountUser(request);
   if (!user) return null;
   const result = await recordPuzzleAttempt({
     userId: user.id,
     puzzleId: puzzle.id,
     variant: puzzle.variant,
-    solved: outcome,
+    solved,
     rated,
     seedRating: seedPuzzleRating(puzzle.solution.length),
   });
@@ -280,6 +388,9 @@ function puzzleDetail(puzzle: PublicPuzzle): PuzzleDetail {
   return {
     ...puzzleSummary(puzzle),
     initial: puzzle.initial,
+    ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
+      ? { sourceGame: puzzle.sourceGame }
+      : {}),
   };
 }
 

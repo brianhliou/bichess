@@ -8,6 +8,7 @@ const HEALTH_PATH = '/health';
 const CAPACITY_PATH = '/internal/engine/capacity';
 const RESERVATIONS_PATH = '/internal/engine/reservations';
 const ENGINE_TURN_PATH = '/internal/engine/turn';
+const ENGINE_OBSERVE_PATH = '/internal/engine/observe';
 const MAX_BODY_BYTES = 1_000_000;
 const DEFAULT_ENGINE_SERVICE_POOL_SIZE = 4;
 const DEFAULT_ENGINE_SERVICE_TIMEOUT_MS = 15_000;
@@ -176,6 +177,18 @@ async function handleRequest(
   if (req.method === 'POST' && releaseMatch) {
     context.reservations.release(decodeURIComponent(releaseMatch[1]!));
     writeJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === ENGINE_OBSERVE_PATH) {
+    const body = await readJson(req);
+    const gameId = typeof body.gameId === 'string' ? body.gameId : '';
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : '';
+    // No-op ingest for now: the Python engine does not yet consume a pushed
+    // observation (pondering on the opponent's clock is a mistboard-engine
+    // follow-up). We ack so the arbiter's best-effort push succeeds; the same
+    // own-move observation still reaches the engine in its next turn request.
+    writeJson(res, 200, { protocolVersion: '1', gameId, sessionId, received: true });
     return;
   }
 

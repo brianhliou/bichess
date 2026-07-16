@@ -29,6 +29,7 @@ import {
   jungleCoverImage,
   jungleFaceDownDiscSvg,
   jungleLastMoveFromSvg,
+  jungleLastMoveRevealSvg,
   jungleLastMoveToSvg,
   jungleShadowFilterDef,
 } from './jungle-art.js';
@@ -45,9 +46,6 @@ const PALETTE = {
   lightCell: '#e7ce96',
   darkCell: '#e7ce96',
   // Borderless: no frame band or board edge, matching the vanilla Jungle board.
-  frameBg: 'transparent',
-  frameInner: 'transparent',
-  boardEdge: 'transparent',
   coord: 'rgba(60,45,30,0.55)',
   lastMove: 'rgba(255,205,80,0.5)',
   selected: 'rgba(31,111,91,0.32)',
@@ -74,10 +72,11 @@ const DESCRIPTOR: GridBoardDescriptor = {
   ranks: RANKS,
   cell: CELL,
   palette: PALETTE,
-  framePad: 0,
   pad: 0,
-  boardRadius: 0,
-  boardEdgeWidth: 0,
+  // Full-bleed <image> terrain (like jungle) isn't clipped by the outer CSS
+  // border-radius, so round the internal clip-path (~1.9% of the 256u board
+  // width = the shared --board-corner-radius token) to clip the corner images.
+  boardRadius: 5,
   svgClass: 'jungle-flip-live-svg',
 };
 
@@ -132,14 +131,22 @@ function terrain(
     );
   }
   if (lastMove) {
-    // Shared JUNGLE_LAST_MOVE spec (same ratios as the vanilla Jungle board):
-    // origin shadow fill + thin gold destination ring.
+    // A board move gets xiangqi's two-part grammar: origin shadow disc plus a
+    // destination halo. A flip is a self-move (`from === to`), so it gets only the
+    // halo around the revealed piece. Drawing the origin shadow there as well would
+    // falsely suggest that the piece travelled away and back.
     const from = jungleFlipCoordOf(lastMove.from);
     const fromTopLeft = geom.topLeft(from.file, from.rank);
-    parts.push(jungleLastMoveFromSvg(fromTopLeft.x, fromTopLeft.y, c));
     const to = jungleFlipCoordOf(lastMove.to);
     const toTopLeft = geom.topLeft(to.file, to.rank);
-    parts.push(jungleLastMoveToSvg(toTopLeft.x, toTopLeft.y, c));
+    if (lastMove.from !== lastMove.to) {
+      parts.push(jungleLastMoveFromSvg(fromTopLeft.x, fromTopLeft.y, c));
+    }
+    parts.push(
+      lastMove.from === lastMove.to
+        ? jungleLastMoveRevealSvg(toTopLeft.x, toTopLeft.y, c)
+        : jungleLastMoveToSvg(toTopLeft.x, toTopLeft.y, c),
+    );
   }
   return parts.join('');
 }

@@ -7,6 +7,7 @@ import {
   type EngineMoveDecision,
   loadEngine,
 } from './engine-registry.js';
+import { computeEngineBudget, type EngineBudget } from './fow-engine-budget.js';
 import { InternalEngineClientError, requestInternalEngineTurn } from './internal-engine-client.js';
 
 /**
@@ -51,19 +52,6 @@ type ChooseLiveEngineMoveOptions = {
 };
 
 const DEFAULT_LIVE_ENGINE_TIMEOUT_MS = 3_000;
-// Padding added to the per-move budget when computing the watchdog timeout.
-// Originally sized for subprocess spawn overhead. The engine-worker pool no
-// longer spawns per move, but the buffer also covers HTTP, JSON round-trip,
-// P-update variance, and gives v0.9.5 enough headroom in late-game positions where
-// |P| is large. Bumped again to 10s in 2026-05-25 after production PvE
-// reached 14-15s engine replies around ply 40; those should spend clock,
-// not trip the service watchdog first.
-const PYTHON_LIVE_PROCESS_OVERHEAD_MS = 10_000;
-const PYTHON_LIVE_CLOCK_GRACE_MS = 1_000;
-const PYTHON_LIVE_BUDGET_SAFETY_MS = 200;
-const DEFAULT_PYTHON_LIVE_MAX_TIMEOUT_MS = 30_000;
-const DEFAULT_PYTHON_LIVE_MOVES_REMAINING_ESTIMATE = 12;
-const DEFAULT_PYTHON_LIVE_SOFT_BUDGET_CAP_MS = 12_000;
 
 export async function chooseLiveEngineMove({
   context,
@@ -207,62 +195,21 @@ export function pythonLiveWatchdogTimeoutMs(
   return pythonLiveTimeoutBudgetMs(context, configuredTimeoutMs).watchdogTimeoutMs;
 }
 
+/**
+ * Live PvE per-move budget. Delegates to the shared `computeEngineBudget`
+ * ('live-cap' policy) — the SAME code the bot-match arbiter uses — so PvE and
+ * EvE-3P cannot diverge in how much time Misty is granted. See fow-engine-budget.ts
+ * and bot-match/pve-eve-conformance.test.ts.
+ */
 export function pythonLiveTimeoutBudgetMs(
   context: EngineMoveContext,
   configuredTimeoutMs: number,
-): { computeBudgetMs: number; watchdogTimeoutMs: number } {
-  const remainingMs = liveClockRemainingMs(context);
-  if (remainingMs === undefined) {
-    return { computeBudgetMs: configuredTimeoutMs, watchdogTimeoutMs: configuredTimeoutMs };
-  }
-
-  const usableClockMs = Math.max(0, remainingMs - PYTHON_LIVE_BUDGET_SAFETY_MS);
-  const computeBudgetMs = Math.min(
-    usableClockMs > 0 ? usableClockMs : 50,
-    computePythonPerMoveBudgetMs(usableClockMs, liveIncrementMs(context)),
-  );
-  const dynamicTimeoutMs = Math.ceil(computeBudgetMs + PYTHON_LIVE_PROCESS_OVERHEAD_MS);
-  const clockBoundMs = Math.ceil(Math.max(0, remainingMs) + PYTHON_LIVE_CLOCK_GRACE_MS);
-  const watchdogTimeoutMs = Math.max(
-    1,
-    Math.min(pythonLiveMaxTimeoutMs(), dynamicTimeoutMs, clockBoundMs),
-  );
-  return {
-    computeBudgetMs: Math.max(1, Math.min(Math.ceil(computeBudgetMs), watchdogTimeoutMs)),
-    watchdogTimeoutMs,
-  };
-}
-
-function computePythonPerMoveBudgetMs(clockRemainingMs: number, incrementMs: number): number {
-  const usable = Math.max(0, clockRemainingMs - PYTHON_LIVE_BUDGET_SAFETY_MS);
-  const bankShare = Math.floor(usable / pythonLiveMovesRemainingEstimate());
-  const budget = bankShare + Math.max(0, incrementMs);
-  return Math.max(50, Math.min(pythonLiveSoftBudgetCapMs(), budget));
-}
-
-function pythonLiveMaxTimeoutMs(): number {
-  return positiveIntegerEnv('PYTHON_LIVE_MAX_TIMEOUT_MS', DEFAULT_PYTHON_LIVE_MAX_TIMEOUT_MS);
-}
-
-function pythonLiveMovesRemainingEstimate(): number {
-  return positiveIntegerEnv(
-    'PYTHON_LIVE_MOVES_REMAINING_ESTIMATE',
-    DEFAULT_PYTHON_LIVE_MOVES_REMAINING_ESTIMATE,
-  );
-}
-
-function pythonLiveSoftBudgetCapMs(): number {
-  return positiveIntegerEnv(
-    'PYTHON_LIVE_SOFT_BUDGET_CAP_MS',
-    DEFAULT_PYTHON_LIVE_SOFT_BUDGET_CAP_MS,
-  );
-}
-
-function positiveIntegerEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-  const value = Number.parseInt(raw, 10);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+): EngineBudget {
+  return computeEngineBudget('live-cap', {
+    clockRemainingMs: liveClockRemainingMs(context),
+    incrementMs: liveIncrementMs(context),
+    untimedFallbackMs: configuredTimeoutMs,
+  });
 }
 
 function liveClockRemainingMs(context: EngineMoveContext): number | undefined {

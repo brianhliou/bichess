@@ -3,7 +3,7 @@ import type { Board, PlayerView, Square } from '@mistboard/game';
 import { afterEach, describe, expect, it } from 'vitest';
 import { boardHighlightClasses, boardResultClass, legalDests } from './live-board.js';
 import { shouldAutoScrollMoveList } from './live-move-list.js';
-import { shouldShowPostGameRoomActions } from './live-render.js';
+import { shouldEnablePremoves, shouldShowPostGameRoomActions } from './live-render.js';
 import { liveState } from './live-state.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -188,6 +188,26 @@ describe('shouldShowPostGameRoomActions', () => {
     liveState.state = makeView();
 
     expect(shouldShowPostGameRoomActions(makeView())).toBe(false);
+  });
+});
+
+describe('shouldEnablePremoves', () => {
+  const eligible = {
+    preferenceEnabled: true,
+    canInteractWithOwnPieces: true,
+    boardIsLive: false,
+    hasSeat: true,
+  };
+
+  it('allows a seated player to queue a premove while waiting', () => {
+    expect(shouldEnablePremoves(eligible)).toBe(true);
+  });
+
+  it('fails closed when the preference, seat, interaction, or turn gate is unavailable', () => {
+    expect(shouldEnablePremoves({ ...eligible, preferenceEnabled: false })).toBe(false);
+    expect(shouldEnablePremoves({ ...eligible, hasSeat: false })).toBe(false);
+    expect(shouldEnablePremoves({ ...eligible, canInteractWithOwnPieces: false })).toBe(false);
+    expect(shouldEnablePremoves({ ...eligible, boardIsLive: true })).toBe(false);
   });
 });
 

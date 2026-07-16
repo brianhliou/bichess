@@ -40,6 +40,7 @@ import {
 } from './live-banqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -104,7 +105,7 @@ function banqiSeatLabel(seat: BanqiSeat): string {
 }
 
 const banqiWebTenant: WebVariantTenant<BanqiSeat> = {
-  displayName: 'Half-Flip Chess',
+  displayName: 'Flip Xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isBanqiSeat,
@@ -169,6 +170,11 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     core = ctx;
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
+    // Repaint when the viewer changes their xiangqi piece set in settings — the
+    // board and captured pool both render from the stored set, so a live game
+    // must hot-reload it (mirrors the chess family's boardAppearanceChangedEvent
+    // hook). Without this the room keeps the piece set it mounted with.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
@@ -184,7 +190,6 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     // A flip (self-move) shows as the flipped square; a board move as from-to.
     // The notation is per-move (never per-seat), so it rides the standard
     // two-column move list keyed by seat.
@@ -224,7 +229,7 @@ function banqiReasonPhrase(reason: string): string {
 
 function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
   liveRefs.board.className = 'board banqi-live-board';
-  liveRefs.board.setAttribute('aria-label', 'Half-Flip Chess board');
+  liveRefs.board.setAttribute('aria-label', 'Flip Xiangqi board');
   if (!view) {
     liveRefs.board.replaceChildren();
     return;

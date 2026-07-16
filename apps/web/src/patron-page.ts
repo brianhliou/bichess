@@ -1,8 +1,8 @@
-// Patron donate page (078). Styled after lichess.org/patron: a warm hero banner
-// with wings, then a two-column body (intro prose left, donation card right).
-// Honest, independent-project framing: the games are free and stay free, a
-// donation buys only a cosmetic profile badge, and it is explicitly NOT
-// tax-deductible (Mistboard is not a registered charity). The card reads
+// Patron support page (078). Styled as a warm hero banner with a two-column
+// body (intro prose left, support card right). Honest, independent-project
+// framing: core play stays free, Patron support buys only cosmetic recognition,
+// separate paid products may exist, and support is explicitly NOT tax-deductible
+// (Mistboard is not a registered charity). The card reads
 // /api/patron/config for live/unavailable state and the current user for the
 // "you are a Patron / manage" path.
 

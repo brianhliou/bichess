@@ -7,8 +7,9 @@
 // it short.
 
 import type { GameEvent } from '@mistboard/game';
+import { reloadForChunkLoadError } from './chunk-load-recovery.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
-import { renderWatchReplaySkeleton } from './replay-skeleton.js';
+import { renderWatchReplayFailure, renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { mountShowcaseBoard } from './showcase-board.js';
 import { nextShowcaseIndex, showcaseRendererKindForSpec } from './showcase-dispatch.js';
 
@@ -45,6 +46,10 @@ export async function mountShowcaseCycler(
   let handle: ReplayHandle | null = null;
   let handleKind: string | null = null;
   let currentRoomId: string | null = null;
+  // Skip a failed game for the current pass through the pool. A successful load
+  // clears the set so a transient failure can be retried on a later cycle without
+  // immediately hammering the same broken entry.
+  const failedRoomIds = new Set<string>();
   // Serializes mounts: a re-mount is async, and both onGameEnd and a jumpNow pool
   // swap can call advance(); the guard drops overlapping requests.
   let mounting = false;
@@ -52,7 +57,25 @@ export async function mountShowcaseCycler(
   const nextEntry = (): ShowcaseEntry | null => {
     if (pool.length === 0) return null;
     const idx = currentRoomId ? pool.findIndex((entry) => entry.roomId === currentRoomId) : -1;
-    return pool[nextShowcaseIndex(pool.length, idx)] ?? null;
+    for (let offset = 0; offset < pool.length; offset += 1) {
+      const candidate = pool[nextShowcaseIndex(pool.length, idx + offset)];
+      if (candidate && !failedRoomIds.has(candidate.roomId)) return candidate;
+    }
+    return null;
+  };
+
+  const advanceAfterFailure = (entry: ShowcaseEntry): void => {
+    failedRoomIds.add(entry.roomId);
+    currentRoomId = entry.roomId;
+    const next = nextEntry();
+    if (next) {
+      void advance(next);
+      return;
+    }
+    handle?.destroy();
+    handle = null;
+    handleKind = null;
+    renderWatchReplayFailure(root);
   };
 
   const onGameEnd = (): void => {
@@ -82,10 +105,12 @@ export async function mountShowcaseCycler(
       currentRoomId = entry.roomId;
       try {
         await handle.loadGame(entry.roomId);
+        failedRoomIds.clear();
         prefetchNext();
       } catch (err) {
         console.warn('[showcase] loadGame failed, skipping', entry.roomId, err);
-        onGameEnd();
+        if (reloadForChunkLoadError(err)) return;
+        advanceAfterFailure(entry);
       }
       return;
     }
@@ -121,12 +146,14 @@ export async function mountShowcaseCycler(
       handle = next;
       handleKind = kind;
       currentRoomId = entry.roomId;
+      failedRoomIds.clear();
       prefetchNext();
     } catch (err) {
       console.warn('[showcase] mount failed, skipping', entry.roomId, err);
       root.style.minHeight = '';
       mounting = false;
-      onGameEnd();
+      if (reloadForChunkLoadError(err)) return;
+      advanceAfterFailure(entry);
       return;
     }
     root.style.minHeight = '';
@@ -139,6 +166,7 @@ export async function mountShowcaseCycler(
     updatePool: (next, opts) => {
       if (destroyed) return;
       pool = next.slice();
+      failedRoomIds.clear();
       if (opts?.jumpNow) void advance(pool[0] ?? nextEntry());
     },
     destroy: () => {

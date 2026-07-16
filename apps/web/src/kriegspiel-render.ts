@@ -44,17 +44,11 @@ const KRIEGSPIEL_DESCRIPTOR: GridBoardDescriptor = {
   cell: CELL,
   // Borderless, like the dark-chess fog board: no brown frame or board edge,
   // just the squares and the fog layer.
-  framePad: 0,
   pad: 0,
-  frameRadius: 0,
   boardRadius: 0,
-  boardEdgeWidth: 0,
   palette: {
     lightCell: 'var(--board-light)',
     darkCell: 'var(--board-dark)',
-    frameBg: 'transparent',
-    frameInner: 'transparent',
-    boardEdge: 'transparent',
     coord: 'transparent',
     lastMove: 'var(--board-last-move)',
     selected: 'rgba(255,205,80,0.55)',

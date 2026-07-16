@@ -38,9 +38,23 @@ export function createEvalBar(): EvalBar {
   el.setAttribute('aria-hidden', 'true');
   const fill = document.createElement('div');
   fill.className = 'review-eval-bar__fill';
+  // Static gradations: a faint tick at each ±1..±6 pawn advantage (mapped through
+  // the same win-prob curve as the fill, so they cluster toward the center like the
+  // bar itself), plus the red equality line at dead center.
+  const ticks = document.createElement('div');
+  ticks.className = 'review-eval-bar__ticks';
+  for (let pawns = 1; pawns <= 6; pawns += 1) {
+    for (const sign of [1, -1]) {
+      const prob = winProbRed(sign * pawns * 100, null);
+      const tick = document.createElement('div');
+      tick.className = 'review-eval-bar__tick';
+      tick.style.bottom = `${(prob * 100).toFixed(2)}%`;
+      ticks.append(tick);
+    }
+  }
   const label = document.createElement('span');
   label.className = 'review-eval-bar__label';
-  el.append(fill, label);
+  el.append(fill, ticks, label);
 
   function applyProb(prob: number): void {
     fill.style.height = `${(prob * 100).toFixed(1)}%`;

@@ -174,7 +174,6 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     // A flip (self-move) shows as the flipped square; a board move as from-to.
     notate: jungleFlipMoveLabel,
     isMoveEvent: isJungleFlipMoveEvent,

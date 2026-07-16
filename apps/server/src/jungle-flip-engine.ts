@@ -19,11 +19,11 @@
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runUciBestmove, UciEnginePool } from './uci-engine-harness.js';
+import { runUciBestmove, runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
-export const JUNGLE_FLIP_ENGINE_VERSION = '0.4.0';
+export const JUNGLE_FLIP_ENGINE_VERSION = '0.5.1';
 export const JUNGLE_FLIP_DEFAULT_ENGINE_ID = 'misty-jungle-flip';
 
 export type JungleFlipEngineTier = {
@@ -58,6 +58,7 @@ const JUNGLE_FLIP_ENGINE_BY_ID: ReadonlyMap<string, JungleFlipEngineTier> = new 
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness).
 const enginePool = new UciEnginePool({
+  name: 'jungle-flip',
   maxProcessesEnvVar: 'MISTBOARD_JUNGLE_FLIP_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_JUNGLE_FLIP_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'jungle-flip-engine concurrency queue timed out',
@@ -106,6 +107,18 @@ export function jungleFlipEngineTierFor(engineId: string | undefined): JungleFli
   return JUNGLE_FLIP_ENGINE_BY_ID.get(engineId) ?? null;
 }
 
+// Presence check for the fail-closed analysis path: true when the binary resolves. The
+// analysis route uses this to return 503 (not a silent weaker eval) when the build is
+// missing the engine — mirrors jungleEngineBinaryAvailable().
+export function jungleFlipEngineBinaryAvailable(): boolean {
+  try {
+    jungleFlipEnginePath();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function jungleFlipEngineDisplayName(engineId: string): string {
   return jungleFlipEngineTierFor(engineId)?.name ?? engineId;
 }
@@ -128,7 +141,28 @@ export type JungleFlipEngineOptions = {
   // one as a threefold draw. Older binaries ignore the trailing token (state_from_fen reads
   // only the leading FEN fields), so this is backward-compatible.
   repSeedFens?: readonly string[];
+  // Decimal seed passed as `JF_TIE_SEED` to break exact-value root ties (mainly the opening
+  // flip). Omit to let the binary self-seed from entropy (varied but non-reproducible). A
+  // stable per-game value (see jungleFlipTieSeed) gives variety AND exact replay. Unknown to
+  // pre-tie-break binaries, which ignore the env var, so this is backward-compatible.
+  tieSeed?: string;
 };
+
+/**
+ * Deterministic per-game tie-break seed for the engine's `JF_TIE_SEED`, derived from the
+ * (persisted) room id: tied choices vary across games yet replay exactly for a given game,
+ * with no extra state to store. FNV-1a 64-bit as a decimal string; never "0" (the engine
+ * reserves 0 as the "off"/legacy-deterministic sentinel).
+ */
+export function jungleFlipTieSeed(roomId: string): string {
+  const mask = 0xffffffffffffffffn;
+  const prime = 0x100000001b3n;
+  let hash = 0xcbf29ce484222325n;
+  for (let i = 0; i < roomId.length; i++) {
+    hash = ((hash ^ BigInt(roomId.charCodeAt(i))) * prime) & mask;
+  }
+  return (hash === 0n ? 1n : hash).toString();
+}
 
 /**
  * Build the UCI `position` command. A non-empty rep seed is appended as
@@ -161,6 +195,7 @@ export async function jungleFlipLiveEngineMove(
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
+      tieSeed: opts.tieSeed,
     });
   } finally {
     release();
@@ -188,5 +223,36 @@ export function jungleFlipEngineMove(
     commands,
     timeoutMs: movetimeCapMs + 4000,
     timeoutMessage: 'jungle-flip-engine move timed out',
+    env: opts.tieSeed ? { JF_TIE_SEED: opts.tieSeed } : undefined,
   });
+}
+
+// Whole-game ANALYSIS eval (distinct from the playable move provider above): read the
+// engine's `info … score` for a redacted current-position FEN, side-to-move POV. Same
+// node-budget dial as play, so the eval is CPU-independent and reproducible — which keeps
+// the cached analysis stable. Gated through the shared pool so an analysis sweep runs
+// sequentially. Each position is evaluated standalone (no `reps` seed — a single-position
+// eval needs no threefold history); the redacted FEN is sent as-is (hidden ids stay hidden).
+export async function evaluateJungleFlipFenNodes(
+  fen: string,
+  opts: { nodes: number; movetimeCapMs: number },
+): Promise<UciEval> {
+  const commands = [
+    'uci',
+    'ucinewgame',
+    'isready',
+    buildJungleFlipPositionCommand(fen),
+    `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
+  ];
+  const release = await enginePool.acquire();
+  try {
+    return await runUciEval({
+      bin: jungleFlipEnginePath(),
+      commands,
+      timeoutMs: opts.movetimeCapMs + 4_000,
+      timeoutMessage: 'jungle-flip-engine eval timed out',
+    });
+  } finally {
+    release();
+  }
 }

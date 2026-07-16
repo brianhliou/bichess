@@ -1,3 +1,11 @@
+import {
+  applyBanqiMove,
+  type BanqiMove,
+  banqiTruthView,
+  createInitialBanqiState,
+  getBanqiPlayerView,
+  STANDARD_BANQI_DEAL,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { banqiResultLabel } from './banqi-result-label.js';
 import { banqiPostgameApiUrl, mountBanqiPostgame } from './live-banqi-postgame.js';
@@ -43,7 +51,7 @@ describe('Banqi postgame page', () => {
     expect(banqiPostgameApiUrl('bq room')).toBe('/api/banqi/games/bq%20room');
   });
 
-  it('renders a single review board, info rail, and two-ply move rows', async () => {
+  it('reconstructs the deal, renders one review board, and lists the flip move', async () => {
     const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
@@ -52,50 +60,37 @@ describe('Banqi postgame page', () => {
     await flushPromises();
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/banqi/games/bq_postgame');
-    // Single clean left rail (title, result, meta, actions) — not the old triptych.
-    expect(root.textContent).toContain('Game review');
-    expect(root.textContent).toContain('Half-Flip Chess');
+    // Single clean left rail (meta card + spectator room) — no action buttons.
+    expect(root.textContent).toContain('Spectator room');
+    expect(root.textContent).toContain('Flip Xiangqi');
     expect(root.textContent).toContain('Red wins');
-    expect(root.querySelector('.review-info-card')).not.toBeNull();
-    expect(root.textContent).toContain('Home');
-    expect(root.textContent).toContain('Room');
+    expect(root.querySelector('.game-meta-card')).not.toBeNull();
     expect(root.textContent).not.toContain('Play again');
-    // Exactly one board (banqi is symmetric — no per-seat split).
+    // Exactly one board (banqi is symmetric — no per-seat split). Its presence
+    // proves the deal reconstructed from history.revealed and the tree replayed.
     expect(root.querySelectorAll('.banqi-board')).toHaveLength(1);
+    // The board renders MASKED as-played: the still-face-down tiles are backs, not
+    // identified pieces (branching reveals them; the tree does not spoil the deal).
+    const board = root.querySelector('.banqi-postgame-board') as HTMLElement;
+    expect(board.innerHTML).toContain('banqi-back');
 
-    // The shared move list shows two plies per row: a numbered row whose left cell
-    // (the first ply, `firstMover: 'a'`) holds the first mover's move.
+    // The move list shows the opening ply (a flip — a real banqi game's first move
+    // is always a flip) in the numbered row's left cell.
     const row = root.querySelector('.review-move-list__row');
     expect(row).not.toBeNull();
     expect(row?.querySelector('.review-move-list__number')?.textContent).toBe('1');
     const firstMove = row?.querySelector<HTMLButtonElement>('.review-move-list__move');
-    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('c2-c3');
-    expect(root.textContent).toContain('Ply 1 of 1');
-  });
-
-  it('hides unflipped tiles by default and reveals them on toggle', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
-    vi.stubGlobal('fetch', fetchSpy);
-    const root = document.createElement('div');
-
-    mountBanqiPostgame(root, 'bq_postgame');
-    await flushPromises();
-
-    const board = () => root.querySelector('.banqi-postgame-board') as HTMLElement;
-    // Default (as-played): Black's still-face-down tile on d3 renders as a neutral
-    // back, never as an identified black horse.
-    expect(board().innerHTML).toContain('banqi-back');
-    expect(board().innerHTML).not.toContain('aria-label="black horse"');
-
-    const reveal = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (el) => el.textContent === 'Reveal tiles',
-    );
-    expect(reveal).not.toBeUndefined();
-    reveal!.click();
-
-    // Revealed: the black horse on d3 now renders with its glyph; the button flips.
-    expect(reveal!.textContent).toBe('Hide tiles');
-    expect(board().innerHTML).toContain('aria-label="black horse"');
+    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    // Opens at the final ply (the flip is the mainline tip): the highlighted current
+    // cell is that flip move. (The tree move list highlights via --current, not the
+    // linear list's data-ply.)
+    const current = root.querySelector('.review-move-list__move--current');
+    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    // Server-side computer analysis underboard is wired: a signed-out visitor sees the
+    // sign-in CTA (the account-gated compute button) rather than nothing.
+    const analyseButton = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse');
+    expect(analyseButton).not.toBeNull();
+    expect(analyseButton?.textContent).toContain('Sign in to request analysis');
   });
 
   it('steps through plies with the arrow keys', async () => {
@@ -106,22 +101,34 @@ describe('Banqi postgame page', () => {
     mountBanqiPostgame(root, 'bq_postgame');
     await flushPromises();
 
-    const meta = () => root.querySelector('.review-scrubber__status')?.textContent ?? '';
-    expect(meta()).toContain('Ply 1 of 1');
+    // The control bar disables next/last at the final ply and first/prev at the
+    // start; the shared review layout binds the keyboard on the mount root. (The
+    // scrubber's "Ply X of Y" status was removed with the lichess control bar.)
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    // Opens at the final ply (1 of 1): next/last disabled.
+    expect(nav('Next move')?.disabled).toBe(true);
+    expect(nav('Previous move')?.disabled).toBe(false);
 
-    // The shared review layout binds the keyboard on the mount root.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(meta()).toContain('Ply 0 of 1');
+    // Ply 0: at the start, first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
+    expect(nav('Next move')?.disabled).toBe(false);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(meta()).toContain('Ply 1 of 1');
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 });
 
 function postgameFixture() {
-  // Red chariot c2 -> c3 (a quiet step). The black horse on d3 stays face-down in
-  // the as-played ('truth') history but is unmasked in the 'revealed' overlay that
-  // the Reveal toggle swaps in. Black resigns.
+  // Build a REAL 1-ply banqi game with the kernel so the tree can reconstruct the
+  // deal (from history.revealed's ply-0 truth board) and replay it: the deal is the
+  // standard fixed arrangement, the opening move is the a1 flip (a real banqi game
+  // always opens with a flip), then black resigns. Generating from the kernel keeps
+  // the fixture legal — the tree replays through the same isBanqiLegalMove gate.
+  const initial = createInitialBanqiState('bq_postgame', STANDARD_BANQI_DEAL);
+  const flip: BanqiMove = { from: 'a1', to: 'a1' };
+  const afterFlip = applyBanqiMove(initial, flip);
   return {
     game: {
       roomId: 'bq_postgame',
@@ -139,68 +146,25 @@ function postgameFixture() {
     },
     state: {
       status: { type: 'finished', winner: 'red', reason: 'resignation' },
-      moveNumber: 1,
+      moveNumber: afterFlip.moveNumber,
       timeControl: { initialMs: 180000, incrementMs: 2000 },
     },
     timeline: [
-      { type: 'move-played', at: 4, color: 'red', move: { from: 'c2', to: 'c3' }, ply: 1 },
+      { type: 'move-played', at: 4, color: 'red', move: flip, ply: 1 },
       { type: 'seat-resigned', at: 5, color: 'black', winner: 'red' },
     ],
-    view: revealedView('bq_postgame_truth', 1),
+    // Final masked view (as-played) — the tree renders its own reconstruction, but
+    // the payload still carries this for the watch adapter.
+    view: getBanqiPlayerView(afterFlip, 'red'),
     history: {
-      // As-played: d3 stays a face-down back; only c2->c3 (a revealed chariot) moves.
-      truth: [maskedSnapshot('bq_t0', 0), maskedSnapshot('bq_t1', 1)],
-      // Spoiler overlay: every face-down identity (the d3 horse) unmasked per ply.
-      revealed: [revealedSnapshot('bq_r0', 0), revealedSnapshot('bq_r1', 1)],
+      // Spoiler overlay: every identity unmasked per ply. The ply-0 board is the
+      // full deal the adapter reconstructs from.
+      revealed: [
+        { ply: 0, view: banqiTruthView(initial) },
+        { ply: 1, view: banqiTruthView(afterFlip) },
+      ],
     },
   };
-}
-
-const finished = { type: 'finished', winner: 'red', reason: 'resignation' } as const;
-const playing = { type: 'playing', turn: 'black' } as const;
-
-function maskedView(id: string, ply: number) {
-  return {
-    id,
-    perspective: 'red',
-    board:
-      ply === 0
-        ? { c2: { color: 'red', role: 'chariot', faceDown: false }, d3: { faceDown: true } }
-        : { c3: { color: 'red', role: 'chariot', faceDown: false }, d3: { faceDown: true } },
-    legalMoves: [],
-    captured: [],
-    status: ply === 0 ? playing : finished,
-    ply,
-    firstColor: 'red',
-    moveNumber: 1,
-    lastMove: ply === 0 ? undefined : { from: 'c2', to: 'c3' },
-  };
-}
-
-function revealedView(id: string, ply: number) {
-  return {
-    id,
-    perspective: 'red',
-    board: {
-      c3: { color: 'red', role: 'chariot', faceDown: false },
-      d3: { color: 'black', role: 'horse', faceDown: false },
-    },
-    legalMoves: [],
-    captured: [],
-    status: finished,
-    ply,
-    firstColor: 'red',
-    moveNumber: 1,
-    lastMove: { from: 'c2', to: 'c3' },
-  };
-}
-
-function revealedSnapshot(id: string, ply: number) {
-  return { ply, view: revealedView(id, ply) };
-}
-
-function maskedSnapshot(id: string, ply: number) {
-  return { ply, view: maskedView(id, ply) };
 }
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

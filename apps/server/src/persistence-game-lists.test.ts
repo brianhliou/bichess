@@ -505,6 +505,57 @@ definePersistenceTests('game lists', () => {
       }),
       3,
     );
+    // Decision #6: a variant/family channel passes modes ['pvp','pve'] so EvE
+    // games never pollute it (they belong to the Engines channel). Same fixture,
+    // narrower mode filter drops the EvE game from both the unlocked list and the
+    // sealed count.
+    const humanOnly = await listWatchUnlockedGames({
+      limit: 10,
+      modes: ['pvp', 'pve'],
+      now,
+      variants: ['dark-chess', 'draft960'],
+    });
+    assert.deepEqual(
+      humanOnly.map((game) => game.roomId),
+      [
+        'watch-short-timeout',
+        'watch-short-pvp',
+        'watch-short-pve',
+        'watch-pvp-newest',
+        'watch-pve-link',
+        'watch-old',
+      ],
+    );
+    assert.equal(
+      await countWatchSealedGames({
+        activeWindowMs: 2 * 60 * 60_000,
+        modes: ['pvp', 'pve'],
+        now,
+        variants: ['dark-chess', 'draft960'],
+      }),
+      2,
+    );
+    // The Engines channel is the mirror image: modes ['eve'] returns only the EvE
+    // game (private EvE still hidden), unlocked and sealed alike.
+    const enginesOnly = await listWatchUnlockedGames({
+      limit: 10,
+      modes: ['eve'],
+      now,
+      variants: ['dark-chess', 'draft960'],
+    });
+    assert.deepEqual(
+      enginesOnly.map((game) => game.roomId),
+      ['watch-eve'],
+    );
+    assert.equal(
+      await countWatchSealedGames({
+        activeWindowMs: 2 * 60 * 60_000,
+        modes: ['eve'],
+        now,
+        variants: ['dark-chess', 'draft960'],
+      }),
+      1,
+    );
     const dmxUnlocked = await listWatchUnlockedGames({
       limit: 10,
       now,

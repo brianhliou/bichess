@@ -1,4 +1,5 @@
 import './notification-nav.css';
+import { readAccountPreferences } from './account-preferences.js';
 
 // A reusable nav notification button: a bell + count badge that aggregates every
 // registered source. Built to grow — correspondence "your move" is the first
@@ -18,6 +19,8 @@ export type NotificationSource = () => Promise<NotificationSnapshot>;
 const sources: NotificationSource[] = [];
 let lastSnapshot: NotificationSnapshot = { count: 0, entries: [] };
 let dismissBound = false;
+let refreshTimer: number | null = null;
+let visibilityBound = false;
 
 export function registerNotificationSource(source: NotificationSource): void {
   sources.push(source);
@@ -27,6 +30,7 @@ export function registerNotificationSource(source: NotificationSource): void {
 // panel always offers a link to the dashboard so the bell is the entry point to
 // /correspondence regardless of count. Registered from main.ts behind the flag.
 export const correspondenceNotificationSource: NotificationSource = async () => {
+  if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
   const resp = await fetch('/api/correspondence/games').catch(() => null);
   if (!resp?.ok) return { count: 0, entries: [] };
   const data = (await resp.json()) as { yourMoveCount?: number };
@@ -42,6 +46,7 @@ export const correspondenceNotificationSource: NotificationSource = async () => 
 // the inbox link so the bell doubles as the /inbox entry point. Anonymous
 // visitors get a 401 → zero snapshot (and the bell never mounts signed-out).
 export const inboxNotificationSource: NotificationSource = async () => {
+  if (!readAccountPreferences().inboxBell) return { count: 0, entries: [] };
   const resp = await fetch('/api/inbox/unread-count').catch(() => null);
   if (!resp?.ok) return { count: 0, entries: [] };
   const data = (await resp.json()) as { count?: number };
@@ -95,12 +100,17 @@ export function mountNotificationBell(nav: HTMLElement): void {
   else utilities.append(control);
 
   ensureDismiss();
+  ensureRefreshLoop();
   applySnapshot(control);
   void refreshNotifications();
 }
 
 export function clearNotificationBells(): void {
   for (const el of document.querySelectorAll('[data-notification-nav]')) el.remove();
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
 }
 
 // Re-poll every source and repaint all mounted bells. Called on mount; callers
@@ -165,6 +175,24 @@ function ensureDismiss(): void {
     if (event.key !== 'Escape') return;
     for (const control of document.querySelectorAll<HTMLElement>('.notif-nav-open'))
       closeBell(control);
+  });
+}
+
+function ensureRefreshLoop(): void {
+  if (refreshTimer === null) {
+    refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshNotifications();
+    }, 60_000);
+  }
+  if (visibilityBound) return;
+  visibilityBound = true;
+  document.addEventListener('visibilitychange', () => {
+    if (
+      document.visibilityState === 'visible' &&
+      document.querySelector('[data-notification-nav]')
+    ) {
+      void refreshNotifications();
+    }
   });
 }
 

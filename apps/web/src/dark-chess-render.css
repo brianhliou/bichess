@@ -7,6 +7,12 @@
   pointer-events: none;
 }
 
+/* The source square of an in-progress drag dims while the floating ghost tracks
+   the cursor (review interactive board; see dark-chess-tree-board.ts). */
+.dark-chess-live-svg .dark-chess-drag-source {
+  opacity: 0.35;
+}
+
 .dark-chess-live-svg .dark-chess-fog-square {
   fill: var(--board-fog-light-fill);
   stroke: var(--board-fog-shadow);

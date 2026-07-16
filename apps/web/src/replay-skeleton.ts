@@ -16,3 +16,16 @@ export function renderWatchReplaySkeleton(root: HTMLElement): void {
   skeleton.append(board, caption);
   root.replaceChildren(skeleton);
 }
+
+export function renderWatchReplayFailure(root: HTMLElement): void {
+  const failure = document.createElement('div');
+  failure.className = 'watch-replay-skeleton watch-replay-failure';
+  failure.setAttribute('role', 'status');
+  const board = document.createElement('div');
+  board.className = 'watch-replay-skeleton-board';
+  const caption = document.createElement('div');
+  caption.className = 'watch-replay-skeleton-caption';
+  caption.textContent = 'Game viewer unavailable';
+  failure.append(board, caption);
+  root.replaceChildren(failure);
+}

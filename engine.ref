@@ -1,11 +1,14 @@
-170ab43
+cc959fb
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
-# Dark Xiangqi engine path (2026-06-23): 170ab43 includes the DXQ royal-flight
-# commit guard from 1391b5c plus the latest engine main bughouse checkpoint.
-# Rollback target: 8b4935b (Misty 1.5 + DMX, before full Dark Xiangqi). Single
-# source of truth for the deployed private engine; bump this + railpack cachebust
-# together before deploying. The railpack reads only the first line; this comment
-# is ignored.
+# Dark Xiangqi v1.1 (2026-07-15): cc959fb ships python-fdx-v1.1 (guarded-64x32-20m:
+# faithful stack + adaptive material prune + general veto + fair blocker vision),
+# baked in the engine profile — no FOW_XIANGQI_* profile env needed. Human-validated
+# (beat author 3/3). Requires the two fair-vision lockstep env flags set on BOTH
+# services (FOW_XIANGQI_SHROUD_BLOCKERS + MISTBOARD_XIANGQI_SHROUD_BLOCKERS).
+# Rollback target: 170ab43 (before fdx v1.1; also repoint DARK_XIANGQI_DEFAULT_ENGINE_ID
+# -> python-fdx-v1.0 in registry.ts). Single source of truth for the deployed private
+# engine; bump this + railpack cachebust together before deploying. The railpack reads
+# only the first line; this comment is ignored.
 # NOTE: the web service has MISTBOARD_BUILD_ENGINE=0 (it does not clone/build this
 # repo); it fetches PREBUILT engine binaries from public GitHub releases (banqi +
 # jungle-flip). engine.ref only matters to the engine-worker deploy.

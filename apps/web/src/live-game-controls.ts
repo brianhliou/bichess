@@ -1,4 +1,5 @@
 import type { PlayerView } from '@mistboard/game';
+import { readAccountPreferences } from './account-preferences.js';
 import { openConfirmDialog } from './confirm-dialog.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -120,6 +121,10 @@ function makeControlButton(label: string, onClick: () => void): HTMLButtonElemen
 }
 
 function requestResign(sendSocket: SendSocket, locale: Locale = currentLocale()): void {
+  if (!readAccountPreferences().confirmGameActions) {
+    sendSocket({ type: 'resign' });
+    return;
+  }
   openConfirmDialog({
     title: t('live.resignTitle', {}, locale),
     body: t('live.resignBody', {}, locale),
@@ -132,6 +137,10 @@ function requestResign(sendSocket: SendSocket, locale: Locale = currentLocale())
 }
 
 function requestAbort(sendSocket: SendSocket, locale: Locale = currentLocale()): void {
+  if (!readAccountPreferences().confirmGameActions) {
+    sendSocket({ type: 'abort' });
+    return;
+  }
   openConfirmDialog({
     title: t('live.abortTitle', {}, locale),
     body: t('live.abortBody', {}, locale),

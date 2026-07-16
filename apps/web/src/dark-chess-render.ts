@@ -37,9 +37,6 @@ const DARK_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   palette: {
     lightCell: 'var(--board-light)',
     darkCell: 'var(--board-dark)',
-    frameBg: 'var(--board-frame)',
-    frameInner: 'transparent',
-    boardEdge: 'var(--board-frame)',
     coord: 'transparent',
     lastMove: 'var(--board-last-move)',
     selected: GRID_INTERACTION_COLORS.selected,
@@ -48,13 +45,8 @@ const DARK_CHESS_DESCRIPTOR: GridBoardDescriptor = {
     targetHover: GRID_INTERACTION_COLORS.targetHover,
     fog: 'transparent',
   },
-  framePad: 1,
   pad: 0,
-  frameRadius: 0,
-  frameInnerRadius: 0,
-  frameInnerWidth: 0,
   boardRadius: 0,
-  boardEdgeWidth: 0,
   // chess polarity: a1 is a dark square.
   darkWhenEven: false,
   svgClass: 'dark-chess-live-svg',
@@ -91,7 +83,7 @@ export function renderDarkChessBoardSvg(
     id,
     flip: perspective === 'black',
     renderPieces: (geom) =>
-      [pieceLayer(view, geom), showFog ? fogLayer(visible, geom) : ''].join(''),
+      [pieceLayer(view, geom, null), showFog ? fogLayer(visible, geom) : ''].join(''),
     lastMove: lastCells,
     selected: null,
     targets: [],
@@ -99,6 +91,55 @@ export function renderDarkChessBoardSvg(
     interactive: false,
     squareName: (file, rank) => squareAt(file, rank),
   });
+}
+
+// The subset of interactive state the review board threads in (selection + drag +
+// legal targets). Separate from the read-only render so the postgame/watch paths
+// stay untouched.
+export type DarkChessInteractiveOptions = DarkChessRenderOptions & {
+  selected?: Square | null;
+  targets?: readonly Square[];
+  draggingFrom?: Square | null;
+};
+
+// Interactive (review/analysis) render: like renderDarkChessBoardSvg but with
+// selection highlight, legal-move target dots, drag-source dimming, and the grid's
+// click hit-layer enabled. Mirrors renderJungleFlipBoardSvg's interactive contract.
+export function renderDarkChessInteractiveBoardSvg(
+  view: DarkChessBoardView,
+  options: DarkChessInteractiveOptions = {},
+): string {
+  const perspective = options.perspective ?? 'white';
+  const showFog = options.showFog ?? true;
+  boardCounter += 1;
+  const id = `dark-chess-live-${boardCounter}`;
+
+  const visible = new Set<Square>(view.visibleSquares);
+  const lastMove = options.lastMove ?? view.lastMove ?? null;
+  const lastCells = lastMove ? [coordOf(lastMove.from), coordOf(lastMove.to)] : null;
+  const draggingFrom = options.draggingFrom ?? null;
+
+  return renderGridBoardSvg(DARK_CHESS_DESCRIPTOR, {
+    id,
+    flip: perspective === 'black',
+    renderPieces: (geom) =>
+      [pieceLayer(view, geom, draggingFrom), showFog ? fogLayer(visible, geom) : ''].join(''),
+    lastMove: lastCells,
+    selected: options.selected ? coordOf(options.selected) : null,
+    targets: (options.targets ?? []).map((square) => ({
+      ...coordOf(square),
+      occupied: view.board[square] !== undefined,
+    })),
+    fogHidden: null,
+    interactive: true,
+    squareName: (file, rank) => squareAt(file, rank),
+  });
+}
+
+// The floating drag ghost for a piece (a single cburnett glyph in a one-cell box),
+// appended to <body> by installBoardDrag.
+export function darkChessPieceGhostSvg(role: PieceRole, color: Color): string {
+  return chessPieceGlyphSvg(role, color);
 }
 
 // ── Coordinates ─────────────────────────────────────────────────────────────
@@ -139,14 +180,19 @@ function isLightSquare(ref: GridCellRef): boolean {
 
 // ── Pieces ───────────────────────────────────────────────────────────────────
 
-function pieceLayer(view: DarkChessBoardView, geom: GridGeometry): string {
+function pieceLayer(
+  view: DarkChessBoardView,
+  geom: GridGeometry,
+  draggingFrom: Square | null,
+): string {
   const size = PIECE_SIZE;
   const parts: string[] = [];
   for (const [square, piece] of Object.entries(view.board)) {
     if (!piece) continue;
     const { file, rank } = coordOf(square as Square);
     const { x, y } = geom.topLeft(file, rank);
-    parts.push(chessPiece(piece.role, piece.color, x, y, size));
+    const token = chessPiece(piece.role, piece.color, x, y, size);
+    parts.push(square === draggingFrom ? `<g class="dark-chess-drag-source">${token}</g>` : token);
   }
   return parts.join('');
 }

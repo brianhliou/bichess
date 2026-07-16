@@ -184,8 +184,9 @@ describe('tenant room chrome player names', () => {
       seatDisplayNames: { white: 'brian', red: 'Misty DMX' },
     });
     chrome.renderClocks();
-    const names = [refs.clockTop.textContent, refs.clockBottom.textContent];
-    // Viewer is white (bottom); opponent red on top.
+    const names = [refs.playerTop.textContent, refs.playerBottom.textContent];
+    // Viewer is white (bottom); opponent red on top. Player lines render into
+    // the boxed table's player rows, not the clock slots.
     expect(names[0]).toContain('Misty DMX');
     expect(names[1]).toContain('brian');
     expect(`${names[0]}${names[1]}`).not.toContain('You');
@@ -194,8 +195,8 @@ describe('tenant room chrome player names', () => {
   it('falls back to You / seat label for anonymous seats', () => {
     const { chrome, refs } = chromeHarness({ clock: armedClock, timeControl });
     chrome.renderClocks();
-    expect(refs.clockBottom.textContent).toContain('You');
-    expect(refs.clockTop.textContent).toContain('Red');
+    expect(refs.playerBottom.textContent).toContain('You');
+    expect(refs.playerTop.textContent).toContain('Red');
   });
 
   it('renders names on the pregame (unarmed) rows with seat-label fallback', () => {
@@ -205,8 +206,8 @@ describe('tenant room chrome player names', () => {
       seatDisplayNames: { red: 'gm_visitor' },
     });
     chrome.renderClocks();
-    expect(refs.clockTop.textContent).toContain('gm_visitor');
-    expect(refs.clockBottom.textContent).toContain('White');
+    expect(refs.playerTop.textContent).toContain('gm_visitor');
+    expect(refs.playerBottom.textContent).toContain('White');
   });
 
   it('uses server names in the meta card player rows', () => {
@@ -289,6 +290,8 @@ function refsFixture(): LiveRefs {
     gameInfo: el('div'),
     moveList: el('ol'),
     offerSection: el('section'),
+    playerBottom: el('div'),
+    playerTop: el('div'),
     promotion: el('div'),
     replayControls: root.querySelectorAll<HTMLButtonElement>('[data-replay]'),
     replayMeta: el('p'),

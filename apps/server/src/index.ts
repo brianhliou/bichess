@@ -55,6 +55,7 @@ import {
   registeredVariantTenants,
   setVariantTenantFallbackRoomLookup,
 } from './variant-tenant/registry.js';
+import { type BotVsBotScheduler, startBotVsBotScheduler } from './xiangqi-bot-vs-bot-scheduler.js';
 import {
   startXiangqiBroadcastScheduler,
   type XiangqiBroadcastScheduler,
@@ -212,6 +213,7 @@ let server: ReturnType<typeof createServer> | null = null;
 let wss: WebSocketServer | null = null;
 let deadlineSweeper: TenantDeadlineSweeper | null = null;
 let broadcastScheduler: XiangqiBroadcastScheduler | null = null;
+let botVsBotScheduler: BotVsBotScheduler | null = null;
 let shuttingDown = false;
 let seatVacateGraceMsOverride: number | null = null;
 
@@ -242,6 +244,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   deadlineSweeper = startTenantDeadlineSweeper();
   if (persistence.isInitialized()) {
     broadcastScheduler = startXiangqiBroadcastScheduler();
+    // Always started; the tick no-ops unless MISTBOARD_BOT_VS_BOT_ENABLED=true,
+    // so ops can flip generation on/off without a restart.
+    botVsBotScheduler = startBotVsBotScheduler();
   }
 
   const httpServer = createServer(
@@ -338,6 +343,8 @@ export async function stopServer(): Promise<void> {
   deadlineSweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
+  botVsBotScheduler?.stop();
+  botVsBotScheduler = null;
   closeRoomClients(rooms.values());
   for (const registration of registeredVariantTenants()) {
     closeRoomClients(registration.rooms.values());
@@ -574,6 +581,8 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   deadlineSweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
+  botVsBotScheduler?.stop();
+  botVsBotScheduler = null;
   closeRoomClients(rooms.values());
   for (const registration of registeredVariantTenants()) {
     closeRoomClients(registration.rooms.values());

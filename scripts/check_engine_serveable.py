@@ -22,8 +22,10 @@ DEFAULT_REGISTRY = HERE / "apps/server/src/engines/registry.ts"
 DEFAULT_WORKER = HERE.parent / "mistboard-engine/scripts/live_move_worker.py"
 
 PYTHON_ENGINE_ID = re.compile(r"""['"](python-(?:v2|dmx|fdx)-[\w.\-]+)['"]""")
+# NB: tolerate a TS type annotation on the const (`: EngineId`) — without the
+# optional `(?::\s*\w+)?` this silently matches nothing and the whole gate no-ops.
 VARIANT_DEFAULT = re.compile(
-    r"""DARK_(?:MINI_XIANGQI|XIANGQI)_DEFAULT_ENGINE_ID\s*=\s*['"]([^'"]+)['"]"""
+    r"""DARK_(?:MINI_XIANGQI|XIANGQI)_DEFAULT_ENGINE_ID\s*(?::\s*\w+\s*)?=\s*['"]([^'"]+)['"]"""
 )
 
 
@@ -46,7 +48,11 @@ def _block(text: str, start_pat: str, open_ch: str, close_ch: str) -> str:
 
 def offered_ids(registry_path: Path) -> set[str]:
     text = registry_path.read_text()
-    block = _block(text, r"PROD_PLAYABLE_ENGINE_IDS\s*=\s*new\s+Set\s*\(\s*\[", "[", "]")
+    # `new Set<EngineId>([...])` — the optional `<...>` generic must be tolerated
+    # or the block regex fails and no chess ids are enforced (silent gate no-op).
+    block = _block(
+        text, r"PROD_PLAYABLE_ENGINE_IDS\s*=\s*new\s+Set\s*(?:<[^>]*>)?\s*\(\s*\[", "[", "]"
+    )
     # The PROD_PLAYABLE block carries rollback notes that mention old ids in
     # comments; strip line comments so only actual string entries are enforced.
     active_playable = re.sub(r"//.*", "", block)

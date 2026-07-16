@@ -169,6 +169,23 @@ export async function createEngineGameTask(
   return mapTask(rows[0]!);
 }
 
+// Count in-flight (queued or running) tasks, optionally scoped to one variant
+// via config->>'variant'. Used by the bot-vs-bot scheduler to top up to a target
+// backlog rather than blindly enqueueing every tick.
+export async function countActiveEngineGameTasks(
+  db: Queryable,
+  opts: { variant?: string } = {},
+): Promise<number> {
+  const { rows } = await db.query<{ active: number }>(
+    `SELECT count(*)::int AS active
+       FROM engine_game_tasks
+      WHERE status IN ('queued', 'running')
+        AND ($1::text IS NULL OR config->>'variant' = $1)`,
+    [opts.variant ?? null],
+  );
+  return rows[0]?.active ?? 0;
+}
+
 export async function registerWorkerRun(
   db: Queryable,
   input: RegisterWorkerRunInput,

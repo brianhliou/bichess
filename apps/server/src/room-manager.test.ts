@@ -9,7 +9,7 @@ import {
   replayGameEvents,
 } from '@mistboard/game';
 import type { Seat } from './payloads.js';
-import type { UserAccount } from './persistence.js';
+import { DEFAULT_ACCOUNT_PREFERENCES, type UserAccount } from './persistence.js';
 import {
   ABORT_WINDOW_MS,
   appendEvent,
@@ -495,6 +495,11 @@ function makeAccount(overrides: Partial<UserAccount> = {}): UserAccount {
     handleChangedAt: null,
     displayName: 'Player',
     displayNameChangedAt: null,
+    bio: '',
+    location: '',
+    profileLinks: [],
+    displayPreferences: {},
+    accountPreferences: DEFAULT_ACCOUNT_PREFERENCES,
     profileVisibility: 'public',
     accountRole: 'player',
     title: null,
@@ -505,6 +510,7 @@ function makeAccount(overrides: Partial<UserAccount> = {}): UserAccount {
     stripeCustomerId: null,
     createdAt: now,
     updatedAt: now,
+    closedAt: null,
     ...overrides,
   };
 }

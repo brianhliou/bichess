@@ -1,0 +1,3 @@
+# Ad-hoc bot-match capture dumps dropped in for local ?replay= viewing.
+# Curated replay samples (bakeoff-*, engine-v2-*, ...) stay tracked.
+public/replay-samples/botmatch-*.jsonl

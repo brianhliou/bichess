@@ -12,10 +12,10 @@ import {
 } from './rating-buckets.js';
 
 export type AccountRole = 'player' | 'admin';
-export type AccountLocale = 'en' | 'zh-Hans' | 'zh-Hant' | 'ja';
+export type AccountLocale = 'en' | 'zh-Hans' | 'zh-Hant';
 export type ProfileVisibility = 'private' | 'unlisted' | 'public';
 
-export const ACCOUNT_LOCALES: readonly AccountLocale[] = ['en', 'zh-Hans', 'zh-Hant', 'ja'];
+export const ACCOUNT_LOCALES: readonly AccountLocale[] = ['en', 'zh-Hans', 'zh-Hant'];
 export const PROFILE_VISIBILITIES: readonly ProfileVisibility[] = ['private', 'unlisted', 'public'];
 
 export function isAccountLocale(value: unknown): value is AccountLocale {
@@ -24,6 +24,56 @@ export function isAccountLocale(value: unknown): value is AccountLocale {
 
 export function isProfileVisibility(value: unknown): value is ProfileVisibility {
   return typeof value === 'string' && PROFILE_VISIBILITIES.includes(value as ProfileVisibility);
+}
+
+export type PieceAnimationPreference = 'none' | 'fast' | 'normal' | 'slow';
+export type AccountDisplayPreferences = { pieceAnimation?: PieceAnimationPreference };
+
+export type ClockTenthsPreference = 'never' | 'low-time' | 'always';
+export type AccountPreferenceKey =
+  | 'clockTenths'
+  | 'lowTimeSound'
+  | 'premoves'
+  | 'confirmGameActions'
+  | 'inboxBell'
+  | 'correspondenceBell'
+  | 'correspondenceDeadlineEmail';
+export type AccountPreferences = {
+  clockTenths: ClockTenthsPreference;
+  lowTimeSound: boolean;
+  premoves: boolean;
+  confirmGameActions: boolean;
+  inboxBell: boolean;
+  correspondenceBell: boolean;
+  correspondenceDeadlineEmail: boolean;
+};
+
+export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
+  clockTenths: 'low-time',
+  lowTimeSound: true,
+  premoves: true,
+  confirmGameActions: true,
+  inboxBell: true,
+  correspondenceBell: true,
+  correspondenceDeadlineEmail: true,
+};
+
+export function isClockTenthsPreference(value: unknown): value is ClockTenthsPreference {
+  return value === 'never' || value === 'low-time' || value === 'always';
+}
+
+export const PIECE_ANIMATION_PREFERENCES: readonly PieceAnimationPreference[] = [
+  'none',
+  'fast',
+  'normal',
+  'slow',
+];
+
+export function isPieceAnimationPreference(value: unknown): value is PieceAnimationPreference {
+  return (
+    typeof value === 'string' &&
+    PIECE_ANIMATION_PREFERENCES.includes(value as PieceAnimationPreference)
+  );
 }
 
 // Who may START a conversation with this user (#93). Replies to an existing
@@ -45,6 +95,11 @@ export type UserAccount = {
   handleChangedAt: Date | null;
   displayName: string;
   displayNameChangedAt: Date | null;
+  bio: string;
+  location: string;
+  profileLinks: string[];
+  displayPreferences: AccountDisplayPreferences;
+  accountPreferences: AccountPreferences;
   profileVisibility: ProfileVisibility;
   accountRole: AccountRole;
   // Verified player title (088), granted only through the title-verification
@@ -62,6 +117,7 @@ export type UserAccount = {
   stripeCustomerId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  closedAt: Date | null;
 };
 
 export type LeaderboardEntry = {
@@ -93,16 +149,58 @@ export type EmailLoginChallenge = {
   expiresAt: Date;
 };
 
+export type AuthRateLimitScope = 'email-confirm-ip' | 'email-start-email' | 'email-start-ip';
+
+export type AuthRateLimitInput = {
+  cooldownMs?: number;
+  limit: number;
+  now: Date;
+  scope: AuthRateLimitScope;
+  subjectHash: string;
+  windowMs: number;
+};
+
+export type EmailChangeChallenge = EmailLoginChallenge & {
+  userId: string;
+};
+
+export type AccountClosureChallenge = {
+  id: string;
+  userId: string;
+  codeHash: string;
+  expiresAt: Date;
+};
+
+export type UpdateUserEmailResult =
+  | { ok: true; user: UserAccount }
+  | { ok: false; error: 'email_taken' | 'user_not_found' };
+
+export type CloseUserAccountResult =
+  | { ok: true }
+  | { ok: false; error: 'active_subscription' | 'already_closed' | 'user_not_found' };
+
 export type AccountSession = {
   id: string;
   userId: string;
   tokenHash: string;
   expiresAt: Date;
+  userAgent?: string | null;
+};
+
+export type AccountSessionSummary = {
+  id: string;
+  createdAt: Date;
+  lastSeenAt: Date;
+  expiresAt: Date;
+  userAgent: string | null;
 };
 
 export type PublicProfileUser = {
   handle: string;
   displayName: string;
+  bio: string;
+  location: string;
+  profileLinks: string[];
   profileVisibility: UserAccount['profileVisibility'];
   accountRole: AccountRole;
   // Verified player title; drives the title badge (flair) on the public
@@ -130,9 +228,22 @@ export type ProfileBucketRating = {
   provisional: boolean;
 };
 
+// One variant's puzzle rating (Glicko-2 pool, schema in migration 073). Shown on
+// the profile alongside game ratings. Only variants the user has attempted appear.
+export type ProfilePuzzleRating = {
+  // The puzzle variant's GameSpecId (e.g. 'xiangqi', 'fortress-xiangqi', 'jungle').
+  variant: string;
+  rating: number;
+  provisional: boolean;
+  solved: number;
+  attempts: number;
+};
+
 export type UserProfile = {
   user: PublicProfileUser;
   ratings: ProfileBucketRating[];
+  // Per-variant puzzle ratings (empty when the user has attempted no puzzles).
+  puzzleRatings: ProfilePuzzleRating[];
   // First page of games (newest first). Older pages load via getUserGamesPage.
   games: ProfileGameRecord[];
   // Total completed games visible to the viewer, so the client can show an
@@ -165,6 +276,64 @@ export async function deleteEmailLoginChallenge(id: string): Promise<void> {
   await getPool().query('DELETE FROM email_login_challenges WHERE id = $1', [id]);
 }
 
+export async function supersedeEmailLoginChallenges(
+  email: string,
+  keepId: string,
+  at: Date,
+): Promise<void> {
+  await getPool().query(
+    `UPDATE email_login_challenges
+        SET consumed_at = $3
+      WHERE lower(email) = lower($1)
+        AND id <> $2
+        AND consumed_at IS NULL`,
+    [email, keepId, at],
+  );
+}
+
+export async function consumeAuthRateLimitBucket(input: AuthRateLimitInput): Promise<boolean> {
+  if (
+    input.limit < 1 ||
+    input.windowMs < 1 ||
+    (input.cooldownMs !== undefined && input.cooldownMs < 0)
+  ) {
+    throw new Error('invalid auth rate-limit configuration');
+  }
+  const windowCutoff = new Date(input.now.getTime() - input.windowMs);
+  const cooldownCutoff = new Date(input.now.getTime() - (input.cooldownMs ?? 0));
+  const { rowCount } = await getPool().query(
+    `INSERT INTO auth_rate_limit_buckets
+       (scope, subject_hash, window_started_at, hit_count, last_hit_at)
+     VALUES ($1, $2, $3, 1, $3)
+     ON CONFLICT (scope, subject_hash) DO UPDATE
+       SET window_started_at = CASE
+             WHEN auth_rate_limit_buckets.window_started_at <= $4 THEN $3
+             ELSE auth_rate_limit_buckets.window_started_at
+           END,
+           hit_count = CASE
+             WHEN auth_rate_limit_buckets.window_started_at <= $4 THEN 1
+             ELSE auth_rate_limit_buckets.hit_count + 1
+           END,
+           last_hit_at = $3
+       WHERE (
+         auth_rate_limit_buckets.window_started_at <= $4
+         OR auth_rate_limit_buckets.hit_count < $5
+       )
+       AND auth_rate_limit_buckets.last_hit_at <= $6
+     RETURNING hit_count`,
+    [input.scope, input.subjectHash, input.now, windowCutoff, input.limit, cooldownCutoff],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function pruneAuthRateLimitBuckets(before: Date): Promise<number> {
+  const result = await getPool().query(
+    'DELETE FROM auth_rate_limit_buckets WHERE last_hit_at < $1',
+    [before],
+  );
+  return result.rowCount ?? 0;
+}
+
 export async function consumeEmailLoginChallenge(
   id: string,
   codeHash: string,
@@ -192,6 +361,74 @@ export async function consumeEmailLoginChallenge(
   return rows[0]?.email ? { email: rows[0].email } : null;
 }
 
+export async function createEmailChangeChallenge(challenge: EmailChangeChallenge): Promise<void> {
+  await getPool().query(
+    `INSERT INTO account_email_change_challenges (id, user_id, email, code_hash, expires_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [challenge.id, challenge.userId, challenge.email, challenge.codeHash, challenge.expiresAt],
+  );
+}
+
+export async function deleteEmailChangeChallenge(id: string): Promise<void> {
+  await getPool().query('DELETE FROM account_email_change_challenges WHERE id = $1', [id]);
+}
+
+export async function consumeEmailChangeChallenge(
+  id: string,
+  userId: string,
+  codeHash: string,
+  at: Date,
+): Promise<{ email: string } | null> {
+  const { rows } = await getPool().query<{ email: string | null }>(
+    `UPDATE account_email_change_challenges
+     SET attempt_count = attempt_count + 1,
+         consumed_at = CASE WHEN code_hash = $3 THEN $4 ELSE consumed_at END
+     WHERE id = $1
+       AND user_id = $2
+       AND consumed_at IS NULL
+       AND expires_at > $4
+       AND attempt_count < max_attempts
+     RETURNING CASE WHEN consumed_at = $4 THEN email ELSE NULL END AS email`,
+    [id, userId, codeHash, at],
+  );
+  return rows[0]?.email ? { email: rows[0].email } : null;
+}
+
+export async function createAccountClosureChallenge(
+  challenge: AccountClosureChallenge,
+): Promise<void> {
+  await getPool().query(
+    `INSERT INTO account_closure_challenges (id, user_id, code_hash, expires_at)
+     VALUES ($1, $2, $3, $4)`,
+    [challenge.id, challenge.userId, challenge.codeHash, challenge.expiresAt],
+  );
+}
+
+export async function deleteAccountClosureChallenge(id: string): Promise<void> {
+  await getPool().query('DELETE FROM account_closure_challenges WHERE id = $1', [id]);
+}
+
+export async function consumeAccountClosureChallenge(
+  id: string,
+  userId: string,
+  codeHash: string,
+  at: Date,
+): Promise<boolean> {
+  const { rows } = await getPool().query<{ verified: boolean }>(
+    `UPDATE account_closure_challenges
+     SET attempt_count = attempt_count + 1,
+         consumed_at = CASE WHEN code_hash = $3 THEN $4 ELSE consumed_at END
+     WHERE id = $1
+       AND user_id = $2
+       AND consumed_at IS NULL
+       AND expires_at > $4
+       AND attempt_count < max_attempts
+     RETURNING consumed_at = $4 AS verified`,
+    [id, userId, codeHash, at],
+  );
+  return rows[0]?.verified === true;
+}
+
 // Canonical users-table column list for reads. Keep in lockstep with UserRow
 // and userFromRow below: every SELECT/RETURNING of a full user row derives from
 // this, so a column can't be silently dropped from one query (which once
@@ -204,6 +441,11 @@ const USER_COLUMNS = [
   'handle_changed_at',
   'display_name',
   'display_name_changed_at',
+  'bio',
+  'location',
+  'profile_links',
+  'display_preferences',
+  'account_preferences',
   'profile_visibility',
   'account_role',
   'title',
@@ -214,6 +456,7 @@ const USER_COLUMNS = [
   'stripe_customer_id',
   'created_at',
   'updated_at',
+  'closed_at',
 ].join(', ');
 
 // Same columns qualified with the `users.` alias, for queries that join users to
@@ -227,10 +470,19 @@ export async function findUserByEmail(email: string): Promise<UserAccount | null
     `SELECT ${USER_COLUMNS}
      FROM users
      WHERE lower(email) = lower($1)
+       AND closed_at IS NULL
      LIMIT 1`,
     [email],
   );
   return rows[0] ? userFromRow(rows[0]) : null;
+}
+
+export async function closedAccountExistsForEmailHash(emailHash: string): Promise<boolean> {
+  const { rows } = await getPool().query<{ exists: boolean }>(
+    'SELECT EXISTS (SELECT 1 FROM users WHERE closed_email_hash = $1) AS exists',
+    [emailHash],
+  );
+  return rows[0]?.exists ?? false;
 }
 
 export async function createUser(user: {
@@ -246,7 +498,11 @@ export async function createUser(user: {
   const { rows } = await getPool().query<UserRow>(
     `INSERT INTO users
        (id, email, email_verified_at, handle, display_name, profile_visibility, account_role, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+     SELECT $1, $2, $3, $4, $5, $6, $7, $8, $8
+     WHERE NOT EXISTS (
+       SELECT 1 FROM user_handle_reservations
+       WHERE lower(handle) = lower($4) AND expires_at > $8
+     )
      RETURNING ${USER_COLUMNS}`,
     [
       user.id,
@@ -259,6 +515,11 @@ export async function createUser(user: {
       user.now,
     ],
   );
+  if (!rows[0]) {
+    const error = new Error('handle is reserved') as Error & { code: string };
+    error.code = '23505';
+    throw error;
+  }
   return userFromRow(rows[0]!);
 }
 
@@ -272,6 +533,98 @@ export async function markUserEmailVerified(userId: string, at: Date): Promise<U
     [userId, at],
   );
   return userFromRow(rows[0]!);
+}
+
+export async function updateUserEmail(
+  userId: string,
+  email: string,
+  at: Date,
+): Promise<UpdateUserEmailResult> {
+  try {
+    const { rows } = await getPool().query<UserRow>(
+      `UPDATE users
+       SET email = $2,
+           email_verified_at = $3,
+           updated_at = $3
+       WHERE id = $1
+       RETURNING ${USER_COLUMNS}`,
+      [userId, email, at],
+    );
+    return rows[0]
+      ? { ok: true, user: userFromRow(rows[0]) }
+      : { ok: false, error: 'user_not_found' };
+  } catch (err) {
+    if (isUniqueViolation(err)) return { ok: false, error: 'email_taken' };
+    throw err;
+  }
+}
+
+export async function closeUserAccount(
+  userId: string,
+  identity: { closedEmailHash: string; closedHandle: string; placeholderEmail: string },
+  at: Date,
+): Promise<CloseUserAccountResult> {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<UserRow>(
+      `SELECT ${USER_COLUMNS}
+       FROM users
+       WHERE id = $1
+       FOR UPDATE`,
+      [userId],
+    );
+    const user = rows[0] ? userFromRow(rows[0]) : null;
+    if (!user) return { ok: false, error: 'user_not_found' };
+    if (user.closedAt) return { ok: false, error: 'already_closed' };
+    if (user.patronSince) return { ok: false, error: 'active_subscription' };
+
+    await client.query(
+      `INSERT INTO user_handle_reservations (handle, user_id, reserved_at, expires_at)
+       VALUES ($1, $2, $3, 'infinity'::timestamptz)
+       ON CONFLICT (handle) DO NOTHING`,
+      [user.handle, userId, at],
+    );
+    await client.query(
+      `UPDATE users
+       SET email = $2,
+           email_verified_at = NULL,
+           closed_email_hash = $3,
+           handle = $4,
+           handle_changed_at = $5,
+           display_name = 'Closed account',
+           display_name_changed_at = $5,
+           bio = '',
+           location = '',
+           profile_links = '{}'::text[],
+           display_preferences = '{}'::jsonb,
+           account_preferences = '{}'::jsonb,
+           profile_visibility = 'private',
+           account_role = 'player',
+           title = NULL,
+           locale = NULL,
+           dm_policy = 'never',
+           patron_since = NULL,
+           closed_at = $5,
+           updated_at = $5
+       WHERE id = $1`,
+      [userId, identity.placeholderEmail, identity.closedEmailHash, identity.closedHandle, at],
+    );
+    await client.query(
+      `UPDATE account_sessions
+       SET revoked_at = $2
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId, at],
+    );
+    await client.query('DELETE FROM user_relations WHERE actor_id = $1 OR target_id = $1', [
+      userId,
+    ]);
+    await client.query(
+      'DELETE FROM correspondence_seeks WHERE creator_user_id = $1 OR target_user_id = $1',
+      [userId],
+    );
+    await client.query('DELETE FROM coach_profiles WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM account_email_change_challenges WHERE user_id = $1', [userId]);
+    return { ok: true };
+  });
 }
 
 export async function updateUserProfile(
@@ -353,6 +706,67 @@ export async function updateUserProfile(
   }
 }
 
+export async function updateUserPublicProfileDetails(
+  userId: string,
+  details: { bio: string; location: string; profileLinks: string[] },
+  at: Date,
+): Promise<UserAccount | null> {
+  const { rows } = await getPool().query<UserRow>(
+    `UPDATE users
+     SET bio = $2,
+         location = $3,
+         profile_links = $4,
+         updated_at = $5
+     WHERE id = $1
+     RETURNING ${USER_COLUMNS}`,
+    [userId, details.bio, details.location, details.profileLinks, at],
+  );
+  return rows[0] ? userFromRow(rows[0]) : null;
+}
+
+export async function updateUserPieceAnimationPreference(
+  userId: string,
+  pieceAnimation: PieceAnimationPreference,
+  at: Date,
+): Promise<UserAccount | null> {
+  const { rows } = await getPool().query<UserRow>(
+    `UPDATE users
+     SET display_preferences = jsonb_set(
+           display_preferences,
+           '{pieceAnimation}',
+           to_jsonb($2::text),
+           true
+         ),
+         updated_at = $3
+     WHERE id = $1
+     RETURNING ${USER_COLUMNS}`,
+    [userId, pieceAnimation, at],
+  );
+  return rows[0] ? userFromRow(rows[0]) : null;
+}
+
+export async function updateUserAccountPreference(
+  userId: string,
+  key: AccountPreferenceKey,
+  value: string | boolean,
+  at: Date,
+): Promise<UserAccount | null> {
+  const { rows } = await getPool().query<UserRow>(
+    `UPDATE users
+     SET account_preferences = jsonb_set(
+           account_preferences,
+           ARRAY[$2::text],
+           $3::jsonb,
+           true
+         ),
+         updated_at = $4
+     WHERE id = $1
+     RETURNING ${USER_COLUMNS}`,
+    [userId, key, JSON.stringify(value), at],
+  );
+  return rows[0] ? userFromRow(rows[0]) : null;
+}
+
 export async function updateUserLocale(
   userId: string,
   locale: AccountLocale | null,
@@ -415,7 +829,7 @@ export async function getUserDmPolicy(userId: string): Promise<DmPolicy> {
 // before writing a directed seek (a clean 404 instead of an FK violation).
 export async function userExists(userId: string): Promise<boolean> {
   const { rows } = await getPool().query<{ one: number }>(
-    `SELECT 1 AS one FROM users WHERE id = $1 LIMIT 1`,
+    `SELECT 1 AS one FROM users WHERE id = $1 AND closed_at IS NULL LIMIT 1`,
     [userId],
   );
   return rows.length > 0;
@@ -423,10 +837,85 @@ export async function userExists(userId: string): Promise<boolean> {
 
 export async function createAccountSession(session: AccountSession): Promise<void> {
   await getPool().query(
-    `INSERT INTO account_sessions (id, user_id, token_hash, expires_at)
-     VALUES ($1, $2, $3, $4)`,
-    [session.id, session.userId, session.tokenHash, session.expiresAt],
+    `INSERT INTO account_sessions (id, user_id, token_hash, expires_at, user_agent)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [session.id, session.userId, session.tokenHash, session.expiresAt, session.userAgent ?? null],
   );
+}
+
+export async function listActiveAccountSessions(
+  userId: string,
+  at: Date,
+): Promise<AccountSessionSummary[]> {
+  const { rows } = await getPool().query<{
+    id: string;
+    created_at: Date;
+    last_seen_at: Date;
+    expires_at: Date;
+    user_agent: string | null;
+  }>(
+    `SELECT id, created_at, last_seen_at, expires_at, user_agent
+     FROM account_sessions
+     WHERE user_id = $1
+       AND revoked_at IS NULL
+       AND expires_at > $2
+     ORDER BY last_seen_at DESC, created_at DESC`,
+    [userId, at],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    lastSeenAt: row.last_seen_at,
+    expiresAt: row.expires_at,
+    userAgent: row.user_agent,
+  }));
+}
+
+export async function backfillUserAccountSessionAgent(
+  userId: string,
+  sessionIds: string[],
+  userAgent: string,
+): Promise<void> {
+  await getPool().query(
+    `UPDATE account_sessions
+     SET user_agent = $3
+     WHERE user_id = $1
+       AND id = ANY($2::text[])
+       AND user_agent IS NULL`,
+    [userId, sessionIds, userAgent],
+  );
+}
+
+export async function revokeUserAccountSession(
+  userId: string,
+  sessionId: string,
+  at: Date,
+): Promise<boolean> {
+  const result = await getPool().query(
+    `UPDATE account_sessions
+     SET revoked_at = $3
+     WHERE id = $1
+       AND user_id = $2
+       AND revoked_at IS NULL`,
+    [sessionId, userId, at],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function revokeOtherUserAccountSessions(
+  userId: string,
+  currentSessionIds: string[],
+  at: Date,
+): Promise<number> {
+  const result = await getPool().query(
+    `UPDATE account_sessions
+     SET revoked_at = $3
+     WHERE user_id = $1
+       AND NOT (id = ANY($2::text[]))
+       AND revoked_at IS NULL`,
+    [userId, currentSessionIds, at],
+  );
+  return result.rowCount ?? 0;
 }
 
 // How stale users.last_seen_at may get before a session validation refreshes
@@ -452,6 +941,7 @@ export async function getUserByAccountSession(
        WHERE account_sessions.id = $1
          AND account_sessions.token_hash = $2
          AND account_sessions.user_id = users.id
+         AND users.closed_at IS NULL
          AND account_sessions.revoked_at IS NULL
          AND account_sessions.expires_at > $3
        RETURNING ${USER_COLUMNS_QUALIFIED}
@@ -507,7 +997,7 @@ async function loadProfileUser(handle: string): Promise<UserAccount | null> {
 // the id the directed-seek path expects without exposing ids to the client.
 export async function userIdForHandle(handle: string): Promise<string | null> {
   const { rows } = await getPool().query<{ id: string }>(
-    `SELECT id FROM users WHERE lower(handle) = lower($1) LIMIT 1`,
+    `SELECT id FROM users WHERE lower(handle) = lower($1) AND closed_at IS NULL LIMIT 1`,
     [handle],
   );
   return rows[0]?.id ?? null;
@@ -656,6 +1146,7 @@ export async function getUserProfileByHandle(
          WHEN games.variant = 'kriegspiel' THEN 'kriegspiel'
          WHEN games.variant = 'jungle' THEN 'jungle'
          WHEN games.variant = 'jungle-flip' THEN 'jungle_flip'
+         WHEN games.variant = 'xiangqi' THEN 'xiangqi'
          WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
          WHEN games.variant IN ('draft960', 'dark-draft960', 'fog-draft960')
               OR COALESCE(games.hidden_draft960, false) THEN 'fog_draft960'
@@ -667,7 +1158,7 @@ export async function getUserProfileByHandle(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
-       AND games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'crossroads-chess', 'dual-chess', 'dark-crossroads-chess', 'dark-dual-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi')
+       AND games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'crossroads-chess', 'dual-chess', 'dark-crossroads-chess', 'dark-dual-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi')
        ${visibilityClause}
      GROUP BY 1`,
     [user.id],
@@ -696,10 +1187,36 @@ export async function getUserProfileByHandle(
     });
   }
 
+  // Puzzle ratings (separate Glicko-2 pool). Show only variants the user has
+  // actually attempted, so an untouched pool never renders a default 1500.
+  const { rows: puzzleRatingRows } = await getPool().query<{
+    variant: string;
+    rating: number;
+    rating_deviation: number;
+    solved: number;
+    attempts: number;
+  }>(
+    `SELECT variant, rating, rating_deviation, solved, attempts
+       FROM user_puzzle_ratings
+       WHERE user_id = $1 AND attempts > 0
+       ORDER BY attempts DESC`,
+    [user.id],
+  );
+  const puzzleRatings: ProfilePuzzleRating[] = puzzleRatingRows.map((row) => ({
+    variant: row.variant,
+    rating: Math.round(row.rating),
+    provisional: row.rating_deviation > PROVISIONAL_RD,
+    solved: row.solved,
+    attempts: row.attempts,
+  }));
+
   return {
     user: {
       handle: user.handle,
       displayName: user.displayName,
+      bio: user.bio,
+      location: user.location,
+      profileLinks: user.profileLinks,
       profileVisibility: user.profileVisibility,
       accountRole: user.accountRole,
       title: user.title,
@@ -707,6 +1224,7 @@ export async function getUserProfileByHandle(
       createdAt: user.createdAt,
     },
     ratings,
+    puzzleRatings,
     games,
     gamesTotal,
   };
@@ -1028,6 +1546,11 @@ type UserRow = {
   handle_changed_at: Date | null;
   display_name: string;
   display_name_changed_at: Date | null;
+  bio: string;
+  location: string;
+  profile_links: string[];
+  display_preferences: unknown;
+  account_preferences: unknown;
   profile_visibility: UserAccount['profileVisibility'];
   account_role: AccountRole;
   title: PlayerTitle | null;
@@ -1038,6 +1561,7 @@ type UserRow = {
   stripe_customer_id: string | null;
   created_at: Date;
   updated_at: Date;
+  closed_at: Date | null;
 };
 
 function userFromRow(row: UserRow): UserAccount {
@@ -1049,6 +1573,11 @@ function userFromRow(row: UserRow): UserAccount {
     handleChangedAt: row.handle_changed_at,
     displayName: row.display_name,
     displayNameChangedAt: row.display_name_changed_at,
+    bio: row.bio,
+    location: row.location,
+    profileLinks: row.profile_links,
+    displayPreferences: displayPreferencesFromJson(row.display_preferences),
+    accountPreferences: accountPreferencesFromJson(row.account_preferences),
     profileVisibility: row.profile_visibility,
     accountRole: row.account_role,
     title: row.title,
@@ -1059,7 +1588,45 @@ function userFromRow(row: UserRow): UserAccount {
     stripeCustomerId: row.stripe_customer_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    closedAt: row.closed_at,
   };
+}
+
+function displayPreferencesFromJson(value: unknown): AccountDisplayPreferences {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const pieceAnimation = (value as Record<string, unknown>).pieceAnimation;
+  return isPieceAnimationPreference(pieceAnimation) ? { pieceAnimation } : {};
+}
+
+function accountPreferencesFromJson(value: unknown): AccountPreferences {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...DEFAULT_ACCOUNT_PREFERENCES };
+  }
+  const parsed = value as Record<string, unknown>;
+  return {
+    clockTenths: isClockTenthsPreference(parsed.clockTenths)
+      ? parsed.clockTenths
+      : DEFAULT_ACCOUNT_PREFERENCES.clockTenths,
+    lowTimeSound: booleanOrDefault(parsed.lowTimeSound, DEFAULT_ACCOUNT_PREFERENCES.lowTimeSound),
+    premoves: booleanOrDefault(parsed.premoves, DEFAULT_ACCOUNT_PREFERENCES.premoves),
+    confirmGameActions: booleanOrDefault(
+      parsed.confirmGameActions,
+      DEFAULT_ACCOUNT_PREFERENCES.confirmGameActions,
+    ),
+    inboxBell: booleanOrDefault(parsed.inboxBell, DEFAULT_ACCOUNT_PREFERENCES.inboxBell),
+    correspondenceBell: booleanOrDefault(
+      parsed.correspondenceBell,
+      DEFAULT_ACCOUNT_PREFERENCES.correspondenceBell,
+    ),
+    correspondenceDeadlineEmail: booleanOrDefault(
+      parsed.correspondenceDeadlineEmail,
+      DEFAULT_ACCOUNT_PREFERENCES.correspondenceDeadlineEmail,
+    ),
+  };
+}
+
+function booleanOrDefault(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 function isUniqueViolation(err: unknown): boolean {

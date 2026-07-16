@@ -52,7 +52,6 @@ const TRADITIONAL_GLYPHS: Record<'red' | 'black', Record<XiangqiOgRole, string>>
 // matches the chess OG cards' solid fog so the card family reads as one set.
 const BG = '#d9bd82';
 const INK = '#4b3c2a';
-const FRAME = '#8b5a24';
 const DISC = '#f3e6c4';
 const RED = '#b91c1c';
 const BLACK = '#1f2937';
@@ -144,9 +143,6 @@ export function renderXiangqiOgBoardSvg(opts: XiangqiOgBoardOptions): string {
     }
     parts.push(`<g clip-path="url(#${clipId})">${fogParts.join('')}</g>`);
   }
-  parts.push(
-    `<rect x="0" y="0" width="${width}" height="${opts.height}" rx="8" fill="none" stroke="${FRAME}" stroke-width="1.5"/>`,
-  );
   return `<svg x="${opts.centerX - width / 2}" y="${opts.y}" width="${width}" height="${opts.height}" viewBox="0 0 ${width} ${opts.height}">${parts.join('')}</svg>`;
 }
 

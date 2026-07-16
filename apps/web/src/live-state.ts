@@ -111,6 +111,8 @@ export type LiveRefs = {
   gameInfo: HTMLDivElement;
   moveList: HTMLOListElement;
   offerSection: HTMLElement;
+  playerBottom: HTMLDivElement;
+  playerTop: HTMLDivElement;
   promotion: HTMLDivElement;
   replayControls: NodeListOf<HTMLButtonElement>;
   replayMeta: HTMLParagraphElement;
@@ -143,9 +145,18 @@ export type SoundKind =
   | 'game-start'
   | 'king-capture'
   | 'king-fall'
+  // learn-* / level-* / stage-*: the Learn course's event sounds (item pickup,
+  // soft failure, level/stage start and completion). Synth-only: no sound set
+  // maps files for them, so every set falls back to the mist tones.
+  | 'learn-failure'
+  | 'learn-take'
+  | 'level-end'
+  | 'level-start'
   | 'lose'
   | 'low-time'
   | 'move'
+  | 'stage-end'
+  | 'stage-start'
   | 'win';
 
 // ── Shared mutable state (accessed by both live-socket and live-render) ────────

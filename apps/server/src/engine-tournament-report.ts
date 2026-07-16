@@ -4,7 +4,7 @@ export type TournamentGameRow = {
   gameIndex: number;
   jobId: string;
   plyCount: number | null;
-  result: 'white-wins' | 'black-wins' | 'draw' | null;
+  result: 'white-wins' | 'black-wins' | 'red-wins' | 'draw' | null;
   runtime?: {
     plies_per_second?: number | null;
     runner?: string | null;
@@ -214,7 +214,9 @@ function recordRuntime(
 }
 
 function scoresForResult(result: NonNullable<TournamentGameRow['result']>): [number, number] {
-  if (result === 'white-wins') return [1, 0];
+  // The legacy Eve columns call the first-mover slot "white"; in Xiangqi that
+  // same slot is Red and the game result correctly uses red-wins.
+  if (result === 'white-wins' || result === 'red-wins') return [1, 0];
   if (result === 'black-wins') return [0, 1];
   return [0.5, 0.5];
 }

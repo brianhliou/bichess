@@ -72,13 +72,12 @@ describe('about page platform activity', () => {
       'Support Mistboard',
       'Terms of Use',
       'Privacy',
-      'Source',
-      'GitHub',
+      'Title verification',
+      'Source code',
+      'Contribute',
+      'Thank you',
+      'Is Mistboard lagging?',
     ]);
-    const githubLink = root.querySelector<HTMLAnchorElement>(
-      'a[href="https://github.com/brianhliou/mistboard"]',
-    );
-    expect(githubLink?.target).toBe('_blank');
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/stats/public', { credentials: 'same-origin' });
@@ -170,7 +169,7 @@ describe('about page platform activity', () => {
     document.body.append(root);
     mountSource(root);
 
-    expect(root.querySelector('h1')?.textContent).toBe('原始碼和授權');
+    expect(root.querySelector('h1')?.textContent).toBe('原始碼');
     expect(root.querySelector('.static-page-rail-link.active')?.textContent).toBe('原始碼');
     expect(root.textContent).toContain('專案原始碼');
     expect(root.textContent).toContain('GitHub 儲存庫');
@@ -266,6 +265,8 @@ describe('about page platform activity', () => {
     mountNotFound(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('找不到頁面');
-    expect(root.textContent).toContain('這裡沒有內容。試試首頁，或透過聯絡告訴我你在找什麼。');
+    expect(root.textContent).toContain('這個頁面不存在，或已經移動。');
+    expect(root.textContent).toContain('返回首頁');
+    expect(root.textContent).toContain('還是找不到？聯絡。');
   });
 });

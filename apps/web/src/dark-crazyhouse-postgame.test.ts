@@ -40,19 +40,27 @@ describe('Dark Crazyhouse postgame page', () => {
 
     expect(root.querySelector('.site-nav')).not.toBeNull();
     expect(root.textContent).toContain('Dark Crazyhouse');
-    expect(root.textContent).toContain('Play again');
-    expect(root.textContent).toContain('Back home');
+    expect(root.textContent).not.toContain('Play again');
     expect(root.textContent).not.toContain('Opponent reserve: hidden');
-    expect(root.textContent).toContain('Ply 2 of 2');
+    // The scrubber's "Ply X of Y" status was removed with the lichess control bar;
+    // the nav buttons disable at the bounds instead. In a 2-ply game the middle ply
+    // is the only one with both nav directions enabled. Opens at the final ply.
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    expect(nav('Next move')?.disabled).toBe(true);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(root.textContent).toContain('Ply 1 of 2');
+    // Ply 1 (middle): both directions enabled.
+    expect(nav('Next move')?.disabled).toBe(false);
+    expect(nav('Previous move')?.disabled).toBe(false);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-    expect(root.textContent).toContain('Ply 0 of 2');
+    // Ply 0 (start): first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-    expect(root.textContent).toContain('Ply 2 of 2');
+    // Back at the final ply.
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 });
 

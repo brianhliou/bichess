@@ -76,6 +76,7 @@ const DROP_MINI_XIANGQI_ENGINE_BY_ID: ReadonlyMap<string, DropMiniXiangqiEngineT
 // Small FSF slot pool, separate from Mini Xiangqi / Crossroads. Drop Mini is a
 // low-traffic surface; promote to a shared pool only under real concurrent load.
 const fsfPool = new UciEnginePool({
+  name: 'drop-mini-xiangqi-fsf',
   maxProcessesEnvVar: 'MISTBOARD_DROP_MINI_XIANGQI_FSF_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_DROP_MINI_XIANGQI_FSF_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'fsf concurrency queue timed out',

@@ -18,7 +18,7 @@ import {
   renderMiniXiangqiBoardSvg,
 } from './live-mini-xiangqi-render.js';
 import { createPane } from './replay-board.js';
-import { createShareButton } from './replay-meta.js';
+import { buildReviewMeta } from './review/game-review-meta.js';
 import { mountReviewLayout } from './review/review-layout.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -44,6 +44,12 @@ export type DropMiniXiangqiPostgameResponse = {
     visibility: string;
     initialMs: number | null;
     incrementMs: number | null;
+    players?: Array<{
+      color: string;
+      name: string;
+      rating: number | null;
+      kind: 'account' | 'guest' | 'engine';
+    }>;
     pveEngineId?: string | null;
   };
   state: {
@@ -149,13 +155,22 @@ function renderPostgame(root: HTMLElement, postgame: DropMiniXiangqiPostgameResp
   moveList.className = 'move-list';
   movesCard.append(movesHeading, moveList);
 
+  const status = `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
+    markerId: 'drop-mini-xiangqi',
+    variantName: 'Drop Mini Xiangqi',
+    game: postgame.game,
+    status,
+  });
+
   root.replaceChildren(buildNav());
   mountReviewLayout(root, {
     pageClassName: 'drop-mini-xiangqi-review',
     ariaLabel: 'Drop Mini Xiangqi postgame',
     title: 'Drop Mini Xiangqi',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    actions: dropMiniXiangqiActions(postgame),
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
     moves: movesCard,
     boards: [{ key: 'truth', el: pane.el, tier: 'primary' }],
     boardAspect: 516 / 516,
@@ -177,43 +192,6 @@ function renderPostgame(root: HTMLElement, postgame: DropMiniXiangqiPostgameResp
       renderMoveRows(moveList, moves, ply, jump);
     },
   });
-}
-
-function dropMiniXiangqiActions(postgame: DropMiniXiangqiPostgameResponse): HTMLElement {
-  const actions = document.createElement('div');
-  actions.className = 'review-actions';
-  const playAgain = document.createElement('button');
-  playAgain.type = 'button';
-  playAgain.className = 'review-action-link';
-  playAgain.textContent = 'Play again';
-  let busy = false;
-  playAgain.onclick = () => {
-    if (busy) return;
-    busy = true;
-    playAgain.disabled = true;
-    playAgain.textContent = 'Creating';
-    void createDropMiniXiangqiPlayAgainRoom(postgame)
-      .then((url) => window.location.assign(url))
-      .catch((err) => {
-        console.warn(err);
-        busy = false;
-        playAgain.disabled = false;
-        playAgain.textContent = 'Try play again';
-      });
-  };
-  const share = createShareButton();
-  const home = reviewActionLink('Home', '/');
-  const room = reviewActionLink('Room', `/room/${encodeURIComponent(postgame.game.roomId)}`);
-  actions.append(playAgain, share, home, room);
-  return actions;
-}
-
-function reviewActionLink(label: string, href: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'review-action-link';
-  link.href = href;
-  link.textContent = label;
-  return link;
 }
 
 export async function createDropMiniXiangqiPlayAgainRoom(

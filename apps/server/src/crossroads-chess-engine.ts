@@ -64,6 +64,7 @@ const CROSSROADS_CHESS_ENGINE_BY_ID: ReadonlyMap<string, CrossroadsChessEngineTi
 
 // Small FSF slot pool (separate from the other variants; low-traffic surface).
 const fsfPool = new UciEnginePool({
+  name: 'crossroads-chess-fsf',
   maxProcessesEnvVar: 'MISTBOARD_CROSSROADS_FSF_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_CROSSROADS_FSF_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'fsf concurrency queue timed out',

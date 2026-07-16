@@ -5,11 +5,6 @@
 
 export const LIGHT_SQUARE = '#f0d9b5';
 export const DARK_SQUARE = '#b58863';
-// Board frame — matched to --board-frame in apps/web/src/styles.css so
-// every surface (live game, replay, article static SVG, article stepper)
-// uses the same brown wood frame.
-export const BOARD_FRAME = '#5f412c';
-export const BOARD_BORDER = BOARD_FRAME;
 
 // Fog veil tokens — matched to the live-game CSS variables
 // (--board-fog-* in apps/web/src/styles.css). Fog is drawn as a translucent
@@ -33,7 +28,6 @@ export const FOG_OPACITY = 0.78;
 export type BoardPalette = {
   light: string;
   dark: string;
-  frame: string;
   fogLightFill: string;
   fogDarkFill: string;
   fogSolidLightFill: string;
@@ -48,7 +42,6 @@ export type BoardPalette = {
 export const BROWN_PALETTE: BoardPalette = {
   light: LIGHT_SQUARE,
   dark: DARK_SQUARE,
-  frame: BOARD_FRAME,
   fogLightFill: FOG_LIGHT_FILL,
   fogDarkFill: FOG_DARK_FILL,
   fogSolidLightFill: FOG_SOLID_LIGHT_FILL,
@@ -63,7 +56,6 @@ export const BROWN_PALETTE: BoardPalette = {
 export const GREEN_PALETTE: BoardPalette = {
   light: '#eeeed2',
   dark: '#769656',
-  frame: '#2a3a2a',
   fogLightFill: FOG_LIGHT_FILL,
   fogDarkFill: FOG_DARK_FILL,
   fogSolidLightFill: FOG_SOLID_LIGHT_FILL,

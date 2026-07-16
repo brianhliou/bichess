@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PLAYER_TITLES } from './player-titles.js';
+import { REQUESTABLE_PLAYER_TITLES } from './player-titles.js';
 import { mountVerifyTitle } from './verify-title.js';
 
 describe('verify-title page', () => {
@@ -31,10 +31,15 @@ describe('verify-title page', () => {
 
     const select = root.querySelector<HTMLSelectElement>('select[name="title"]');
     expect(select).not.toBeNull();
-    // Placeholder + the closed vocabulary, nothing else.
-    expect(select?.options.length).toBe(PLAYER_TITLES.length + 1);
-    expect([...(select?.options ?? [])].map((o) => o.value)).toEqual(['', ...PLAYER_TITLES]);
+    // Placeholder + the requestable (xiangqi-only, for now) vocabulary, nothing else.
+    expect(select?.options.length).toBe(REQUESTABLE_PLAYER_TITLES.length + 1);
+    expect([...(select?.options ?? [])].map((o) => o.value)).toEqual([
+      '',
+      ...REQUESTABLE_PLAYER_TITLES,
+    ]);
     expect(select?.textContent).toContain('XGM (Xiangqi Grandmaster)');
+    // Chess titles are not offered while requests are scoped to xiangqi.
+    expect([...(select?.options ?? [])].map((o) => o.value)).not.toContain('gm');
 
     expect(root.querySelector('textarea[name="evidence"]')).not.toBeNull();
     expect(root.querySelector('.verify-title-help')?.textContent).toContain('federation profile');

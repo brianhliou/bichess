@@ -2,6 +2,7 @@ import { XIANGQI_BROADCAST_SCHEMA, type XiangqiColor, type XiangqiMove } from '@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   formatBroadcastFreshness,
   mountXiangqiBroadcastBoard,
@@ -215,6 +216,22 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelectorAll('.xqb-board-card-live .xqb-card-player').length).toBe(2);
     // The live status renders as the accent badge.
     expect(root.querySelector('.xqb-board-card-live .xqb-badge-live')).not.toBeNull();
+  });
+
+  it('repaints mini-board cards when the board layout changes', async () => {
+    stubFetchJson(() => ROUND);
+    stubEventSource();
+    window.history.replaceState(null, '', '/broadcast/xiangqi/t/round/r');
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    expect(root.querySelectorAll('.xq-live-svg--intersection')).toHaveLength(2);
+
+    window.history.replaceState(null, '', '/broadcast/xiangqi/t/round/r?xqLayout=cell');
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+
+    expect(root.querySelectorAll('.xq-live-svg--cell')).toHaveLength(2);
+    window.history.replaceState(null, '', '/');
   });
 
   it('renders English primary with the Chinese preserved as a secondary line', async () => {

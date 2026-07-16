@@ -1,13 +1,15 @@
 import pg from 'pg';
 import { createEngineGameTask, createExperimentJob } from './engine-experiments.js';
-import { upsertBuiltinEngineVersions } from './engine-registry.js';
+import { loadEngine, upsertBuiltinEngineVersions } from './engine-registry.js';
 import {
   createRoundRobinPairings,
   nextTournamentSeed,
+  pairingOpeningPolicy,
   parseTournamentArgs,
   tournamentJobConfig,
 } from './engine-tournament.js';
 import { runMigrations } from './migrate.js';
+import { xiangqiEngineTierFor } from './xiangqi-engine-catalog.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -16,6 +18,12 @@ if (!databaseUrl) {
 }
 
 const config = parseTournamentArgs(process.argv.slice(2));
+if (
+  config.variant === 'xiangqi' &&
+  config.engines.some((engineId) => xiangqiEngineTierFor(loadEngine(engineId).id) === null)
+) {
+  throw new Error('xiangqi tournaments require registered standard-Xiangqi engine profiles');
+}
 const pairings = createRoundRobinPairings({
   engines: config.engines,
   gamesPerPair: config.gamesPerPair,
@@ -43,11 +51,11 @@ try {
         blackEngineId: pairing.blackEngineId,
         seed: nextTournamentSeed(config.seed, pairing.gameIndex),
         timeControl: config.timeControl,
-        openingPolicy: config.openingPolicy,
+        openingPolicy: pairingOpeningPolicy(config.openingPolicy, config.seed, pairing),
         artifactPolicy: config.artifactPolicy,
         resourcePolicy: { providers: config.providers, concurrency: 1 },
         config: {
-          variant: 'dark-chess',
+          variant: config.variant,
           max_plies: config.maxPlies,
           tournament_id: config.tournamentId,
           pair_id: pairing.pairId,
@@ -76,6 +84,7 @@ try {
         providers: config.providers,
         timeControl: config.timeControl,
         openingPolicy: config.openingPolicy,
+        variant: config.variant,
       },
       null,
       2,

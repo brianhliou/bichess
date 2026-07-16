@@ -160,11 +160,6 @@
      outer size, so the board fills the shell and snaps to a multiple of 8. */
   aspect-ratio: 1;
   border: none;
-  /* Fallback for fractional dpr (1.25/1.5), where an 8px-CSS-multiple width can
-     still leave a sub-pixel remainder chessground floors away: any residual gap
-     on the bottom/right reads as a hairline board frame instead of glaring page
-     background. At dpr 1/2 the gap is 0 and this is never visible. */
-  background: var(--board-frame);
   overflow: hidden;
   box-shadow: 0 14px 40px var(--site-shadow);
 }

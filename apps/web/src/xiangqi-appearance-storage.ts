@@ -5,18 +5,27 @@ import {
 } from './xiangqi-piece-sets.js';
 
 export type XiangqiBoardTheme = 'international' | 'traditional';
+export type XiangqiBoardLayout = 'intersection' | 'cell';
 
 const xiangqiBoardStorageKey = 'mistboard.xiangqiBoardTheme';
 const xiangqiBoardStorageVersionKey = 'mistboard.xiangqiBoardThemeVersion';
+const xiangqiBoardLayoutStorageKey = 'mistboard.xiangqiBoardLayout';
+const xiangqiBoardLayoutStorageVersionKey = 'mistboard.xiangqiBoardLayoutVersion';
 const xiangqiPieceSetStorageKey = 'mistboard.xiangqiPieceSet';
 const xiangqiPieceSetStorageVersionKey = 'mistboard.xiangqiPieceSetVersion';
 const defaultXiangqiBoardTheme: XiangqiBoardTheme = 'international';
+const defaultXiangqiBoardLayout: XiangqiBoardLayout = 'intersection';
 const xiangqiBoardStorageVersion = '4';
+const xiangqiBoardLayoutStorageVersion = '1';
 const xiangqiPieceSetStorageVersion = '3';
 const defaultXiangqiPieceSet: XiangqiPieceSet = DEFAULT_XIANGQI_PIECE_SET;
 const xiangqiBoardThemes: ReadonlyArray<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
+];
+const xiangqiBoardLayouts: ReadonlyArray<{ id: XiangqiBoardLayout; label: string }> = [
+  { id: 'intersection', label: 'Classic intersections' },
+  { id: 'cell', label: 'Square grid' },
 ];
 
 export function readStoredXiangqiBoardTheme(): XiangqiBoardTheme {
@@ -43,8 +52,50 @@ export function writeStoredXiangqiBoardTheme(theme: XiangqiBoardTheme): void {
   }
 }
 
+export function readStoredXiangqiBoardLayout(): XiangqiBoardLayout {
+  try {
+    // QA/share hook: a URL can pin either layout without changing the browser's
+    // saved preference. Useful for visual review links and reproducible reports.
+    const previewLayout = new URLSearchParams(window.location.search).get('xqLayout');
+    if (xiangqiBoardLayouts.some((layout) => layout.id === previewLayout)) {
+      return previewLayout as XiangqiBoardLayout;
+    }
+    const stored = window.localStorage.getItem(xiangqiBoardLayoutStorageKey);
+    const version = window.localStorage.getItem(xiangqiBoardLayoutStorageVersionKey);
+    const normalized = normalizeXiangqiBoardLayout(stored);
+    if (version !== xiangqiBoardLayoutStorageVersion || normalized !== stored) {
+      window.localStorage.setItem(
+        xiangqiBoardLayoutStorageVersionKey,
+        xiangqiBoardLayoutStorageVersion,
+      );
+      window.localStorage.setItem(xiangqiBoardLayoutStorageKey, normalized);
+    }
+    return normalized;
+  } catch {
+    return defaultXiangqiBoardLayout;
+  }
+}
+
+export function writeStoredXiangqiBoardLayout(layout: XiangqiBoardLayout): void {
+  try {
+    window.localStorage.setItem(xiangqiBoardLayoutStorageKey, layout);
+    window.localStorage.setItem(
+      xiangqiBoardLayoutStorageVersionKey,
+      xiangqiBoardLayoutStorageVersion,
+    );
+  } catch {
+    // The current board keeps its existing layout when storage is unavailable.
+  }
+}
+
 export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
   try {
+    // QA/share hook: preview a piece set without changing the browser's saved
+    // preference. This mirrors the xqLayout hook used for board-layout review.
+    const previewPieceSet = new URLSearchParams(window.location.search).get('xqPieces');
+    if (XIANGQI_PIECE_SETS.some((set) => set.id === previewPieceSet)) {
+      return previewPieceSet as XiangqiPieceSet;
+    }
     const version = window.localStorage.getItem(xiangqiPieceSetStorageVersionKey);
     if (version !== xiangqiPieceSetStorageVersion) {
       window.localStorage.setItem(xiangqiPieceSetStorageVersionKey, xiangqiPieceSetStorageVersion);
@@ -70,6 +121,12 @@ export function normalizeXiangqiBoardTheme(value: string | null): XiangqiBoardTh
   return xiangqiBoardThemes.some((theme) => theme.id === value)
     ? (value as XiangqiBoardTheme)
     : defaultXiangqiBoardTheme;
+}
+
+export function normalizeXiangqiBoardLayout(value: string | null): XiangqiBoardLayout {
+  return xiangqiBoardLayouts.some((layout) => layout.id === value)
+    ? (value as XiangqiBoardLayout)
+    : defaultXiangqiBoardLayout;
 }
 
 export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {

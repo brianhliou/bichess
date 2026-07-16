@@ -6,10 +6,11 @@ const DEFAULT_MIN_ANCHOR_GAMES = 8;
 const DEFAULT_EXCLUDED_TERMINATIONS = ['truncated'];
 
 export type EngineEloGameRow = {
+  anchorEngineId: string | null;
   blackEngineId: string | null;
   gameId: string;
   jobId: string;
-  result: 'white-wins' | 'black-wins' | 'draw' | null;
+  result: 'white-wins' | 'black-wins' | 'red-wins' | 'draw' | null;
   status: string;
   termination: string | null;
   timeControl: Record<string, unknown>;
@@ -97,7 +98,11 @@ export function buildEngineEloReport(
     if (!white || !black || !row.result) continue;
 
     if (white === anchorEngineId || black === anchorEngineId) {
-      const anchorScore = scoreForColor(row.result, white === anchorEngineId ? 'white' : 'black');
+      const anchorScore = scoreForSlot(
+        row.result,
+        white === anchorEngineId ? 'white' : 'black',
+        row.variant,
+      );
       record(anchor, anchorScore);
       const otherEngine = white === anchorEngineId ? black : white;
       const otherScore = 1 - anchorScore;
@@ -204,11 +209,12 @@ export async function loadRatedEngineEloRows(
     black_engine_id: string | null;
     game_id: string;
     job_id: string;
-    result: 'white-wins' | 'black-wins' | 'draw' | null;
+    result: 'white-wins' | 'black-wins' | 'red-wins' | 'draw' | null;
     status: string;
     termination: string | null;
     time_control: Record<string, unknown>;
     tournament_id: string | null;
+    anchor_engine_id: string | null;
     variant: string;
     white_engine_id: string | null;
   }>(
@@ -219,6 +225,7 @@ export async function loadRatedEngineEloRows(
        eve_game.black_engine_id,
        eve_game.time_control,
        job.config->'tournament'->>'id' AS tournament_id,
+       job.config->'rating_policy'->>'anchor_engine_id' AS anchor_engine_id,
        game.variant,
        game.status,
        game.result,
@@ -234,6 +241,7 @@ export async function loadRatedEngineEloRows(
   );
   return rows
     .map((row) => ({
+      anchorEngineId: row.anchor_engine_id,
       blackEngineId: row.black_engine_id,
       gameId: row.game_id,
       jobId: row.job_id,
@@ -275,8 +283,15 @@ async function main(): Promise<void> {
         args.timeControlBucket ?? process.env.ENGINE_RATING_TIME_CONTROL_BUCKET ?? null,
     });
     const report = buildEngineEloReport(rows, {
+      // Precedence: explicit CLI/env override > the anchor the rated jobs
+      // recorded in their rating_policy > the global default. Reading it back
+      // from the jobs means variant pools (xiangqi anchors on FSF-1 / the random
+      // floor bot) rate correctly without passing --anchor by hand.
       anchorEngineId:
-        args.anchorEngineId ?? process.env.ENGINE_RATING_ANCHOR ?? DEFAULT_ANCHOR_ENGINE_ID,
+        args.anchorEngineId ??
+        process.env.ENGINE_RATING_ANCHOR ??
+        deriveAnchorEngineId(rows) ??
+        DEFAULT_ANCHOR_ENGINE_ID,
       minAnchorGames:
         args.minAnchorGames ??
         positiveInteger(process.env.ENGINE_RATING_MIN_ANCHOR_GAMES, DEFAULT_MIN_ANCHOR_GAMES),
@@ -291,6 +306,16 @@ async function main(): Promise<void> {
   }
 }
 
+// The anchor the rated jobs agreed on, if there is exactly one. Returns null when
+// no job recorded an anchor or the pool mixes anchors (then the caller falls back
+// to an explicit override or the global default rather than guessing).
+export function deriveAnchorEngineId(rows: EngineEloGameRow[]): string | null {
+  const anchors = new Set(
+    rows.map((row) => row.anchorEngineId).filter((id): id is string => id !== null),
+  );
+  return anchors.size === 1 ? [...anchors][0]! : null;
+}
+
 function isEligibleResult(row: EngineEloGameRow, excludedTerminations: Set<string>): boolean {
   return (
     row.status === 'completed' &&
@@ -300,12 +325,17 @@ function isEligibleResult(row: EngineEloGameRow, excludedTerminations: Set<strin
   );
 }
 
-function scoreForColor(
+function scoreForSlot(
   result: NonNullable<EngineEloGameRow['result']>,
-  color: 'white' | 'black',
+  slot: 'white' | 'black',
+  variant: string,
 ): number {
   if (result === 'draw') return 0.5;
-  return result === `${color}-wins` ? 1 : 0;
+  // eve_games predates red/black families and names its first-mover slot
+  // white_engine_id. For Xiangqi-family results, that slot is Red.
+  const winningSlot =
+    result === 'red-wins' && variant === 'xiangqi' ? 'white' : result.split('-')[0];
+  return winningSlot === slot ? 1 : 0;
 }
 
 function emptyRecord(): MutableRecord {

@@ -30,90 +30,79 @@ export {
   xiangqiSquareToPikafishUci as xiangqiSquareToPikafish,
 } from '@mistboard/game';
 
-// Level 5 (skill 12) is the successor of the retired 'pikafish-xiangqi-strong'
-// default, so default difficulty does not jump across the ladder expansion.
+// Level 5 remains the public default selected by the expanded ladder.
 export const XIANGQI_DEFAULT_ENGINE_ID = 'pikafish-xiangqi-level-5';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier).
 // Bump on any engine/net/config change.
-export const XIANGQI_ENGINE_VERSION = '0.2.0';
+export const XIANGQI_ENGINE_VERSION = '0.3.0';
+
+export type XiangqiEngineId =
+  | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'pikafish-xiangqi-amateur'
+  | 'pikafish-xiangqi-strong'
+  | 'pikafish-xiangqi-strongest';
 
 export type XiangqiEngineTier = {
-  id: string;
+  id: XiangqiEngineId;
   name: string;
-  // Skill Level (0-20) weakens move selection CPU-independently; the NODE budget
-  // pins strength reproducibly across the slow prod vCPU; movetimeMs is the
-  // latency ceiling handed to the clock-aware allocator (budgetForMove). Starting
-  // points — calibrate vs play.
-  skill: number;
+  // Mainline Pikafish does not expose Stockfish's `Skill Level` / `UCI_Elo`
+  // options. The node budget is the only strength control; movetimeMs is the
+  // latency ceiling handed to the clock-aware allocator (budgetForMove).
   nodes: number;
   movetimeMs: number;
 };
 
-// Calibrated 8-level ladder (lichess/PlayStrategy convention), ordered weakest
-// first. Skill Level shapes move selection, the node budget pins strength
-// reproducibly, movetime is only the latency ceiling. Adjacent-pair EvE autoplay
-// (src/scripts/xiangqi-pikafish-ladder.ts, 2026-07-10): L1 through L6 each beat
-// the level below with >= 60% (75-100%), and no higher level lost a single game
-// anywhere. Above L6, adjacent EvE saturates at draws (skill >= 14 with >= 300k
-// nodes defends at xiangqi's draw margin under the kernel's progress-clock), so
-// L7/L8 separation rests on their node budgets (1M/3M vs 300k) plus the decisive
-// 3-gap result (L8 checkmated L5 in both colors).
+// Eight node-budget rungs, ordered weakest first. The 2026-07-10 autoplay did
+// establish monotonic ordering through L6, but it did NOT exercise the configured
+// skill values: Pikafish rejected that unsupported option while the old harness
+// ignored the diagnostic. Human-facing strength remains provisional pending the
+// opening-diverse engine-league calibration.
 const XIANGQI_ENGINE_TIERS = [
   {
     id: 'pikafish-xiangqi-level-1',
     name: 'Pikafish - Level 1',
-    skill: 0,
     nodes: 1_000,
     movetimeMs: 300,
   },
   {
     id: 'pikafish-xiangqi-level-2',
     name: 'Pikafish - Level 2',
-    skill: 3,
     nodes: 3_000,
     movetimeMs: 400,
   },
   {
     id: 'pikafish-xiangqi-level-3',
     name: 'Pikafish - Level 3',
-    skill: 6,
     nodes: 10_000,
     movetimeMs: 500,
   },
   {
     id: 'pikafish-xiangqi-level-4',
     name: 'Pikafish - Level 4',
-    skill: 9,
     nodes: 30_000,
     movetimeMs: 800,
   },
   {
     id: XIANGQI_DEFAULT_ENGINE_ID,
     name: 'Pikafish - Level 5',
-    skill: 12,
     nodes: 100_000,
     movetimeMs: 1_200,
   },
   {
     id: 'pikafish-xiangqi-level-6',
     name: 'Pikafish - Level 6',
-    // Skill 14, not 15: at skill 15 with this node budget the level defended at
-    // xiangqi's draw margin and L7/L8 could not beat it in EvE calibration.
-    skill: 14,
     nodes: 300_000,
     movetimeMs: 1_500,
   },
   {
     id: 'pikafish-xiangqi-level-7',
     name: 'Pikafish - Level 7',
-    skill: 18,
     nodes: 1_000_000,
     movetimeMs: 2_500,
   },
   {
     id: 'pikafish-xiangqi-level-8',
-    name: 'Pikafish - Level 8',
-    skill: 20,
+    name: 'Pikafish',
     nodes: 3_000_000,
     movetimeMs: 4_000,
   },
@@ -129,35 +118,37 @@ export const XIANGQI_LEGACY_ENGINE_TIERS = [
   {
     id: 'pikafish-xiangqi-amateur',
     name: 'Pikafish - Amateur',
-    skill: 3,
     nodes: 20_000,
     movetimeMs: 400,
   },
   {
     id: 'pikafish-xiangqi-strong',
     name: 'Pikafish - Strong',
-    skill: 12,
     nodes: 300_000,
     movetimeMs: 1_500,
   },
   {
     id: 'pikafish-xiangqi-strongest',
     name: 'Pikafish - Strongest',
-    skill: 20,
     nodes: 3_000_000,
     movetimeMs: 4_000,
   },
 ] as const satisfies readonly XiangqiEngineTier[];
 
 export const XIANGQI_PLAYABLE_ENGINES: readonly XiangqiEngineTier[] = XIANGQI_ENGINE_TIERS;
+export const XIANGQI_ALL_ENGINE_TIERS: readonly XiangqiEngineTier[] = [
+  ...XIANGQI_ENGINE_TIERS,
+  ...XIANGQI_LEGACY_ENGINE_TIERS,
+];
 
 const XIANGQI_ENGINE_BY_ID: ReadonlyMap<string, XiangqiEngineTier> = new Map(
-  [...XIANGQI_ENGINE_TIERS, ...XIANGQI_LEGACY_ENGINE_TIERS].map((engine) => [engine.id, engine]),
+  XIANGQI_ALL_ENGINE_TIERS.map((engine) => [engine.id, engine]),
 );
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness). Reuses the
 // same env knobs as the Jieqi Pikafish pool.
 const enginePool = new UciEnginePool({
+  name: 'pikafish-xiangqi',
   maxProcessesEnvVar: 'MISTBOARD_PIKAFISH_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'pikafish-xiangqi concurrency queue timed out',
@@ -262,7 +253,6 @@ export async function xiangqiLiveEngineMove(
   const release = await enginePool.acquire();
   try {
     return await xiangqiEngineMove(moves, {
-      skill: tier.skill,
       nodes: tier.nodes,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
     });
@@ -273,11 +263,10 @@ export async function xiangqiLiveEngineMove(
 
 export function xiangqiEngineMove(
   moves: string[],
-  opts: { skill: number; nodes: number; movetimeMs: number },
+  opts: { nodes: number; movetimeMs: number },
 ): Promise<string | null> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
-  const skill = Math.max(0, Math.min(20, Math.floor(opts.skill)));
   const nodes = Math.max(1, Math.floor(opts.nodes));
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs));
   const position =
@@ -285,7 +274,6 @@ export function xiangqiEngineMove(
   const commands = [
     'uci',
     `setoption name EvalFile value ${net}`,
-    `setoption name Skill Level value ${skill}`,
     'ucinewgame',
     'isready',
     position,
@@ -316,7 +304,7 @@ export type XiangqiPositionEval = {
 
 /**
  * Full-strength eval of a xiangqi position for postgame analysis (P3). Unlike the
- * bot move (tuned Skill/nodes), this runs uncapped to a FIXED DEPTH so a whole-game
+ * bot move (node-limited), this runs uncapped to a FIXED DEPTH so a whole-game
  * series is comparable, and normalises the side-to-move UCI score to RED's POV so
  * the advantage chart and accuracy are coherent across the game. Concurrency is
  * gated by the shared engine pool.

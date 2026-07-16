@@ -264,6 +264,43 @@ export type EngineTurnResponse = {
 };
 
 /**
+ * Post-move observation PUSH: server → engine, immediately after the engine's
+ * own move is applied and BEFORE the opponent replies.
+ *
+ * This is the "observe right after you move" step (faithful to chess.com-style
+ * fog, where you see your new vantage the instant you move). It lets an engine
+ * advance its belief on its own move and think on the opponent's clock
+ * (pondering) instead of waiting for its next turn request.
+ *
+ * OPT-IN and additive: an engine that does not implement the observe endpoint
+ * still plays correctly — the same `own_move` observation also arrives in its
+ * next `EngineTurnRequest` (transcript). Engines that handle BOTH must dedupe by
+ * `ply` so the observation isn't applied twice. The push expects only an ack;
+ * no move is requested.
+ */
+export type EngineObservationPush = {
+  protocolVersion: EngineProtocolVersion;
+  gameId: string;
+  engineId: string;
+  gameSpecId?: string;
+  sessionId: string;
+  /** The color that just moved (this engine's seat). */
+  color: Color;
+  /** Ply count AFTER the engine's move (matches `observation.ply`). */
+  ply: number;
+  /** The engine's own-move observation (`kind === 'own_move'`). */
+  observation: EngineObservation;
+};
+
+/** Engine's acknowledgment of an {@link EngineObservationPush}. */
+export type EngineObservationAck = {
+  protocolVersion: EngineProtocolVersion;
+  gameId: string;
+  sessionId: string;
+  received: true;
+};
+
+/**
  * The server's session identifier scheme. Engines treat sessionId as
  * opaque; this type documents how the server constructs it. Exposed so
  * other parts of the codebase (logging, persistence) can format the

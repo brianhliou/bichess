@@ -47,13 +47,15 @@ describe('Jungle watch replay', () => {
     const boardSvg = () => root.querySelector('svg.jungle-live-svg');
     expect(boardSvg()).not.toBeNull();
     expect(boardSvg()!.outerHTML).not.toContain('stroke="#e3b34d"');
-    expect(boardSvg()!.outerHTML).not.toContain('fill="rgba(58,44,32,0.32)"');
+    expect(boardSvg()!.outerHTML).not.toContain('fill="rgba(58,44,32,0.36)"');
 
-    // Ply 1: the a3-a4 move renders the origin shadow fill on a3 and ONE thin
-    // gold destination ring on a4 (shared JUNGLE_LAST_MOVE grammar).
+    // Ply 1: the a3-a4 move renders the origin shadow disc on a3 and ONE thin
+    // gold destination halo on a4 (shared JUNGLE_LAST_MOVE grammar).
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
-    expect(boardSvg()!.outerHTML.match(/fill="rgba\(58,44,32,0\.32\)"/g)).toHaveLength(1);
+    expect(boardSvg()!.outerHTML.match(/fill="rgba\(58,44,32,0\.36\)"/g)).toHaveLength(1);
     expect(boardSvg()!.outerHTML.match(/stroke="#e3b34d"/g)).toHaveLength(1);
+    expect(boardSvg()!.querySelector('circle.jungle-last-move-from')).not.toBeNull();
+    expect(boardSvg()!.querySelector('circle.jungle-last-move-ring')).not.toBeNull();
 
     handle.destroy();
   });

@@ -4,7 +4,8 @@ import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { setPostHogInstance } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
-import { correspondenceEnabled, friendsOnlineEnabled } from './feature-flags.js';
+import { clearChunkReloadAttempt, reloadForChunkLoadError } from './chunk-load-recovery.js';
+import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './feature-flags.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl } from './i18n/locale.js';
 import {
@@ -60,6 +61,18 @@ if (phKey && phHost && import.meta.env.PROD) {
       // Unhandled errors + promise rejections surface as $exception events
       // (Error Tracking), so a broken page reports itself instead of going dark.
       capture_exceptions: true,
+      // Drop benign browser noise before ingestion. "ResizeObserver loop
+      // completed with undelivered notifications" is a synthetic warning
+      // Chromium fires at window.onerror when an observer callback defers a
+      // layout to the next frame; nothing breaks and it never reproduces on
+      // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
+      before_send: (event) => {
+        const message = event?.properties?.$exception_values?.[0];
+        if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
+          return null;
+        }
+        return event;
+      },
     });
     posthog.capture('$pageview', { path: window.location.pathname });
     setPostHogInstance(posthog);
@@ -89,6 +102,9 @@ const wantsPatron = path === '/patron' || page === 'patron';
 const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
+const wantsContribute = path === '/contribute' || page === 'contribute';
+const wantsThanks = path === '/thanks' || page === 'thanks';
+const wantsLag = path === '/lag' || page === 'lag';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -106,13 +122,18 @@ const inboxHandle = inboxMatch?.[1] ? decodeURIComponent(inboxMatch[1]) : null;
 // Signed-in-only; the page itself renders a sign-in prompt for anonymous
 // visitors. Deliberately not in the sitemap (a private, self-only surface).
 const wantsFollowing = path === '/following' || page === 'following';
-const wantsLearn = path === '/learn' || page === 'learn';
+// Legacy dark-chess /learn hub — gated off in prod (see learnEnabled). When
+// disabled, /learn falls through to the branded not-found page.
+const wantsLearn = learnEnabled() && (path === '/learn' || page === 'learn');
+// Interactive beginner course (lichess /learn parity), xiangqi first. Ungated —
+// distinct from the legacy /learn hub above.
+const wantsLearnXiangqi = path === '/learn/xiangqi';
 const wantsRulesIndex =
   path === '/rules' || path === '/zh-hans/rules' || path === '/zh-hant/rules' || page === 'rules';
 const articleSlug = articleSlugFromPath(path);
 const articleLang = articleLangFromPath(path);
-const wantsArticlesIndex =
-  path === '/blog' || path === '/zh-hans/blog' || path === '/zh-hant/blog' || page === 'blog';
+const articleIndexView = articleIndexViewFromPath(path);
+const wantsArticlesIndex = articleIndexView !== null || page === 'blog';
 const wantsNews = path === '/feed' || path === '/news' || page === 'feed' || page === 'news';
 const forumRedirectPostId = forumRedirectPostIdFromPath(path);
 const forumTopicId = forumTopicIdFromPath(path);
@@ -152,6 +173,9 @@ const wantsDatabase = path === '/database';
 // Title verification: player-facing request form. Linked from profile copy,
 // no nav entry.
 const wantsVerifyTitle = path === '/verify-title';
+// Streamers directory: /streamer (public list). Basic empty-state scaffold for
+// now (apps/web/src/streamer.ts), linked from the Watch nav.
+const wantsStreamer = path === '/streamer';
 // Coach directory: /coach (public list) and /coach/:handle (public detail)
 // share one module. /coach/edit is the signed-in editor, a reserved literal
 // below the :handle pattern that must win over it (same tradeoff as
@@ -182,6 +206,8 @@ const wantsXiangqiAnalysis = path === '/analysis/xiangqi';
 const wantsHistoricalXiangqiSearch =
   path === '/historical-xiangqi' || path === '/historical-xiangqi/games';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
+const studyId = /^\/study\/([A-Za-z0-9]+)$/.exec(path)?.[1] ?? null;
+const wantsStudyIndex = path === '/study';
 // Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
 const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
 // Hidden DEV-only spike for the candidate 7x7 Dark Mini Xiangqi ruleset.
@@ -229,7 +255,13 @@ if (replaySample) {
   // deep-link drop straight onto a position of interest in a long replay.
   const replayPlyRaw = params.get('ply');
   const replayPly = replayPlyRaw ? Number.parseInt(replayPlyRaw, 10) : NaN;
-  const replayOpts = Number.isFinite(replayPly) ? { initialPly: replayPly } : undefined;
+  // Keep the White/Black POV panes fogged even after the game ends — only the
+  // Truth pane reveals. A finished game shouldn't retroactively lift the fog a
+  // player actually saw the game under.
+  const replayOpts = {
+    revealOnFinish: false,
+    ...(Number.isFinite(replayPly) ? { initialPly: replayPly } : {}),
+  };
   void mountOrReport(() =>
     import('./replay.js').then(({ mountReplay }) =>
       mountReplay(appRoot, replaySample, replayOpts).then(() => undefined),
@@ -250,9 +282,11 @@ if (replaySample) {
   );
 } else if (tenantPostgame?.tenant.enabled()) {
   const { tenant, mount, roomId } = tenantPostgame;
+  appRoot.dataset.favoriteGameId = roomId;
   setTitle(tenant.pageTitle);
   void mountOrReport(() => mount(appRoot, roomId).then(() => undefined));
 } else if (gameRoomId) {
+  appRoot.dataset.favoriteGameId = gameRoomId;
   setTitle('Game');
   void mountOrReport(() =>
     import('./landing.js').then(({ mountGame }) => mountGame(appRoot, gameRoomId)),
@@ -272,6 +306,20 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./xiangqi-analysis-page.js').then(({ mountXiangqiAnalysisPage }) => {
       mountXiangqiAnalysisPage(appRoot);
+    }),
+  );
+} else if (wantsStudyIndex) {
+  setTitle('Studies');
+  void mountOrReport(() =>
+    import('./study-index.js').then(({ mountStudyIndex }) => {
+      mountStudyIndex(appRoot);
+    }),
+  );
+} else if (studyId) {
+  setTitle('Study');
+  void mountOrReport(() =>
+    import('./study.js').then(({ mountStudy }) => {
+      mountStudy(appRoot, studyId);
     }),
   );
 } else if (wantsHistoricalXiangqiSearch) {
@@ -297,6 +345,11 @@ if (replaySample) {
   setTitleKey('verifyTitle.heading');
   void mountOrReport(() =>
     import('./verify-title.js').then(({ mountVerifyTitle }) => mountVerifyTitle(appRoot)),
+  );
+} else if (wantsStreamer) {
+  setTitleKey('streamer.heading');
+  void mountOrReport(() =>
+    import('./streamer.js').then(({ mountStreamer }) => mountStreamer(appRoot)),
   );
 } else if (wantsCoachEdit) {
   setTitleKey('coach.editHeading');
@@ -444,7 +497,7 @@ if (replaySample) {
     ),
   );
 } else if (wantsXiangqiDemo) {
-  setTitle('Fog Elephant Chess demo');
+  setTitle('Fog Xiangqi demo');
   void mountOrReport(() =>
     import('./xiangqi-demo.js').then(({ mountXiangqiDemo }) => mountXiangqiDemo(appRoot)),
   );
@@ -550,7 +603,7 @@ if (replaySample) {
   setTitleKey('articles.heading');
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountArticlesIndex }) =>
-      mountArticlesIndex(appRoot, articleLang),
+      mountArticlesIndex(appRoot, articleLang, articleIndexView ?? 'mistboard'),
     ),
   );
 } else if (wantsRulesIndex) {
@@ -558,6 +611,13 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountRulesIndex }) =>
       mountRulesIndex(appRoot, articleLang),
+    ),
+  );
+} else if (wantsLearnXiangqi) {
+  setTitleKey('nav.learn');
+  void mountOrReport(() =>
+    import('./learn-xiangqi/learn-xiangqi-page.js').then(({ mountLearnXiangqi }) =>
+      mountLearnXiangqi(appRoot),
     ),
   );
 } else if (wantsLearn) {
@@ -569,7 +629,7 @@ if (replaySample) {
     import('./pages-static.js').then(({ mountAbout }) => mountAbout(appRoot)),
   );
 } else if (wantsSource) {
-  setTitleKey('footer.source');
+  setTitleKey('source.heading');
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountSource }) => mountSource(appRoot)),
   );
@@ -596,6 +656,19 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountPrivacy }) => mountPrivacy(appRoot)),
   );
+} else if (wantsContribute) {
+  setTitleKey('contribute.heading');
+  void mountOrReport(() =>
+    import('./contribute-page.js').then(({ mountContribute }) => mountContribute(appRoot)),
+  );
+} else if (wantsThanks) {
+  setTitleKey('thanks.heading');
+  void mountOrReport(() =>
+    import('./thanks-page.js').then(({ mountThanks }) => mountThanks(appRoot)),
+  );
+} else if (wantsLag) {
+  setTitleKey('lag.heading');
+  void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
 } else if (path === '/') {
   void mountOrReport(() =>
     import('./landing.js').then(({ mountLanding }) => mountLanding(appRoot)),
@@ -623,54 +696,13 @@ function setTitleKey(key: I18nKey): void {
   setTitle(t(key, {}, currentLocale()));
 }
 
-// Code-split routes fetch their chunk lazily, so a transient failure — most
-// often the brief server-restart window during a deploy — rejects the dynamic
-// import with a browser-specific "module load" error. Retry once with a full
-// reload (which re-fetches index.html and the current chunk hashes) before
-// surfacing the error screen. The sessionStorage flag caps it at one retry per
-// tab session so a genuinely-missing asset can't loop; it clears on any
-// successful mount so a later deploy gets its own retry budget.
-const CHUNK_RELOAD_FLAG = 'mistboard.chunkReloadAttempted';
-
-function isChunkLoadError(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err);
-  return (
-    message.includes('Failed to fetch dynamically imported module') || // Chromium
-    message.includes('error loading dynamically imported module') || // Firefox
-    message.includes('Importing a module script failed') // Safari
-  );
-}
-
-function chunkReloadAlreadyAttempted(): boolean {
-  try {
-    return sessionStorage.getItem(CHUNK_RELOAD_FLAG) !== null;
-  } catch {
-    // Storage unavailable (private mode, etc.): treat as already tried so we
-    // fall through to the error screen instead of risking a reload loop.
-    return true;
-  }
-}
-
-function setChunkReloadAttempted(value: boolean): void {
-  try {
-    if (value) sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
-    else sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
-  } catch {
-    // No-op when storage is unavailable.
-  }
-}
-
 async function mountOrReport(run: () => Promise<void>): Promise<void> {
   try {
     await run();
-    setChunkReloadAttempted(false);
+    clearChunkReloadAttempt();
   } catch (err) {
     console.error(err);
-    if (isChunkLoadError(err) && !chunkReloadAlreadyAttempted()) {
-      setChunkReloadAttempted(true);
-      location.reload();
-      return;
-    }
+    if (reloadForChunkLoadError(err)) return;
     appRoot.replaceChildren();
     appRoot.classList.add('landing-page');
     const shell = document.createElement('main');
@@ -685,7 +717,7 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     reload.className = 'landing-cta-primary';
     reload.textContent = 'Reload';
     reload.addEventListener('click', () => {
-      setChunkReloadAttempted(false);
+      clearChunkReloadAttempt();
       location.reload();
     });
     shell.append(heading, detail, reload);
@@ -781,7 +813,15 @@ function forumRedirectPostIdFromPath(value: string): string | null {
 // have no slug segment); the lang parser reports the prefix.
 function articleSlugFromPath(value: string): string | null {
   const match = value.replace(/^\/zh-han[st]/, '').match(/^\/(?:blog|rules)\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]!) : null;
+  const slug = match ? decodeURIComponent(match[1]!) : null;
+  return slug === 'community' && value.includes('/blog/') ? null : slug;
+}
+
+function articleIndexViewFromPath(value: string): import('./articles.js').ArticleIndexView | null {
+  const normalized = value.replace(/^\/zh-han[st]/, '');
+  if (normalized === '/blog') return 'mistboard';
+  if (normalized === '/blog/community') return 'community';
+  return null;
 }
 
 function articleLangFromPath(value: string): ArticleLang | null {

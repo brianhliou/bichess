@@ -39,7 +39,7 @@ definePersistenceTests('forum', () => {
       categories.map((category) => category.slug),
       ['general-discussion', 'feedback', 'game-analysis', 'off-topic-discussion'],
     );
-    assert.equal(categories[0]?.name, 'General Chess Discussion');
+    assert.equal(categories[0]?.name, 'General Games Discussion');
     assert.equal(categories[0]?.topicWritePolicy, 'account');
 
     await createUser({

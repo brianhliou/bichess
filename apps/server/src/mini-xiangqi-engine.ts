@@ -70,6 +70,7 @@ const MINI_XIANGQI_ENGINE_BY_ID: ReadonlyMap<string, MiniXiangqiEngineTier> = ne
 // vCPU this could oversubscribe, but these are low-traffic surfaces. Promote to a
 // shared pool or a dedicated process only under real load (the task-#92 trigger).
 const fsfPool = new UciEnginePool({
+  name: 'mini-xiangqi-fsf',
   maxProcessesEnvVar: 'MISTBOARD_MINI_XIANGQI_FSF_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_MINI_XIANGQI_FSF_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'fsf concurrency queue timed out',

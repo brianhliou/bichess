@@ -35,7 +35,7 @@ async function main(): Promise<void> {
       break;
     }
     const turn = state.status.turn;
-    const uci = await xiangqiEngineMove(history, { skill: 20, nodes: 100_000, movetimeMs: 800 });
+    const uci = await xiangqiEngineMove(history, { nodes: 100_000, movetimeMs: 800 });
     if (!uci) {
       console.error(`ply ${i} (${turn}): pikafish returned NO move`);
       process.exit(1);

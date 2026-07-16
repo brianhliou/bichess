@@ -1,0 +1,15 @@
+/* /streamer: public streamers directory (basic empty-state scaffold). */
+
+.streamer-shell {
+  max-width: 860px;
+}
+
+.streamer-intro {
+  color: var(--site-text);
+  margin: 10px 0 18px;
+}
+
+.streamer-empty {
+  color: var(--site-muted);
+  margin: 12px 0;
+}

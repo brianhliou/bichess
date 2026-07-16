@@ -42,3 +42,37 @@ export function isLikelySignedIn(): boolean {
   if (resolvedSignedIn !== undefined) return resolvedSignedIn;
   return readSignedInHint();
 }
+
+// Admin hint, same shape as the signed-in hint: site-shell paints the
+// admin-only nav links from it before /api/auth/me resolves, account-nav
+// reconciles every [data-admin-only] element once auth settles. Purely
+// cosmetic — /database and /engines are admin-gated server-side.
+const ADMIN_HINT_KEY = 'mb_admin';
+
+let resolvedAdmin: boolean | undefined;
+
+export function readAdminHint(): boolean {
+  try {
+    return window.localStorage.getItem(ADMIN_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function writeAdminHint(value: boolean): void {
+  try {
+    if (value) window.localStorage.setItem(ADMIN_HINT_KEY, '1');
+    else window.localStorage.removeItem(ADMIN_HINT_KEY);
+  } catch {
+    // localStorage unavailable (private mode etc.) — fall through.
+  }
+}
+
+export function setResolvedAdmin(value: boolean | undefined): void {
+  resolvedAdmin = value;
+}
+
+export function isLikelyAdmin(): boolean {
+  if (resolvedAdmin !== undefined) return resolvedAdmin;
+  return readAdminHint();
+}

@@ -6,6 +6,7 @@
 // "listening" log is suppressed by the `!options.port` gate (which exists so
 // the harness on port:0 stays quiet).
 
+import { verifyEngineBinariesAtBoot } from './engine-boot-check.js';
 import { installShutdownHandlers, startServer } from './index.js';
 import { logger, startObservability } from './obs.js';
 
@@ -16,6 +17,10 @@ const stopObs = startObservability({
   wsClientCount: started.wsClientCount,
 });
 logger.info({ kind: 'boot', port: started.port }, 'observability started');
+
+// Deploy tripwire: alert loudly if an enabled variant's engine binary was never
+// provisioned. Prod-only (this entry point is not used by the port:0 test harness).
+verifyEngineBinariesAtBoot();
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {

@@ -7,7 +7,7 @@ import {
   type RoomTimeControl,
 } from '@mistboard/game';
 import { crossroadsChessEnabled, darkMiniXiangqiEnabled } from './feature-flags.js';
-import { type HttpApiContext, isAllowedCrossroadsChessTimeControl } from './routes/lib.js';
+import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
 import { tryHandle } from './routes/lobby.js';
 import type { Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
@@ -126,7 +126,7 @@ registerFakeLobbyTenant({
   errorPrefix: 'crossroads_chess',
   enabled: crossroadsChessEnabled,
   supportsRated: false,
-  allowsTimeControl: isAllowedCrossroadsChessTimeControl,
+  allowsTimeControl: isAllowedFullTimeControl,
   createRoom: async (timeControl, rated) => {
     crossroadsCalls.push([timeControl, rated]);
     crossroadsRoomSeq += 1;

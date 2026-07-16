@@ -17,6 +17,7 @@ import {
   type FortressXiangqiMove,
   type FortressXiangqiPlayerView,
   type FortressXiangqiSquare,
+  fsfUciToXiangqiSquares,
   getDropMiniXiangqiPlayerView,
   getFortressXiangqiPlayerView,
   getJunglePlayerView,
@@ -34,7 +35,10 @@ import {
   type MiniXiangqiMove,
   type MiniXiangqiSquare,
   oppositeMiniXiangqiColor,
+  puzzleShortCode,
+  resolvePuzzleShortCode,
   type StandardXiangqiPlayerView,
+  standardXiangqiEngineFen,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiGameState,
@@ -78,6 +82,8 @@ import {
   renderMiniXiangqiBoardSvg,
 } from './live-mini-xiangqi-render.js';
 import { initLiveSound, playSound } from './live-sound.js';
+import { engineArrowsFromLines } from './review/engine/engine-arrows.js';
+import { createEnginePanel } from './review/engine/engine-panel.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -87,6 +93,8 @@ import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
   animateXiangqiBoardMove,
   XIANGQI_PIECE_SIZE,
+  type XiangqiBoardArrow,
+  xiangqiArrowSvg,
   xiangqiBoardSvg,
   xiangqiClickResult,
   xiangqiPieceGhostSvg,
@@ -118,6 +126,17 @@ type PuzzleSummary = {
     | { type: 'winning-advantage'; winner?: PuzzleColor; centipawns?: number };
   themes: string[];
   solutionPlyCount: number;
+  // Attribution for the "From game" card (standard-xiangqi mined puzzles). The
+  // source game is not hosted yet, so this is display-only, not a link.
+  sourceGame?: {
+    gameId: string;
+    ply: number;
+    event?: string;
+    playedOn?: string;
+    result?: string;
+    redName?: string;
+    blackName?: string;
+  };
 };
 
 type MiniPuzzleDetail = PuzzleSummary & {
@@ -194,9 +213,29 @@ type PuzzleSession = {
   // their final state is still 'playing', so board status alone cannot signal
   // "solved" (and the next-puzzle CTA would never appear).
   solved: boolean;
+  // Persistent (unlike feedback, which piece-selects reset to 'neutral'): set on
+  // the first wrong move OR the first reveal/hint. Drives the always-visible
+  // advance-to-next CTA + fail action row so a retry/select can't hide the way
+  // out. The user may keep trying moves, take a hint, view the solution, or move
+  // on — lichess "you failed this puzzle" semantics.
+  failed: boolean;
+  // The full solution has been fetched and played out; solving is locked (the
+  // board becomes a replay of the answer). Distinct from `solved` (which shows
+  // the Success panel) — a reveal is a give-up, not a win.
+  revealed: boolean;
   // One-shot flag: focus the next-puzzle button on the render right after a
   // solve, so Enter or Space advances without reaching for the mouse.
   focusNext: boolean;
+  // The viewer's "did you like this puzzle?" thumb vote, if any. Kept on the
+  // session so the selected-button feedback survives renderSession() rebuilds
+  // (the solved panel is rebuilt from scratch on every render). Voting shows
+  // feedback in place and does NOT advance to the next puzzle.
+  vote: 'up' | 'down' | null;
+  // Post-completion engine analysis (standard xiangqi only). Created lazily the
+  // first time a completed puzzle renders, then persists across renderSession()
+  // rebuilds so the engine toggle + eval + arrows survive a full re-render.
+  // Disposed when the session is replaced (see selectPuzzle).
+  analysis?: PuzzleAnalysisController | null;
 };
 
 type PuzzleNavigation = {
@@ -213,6 +252,9 @@ const SEEN_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:seen';
 const AUTO_NEXT_STORAGE_KEY = 'mistboard:puzzles:auto-next';
 const RATED_STORAGE_KEY = 'mistboard:puzzles:rated';
 const AUTO_NEXT_DELAY_MS = 150;
+// Cadence for auto-playing the revealed solution, one ply at a time (each step
+// reuses the scrub-forward animation).
+const REVEAL_STEP_MS = 650;
 // Rotation only needs "have I seen this lately," so cap the persisted seen-set
 // to the most-recently-seen ids rather than growing an unbounded history.
 const SEEN_PUZZLES_CAP = 200;
@@ -244,11 +286,10 @@ let onAttemptRating: ((rating: PuzzleAttemptRating) => void) | null = null;
 // the bet variant) leads; Fortress and Jungle are offered alongside it. Mini /
 // Drop Mini stay in the corpus + API (deep links still resolve server-side)
 // but are hidden from the selector. Add a spec id here to unhide it.
-const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [
-  XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  JUNGLE_SPEC_ID,
-];
+// Fortress is hidden from the picker while the variant is demoted and its
+// puzzles await a re-mine with the per-ply uniqueness gate. Re-add
+// FORTRESS_XIANGQI_SPEC_ID here when the re-mined corpus lands.
+const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID, JUNGLE_SPEC_ID];
 
 export async function mountPuzzles(
   root: HTMLElement,
@@ -383,26 +424,23 @@ export async function mountPuzzles(
   const renderSession = (): void => {
     if (!session) return;
     const navigation = navigationFor(queueSummaries(), selectedId, selectPuzzle);
-    renderPuzzleDetail(
-      detail,
-      session,
-      renderSession,
-      navigation,
-      (id) => {
-        solvedIds.add(id);
-        saveSolvedPuzzleIds(solvedIds);
-        markPuzzleSeen(id);
-        renderControls();
-        scheduleAutoNext(navigation);
-      },
-      clearAutoNextTimer,
-    );
+    renderPuzzleDetail(detail, session, renderSession, navigation, (id) => {
+      solvedIds.add(id);
+      saveSolvedPuzzleIds(solvedIds);
+      markPuzzleSeen(id);
+      renderControls();
+      scheduleAutoNext(navigation);
+    });
     renderControls();
   };
 
   const selectPuzzle = async (id: string, pushUrl: boolean): Promise<void> => {
     clearAutoNextTimer();
     ratingDelta = null;
+    // A deep link (or popstate) may carry a short code (Puzzle #bMpKA) instead
+    // of the full id. Normalize to the full id up front so selection, queue
+    // matching, the pushed URL, and solved-state keys all use the canonical id.
+    id = resolveToFullPuzzleId(id, summaries);
     const summary = summaries.find((puzzle) => puzzle.id === id);
     if (summary && !queueSummaries().some((puzzle) => puzzle.id === id)) {
       variantFilter = summary.variant;
@@ -422,11 +460,47 @@ export async function mountPuzzles(
     if (pushUrl && window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
+    // Tear down the outgoing puzzle's engine (worker + arrows) before swapping
+    // in the next session, so a stale ceval handle does not outlive its board.
+    session?.analysis?.dispose();
     session = createPuzzleSession(puzzle);
     markPuzzleSeen(id);
     renderSession();
     renderControls();
   };
+
+  // Arrow-key replay scrubbing (lichess-style): up/down jump to the first/last
+  // move, left/right step one ply. Attached to window so it works without
+  // focusing the board; self-removes once this page is navigated away (the shell
+  // detaches from the document).
+  const onPuzzleKeyDown = (event: KeyboardEvent): void => {
+    if (!shell.isConnected) {
+      window.removeEventListener('keydown', onPuzzleKeyDown);
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    ) {
+      return;
+    }
+    const action: PuzzleScrub | null =
+      event.key === 'ArrowUp'
+        ? 'first'
+        : event.key === 'ArrowDown'
+          ? 'last'
+          : event.key === 'ArrowLeft'
+            ? 'previous'
+            : event.key === 'ArrowRight'
+              ? 'next'
+              : null;
+    if (!action || !session) return;
+    event.preventDefault();
+    scrubPuzzle(session, renderSession, action);
+  };
+  window.addEventListener('keydown', onPuzzleKeyDown);
 
   renderStatus(controls, 'Loading');
   renderStatus(detail, 'Loading');
@@ -435,6 +509,9 @@ export async function mountPuzzles(
   // visits instead of being identical every time. Computed once per visit so
   // navigation stays stable while solving; filtering by variant preserves it.
   summaries = rotatePuzzleOrder(summaries, seenPuzzles);
+  // The deep-link path may be a short code; resolve it to the full id before it
+  // drives variant selection and queue matching below.
+  if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);
   const directSummary = selectedId ? summaries.find((puzzle) => puzzle.id === selectedId) : null;
   // A normal visit defaults to the surfaced variant (Fortress); a direct deep
   // link into any puzzle still resolves so shared/bookmarked URLs keep working.
@@ -483,7 +560,10 @@ function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
     feedback: { kind: 'neutral', text: 'Find the best move.' },
     submitting: false,
     solved: false,
+    failed: false,
+    revealed: false,
     focusNext: false,
+    vote: null,
   };
 }
 
@@ -529,7 +609,7 @@ function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): void {
   if (current) {
     infoCard.append(
       puzzleInfoRow('target', [
-        puzzleInfoLine(`Puzzle ${puzzleNumberLabel(currentIndex)}`),
+        puzzleCodeLine(current),
         puzzleInfoLine('Rating: hidden'),
         puzzleInfoLine(solvedIds.has(current.id) ? 'Solved' : 'Played locally'),
       ]),
@@ -537,7 +617,11 @@ function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): void {
       puzzleInfoRow(
         'variant',
         [
-          puzzleInfoLine(`From set ${variantLabel(current.variant)}`),
+          // Mined xiangqi puzzles carry attribution for the real game they came
+          // from: show a lichess-style "From game" header instead of "From set".
+          // The source game is not hosted yet (license-gated), so this is
+          // display-only — no link.
+          ...sourceGameLines(current),
           // The goal (e.g. "Mate in 1") is a spoiler while solving; reveal it only
           // once the puzzle is solved, like the puzzle rating.
           puzzleInfoLine(
@@ -712,14 +796,92 @@ function puzzleInfoLine(text: string): HTMLSpanElement {
   return line;
 }
 
+// The "From X" header lines for the info card. Mined xiangqi puzzles that carry
+// source-game attribution get a lichess-style "From game" header with the event
+// and both players; everything else falls back to "From set <variant>".
+export function sourceGameLines(
+  puzzle: Pick<PuzzleSummary, 'variant' | 'sourceGame'>,
+): HTMLElement[] {
+  const source = puzzle.sourceGame;
+  const hasAttribution =
+    puzzle.variant === XIANGQI_SPEC_ID &&
+    source !== undefined &&
+    (source.event !== undefined || source.redName !== undefined || source.blackName !== undefined);
+  if (!source || !hasAttribution) {
+    return [puzzleInfoLine(`From set ${variantLabel(puzzle.variant)}`)];
+  }
+  const lines: HTMLElement[] = [puzzleInfoLine(sourceGameHeader(source))];
+  if (source.redName !== undefined || source.blackName !== undefined) {
+    lines.push(
+      sourceGamePlayerLine('red', source.redName, source.result),
+      sourceGamePlayerLine('black', source.blackName, source.result),
+    );
+  }
+  return lines;
+}
+
+// "From game · <event> (<year>)" — event and year are both optional.
+function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): string {
+  const year = source.playedOn?.slice(0, 4);
+  const parts = [source.event, year ? `(${year})` : undefined].filter(
+    (part): part is string => part !== undefined && part.length > 0,
+  );
+  return parts.length > 0 ? `From game · ${parts.join(' ')}` : 'From game';
+}
+
+// One player row: a color disc, the player name, and a result glyph on the
+// side that won (½ on a draw). Names are the raw source-archive strings.
+function sourceGamePlayerLine(
+  color: 'red' | 'black',
+  name: string | undefined,
+  result: string | undefined,
+): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'puzzle-source-player';
+  const disc = document.createElement('span');
+  disc.className = `puzzle-source-disc puzzle-source-disc--${color}`;
+  disc.setAttribute('aria-hidden', 'true');
+  const label = document.createElement('span');
+  label.className = 'puzzle-source-player-name';
+  label.textContent = name && name.length > 0 ? name : color === 'red' ? 'Red' : 'Black';
+  line.append(disc, label);
+  const glyph = sourceGameResultGlyph(color, result);
+  if (glyph) {
+    const outcome = document.createElement('span');
+    outcome.className = 'puzzle-source-result';
+    outcome.textContent = glyph;
+    line.append(outcome);
+  }
+  return line;
+}
+
+function sourceGameResultGlyph(color: 'red' | 'black', result: string | undefined): string | null {
+  if (result === '1/2-1/2') return '½';
+  if (result === '1-0') return color === 'red' ? '1' : null;
+  if (result === '0-1') return color === 'black' ? '1' : null;
+  return null;
+}
+
 function puzzleInfoDivider(): HTMLHRElement {
   const divider = document.createElement('hr');
   divider.className = 'puzzle-info-divider';
   return divider;
 }
 
-function puzzleNumberLabel(index: number): string {
-  return `#${String(index + 1).padStart(3, '0')}`;
+// Stable, lichess-style puzzle identifier: "Puzzle #bMpKA", where the code is a
+// deterministic hash of the puzzle id (unlike the old queue position, which
+// shuffled every visit). The code links to the puzzle's canonical full-id URL;
+// hand-typing /puzzles/<code> also resolves (see resolveToFullPuzzleId).
+function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.append('Puzzle ');
+  const link = document.createElement('a');
+  link.className = 'puzzle-code-link';
+  link.href = `/puzzles/${encodeURIComponent(puzzle.id)}`;
+  link.dataset.puzzleCode = puzzleShortCode(puzzle.id);
+  link.textContent = `#${puzzleShortCode(puzzle.id)}`;
+  line.append(link);
+  return line;
 }
 
 function renderPuzzleDetail(
@@ -728,7 +890,6 @@ function renderPuzzleDetail(
   renderSession: () => void,
   navigation: PuzzleNavigation,
   onSolved: (id: string) => void,
-  cancelAutoNext: () => void,
 ): void {
   host.replaceChildren();
 
@@ -736,6 +897,9 @@ function renderPuzzleDetail(
   boardPanel.className = 'puzzle-board-panel';
   const board = document.createElement('div');
   board.className = 'puzzle-board';
+  // Tag the board with the current puzzle so async reveal playback can detect a
+  // navigation away (new puzzle = new id) and stop stepping a stale session.
+  board.dataset.puzzleId = session.puzzle.id;
   const side = document.createElement('aside');
   side.className = 'puzzle-side-panel';
 
@@ -743,8 +907,23 @@ function renderPuzzleDetail(
 
   const trainer = document.createElement('div');
   trainer.className = 'puzzle-trainer-panel';
-  trainer.append(moveListPanel(session), feedbackPanel(session, navigation));
-  side.append(trainer, actionPanel(session, renderSession, cancelAutoNext));
+  trainer.append(moveListPanel(session), feedbackPanel(session, navigation, renderSession));
+  side.append(trainer, actionPanel(session, renderSession));
+
+  // Post-completion engine analysis (standard xiangqi): once the puzzle is over
+  // (solved or its solution revealed), surface the local-engine panel + board
+  // arrows. Gated to non-spoiler states only — a bare wrong move keeps solving
+  // open, so the engine stays hidden until the outcome is locked. The controller
+  // persists on the session across renders (see PuzzleAnalysisController).
+  if (puzzleAnalysisSupported(session) && isPuzzleComplete(session)) {
+    if (!session.analysis) session.analysis = createPuzzleAnalysis();
+    // The engine panel is a third child in a column sized to the board; let the
+    // column scroll instead of clipping (grid is otherwise a fixed 2-row shape).
+    side.classList.add('puzzle-side-panel--analysis');
+    side.append(session.analysis.el);
+    session.analysis.refresh(session, board);
+  }
+
   boardPanel.append(board, side);
   host.append(boardPanel);
 
@@ -977,7 +1156,12 @@ function jungleIsSelectable(
 }
 
 function canDragJunglePiece(session: PuzzleSession, square: JungleSquare): boolean {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return false;
   }
   return jungleIsSelectable(session, jungleLiveView(session), square);
@@ -989,7 +1173,12 @@ async function handleJungleBoardClick(
   renderSession: () => void,
   onSolved: (id: string) => void,
 ): Promise<void> {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return;
   }
   const view = jungleLiveView(session);
@@ -1107,6 +1296,84 @@ function xiangqiPerspective(session: PuzzleSession): XiangqiColor {
   return (session.puzzle.sideToMove as XiangqiColor | null) ?? 'red';
 }
 
+// ── Post-completion engine analysis (standard xiangqi only) ──────────────────
+// A lichess-style local-engine surface shown once a xiangqi puzzle is finished
+// (solved, failed, or revealed): an on/off toggle, eval + principal-variation
+// lines, and the engine's candidate moves drawn as arrows on the puzzle board.
+// Reuses the review board's ceval stack unchanged; the only puzzle-specific bit
+// is feeding the engine a FEN of the displayed position — mined puzzles begin
+// mid-game, so there is no start-position move list to replay.
+type PuzzleAnalysisController = {
+  el: HTMLElement;
+  // Re-point the engine at the currently displayed position and (re-)apply the
+  // engine arrows to the freshly rebuilt board host. Called after each render.
+  refresh(session: PuzzleSession, boardHost: HTMLElement): void;
+  dispose(): void;
+};
+
+// Which puzzle families expose the post-completion analysis engine. Standard
+// xiangqi only for now: it maps to the ceval 'xiangqi' variant and we can
+// serialize its state to an engine FEN (standardXiangqiEngineFen). This is the
+// deliberate extension point for per-variant engines — as each family gets its
+// own engine (Fortress already has a ceval variant; Mini/Jungle will follow),
+// add it here and generalise createPuzzleAnalysis's hardcoded 'xiangqi' variant
+// + FEN builder to dispatch on session.puzzle.variant.
+function puzzleAnalysisSupported(session: PuzzleSession): boolean {
+  return session.puzzle.variant === XIANGQI_SPEC_ID;
+}
+
+function formatXiangqiEngineMove(uci: string): string {
+  const squares = fsfUciToXiangqiSquares(uci);
+  return squares ? `${squares.from}-${squares.to}` : uci;
+}
+
+function createPuzzleAnalysis(): PuzzleAnalysisController {
+  let arrows: XiangqiBoardArrow[] = [];
+  let boardHost: HTMLElement | null = null;
+  let perspective: XiangqiColor = 'red';
+  let lastFen: string | null = null;
+
+  const paintArrows = (): void => {
+    const layer = boardHost?.querySelector('.xq-live-arrows');
+    if (layer)
+      layer.innerHTML = arrows.map((arrow) => xiangqiArrowSvg(arrow, perspective)).join('');
+  };
+
+  const panel = createEnginePanel({
+    variant: 'xiangqi',
+    formatPvMove: formatXiangqiEngineMove,
+    onLines: (lines) => {
+      arrows = lines?.length ? engineArrowsFromLines(lines) : [];
+      paintArrows();
+    },
+  });
+
+  const container = document.createElement('section');
+  container.className = 'puzzle-analysis-panel';
+  container.append(panel.el);
+
+  return {
+    el: container,
+    refresh(session, host) {
+      boardHost = host;
+      perspective = xiangqiPerspective(session);
+      // Re-apply the last-known arrows onto the rebuilt board immediately (the
+      // board's arrow layer is regenerated empty on every render).
+      paintArrows();
+      const fen = standardXiangqiEngineFen(puzzleReplayState(session) as XiangqiGameState);
+      if (fen !== lastFen) {
+        lastFen = fen;
+        // setPosition clears arrows (onLines(null)) then re-evaluates if the
+        // engine is on; a no-op while the engine is off beyond storing the FEN.
+        panel.setPosition([], fen);
+      }
+    },
+    dispose() {
+      panel.dispose();
+    },
+  };
+}
+
 function xiangqiLiveView(session: PuzzleSession): StandardXiangqiPlayerView {
   return getStandardXiangqiPlayerView(
     session.state as XiangqiGameState,
@@ -1115,16 +1382,20 @@ function xiangqiLiveView(session: PuzzleSession): StandardXiangqiPlayerView {
 }
 
 function canDragXiangqiPiece(session: PuzzleSession, square: XiangqiSquare): boolean {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return false;
   }
   const view = xiangqiLiveView(session);
   const piece = view.board[square];
-  return (
-    !!piece &&
-    piece.color === (activeTurn(session) as XiangqiColor) &&
-    view.legalMoves.some((move) => move.from === square)
-  );
+  // Any of your pieces can be lifted on your turn, even one with no legal move:
+  // it shows the origin highlight + faded source, no destination dots, and snaps
+  // back on drop. The tap sibling lives in handleXiangqiBoardClick.
+  return !!piece && piece.color === (activeTurn(session) as XiangqiColor);
 }
 
 async function handleXiangqiBoardClick(
@@ -1133,7 +1404,12 @@ async function handleXiangqiBoardClick(
   renderSession: () => void,
   onSolved: (id: string) => void,
 ): Promise<void> {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return;
   }
   const view = xiangqiLiveView(session);
@@ -1152,9 +1428,24 @@ async function handleXiangqiBoardClick(
     session.selectedDrop = null;
     session.feedback = { kind: 'neutral', text: `${result.square} selected.` };
   } else if (result.kind === 'clear') {
-    session.selectedSquare = null;
-    session.selectedDrop = null;
-    session.feedback = { kind: 'neutral', text: 'Find the best move.' };
+    // xiangqiClickResult only 'select's a piece that has a legal move. Let the
+    // solver also tap-pick one of their pieces that has no legal move (origin
+    // highlight, no dest dots) instead of clearing — the tap sibling of
+    // canDragXiangqiPiece.
+    const piece = view.board[square];
+    const ownDeadPiece =
+      !!piece &&
+      piece.color === (activeTurn(session) as XiangqiColor) &&
+      square !== session.selectedSquare;
+    if (ownDeadPiece) {
+      session.selectedSquare = square;
+      session.selectedDrop = null;
+      session.feedback = { kind: 'neutral', text: `${square} selected.` };
+    } else {
+      session.selectedSquare = null;
+      session.selectedDrop = null;
+      session.feedback = { kind: 'neutral', text: 'Find the best move.' };
+    }
   }
   renderSession();
 }
@@ -1305,8 +1596,13 @@ function renderPuzzleBoardShell(
   return boardSurface;
 }
 
-function feedbackPanel(session: PuzzleSession, navigation: PuzzleNavigation): HTMLElement {
-  if (isSessionSolved(session)) return solvedPanel(navigation);
+function feedbackPanel(
+  session: PuzzleSession,
+  navigation: PuzzleNavigation,
+  renderSession: () => void,
+): HTMLElement {
+  if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession);
+  if (session.revealed) return revealedPanel(navigation);
 
   const panel = document.createElement('div');
   panel.className = `puzzle-feedback puzzle-feedback--${session.feedback.kind}`;
@@ -1322,23 +1618,86 @@ function feedbackPanel(session: PuzzleSession, navigation: PuzzleNavigation): HT
   const body = document.createElement('span');
   body.className = 'puzzle-feedback-body';
   body.textContent = session.feedback.text;
-  copy.append(title, body);
-  // After a failed attempt, offer a way out: without it the page has no
-  // between-puzzle navigation until the puzzle is solved.
-  if (session.feedback.kind === 'bad' && navigation.hasNext) {
-    const skip = document.createElement('button');
-    skip.type = 'button';
-    skip.className = 'puzzle-feedback-skip';
-    skip.dataset.puzzleSkip = 'true';
-    skip.textContent = 'Skip to the next puzzle';
-    skip.addEventListener('click', navigation.goNext);
-    copy.append(skip);
-  }
+  copy.append(title, body, assistRow(session, navigation, renderSession));
   panel.append(icon, copy);
   return panel;
 }
 
-function solvedPanel(navigation: PuzzleNavigation): HTMLElement {
+// Persistent escape hatches while a puzzle is unsolved. Hint + view-solution are
+// always available (they double as give-up; using either books a failed attempt
+// server-side). The advance-to-next CTA appears only once the puzzle is failed,
+// and — because it keys on session.failed, not the transient feedback kind — it
+// survives the piece-select feedback reset (so a retry can't hide the way out).
+function assistRow(
+  session: PuzzleSession,
+  navigation: PuzzleNavigation,
+  renderSession: () => void,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'puzzle-assist-row';
+
+  const hint = document.createElement('button');
+  hint.type = 'button';
+  hint.className = 'puzzle-feedback-skip puzzle-assist-hint';
+  hint.dataset.puzzleHint = 'true';
+  hint.textContent = 'Get a hint';
+  hint.disabled = session.submitting;
+  hint.addEventListener('click', () => {
+    void requestHint(session, renderSession);
+  });
+
+  const solution = document.createElement('button');
+  solution.type = 'button';
+  solution.className = 'puzzle-feedback-skip puzzle-assist-solution';
+  solution.dataset.puzzleReveal = 'true';
+  solution.textContent = 'View solution';
+  solution.disabled = session.submitting;
+  solution.addEventListener('click', () => {
+    void revealSolution(session, renderSession);
+  });
+
+  row.append(hint, solution);
+
+  if (session.failed && navigation.hasNext) {
+    const skip = document.createElement('button');
+    skip.type = 'button';
+    skip.className = 'puzzle-feedback-skip puzzle-assist-next';
+    skip.dataset.puzzleSkip = 'true';
+    skip.textContent = 'Skip to the next puzzle';
+    skip.addEventListener('click', navigation.goNext);
+    row.append(skip);
+  }
+  return row;
+}
+
+// Shown after "View solution": the answer has been played out and the board is a
+// locked replay to scrub. Distinct from the solved panel (no "Success!") — a
+// reveal counts as a give-up, not a win.
+function revealedPanel(navigation: PuzzleNavigation): HTMLElement {
+  const panel = document.createElement('div');
+  panel.className = 'puzzle-solved-panel puzzle-revealed-panel';
+
+  const title = document.createElement('h2');
+  title.textContent = 'Solution';
+
+  const cont = document.createElement('button');
+  cont.type = 'button';
+  cont.className = 'puzzle-continue-button';
+  cont.dataset.puzzleNext = 'true';
+  cont.innerHTML = `${ICON_PLAY}<span>Next puzzle</span>`;
+  cont.setAttribute('aria-label', 'Next puzzle');
+  cont.disabled = !navigation.hasNext;
+  cont.addEventListener('click', navigation.goNext);
+
+  panel.append(title, cont);
+  return panel;
+}
+
+function solvedPanel(
+  session: PuzzleSession,
+  navigation: PuzzleNavigation,
+  renderSession: () => void,
+): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel';
 
@@ -1359,38 +1718,49 @@ function solvedPanel(navigation: PuzzleNavigation): HTMLElement {
 
   const feedbackRow = document.createElement('div');
   feedbackRow.className = 'puzzle-solved-feedback';
-  // The target opens the analysis board on lichess. We don't have one yet, so
-  // this is a disabled stub for now.
-  const analysis = document.createElement('button');
-  analysis.type = 'button';
-  analysis.className = 'puzzle-analysis-button';
-  analysis.innerHTML = targetAvatarSvg();
-  analysis.title = 'Analysis board (coming soon)';
-  analysis.setAttribute('aria-label', 'Open analysis board (coming soon)');
-  analysis.disabled = true;
+  // Standard xiangqi now gets an inline local-engine analysis panel below (see
+  // renderPuzzleDetail), so the old disabled "analysis board" stub is gone.
   const prompt = document.createElement('span');
   prompt.className = 'puzzle-vote-prompt';
-  prompt.textContent = 'Did you like this puzzle?';
+  prompt.textContent = session.vote ? 'Thanks for the feedback!' : 'Did you like this puzzle?';
   const votes = document.createElement('div');
   votes.className = 'puzzle-vote-actions';
-  votes.append(puzzleVoteButton('up', navigation), puzzleVoteButton('down', navigation));
-  feedbackRow.append(analysis, prompt, votes);
+  votes.append(
+    puzzleVoteButton('up', session, renderSession),
+    puzzleVoteButton('down', session, renderSession),
+  );
+  feedbackRow.append(prompt, votes);
 
   panel.append(title, cont, feedbackRow);
   return panel;
 }
 
-function puzzleVoteButton(kind: 'up' | 'down', navigation: PuzzleNavigation): HTMLButtonElement {
+// The thumb vote records a like/dislike and shows in-place feedback (the chosen
+// button reads as selected). It deliberately does NOT advance to the next
+// puzzle — advancing is the "Next puzzle" CTA's job.
+function puzzleVoteButton(
+  kind: 'up' | 'down',
+  session: PuzzleSession,
+  renderSession: () => void,
+): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `puzzle-vote-button puzzle-vote-button--${kind}`;
+  const selected = session.vote === kind;
+  button.className = `puzzle-vote-button puzzle-vote-button--${kind}${
+    selected ? ' puzzle-vote-button--selected' : ''
+  }`;
   button.setAttribute(
     'aria-label',
     kind === 'up' ? 'Puzzle was helpful' : 'Puzzle was not helpful',
   );
+  button.setAttribute('aria-pressed', selected ? 'true' : 'false');
   button.innerHTML = kind === 'up' ? THUMB_UP_SVG : THUMB_DOWN_SVG;
-  button.disabled = !navigation.hasNext;
-  button.addEventListener('click', navigation.goNext);
+  button.addEventListener('click', () => {
+    // Toggle off if re-clicking the current vote, else set it. Re-render so both
+    // buttons reflect the new state (and the prompt updates).
+    session.vote = session.vote === kind ? null : kind;
+    renderSession();
+  });
   return button;
 }
 
@@ -1407,45 +1777,70 @@ function moveListPanel(session: PuzzleSession): HTMLElement {
   return panel;
 }
 
-function actionPanel(
-  session: PuzzleSession,
-  renderSession: () => void,
-  cancelAutoNext: () => void,
-): HTMLElement {
+type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
+
+// Move the replay cursor. Shared by the arrow buttons and the keyboard handler
+// so both animate identically. No-op while a submission is in flight or when the
+// cursor is already at the requested end.
+function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: PuzzleScrub): void {
+  if (session.submitting) return;
+  const lastPly = session.playedMoves.length;
+  switch (action) {
+    case 'first':
+      if (session.viewPly <= 0) return;
+      session.viewPly = 0;
+      renderSession();
+      return;
+    case 'previous': {
+      if (session.viewPly <= 0) return;
+      // Reverse-glide the move being undone (replay back-step).
+      const undone = session.playedMoves[session.viewPly - 1];
+      session.viewPly -= 1;
+      renderSession();
+      if (undone) animatePuzzleMove(session, undone, { reverse: true });
+      return;
+    }
+    case 'next': {
+      if (session.viewPly >= lastPly) return;
+      // Glide the move being stepped into (replay forward step).
+      const stepped = session.playedMoves[session.viewPly];
+      session.viewPly += 1;
+      renderSession();
+      if (stepped) animatePuzzleMove(session, stepped);
+      return;
+    }
+    case 'last':
+      if (session.viewPly >= lastPly) return;
+      session.viewPly = lastPly;
+      renderSession();
+      return;
+  }
+}
+
+function actionPanel(session: PuzzleSession, renderSession: () => void): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-actions';
   const atStart = session.viewPly <= 0 || session.submitting;
   const atEnd = session.viewPly >= session.playedMoves.length || session.submitting;
-  const lastPly = session.playedMoves.length;
 
-  const first = actionButton('puzzleReplayFirst', ICON_FIRST, 'First move', atStart, () => {
-    session.viewPly = 0;
-    renderSession();
-  });
-  const previous = actionButton('puzzleReplayPrevious', ICON_PREV, 'Previous move', atStart, () => {
-    // Reverse-glide the move being undone (replay back-step).
-    const undone = session.playedMoves[session.viewPly - 1];
-    session.viewPly = Math.max(0, session.viewPly - 1);
-    renderSession();
-    if (undone) animatePuzzleMove(session, undone, { reverse: true });
-  });
-  const reset = actionButton('puzzleReplayReset', '↺', 'Restart puzzle', session.submitting, () => {
-    cancelAutoNext();
-    Object.assign(session, createPuzzleSession(session.puzzle));
-    renderSession();
-  });
-  const next = actionButton('puzzleReplayNext', ICON_NEXT, 'Next move', atEnd, () => {
-    // Glide the move being stepped into (replay forward step).
-    const stepped = session.playedMoves[session.viewPly];
-    session.viewPly = Math.min(lastPly, session.viewPly + 1);
-    renderSession();
-    if (stepped) animatePuzzleMove(session, stepped);
-  });
-  const last = actionButton('puzzleReplayLast', ICON_LAST, 'Last move', atEnd, () => {
-    session.viewPly = lastPly;
-    renderSession();
-  });
-  panel.append(first, previous, reset, next, last);
+  const scrub = (action: PuzzleScrub) => () => scrubPuzzle(session, renderSession, action);
+  const first = actionButton(
+    'puzzleReplayFirst',
+    ICON_FIRST,
+    'First move',
+    atStart,
+    scrub('first'),
+  );
+  const previous = actionButton(
+    'puzzleReplayPrevious',
+    ICON_PREV,
+    'Previous move',
+    atStart,
+    scrub('previous'),
+  );
+  const next = actionButton('puzzleReplayNext', ICON_NEXT, 'Next move', atEnd, scrub('next'));
+  const last = actionButton('puzzleReplayLast', ICON_LAST, 'Last move', atEnd, scrub('last'));
+  panel.append(first, previous, next, last);
   return panel;
 }
 
@@ -1474,6 +1869,14 @@ function isSessionSolved(session: PuzzleSession): boolean {
   // missed winning-advantage puzzles, whose solution line ends while the game
   // is still in progress; a finished board still counts for mate/win lines.
   return session.solved || session.state.status.type === 'finished';
+}
+
+// The puzzle outcome is locked: solved, or the solution was revealed (a give-up
+// that plays the answer out). A bare wrong move does NOT count — the trainer
+// keeps solving open (retry / hint / view-solution), so the analysis engine
+// stays hidden to avoid spoiling a still-open attempt.
+function isPuzzleComplete(session: PuzzleSession): boolean {
+  return isSessionSolved(session) || session.revealed;
 }
 
 function fillPuzzleReserveStrip(
@@ -1572,7 +1975,12 @@ async function handleBoardClick(
   renderSession: () => void,
   onSolved: (id: string) => void,
 ): Promise<void> {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return;
   }
   if (session.selectedDrop) {
@@ -1715,7 +2123,12 @@ function fortressIsSelectable(
 }
 
 function canDragFortressPiece(session: PuzzleSession, square: FortressXiangqiSquare): boolean {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return false;
   }
   return fortressIsSelectable(session, fortressLiveView(session), square);
@@ -1727,7 +2140,12 @@ async function handleFortressBoardClick(
   renderSession: () => void,
   onSolved: (id: string) => void,
 ): Promise<void> {
-  if (session.submitting || session.state.status.type !== 'playing' || !isReplayLive(session)) {
+  if (
+    session.submitting ||
+    session.revealed ||
+    session.state.status.type !== 'playing' ||
+    !isReplayLive(session)
+  ) {
     return;
   }
   const view = fortressLiveView(session);
@@ -1831,6 +2249,9 @@ async function submitMove(
   renderSession: () => void,
   onSolved?: (id: string) => void,
 ): Promise<void> {
+  // Once the answer has been shown (or the puzzle is solved), the board is a
+  // locked replay: no further moves are submitted.
+  if (session.revealed || session.solved) return;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: 'Checking move.' };
   renderSession();
@@ -1862,6 +2283,9 @@ async function submitMove(
   } else {
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
+    // Persist the failed state so the escape hatches (hint / view solution /
+    // next) survive the piece-select feedback reset on the next render.
+    session.failed = true;
     session.feedback = { kind: 'bad', text: 'Try another move.' };
     playSound('lose');
   }
@@ -1874,6 +2298,89 @@ async function submitMove(
     const reply = attempt.playedMoves.at(-1);
     if (reply) animatePuzzleMove(session, reply);
   }
+}
+
+// Highlight the correct piece to move for the current ply (lichess "get a hint").
+// The move is computed server-side (the client never holds the solution); the
+// hint books a failed rated attempt on the first terminal action (idempotent
+// server-side, so it never double-counts a prior wrong-move fail). The user may
+// then play the highlighted piece, take the full solution, or move on.
+async function requestHint(session: PuzzleSession, renderSession: () => void): Promise<void> {
+  if (session.submitting || session.revealed || session.solved) return;
+  session.submitting = true;
+  session.feedback = { kind: 'pending', text: 'Fetching a hint.' };
+  renderSession();
+  const { move, rating } = await fetchPuzzleHint(session.puzzle.id, session.playedMoves.length);
+  session.submitting = false;
+  if (!move) {
+    session.feedback = { kind: 'neutral', text: 'No hint available.' };
+    renderSession();
+    return;
+  }
+  session.failed = true;
+  // Drop the replay cursor back to the live position so the highlight paints.
+  session.viewPly = session.playedMoves.length;
+  if ('drop' in move) {
+    session.selectedDrop = move.drop;
+    session.selectedSquare = null;
+  } else {
+    session.selectedSquare = move.from;
+    session.selectedDrop = null;
+  }
+  session.feedback = { kind: 'neutral', text: 'Hint: move the highlighted piece.' };
+  if (rating) onAttemptRating?.(rating);
+  renderSession();
+}
+
+// Fetch the full solution line, play it out, and lock solving (lichess "view
+// solution"). Spoiler-gated: nothing is fetched until this runs. Books a failed
+// rated attempt on the first terminal action (idempotent server-side).
+async function revealSolution(session: PuzzleSession, renderSession: () => void): Promise<void> {
+  if (session.submitting || session.revealed) return;
+  session.submitting = true;
+  session.feedback = { kind: 'pending', text: 'Loading the solution.' };
+  renderSession();
+  const { solution, rating } = await fetchPuzzleSolution(session.puzzle.id);
+  session.submitting = false;
+  if (!solution || solution.length === 0) {
+    session.feedback = { kind: 'neutral', text: 'No solution available.' };
+    renderSession();
+    return;
+  }
+  session.failed = true;
+  session.revealed = true;
+  session.selectedSquare = null;
+  session.selectedDrop = null;
+  // Play the answer out from wherever the user got to. Their correct moves are a
+  // prefix of the solution, so replaying from that ply matches the board.
+  const startPly = Math.min(session.playedMoves.length, solution.length);
+  session.playedMoves = solution;
+  session.solverMoves = solution.filter((_, index) => index % 2 === 0);
+  let state = clonePuzzleState(session.puzzle.initial);
+  for (const move of solution) {
+    state = applyPuzzleMove(session.puzzle.variant, state, move);
+  }
+  session.state = state;
+  session.viewPly = startPly;
+  session.feedback = { kind: 'neutral', text: 'Solution' };
+  if (rating) onAttemptRating?.(rating);
+  renderSession();
+  playbackSolution(session, renderSession);
+}
+
+// Step the replay cursor forward one ply at a time, reusing the scrub-forward
+// animation, until the whole solution has been shown. Stops early if the user
+// navigated to another puzzle (the board's puzzle id no longer matches).
+function playbackSolution(session: PuzzleSession, renderSession: () => void): void {
+  const puzzleId = session.puzzle.id;
+  const step = (): void => {
+    const board = document.querySelector<HTMLElement>('.puzzle-board');
+    if (!board || board.dataset.puzzleId !== puzzleId) return;
+    if (session.viewPly >= session.playedMoves.length) return;
+    scrubPuzzle(session, renderSession, 'next');
+    window.setTimeout(step, REVEAL_STEP_MS);
+  };
+  window.setTimeout(step, REVEAL_STEP_MS);
 }
 
 // Glide a board move on the mounted puzzle board. One puzzle page mounts at a
@@ -2090,6 +2597,44 @@ async function submitPuzzleAttempt(
   return { attempt: body.attempt, rating: body.rating ?? null };
 }
 
+// Fetch the full solution line (the reveal endpoint is the only route that
+// exposes solution moves). POST because it books a failed rated attempt.
+async function fetchPuzzleSolution(
+  id: string,
+): Promise<{ solution: PuzzleMove[] | null; rating: PuzzleAttemptRating | null }> {
+  const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/reveal`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mode: 'solution', rated: puzzleRatedPref }),
+  });
+  if (!response.ok) throw new Error(`Puzzle reveal failed: ${response.status}`);
+  const body = (await response.json()) as {
+    solution?: PuzzleMove[];
+    rating?: PuzzleAttemptRating;
+  };
+  return { solution: body.solution ?? null, rating: body.rating ?? null };
+}
+
+// Fetch just the next correct move for the current ply (server computes it via
+// the per-variant *PuzzleNextMove helpers; the client never holds the full line
+// for a hint). POST because it books a failed rated attempt.
+async function fetchPuzzleHint(
+  id: string,
+  playedPlyCount: number,
+): Promise<{ move: PuzzleMove | null; rating: PuzzleAttemptRating | null }> {
+  const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/reveal`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mode: 'hint', playedPlyCount, rated: puzzleRatedPref }),
+  });
+  if (!response.ok) throw new Error(`Puzzle hint failed: ${response.status}`);
+  const body = (await response.json()) as {
+    move?: PuzzleMove | null;
+    rating?: PuzzleAttemptRating;
+  };
+  return { move: body.move ?? null, rating: body.rating ?? null };
+}
+
 async function fetchUserPuzzleRating(variant: PuzzleVariant): Promise<UserPuzzleRating | null> {
   try {
     const response = await fetch(`/api/puzzles/rating?variant=${encodeURIComponent(variant)}`);
@@ -2142,6 +2687,20 @@ function isReplayLive(session: PuzzleSession): boolean {
 function puzzleIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/puzzles\/([^/]+)$/);
   return match ? decodeURIComponent(match[1]!) : null;
+}
+
+// The URL slug is normally the full puzzle id, but the info-card code link and
+// hand-typed short URLs may carry a lichess-style short code. Resolve a code
+// against the loaded summaries; pass through anything that already is a full id
+// (or does not resolve, so selectPuzzle can surface "Puzzle not found").
+function resolveToFullPuzzleId(idOrCode: string, summaries: readonly PuzzleSummary[]): string {
+  if (summaries.some((puzzle) => puzzle.id === idOrCode)) return idOrCode;
+  return (
+    resolvePuzzleShortCode(
+      idOrCode,
+      summaries.map((puzzle) => puzzle.id),
+    ) ?? idOrCode
+  );
 }
 
 function loadSolvedPuzzleIds(): Set<string> {
@@ -2257,7 +2816,7 @@ function saveAutoNextEnabled(enabled: boolean): void {
 }
 
 function variantLabel(variant: PuzzleVariant): string {
-  if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress';
+  if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress Xiangqi';
   if (variant === JUNGLE_SPEC_ID) return 'Jungle';
   if (variant === XIANGQI_SPEC_ID) return 'Xiangqi';
   return variant === DROP_MINI_XIANGQI_SPEC_ID ? 'Drop Mini Xiangqi' : 'Mini Xiangqi';
@@ -2290,23 +2849,53 @@ function puzzleMoveLabel(move: PuzzleMove, variant: PuzzleVariant): string {
   return `${move.from}-${move.to}`;
 }
 
-function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
-  if (session.playedMoves.length === 0) return [puzzleMoveContextRow(session)];
+// The opponent's move that set up the puzzle (the mined blunder), if the initial
+// state carries one. Prepended to the move list so it reads like a game and the
+// opening position (viewPly 0) highlights the move that created the puzzle.
+function puzzleSetupMove(session: PuzzleSession): PuzzleMove | null {
+  const initial = session.puzzle.initial as { lastMove?: PuzzleMove };
+  return initial.lastMove ?? null;
+}
 
-  const firstColor = session.puzzle.sideToMove ?? 'red';
-  const rows = new Map<
-    number,
-    { black?: { index: number; move: PuzzleMove }; red?: { index: number; move: PuzzleMove } }
-  >();
+type PuzzleMoveCell = { move: PuzzleMove; active: boolean };
+
+function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
+  const solverColor = (session.puzzle.sideToMove ?? 'red') as MiniXiangqiColor;
+  const setup = puzzleSetupMove(session);
+
+  // Combined list: [setup?, ...solution]. The setup was played by the opponent,
+  // so the whole sequence alternates starting from the opponent's color when a
+  // setup exists, and from the solver's color otherwise.
+  const combined: { move: PuzzleMove; solutionIndex: number | null }[] = [];
+  if (setup) combined.push({ move: setup, solutionIndex: null });
   for (const [index, move] of session.playedMoves.entries()) {
-    const color = moveColorAt(firstColor, index);
-    const number = Math.floor(index / 2) + 1;
+    combined.push({ move, solutionIndex: index });
+  }
+  if (combined.length === 0) return [puzzleMoveContextRow(session)];
+
+  const firstColor: MiniXiangqiColor = setup ? oppositeMiniXiangqiColor(solverColor) : solverColor;
+  // viewPly 0 = the setup/opening position (setup cell active); otherwise the
+  // just-played solution ply is viewPly-1.
+  const activeSolutionIndex = session.viewPly - 1;
+
+  const rows = new Map<number, { black?: PuzzleMoveCell; red?: PuzzleMoveCell }>();
+  for (const [combinedIndex, entry] of combined.entries()) {
+    const color = moveColorAt(firstColor, combinedIndex);
+    const number = puzzleMoveRowNumber(firstColor, combinedIndex);
     const row = rows.get(number) ?? {};
-    row[color] = { index, move };
+    row[color] = {
+      move: entry.move,
+      active:
+        entry.solutionIndex === null
+          ? session.viewPly === 0
+          : entry.solutionIndex === activeSolutionIndex,
+    };
     rows.set(number, row);
   }
 
-  return Array.from(rows.entries()).map(([number, row]) => puzzleMoveRow(number, row, session));
+  return Array.from(rows.entries()).map(([number, row]) =>
+    puzzleMoveRow(number, row, firstColor, session),
+  );
 }
 
 function puzzleMoveContextRow(session: PuzzleSession): HTMLElement {
@@ -2322,29 +2911,31 @@ function puzzleMoveContextRow(session: PuzzleSession): HTMLElement {
 
 function puzzleMoveRow(
   number: number,
-  rowMoves: {
-    black?: { index: number; move: PuzzleMove };
-    red?: { index: number; move: PuzzleMove };
-  },
+  rowMoves: { black?: PuzzleMoveCell; red?: PuzzleMoveCell },
+  firstColor: MiniXiangqiColor,
   session: PuzzleSession,
 ): HTMLElement {
   const row = document.createElement('li');
   row.className = 'puzzle-move-item';
-  if (
-    rowMoves.red?.index === session.viewPly - 1 ||
-    rowMoves.black?.index === session.viewPly - 1
-  ) {
-    row.classList.add('puzzle-move-item--active');
-  }
   const numberCell = puzzleMoveCell('puzzle-move-number', String(number));
+  // When the list leads with black (black-first solve, or a red-solve whose
+  // setup move was black's), row 1 has no red move; show the "…" lead marker
+  // (matching puzzleMoveContextRow) so the opening move reads as the reply.
+  const blackLeads = firstColor === 'black';
   const redCell = puzzleMoveCell(
     'puzzle-move-red',
-    rowMoves.red ? puzzleMoveLabel(rowMoves.red.move, session.puzzle.variant) : '',
+    rowMoves.red
+      ? puzzleMoveLabel(rowMoves.red.move, session.puzzle.variant)
+      : number === 1 && blackLeads
+        ? '...'
+        : '',
   );
+  if (rowMoves.red?.active) redCell.classList.add('puzzle-move-cell--active');
   const blackCell = puzzleMoveCell(
     'puzzle-move-black',
     rowMoves.black ? puzzleMoveLabel(rowMoves.black.move, session.puzzle.variant) : '',
   );
+  if (rowMoves.black?.active) blackCell.classList.add('puzzle-move-cell--active');
   row.append(numberCell, redCell, blackCell);
   return row;
 }
@@ -2358,6 +2949,16 @@ function puzzleMoveCell(className: string, text: string): HTMLSpanElement {
 
 function moveColorAt(firstColor: MiniXiangqiColor, plyIndex: number): MiniXiangqiColor {
   return plyIndex % 2 === 0 ? firstColor : oppositeMiniXiangqiColor(firstColor);
+}
+
+// Full-move number for a solution ply. Red always occupies the left column, so
+// when BLACK moves first its opening move sits alone in row 1 (red cell blank),
+// pushing red down one — otherwise black's move and red's reply would share a
+// row and, printed red-cell-first, read in reversed order (e.g. "1. d2-d6 h7-h3"
+// when black actually played h7-h3 first). Red-first is the ordinary chess case.
+export function puzzleMoveRowNumber(firstColor: MiniXiangqiColor, plyIndex: number): number {
+  const leadOffset = firstColor === 'black' ? 1 : 0;
+  return Math.floor((plyIndex + leadOffset) / 2) + 1;
 }
 
 function targetAvatarSvg(): string {

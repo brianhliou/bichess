@@ -38,6 +38,7 @@ import {
 } from './live-jieqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -84,7 +85,7 @@ let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
-  displayName: 'Flip Elephant Chess',
+  displayName: 'Reveal Xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isJieqiColor,
@@ -92,9 +93,9 @@ const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   enabled: jieqiEnabled,
   reviewUrl: (roomId) => `/jieqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: jieqiReasonPhrase,
-  disabledTitle: 'Flip Elephant Chess disabled',
+  disabledTitle: 'Reveal Xiangqi disabled',
   disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Flip Elephant Chess room is not active. Create a new invite to start a game.',
+  rejectedBody: 'This Reveal Xiangqi room is not active. Create a new invite to start a game.',
   spectatorBody: 'Watching without private information.',
   selectInstruction: 'Select one of your pieces, then choose a destination.',
 };
@@ -143,6 +144,9 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     core = ctx;
     installJieqiBoardStyles();
     installJieqiBoardInteraction(ctx.refs);
+    // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
+    // render from the stored set); mirrors the chess family's appearance hook.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
@@ -158,7 +162,6 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     notate: (move) => `${move.from}-${move.to}`,
     isMoveEvent: isJieqiMoveEvent,
   },
@@ -195,7 +198,7 @@ function jieqiReasonPhrase(reason: string): string {
 
 function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   liveRefs.board.className = 'board jieqi-live-board';
-  liveRefs.board.setAttribute('aria-label', 'Flip Elephant Chess board');
+  liveRefs.board.setAttribute('aria-label', 'Reveal Xiangqi board');
   if (!view) {
     liveRefs.board.replaceChildren();
     return;

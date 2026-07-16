@@ -143,6 +143,7 @@ describe('audio unlock and sticky activation', () => {
     class FakeAudioContext {
       currentTime = 0;
       destination = {};
+      sampleRate = 48_000;
       state = 'suspended';
       async resume(): Promise<void> {
         this.state = 'running';
@@ -160,11 +161,33 @@ describe('audio unlock and sticky activation', () => {
       createGain() {
         return {
           gain: {
+            value: 1,
             setValueAtTime() {},
             exponentialRampToValueAtTime(value: number) {
               gainTargets.push(value);
             },
           },
+          connect: (node: unknown) => node,
+        };
+      }
+      createBuffer(_channels: number, length: number) {
+        const samples = new Float32Array(length);
+        return { getChannelData: () => samples };
+      }
+      createBufferSource() {
+        return {
+          buffer: null,
+          playbackRate: { value: 1 },
+          connect: (node: unknown) => node,
+          start() {},
+          stop() {},
+        };
+      }
+      createBiquadFilter() {
+        return {
+          type: 'bandpass',
+          frequency: { setValueAtTime() {} },
+          Q: { value: 1 },
           connect: (node: unknown) => node,
         };
       }
@@ -210,7 +233,7 @@ describe('audio unlock and sticky activation', () => {
     mod.initLiveSound();
     mod.playSound('move');
 
-    expect(audio.peakGain()).toBeCloseTo(0.4125);
+    expect(audio.peakGain()).toBeCloseTo(0.675);
   });
 
   it('stays locked on a cold load until the first gesture, then plays', async () => {
@@ -226,6 +249,22 @@ describe('audio unlock and sticky activation', () => {
     window.dispatchEvent(new Event('pointerdown'));
     mod.playSound('move');
     expect(audio.oscillatorCount()).toBeGreaterThan(0);
+  });
+
+  it('suppresses the critical-time warning when the account preference is disabled', async () => {
+    const audio = installFakeAudio();
+    setUserActivation(true);
+    window.localStorage.setItem(
+      'mistboard.accountPreferences.v1',
+      JSON.stringify({ lowTimeSound: false }),
+    );
+    vi.resetModules();
+    const mod = await import('./live-sound.js');
+
+    mod.initLiveSound();
+    mod.maybePlayLowTimeSound('sound-pref-disabled', 5_000, 60_000);
+
+    expect(audio.oscillatorCount()).toBe(0);
   });
 });
 

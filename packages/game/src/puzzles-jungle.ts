@@ -89,6 +89,7 @@ export type JungleSourceGame = {
 
 export type JunglePuzzleValidationIssueCode =
   | 'ambiguous-immediate-win'
+  | 'dominated-by-forced-win'
   | 'empty-solution'
   | 'illegal-move'
   | 'not-playing'
@@ -275,6 +276,13 @@ export const JUNGLE_MATERIAL_VALUE: Record<JunglePieceRole, number> = {
 // exists (those get filtered out; they belong to the forced-win miner).
 const JUNGLE_MATERIAL_MATE = 100_000;
 
+// Horizon (in solver plies) within which a forced win DOMINATES a winning-advantage
+// material payoff. findJungleMaterialTactic refuses a position with a win this shallow,
+// and validateJunglePuzzle rejects a winning-advantage puzzle that sits on one — both
+// use this bound so the mine-time filter and the ship-time gate stay in sync. Matches
+// the default material search reach (maxSolverPlies 2, checked out to +2).
+const WINNING_ADVANTAGE_DOMINATION_HORIZON = 4;
+
 export type JungleMaterialTactic = {
   line: JungleMove[];
   // Guaranteed material the solver wins (in JUNGLE_MATERIAL_VALUE units) against
@@ -331,6 +339,18 @@ export function findJungleMaterialTactic(
     // the puzzle has one clear answer.
     const second = scored[1]?.score ?? -Number.POSITIVE_INFINITY;
     if (best.score - second < uniqueMargin) return null;
+    // A position with a forced WIN belongs to the forced-win miner, NOT here — even when
+    // the win needs more solver plies than the material gain. The per-depth mate check
+    // above only rejects a win found at the SAME depth as the gain, so a win-in-2 that
+    // dominates a material-gain-in-1 slips through (a den-entry wins the game while
+    // changing zero material, so a pure-material search can't see it without reaching the
+    // terminal). Run this only now that a qualifying tactic exists — the exact forced-win
+    // search is expensive, so it must not run on every scanned position.
+    const dominatingWin = findJungleForcedWinLine(state, maxSolverPlies + 2, {
+      nodeLimit: options.nodeLimit ?? 120_000,
+      requireUnique: false,
+    });
+    if (dominatingWin !== null) return null;
     const line = buildMaterialLine(state, best.move, depth, budget);
     if (budget.cutOff || line.length === 0) return null;
     return { line, gain };
@@ -520,6 +540,25 @@ export function validateJunglePuzzle(puzzle: JunglePuzzle): JunglePuzzleValidati
   const expectedWinner = puzzle.goal.winner ?? solver;
 
   if (puzzle.goal.type === 'winning-advantage') {
+    // A winning-advantage puzzle must not sit on a forced game-win: that win
+    // dominates the material payoff and makes the puzzle degenerate. This is the
+    // multi-ply generalization of the immediate-win guard above — findJungleMaterialTactic
+    // refuses these at mine time, and this enforces the same invariant at the gate so a
+    // dominated puzzle (from a finder regression or a hand-edit) can never ship.
+    const dominatingWin = findJungleForcedWinLine(
+      puzzle.initial,
+      WINNING_ADVANTAGE_DOMINATION_HORIZON,
+      { requireUnique: false },
+    );
+    if (dominatingWin !== null) {
+      return validationError(
+        puzzle,
+        'dominated-by-forced-win',
+        0,
+        'Winning-advantage puzzle sits on a forced win that dominates the material payoff.',
+        dominatingWin[0],
+      );
+    }
     // No terminal to verify. The line must end on the solver's own move (the
     // payoff): solver plies are the even indices, so the final index
     // (length - 1) must be even, i.e. the length must be odd.

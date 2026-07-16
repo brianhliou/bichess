@@ -111,6 +111,10 @@
   color: var(--site-muted);
   min-height: 1em;
 }
+/* Engine off: don't reserve a blank meta/status line under the head row. */
+.engine-panel:not(.engine-panel--on) .engine-panel__meta:empty {
+  display: none;
+}
 .engine-panel__lines {
   margin: 0;
   padding: 0;

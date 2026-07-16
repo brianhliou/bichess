@@ -35,11 +35,11 @@ export function darkMiniXiangqiEnabled(): boolean {
   return process.env.MISTBOARD_DARK_MINI_XIANGQI_ENABLED === 'true';
 }
 
-// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves). Public
-// by default; keep this helper so existing tenant and route code can use the
-// same shape as still-gated variants.
+// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves) is a
+// parked lab surface. Existing postgames remain readable, while new rooms need
+// an explicit lab/runtime opt-in.
 export function dropMiniXiangqiEnabled(): boolean {
-  return true;
+  return process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED === 'true';
 }
 
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket) live rooms. Server-side opt-in,
@@ -133,6 +133,16 @@ export function jungleFlipEnabled(): boolean {
 // only at C1.
 export function correspondenceEnabled(): boolean {
   return process.env.MISTBOARD_CORRESPONDENCE_ENABLED === 'true';
+}
+
+// Automated bot-vs-bot (engine-vs-engine) game generation. Server-side opt-in,
+// default off. This gates only GENERATION of EvE games (the in-server scheduler
+// that tops up a backlog of xiangqi EvE tasks for the worker to drain). It is
+// deliberately independent of xiangqiEnabled(), which gates whether those games
+// become VISIBLE in the /watch Engines channel — so games can be pre-generated
+// to warm the feed before the xiangqi launch flag flips. See #196.
+export function botVsBotEnabled(): boolean {
+  return process.env.MISTBOARD_BOT_VS_BOT_ENABLED === 'true';
 }
 
 // Global lobby chat on the homepage (gate-cleared 2026-07-02, ships OFF).

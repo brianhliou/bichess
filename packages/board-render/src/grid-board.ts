@@ -5,9 +5,12 @@
 // light/dark — differing only in data (dimensions, an optional river strip,
 // palette, and how a piece glyph is drawn). This core owns the model: geometry
 // (orientation flip + strip offset), the board furniture (grid, strip, coords,
-// frame, clip), and the generic interaction layers (last-move, selection,
+// clip), and the generic interaction layers (last-move, selection,
 // targets, fog, hit). A variant supplies a GridBoardDescriptor + a renderPieces
 // callback and gets a byte-stable SVG string back.
+// Decorative perimeter frames are intentionally not part of the descriptor API:
+// every Mistboard board surface ends at its playable background without an
+// additional outer outline.
 //
 // Intersection-based boards (xiangqi family: pieces on grid NODES, palace
 // furniture, mask fog) are a DIFFERENT model and intentionally out of scope —
@@ -26,9 +29,6 @@ export type GridStrip = {
 export type GridPalette = {
   lightCell: string;
   darkCell: string;
-  frameBg: string;
-  frameInner: string;
-  boardEdge: string;
   coord: string;
   lastMove: string;
   selected: string;
@@ -49,14 +49,9 @@ export type GridBoardDescriptor = {
   cell: number;
   strips?: readonly GridStrip[];
   palette: GridPalette;
-  // Layout knobs — defaults match the Crossroads Chess board so it is a drop-in.
-  framePad?: number;
+  // Layout knobs.
   pad?: number;
-  frameRadius?: number;
-  frameInnerRadius?: number;
-  frameInnerWidth?: number;
   boardRadius?: number;
-  boardEdgeWidth?: number;
   // Square-colour polarity: when true (the default), (file+rank) even is dark.
   darkWhenEven?: boolean;
   // Coordinate glyphs. Defaults: files -> a,b,c…; ranks -> their number.
@@ -120,11 +115,8 @@ function layout(descriptor: GridBoardDescriptor) {
   const stripTotal = (descriptor.strips ?? []).reduce((sum, s) => sum + s.height, 0);
   const boardW = files * cell;
   const boardH = ranks * cell + stripTotal;
-  const framePad = descriptor.framePad ?? 9;
   const pad = descriptor.pad ?? 6;
-  const frameW = boardW + framePad * 2;
-  const frameH = boardH + framePad * 2;
-  return { boardW, boardH, framePad, pad, frameW, frameH };
+  return { boardW, boardH, pad };
 }
 
 // Total strip shift applied to a display row (sum of every strip it sits past).
@@ -161,14 +153,10 @@ export function renderGridBoardSvg(
   const darkWhenEven = descriptor.darkWhenEven ?? true;
   const fileLabel = descriptor.fileLabel ?? DEFAULT_FILE_LABEL;
   const strips = descriptor.strips ?? [];
-  const { boardW, boardH, framePad, pad, frameW, frameH } = layout(descriptor);
+  const { boardW, boardH, pad } = layout(descriptor);
   const geom = createGridGeometry(descriptor, layers.flip);
   const id = layers.id;
-  const frameRadius = descriptor.frameRadius ?? 14;
-  const frameInnerRadius = descriptor.frameInnerRadius ?? 12.5;
-  const frameInnerWidth = descriptor.frameInnerWidth ?? 2;
   const boardRadius = descriptor.boardRadius ?? 5;
-  const boardEdgeWidth = descriptor.boardEdgeWidth ?? 1.5;
 
   // ── Furniture + interaction layers (in crossroads-chess draw order) ──────────────
 
@@ -312,16 +300,12 @@ export function renderGridBoardSvg(
     // data-board="grid" (kept at the tag's end so callers that regex on the
     // leading `class="…" viewBox="…"` — e.g. crossroads-chess-diagram — still
     // match) lets one CSS rule round every grid board to the shared corner token.
-    `<svg${descriptor.svgClass ? ` class="${descriptor.svgClass}"` : ''} viewBox="0 0 ${frameW + pad * 2} ${frameH + pad * 2}" role="img" xmlns="http://www.w3.org/2000/svg" data-board="grid">`,
+    `<svg${descriptor.svgClass ? ` class="${descriptor.svgClass}"` : ''} viewBox="0 0 ${boardW + pad * 2} ${boardH + pad * 2}" role="img" xmlns="http://www.w3.org/2000/svg" data-board="grid">`,
     `<defs>${clipDef}${arrowMarkerDef}${layers.extraDefs ?? ''}</defs>`,
     `<g transform="translate(${pad} ${pad})">`,
-    `<rect x="0" y="0" width="${frameW}" height="${frameH}" rx="${frameRadius}" fill="${palette.frameBg}"/>`,
-    `<rect x="1.5" y="1.5" width="${frameW - 3}" height="${frameH - 3}" rx="${frameInnerRadius}" fill="none" stroke="${palette.frameInner}" stroke-width="${frameInnerWidth}"/>`,
-    `<g transform="translate(${framePad} ${framePad})">`,
     `<g clip-path="url(#${id}-clip)">${clipped}</g>`,
-    // Arrows ride over the board (analysis overlay), under the frame edge.
+    // Arrows ride over the board as an analysis overlay.
     arrowLayer(),
-    `<rect x="0" y="0" width="${boardW}" height="${boardH}" rx="${boardRadius}" fill="none" stroke="${palette.boardEdge}" stroke-width="${boardEdgeWidth}"/>`,
-    `</g></g></svg>`,
+    `</g></svg>`,
   ].join('');
 }

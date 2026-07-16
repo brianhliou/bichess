@@ -1,9 +1,9 @@
 // Sound-set registry: which audio source plays each SoundKind.
 //
-// 'mist' is the default — Mistboard's own WebAudio-synthesized tones in
-// live-sound.ts, zero assets. The file sets are lichess's AGPL sets
-// (public/sound/<set>/, see CREDITS.md there); they cover the universal
-// vocabulary, while the fog-native kinds keep per-kind tweaks (rate/gain)
+// 'wood' is the default: tactile recordings of pieces on a wooden board. 'mist'
+// is Mistboard's own WebAudio-synthesized set with zero assets. The other file
+// sets are lichess's AGPL sets (public/sound/<set>/, see CREDITS.md there). They
+// cover the universal vocabulary, while the fog-native kinds keep per-kind tweaks (rate/gain)
 // so 'captured' stays darker than 'capture' even when both use the same
 // source file. A kind with no file entry falls back to the synthesized
 // tones, so partial sets degrade to Mist rather than silence.
@@ -13,17 +13,28 @@
 
 import type { SoundKind } from './live-state.js';
 
-export type SoundSetId = 'mist' | 'futuristic' | 'nes' | 'piano' | 'sfx';
+export type SoundSetId = 'mist' | 'wood' | 'futuristic' | 'nes' | 'piano' | 'sfx';
 
 export const SOUND_SETS: ReadonlyArray<{ id: SoundSetId; label: string }> = [
+  { id: 'wood', label: 'Wood' },
   { id: 'mist', label: 'Mist' },
-  { id: 'futuristic', label: 'Futuristic' },
-  { id: 'nes', label: 'NES' },
   { id: 'piano', label: 'Piano' },
   { id: 'sfx', label: 'SFX' },
+  { id: 'futuristic', label: 'Futuristic' },
+  { id: 'nes', label: 'NES' },
 ];
 
-export const DEFAULT_SOUND_SET: SoundSetId = 'mist';
+export const DEFAULT_SOUND_SET: SoundSetId = 'wood';
+
+// Synthesized sets carry no asset files: every SoundKind routes to the WebAudio
+// tones in live-sound.ts. 'mist' is the only fully-synthesized set. ('wood' is a
+// FILE set of real CC0 wood-board recordings; kinds it has no file for still fall
+// back to the synth tones.)
+const SYNTHESIZED_SETS: ReadonlySet<SoundSetId> = new Set<SoundSetId>(['mist']);
+
+export function isSynthesizedSet(set: SoundSetId): boolean {
+  return SYNTHESIZED_SETS.has(set);
+}
 
 const SOUND_SET_STORAGE_KEY = 'mistboard.soundSet';
 
@@ -56,9 +67,26 @@ const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   // identity sound in every set (file sets fall back to it by design).
 };
 
+// The 'wood' set is real CC0 recordings of pieces on a wooden board (el_boss's
+// "Chess Puzzle Blitz SFX", freesound.org pack 30764, CC0 — see public/sound/
+// CREDITS.md). Four source files serve the tactile kinds; terminal/alert kinds
+// have no file and fall back to the synthesized tones.
+const WOOD_FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
+  move: { file: 'move.mp3' },
+  capture: { file: 'capture.mp3' },
+  // Losing a piece: the same capture, dragged down so it reads as done-to-you.
+  captured: { file: 'capture.mp3', rate: 0.82, gain: 0.9 },
+  castle: { file: 'slide.mp3' },
+  drop: { file: 'move.mp3' },
+  flip: { file: 'move.mp3' },
+  // The cannon slam: the capture, pitched down for extra weight.
+  'cannon-capture': { file: 'capture.mp3', rate: 0.85, gain: 1.1 },
+  'game-start': { file: 'start.mp3' },
+};
+
 export function soundFileFor(set: SoundSetId, kind: SoundKind): SoundFileSpec | null {
-  if (set === 'mist') return null;
-  const spec = FILE_BY_KIND[kind];
+  if (isSynthesizedSet(set)) return null;
+  const spec = (set === 'wood' ? WOOD_FILE_BY_KIND : FILE_BY_KIND)[kind];
   return spec ? { ...spec, file: `/sound/${set}/${spec.file}` } : null;
 }
 

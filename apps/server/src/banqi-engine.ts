@@ -14,12 +14,12 @@
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runUciBestmove, UciEnginePool } from './uci-engine-harness.js';
+import { runUciBestmove, runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyBanqi <version>"
 // over UCI, and the engines registry records it (configHash) on each game so we can always
 // tell which build played.
-export const BANQI_ENGINE_VERSION = '0.2.3';
+export const BANQI_ENGINE_VERSION = '0.2.4';
 export const BANQI_DEFAULT_ENGINE_ID = 'misty-banqi';
 
 export type BanqiEngineTier = {
@@ -61,6 +61,7 @@ const BANQI_ENGINE_BY_ID: ReadonlyMap<string, BanqiEngineTier> = new Map<string,
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness).
 const enginePool = new UciEnginePool({
+  name: 'banqi',
   maxProcessesEnvVar: 'MISTBOARD_BANQI_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_BANQI_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'banqi-engine concurrency queue timed out',
@@ -105,6 +106,18 @@ export function banqiEnginePath(): string {
 export function banqiEngineTierFor(engineId: string | undefined): BanqiEngineTier | null {
   if (!engineId) return null;
   return BANQI_ENGINE_BY_ID.get(engineId) ?? null;
+}
+
+// Presence check for the fail-closed analysis path: true when the binary resolves. The
+// analysis route uses this to return 503 (not a silent weaker eval) when the build is
+// missing the engine — mirrors jungleEngineBinaryAvailable().
+export function banqiEngineBinaryAvailable(): boolean {
+  try {
+    banqiEnginePath();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function banqiEngineDisplayName(engineId: string): string {
@@ -179,4 +192,34 @@ export function banqiEngineMove(
     timeoutMs: movetimeCapMs + 4000,
     timeoutMessage: 'banqi-engine move timed out',
   });
+}
+
+// Whole-game ANALYSIS eval (distinct from the playable move provider above): read the
+// engine's `info … score` for a redacted current-position FEN, side-to-move POV. Same
+// node-budget dial as play, so the eval is CPU-independent and reproducible — which keeps
+// the cached analysis stable. Gated through the shared pool so an analysis sweep runs
+// sequentially rather than stampeding the binary. Caller owns POV normalization; the
+// redacted (as-played info-state) FEN is sent as-is — the engine never sees a hidden id.
+export async function evaluateBanqiFenNodes(
+  fen: string,
+  opts: { nodes: number; movetimeCapMs: number },
+): Promise<UciEval> {
+  const commands = [
+    'uci',
+    'ucinewgame',
+    'isready',
+    `position fen ${fen}`,
+    `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
+  ];
+  const release = await enginePool.acquire();
+  try {
+    return await runUciEval({
+      bin: banqiEnginePath(),
+      commands,
+      timeoutMs: opts.movetimeCapMs + 4_000,
+      timeoutMessage: 'banqi-engine eval timed out',
+    });
+  } finally {
+    release();
+  }
 }

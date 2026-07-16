@@ -4,14 +4,13 @@
 // the postgame's ply navigation; scores are normalised to Red's POV so the gauge
 // reads the same regardless of whose turn it is.
 import {
-  CEVAL_ENGINE_NAME,
   type CevalHandle,
   type CevalLine,
   type CevalUpdate,
   type CevalVariant,
+  cevalEngineName,
   cevalSupported,
   createCeval,
-  preloadEngine,
 } from './ceval.js';
 import './engine-panel.css';
 import type { EvalBar } from './eval-bar.js';
@@ -19,8 +18,10 @@ import { formatEval, winProbRed } from './eval-format.js';
 
 export interface EnginePanel {
   el: HTMLElement;
-  /** Push the current position (move history from startpos, engine UCI). */
-  setPosition(movesUci: string[]): void;
+  /** Push the current position. Without `initialFen` the moves replay from the
+   *  standard start position; pass `initialFen` to analyse a mid-game base
+   *  position (e.g. a puzzle) with `movesUci` applied on top. */
+  setPosition(movesUci: string[], initialFen?: string): void;
   dispose(): void;
 }
 
@@ -43,7 +44,8 @@ type Side = 'red' | 'black';
 const DEBOUNCE_MS = 150;
 
 export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
-  const supported = cevalSupported();
+  const supported = cevalSupported(opts.variant);
+  const engineName = cevalEngineName(opts.variant);
   // Mutable so the settings popover can retune them live.
   let multiPv = opts.multiPv ?? 3;
   let maxDepth = opts.maxDepth ?? 18;
@@ -105,10 +107,17 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let handle: CevalHandle | null = null;
   let on = false;
   let currentMoves: string[] = [];
+  let currentFen: string | undefined;
+  // Side to move at the base position: startpos is Red, but an initialFen (a
+  // mid-game puzzle position) may hand the engine a Black-to-move base. Read it
+  // from the FEN's turn token so the gauge normalises scores to the right POV.
+  let currentBaseSide: Side = 'red';
   let debounceId: ReturnType<typeof setTimeout> | undefined;
 
   function sideToMove(moves: string[]): Side {
-    return moves.length % 2 === 0 ? 'red' : 'black';
+    const flipped = moves.length % 2 === 1;
+    if (!flipped) return currentBaseSide;
+    return currentBaseSide === 'red' ? 'black' : 'red';
   }
 
   function syncToggle(): void {
@@ -141,8 +150,8 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       opts.evalBar?.setEval(cp, mate);
     }
     meta.textContent = update.depth
-      ? `${CEVAL_ENGINE_NAME} · depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
-      : `${CEVAL_ENGINE_NAME} · thinking…`;
+      ? `${engineName} · depth ${update.depth}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
+      : `${engineName} · thinking…`;
     lines.replaceChildren(...update.lines.map((line) => renderLine(line, side, formatMove)));
     opts.onLines?.(update.lines);
   }
@@ -151,11 +160,12 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     if (!on || !supported) return;
     const moves = currentMoves;
     const side = sideToMove(moves);
-    meta.textContent = `${CEVAL_ENGINE_NAME} · loading…`;
+    meta.textContent = `${engineName} · loading…`;
     opts.evalBar?.setLoading();
     void handle!
       .evaluate({
         movesUci: moves,
+        initialFen: currentFen,
         multiPv,
         maxDepth,
         onUpdate: (update) => render(update, side),
@@ -165,8 +175,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       });
   }
 
-  function setPosition(movesUci: string[]): void {
+  function setPosition(movesUci: string[], initialFen?: string): void {
     currentMoves = movesUci;
+    currentFen = initialFen;
+    currentBaseSide = initialFen?.split(' ')[1] === 'b' ? 'black' : 'red';
     if (!on || !supported) return;
     // The panel keeps its last PV text until fresh results stream in, but
     // on-board arrows for a position we already left would be misleading —
@@ -181,8 +193,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     on = true;
     syncToggle();
     opts.evalBar?.setIdle(false);
-    meta.textContent = `${CEVAL_ENGINE_NAME} · loading…`;
-    void preloadEngine()
+    meta.textContent = `${engineName} · loading…`;
+    void handle
+      .preload()
       .then(() => {
         if (on) evaluateNow();
       })

@@ -65,20 +65,14 @@ const CROSSROADS_APP_PALETTE: GridPalette = {
   // Borderless to match the fog aesthetic: the checker cells plus the river
   // strip carry the fusion identity, so the frame goes transparent and the
   // cells run edge-to-edge (frame paddings/radii zeroed in the descriptor).
-  frameBg: 'transparent',
-  frameInner: 'transparent',
-  boardEdge: 'transparent',
   coord: 'var(--crossroads-coord)',
   lastMove: 'var(--board-last-move)',
   fog: 'var(--board-fog-light-fill)',
 };
 const CROSSROADS_APP_DESCRIPTOR = {
   ...CROSSROADS_CHESS_DESCRIPTOR,
-  framePad: 0,
   pad: 0,
-  frameRadius: 0,
   boardRadius: 0,
-  boardEdgeWidth: 0,
   strips: CROSSROADS_CHESS_DESCRIPTOR.strips?.map((strip) => ({
     ...strip,
     fill: 'var(--crossroads-river)',

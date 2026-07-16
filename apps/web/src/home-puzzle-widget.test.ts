@@ -57,8 +57,8 @@ describe('home puzzle widget', () => {
 
     expect(widget?.querySelector('.home-puzzle-reserve')).not.toBeNull();
     expect(widget?.querySelectorAll('.home-puzzle-hand')).toHaveLength(2);
-    expect(widget?.querySelector('[aria-label="black reserve"]')).not.toBeNull();
-    const redReserve = widget?.querySelector('[aria-label="red reserve"]');
+    expect(widget?.querySelector('[aria-label="Black reserve"]')).not.toBeNull();
+    const redReserve = widget?.querySelector('[aria-label="Red reserve"]');
     expect(redReserve).not.toBeNull();
     expect(redReserve?.querySelector('.drop-mini-reserve-piece')).not.toBeNull();
     expect(widget?.querySelector('.mini-xq-board')).not.toBeNull();

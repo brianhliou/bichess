@@ -19,19 +19,19 @@ export const fortressXiangqiArticle: Article = {
   boardFamily: 'xiangqi',
   kind: 'rules',
   playableOnMistboard: true,
-  title: 'Fortress Rules',
+  title: 'Fortress Xiangqi Rules',
   summary:
-    'Elephant Chess with a pocket: every familiar piece moves as in xiangqi, plus crazyhouse-style drops and one new piece, the Treasure.',
+    'Xiangqi with a pocket: every familiar piece moves as in xiangqi, plus crazyhouse-style drops and one new piece, the Treasure.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-07-01',
-  updatedAt: '2026-07-02',
+  updatedAt: '2026-07-12',
   audience: 'Xiangqi and crazyhouse players who want a compact, decisive drop variant.',
   thumbnail: { kind: 'svg', svg: FORTRESS_XIANGQI_START_BOARD },
   intro: [
     {
       kind: 'paragraph',
-      text: 'Fortress is Fortress Xiangqi, an [Elephant Chess](/rules/xiangqi) variant with a reserve, designed by Brian H. Liou in 2026 as a Mistboard original. Every familiar piece moves exactly as it does in xiangqi, and one new piece, the Treasure, joins the back rank. The new rule is the [crazyhouse](https://en.wikipedia.org/wiki/Crazyhouse) loop: capture a piece, hold it in hand, and drop it back into the fight.',
+      text: 'Fortress Xiangqi is an [Xiangqi](/rules/xiangqi) variant with a reserve, designed by Brian H. Liou in 2026 as a Mistboard original. Every familiar piece moves exactly as it does in xiangqi, and one new piece, the Treasure, joins the back rank. The new rule is the [crazyhouse](https://en.wikipedia.org/wiki/Crazyhouse) loop: capture a piece, hold it in hand, and drop it back into the fight.',
     },
     {
       kind: 'paragraph',
@@ -182,7 +182,7 @@ export const fortressXiangqiArticle: Article = {
       ],
     },
     {
-      heading: 'What makes it Fortress',
+      heading: 'What makes it Fortress Xiangqi',
       blocks: [
         {
           kind: 'paragraph',
@@ -216,22 +216,16 @@ export const fortressXiangqiArticle: Article = {
       ],
     },
     playClosing({
-      heading: 'Play it',
-      lead: 'Fortress is live on Mistboard. Play the Fairy-Stockfish bot at three strengths, create an invite for a friend, or find an open game from the homepage play panel.',
-      playLabel: 'Play the bot',
+      heading: 'Play on Mistboard',
+      lead: 'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=fortress-xiangqi',
       secondary: [
         {
-          label: 'Create invite',
+          label: 'Challenge a friend',
           href: '/?play=friend&gameSpecId=fortress-xiangqi',
           emphasis: 'secondary',
         },
-        {
-          label: 'Find opponent',
-          href: '/?play=lobby&gameSpecId=fortress-xiangqi',
-          emphasis: 'secondary',
-        },
-        { label: 'Back to all rules', href: '/rules', emphasis: 'secondary' },
       ],
     }),
   ],

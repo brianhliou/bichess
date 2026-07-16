@@ -20,12 +20,6 @@
 .variant-mini .vm-sq-dark {
   fill: var(--board-dark, #769656);
 }
-.variant-mini .vm-frame-chess {
-  stroke: var(--board-frame, #2a3a2a);
-}
-.variant-mini .vm-frame-xq {
-  stroke: #8b5a24;
-}
 .variant-mini .vm-chess-fog {
   fill: #17261a;
 }
@@ -45,7 +39,7 @@
   fill: #5e84b0;
 }
 /* Shogi: a fixed pale-wood board (no appearance picker), dark grid lines, and a
-   wood-toned fog for Dark Shogi. The frame takes the board-edge brown. */
+   wood-toned fog for Dark Shogi. */
 .variant-mini .vm-shogi-bg {
   fill: #f4ddb0;
 }
@@ -54,13 +48,4 @@
 }
 .variant-mini .vm-shogi-fog {
   fill: rgba(36, 25, 15, 0.62);
-}
-.variant-mini .vm-frame-shogi {
-  stroke: #7a5c33;
-}
-/* Jungle: its own game group, so its own frame — a fixed jungle green (the animal
-   board reads distinctly from the xiangqi wood-brown). The marker crops the real
-   dobutsu board, so it needs no marker-specific tile colours. */
-.variant-mini .vm-frame-jungle {
-  stroke: #2e7d4a;
 }

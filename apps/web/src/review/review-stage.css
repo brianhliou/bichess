@@ -60,6 +60,21 @@
 .review-stage__slot--secondary .dczh-postgame__reserve {
   display: none;
 }
+
+/* Standardized review center: the primary board itself owns the column. Captured
+   material and drop reserves stay out of the layout until their rail treatment is
+   redesigned; the replay state still retains them. Primary-only headings are also
+   collapsed so the board top aligns with both rails, matching the Xiangqi review. */
+.review-stage--board-only .captures-strip,
+.review-stage--board-only .dsg-postgame__reserve,
+.review-stage--board-only .dczh-postgame__reserve,
+.review-stage--board-only .review-stage__slot--primary > .dxq-postgame__board-title,
+.review-stage--board-only .review-stage__slot--primary > .replay-pane-label,
+.review-stage--board-only .review-stage__slot--primary > .replay-pane-name,
+.review-stage--board-only .review-stage__slot--primary > .replay-pane-clock,
+.review-stage--board-only .review-stage__slot--primary > .replay-pane-status {
+  display: none;
+}
 /* Board-sized capture tiles can total wider than the board; wrap them within the
    board width (multiple rows) instead of overflowing past the panel edge. */
 .review-stage .captures-strip .captures-row {

@@ -21,6 +21,10 @@ export interface MoveTreeAnnotation {
   suffixClass?: string;
   /** Formatted eval after the move (fixed POV), e.g. '+2.1', '#3'. */
   eval?: string;
+  /** Luck readout for a chance (reveal) move, e.g. '🎲 -11%'. Shown inline next to the move. */
+  luck?: string;
+  /** Tone hook for the luck badge → .review-move-list__luck--<tone>. */
+  luckTone?: 'lucky' | 'unlucky' | 'even';
 }
 
 export interface MoveTree {
@@ -129,12 +133,32 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     const san = document.createElement('span');
     san.className = 'review-move-list__san';
     san.textContent = node.label;
+    // The judgment glyph is its OWN slot, NOT appended inside `san`: san truncates with an
+    // ellipsis when the row is tight (e.g. a jieqi reveal that also carries a luck badge), and a
+    // glyph inside san would be clipped away with the label. A dedicated non-shrinking slot keeps
+    // the glyph visible right after the move.
+    const suffixEl = document.createElement('span');
+    suffixEl.className = 'review-move-list__suffix';
+    const luckEl = document.createElement('span');
+    luckEl.className = 'review-move-list__luck';
     const evalEl = document.createElement('span');
     evalEl.className = 'review-move-list__eval';
-    button.append(san, evalEl);
+    button.append(san, suffixEl, luckEl, evalEl);
     const ann = annotations.get(key);
-    if (ann?.suffix) appendGlyph(san, ann.suffix, ann.suffixClass);
-    if (ann?.eval) evalEl.textContent = ann.eval;
+    if (ann?.suffix) {
+      suffixEl.textContent = ann.suffix;
+      if (ann.suffixClass) suffixEl.classList.add(`review-move--${ann.suffixClass}`);
+    }
+    // Inline luck badge for a reveal (chance) move — the reveal's variance, shown but never graded.
+    if (ann?.luck) {
+      luckEl.textContent = ann.luck;
+      if (ann.luckTone) luckEl.classList.add(`review-move-list__luck--${ann.luckTone}`);
+    }
+    // On a chance (flip/reveal) ply the luck badge IS the per-move readout; the raw eval there is
+    // the realized (luck-mixed) value the chart already plots, and a fourth item crowds the bare
+    // coord into an ellipsis. Show the eval only on graded (non-luck) moves so a flip's notation
+    // stays fully visible next to its glyph + luck badge.
+    if (ann?.eval && !ann.luck) evalEl.textContent = ann.eval;
     button.addEventListener('click', () => opts.onJump(pathOf(node)));
     if (opts.onPromote || opts.onDelete) {
       button.addEventListener('contextmenu', (event) => {
@@ -154,12 +178,21 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     return button;
   }
 
-  // Render the mainline as number · red · black rows, emitting each node's
-  // variations as indented breakout rows right after the move they diverge from.
-  function renderMainline(firstNode: GameTreeNode<M, T>): void {
-    let node: GameTreeNode<M, T> | null = firstNode;
+  // Render the mainline as number · red · black rows. A ply's VARIATIONS are its
+  // siblings (alternatives to that same move): parent.children[1..] are the
+  // alternatives to parent.children[0]. They render as indented breakout lines
+  // right after the move they replace, and that move CLOSES its row so the reply
+  // resumes on a fresh line — so a two-ply row splits whenever a variation attaches
+  // to either ply (lila style), keeping it unambiguous which ply a variation is on.
+  // Passing the ROOT (not the first move) folds the alternative first moves in at
+  // move 1 instead of dumping them after the whole mainline.
+  function renderMainline(root: GameTreeNode<M, T>): void {
+    let node: GameTreeNode<M, T> | null = root.children[0] ?? null;
     let row: HTMLElement | null = null;
     while (node) {
+      const parent = node.parent;
+      // Alternatives to `node` itself (its later siblings under the same parent).
+      const variations = parent ? parent.children.slice(1) : [];
       if (isRed(node.ply)) {
         row = document.createElement('li');
         row.className = 'review-move-list__row';
@@ -168,19 +201,22 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         rows.append(row);
       } else if (row) {
         row.replaceChild(moveCell(node), row.lastChild as Node);
-        row = null;
       } else {
-        // A black move with no open row (the red reply was a variation): start a
-        // row with an empty red column and a "N…" number.
+        // A black move with no open row (its red partner ended a variation-split
+        // line): start a row with an empty red column and a "N…" number.
         row = document.createElement('li');
         row.className = 'review-move-list__row';
         row.append(numberSpan(`${node.ply / 2}…`), emptyCell(), moveCell(node));
         rows.append(row);
-        row = null;
       }
-      // Variations diverge from `node` (alternatives to its mainline child).
-      for (let i = 1; i < node.children.length; i++) {
-        rows.append(variationRow(node.children[i]!));
+      if (variations.length > 0) {
+        // This ply has alternatives: emit them right here, then break the line so
+        // the reply starts on a fresh row (and a black move resumes as "N…").
+        for (const variation of variations) rows.append(variationRow(variation));
+        row = null;
+      } else if (!isRed(node.ply)) {
+        // A completed black move with no variation ends the two-ply row.
+        row = null;
       }
       node = node.children[0] ?? null;
     }
@@ -240,11 +276,9 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       rows.append(empty);
       return;
     }
-    renderMainline(main);
-    // Alternative first moves (root variations) render as top-level breakout rows.
-    for (let i = 1; i < tree.root.children.length; i++) {
-      rows.append(variationRow(tree.root.children[i]!));
-    }
+    // Pass the root so alternative first moves interleave at move 1 (renderMainline
+    // treats them as variations of move 1) rather than dumping at the very bottom.
+    renderMainline(tree.root);
   }
 
   function setCurrent(path: TreePath): void {
@@ -261,14 +295,6 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
   function annotate(byPathKey: Map<string, MoveTreeAnnotation>): void {
     annotations = byPathKey;
     rebuild();
-  }
-
-  function appendGlyph(san: HTMLElement, suffix: string, suffixClass?: string): void {
-    const glyph = document.createElement('span');
-    glyph.className = 'review-move-list__suffix';
-    if (suffixClass) glyph.classList.add(`review-move--${suffixClass}`);
-    glyph.textContent = ` ${suffix}`;
-    san.append(glyph);
   }
 
   rebuild();

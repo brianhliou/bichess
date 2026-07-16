@@ -46,9 +46,6 @@ const REVEAL_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   palette: {
     lightCell: 'var(--board-light)',
     darkCell: 'var(--board-dark)',
-    frameBg: 'var(--crossroads-frame)',
-    frameInner: 'var(--crossroads-frame-inner)',
-    boardEdge: 'var(--crossroads-board-edge)',
     coord: 'var(--crossroads-coord)',
     lastMove: 'var(--board-last-move)',
     selected: GRID_INTERACTION_COLORS.selected,

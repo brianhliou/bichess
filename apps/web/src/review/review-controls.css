@@ -1,0 +1,124 @@
+/* Playback control bar below the move-list box. See review/review-controls.ts. */
+.review-controls {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 10px);
+  background: var(--site-panel, var(--site-surface));
+}
+.review-controls__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.review-controls__group--tools {
+  justify-self: start;
+}
+.review-controls__group--nav {
+  justify-self: center;
+}
+.review-controls__group--menu {
+  justify-self: end;
+}
+
+.review-controls__tool,
+.review-controls__nav,
+.review-controls__menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--site-radius-sm, 8px);
+  background: transparent;
+  color: var(--site-muted);
+  cursor: pointer;
+}
+.review-controls__tool:hover:not(:disabled),
+.review-controls__nav:hover:not(:disabled),
+.review-controls__menu-button:hover {
+  background: var(--site-surface);
+  color: var(--site-text);
+}
+.review-controls__nav:disabled,
+.review-controls__tool:disabled {
+  color: color-mix(in srgb, var(--site-muted) 40%, transparent);
+  cursor: default;
+}
+.review-controls__menu-button--open {
+  background: var(--site-accent, #237960);
+  color: #fff;
+}
+.review-controls__menu-button--open:hover {
+  background: var(--site-accent, #237960);
+  color: #fff;
+}
+
+/* Menu overlay: opens UPWARD from the bar, covering the move-list box (lichess). */
+.review-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 10px);
+  background: var(--site-panel, var(--site-surface));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+.review-menu[hidden] {
+  display: none;
+}
+.review-menu__header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--site-accent, #237960);
+}
+.review-menu__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 6px;
+}
+.review-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border: none;
+  border-radius: var(--site-radius-sm, 8px);
+  background: transparent;
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.review-menu__item:hover:not(:disabled) {
+  background: var(--site-surface);
+}
+.review-menu__item:disabled {
+  color: color-mix(in srgb, var(--site-muted) 60%, transparent);
+  cursor: default;
+}
+.review-menu__item-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--site-muted);
+}
+.review-menu__item:disabled .review-menu__item-icon {
+  color: color-mix(in srgb, var(--site-muted) 50%, transparent);
+}

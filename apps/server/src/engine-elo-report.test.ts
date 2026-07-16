@@ -2,9 +2,34 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildEngineEloReport,
+  deriveAnchorEngineId,
   type EngineEloGameRow,
   renderEngineEloReportMarkdown,
 } from './engine-elo-report.js';
+
+test('scores Xiangqi red-wins as a win for the first-mover Eve slot', () => {
+  const report = buildEngineEloReport(
+    [
+      {
+        anchorEngineId: 'pikafish-xiangqi-level-1',
+        blackEngineId: 'pikafish-xiangqi-level-3',
+        gameId: 'xq-eve-1',
+        jobId: 'job-xq',
+        result: 'red-wins',
+        status: 'completed',
+        termination: 'checkmate',
+        timeControl: { kind: 'standard', initial_seconds: 180, increment_seconds: 2 },
+        tournamentId: 'xq-calibration',
+        variant: 'xiangqi',
+        whiteEngineId: 'pikafish-xiangqi-level-1',
+      },
+    ],
+    { anchorEngineId: 'pikafish-xiangqi-level-1', minAnchorGames: 1 },
+  );
+
+  assert.equal(report.rows.find((row) => row.isAnchor)?.wins, 1);
+  assert.equal(report.rows.find((row) => row.engineId.endsWith('level-3'))?.losses, 1);
+});
 
 test('builds anchor-relative Elo only from eligible rated games', () => {
   const report = buildEngineEloReport(
@@ -88,8 +113,24 @@ test('rejects mixed time-control buckets', () => {
   );
 });
 
+test('deriveAnchorEngineId returns the agreed anchor, null when absent or mixed', () => {
+  assert.equal(
+    deriveAnchorEngineId([
+      game({ anchorEngineId: 'random-legal-xiangqi' }),
+      game({ anchorEngineId: 'random-legal-xiangqi' }),
+    ]),
+    'random-legal-xiangqi',
+  );
+  assert.equal(deriveAnchorEngineId([game({ anchorEngineId: null })]), null);
+  assert.equal(
+    deriveAnchorEngineId([game({ anchorEngineId: 'a' }), game({ anchorEngineId: 'b' })]),
+    null,
+  );
+});
+
 function game(overrides: Partial<EngineEloGameRow> = {}): EngineEloGameRow {
   return {
+    anchorEngineId: 'python-random-legal',
     blackEngineId: 'python-random-legal',
     gameId: `game-${Math.random()}`,
     jobId: 'job',

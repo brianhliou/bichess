@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 const suites = {
   quick: [
     ['npm', 'run', 'lint'],
+    ['npm', 'run', 'i18n:check'],
     ['npm', 'run', 'build'],
     ['npm', 'run', 'typecheck'],
     ['npm', 'run', 'test:unit'],
@@ -13,6 +14,7 @@ const suites = {
   ],
   local: [
     ['npm', 'run', 'lint'],
+    ['npm', 'run', 'i18n:check'],
     ['npm', 'run', 'build'],
     ['npm', 'run', 'typecheck'],
     ['npm', 'run', 'test:unit'],
@@ -66,9 +68,9 @@ function printHelp() {
   npm run ci:quick
   npm run ci:local
 
-ci:quick runs the local build first so unit tests that spawn dist entrypoints do
-not read stale or missing output, then runs typecheck, unit tests, and the
-dependency-cycle check.
+ci:quick checks formatting and translation-catalog policy, runs the local build
+so unit tests that spawn dist entrypoints do not read stale or missing output,
+then runs typecheck, unit tests, and the dependency-cycle check.
 
 ci:local runs the full local build, typecheck, unit tests, cycle check, and
 server integration tests. Set MISTBOARD_RUN_DB_CHECKS=1 to include the

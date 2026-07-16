@@ -10,9 +10,6 @@ import {
 const palette: GridPalette = {
   lightCell: '#f0d9b5',
   darkCell: '#b58863',
-  frameBg: '#5b4636',
-  frameInner: '#6e5743',
-  boardEdge: '#3a2c20',
   coord: 'rgba(60,45,30,0.55)',
   lastMove: 'rgba(255,205,80,0.45)',
   selected: 'rgba(255,205,80,0.55)',
@@ -52,6 +49,10 @@ test('one core renders a 6x8 river board and an 8x8 board from data alone', () =
   assert.match(crossroadsSvg, /width="300" height="411"/);
   assert.doesNotMatch(chessSvg, /fill="#5aa0d6"/);
   assert.match(chessSvg, /width="400" height="400"/);
+  // Board chrome is intentionally outline-free. The shared core has no frame
+  // palette or edge-width escape hatch, so every descriptor gets this policy.
+  assert.doesNotMatch(crossroadsSvg, /<rect[^>]*fill="none"[^>]*stroke=/);
+  assert.doesNotMatch(chessSvg, /<rect[^>]*fill="none"[^>]*stroke=/);
 });
 
 test('geometry offsets rows past the strip and flips with orientation', () => {

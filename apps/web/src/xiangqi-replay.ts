@@ -25,8 +25,6 @@ const PAD = 4;
 const BOARD_W = MARGIN * 2 + 8 * CELL;
 const BOARD_H = MARGIN * 2 + 9 * CELL;
 const RADIUS = 8;
-const STROKE = '#8b5a24';
-const STROKE_WIDTH = 1.5;
 const ARROW = '#15781B';
 
 export type XiangqiReplaySpec = {
@@ -149,7 +147,6 @@ function boardSvg(
     gridSvg(perspective),
     piecesSvg(board, perspective),
     lastMove ? arrowSvg(lastMove, perspective, `xqr-arrow-${key}`) : '',
-    `<rect x="0" y="0" width="${BOARD_W}" height="${BOARD_H}" rx="${RADIUS}" fill="none" stroke="${STROKE}" stroke-width="${STROKE_WIDTH}"/>`,
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
 }

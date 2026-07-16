@@ -58,7 +58,6 @@ function recordLatency(id: string, ms: number): void {
 async function moveFor(tier: Tier, history: string[]): Promise<string | null> {
   const started = performance.now();
   const uci = await xiangqiEngineMove(history, {
-    skill: tier.skill,
     nodes: tier.nodes,
     movetimeMs: Math.min(tier.movetimeMs, movetimeCapMs),
   });
@@ -143,7 +142,7 @@ async function main(): Promise<void> {
   console.log(
     `ladder: gamesPerColor=${gamesPerColor} maxPlies=${maxPlies} movetimeCap=${movetimeCapMs}ms`,
   );
-  for (const t of tiers) console.log(`  tier ${t.id}: skill=${t.skill} nodes=${t.nodes}`);
+  for (const t of tiers) console.log(`  tier ${t.id}: nodes=${t.nodes}`);
   console.log('');
 
   // Adjacent pairings + the extreme, to verify a monotonic ladder.

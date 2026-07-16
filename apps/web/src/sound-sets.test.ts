@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { SoundKind } from './live-state.js';
-import { SOUND_SETS, soundFileFor } from './sound-sets.js';
+import { DEFAULT_SOUND_SET, isSynthesizedSet, SOUND_SETS, soundFileFor } from './sound-sets.js';
 
 const ALL_KINDS: SoundKind[] = [
   'move',
@@ -20,9 +20,21 @@ const ALL_KINDS: SoundKind[] = [
 ];
 
 describe('sound set registry', () => {
+  it('orders the menu sets around the wood default', () => {
+    expect(DEFAULT_SOUND_SET).toBe('wood');
+    expect(SOUND_SETS.map((set) => set.id)).toEqual([
+      'wood',
+      'mist',
+      'piano',
+      'sfx',
+      'futuristic',
+      'nes',
+    ]);
+  });
+
   it('every mapped file exists on disk for every file set', () => {
     for (const set of SOUND_SETS) {
-      if (set.id === 'mist') continue;
+      if (isSynthesizedSet(set.id)) continue;
       for (const kind of ALL_KINDS) {
         const spec = soundFileFor(set.id, kind);
         if (!spec) continue; // unmapped kinds fall back to synth by design
@@ -32,9 +44,11 @@ describe('sound set registry', () => {
     }
   });
 
-  it('mist resolves no files (pure synth)', () => {
-    for (const kind of ALL_KINDS) {
-      expect(soundFileFor('mist', kind)).toBeNull();
+  it('synthesized sets resolve no files (pure synth)', () => {
+    for (const set of SOUND_SETS.filter((entry) => isSynthesizedSet(entry.id))) {
+      for (const kind of ALL_KINDS) {
+        expect(soundFileFor(set.id, kind)).toBeNull();
+      }
     }
   });
 });

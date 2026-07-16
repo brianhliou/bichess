@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createRoundRobinPairings,
   nextTournamentSeed,
+  pairingOpeningPolicy,
   parseTournamentArgs,
   tournamentJobConfig,
 } from './engine-tournament.js';
@@ -24,6 +25,10 @@ test('creates color-balanced round-robin pairings', () => {
       ['b', 'c'],
       ['c', 'b'],
     ],
+  );
+  assert.deepEqual(
+    pairings.map((pairing) => pairing.openingIndex),
+    [0, 0, 0, 0, 0, 0],
   );
   assert.deepEqual(
     pairings.map((pairing) => pairing.gameIndex),
@@ -64,6 +69,8 @@ test('parses tournament CLI config', () => {
   assert.equal(config.rated, true);
   assert.equal(config.ratingAnchorEngineId, 'python-random-legal');
   assert.equal(config.ratingMinAnchorGames, 8);
+  assert.equal(config.ratingAnchorEngineId, 'python-random-legal');
+  assert.equal(config.variant, 'dark-chess');
 });
 
 test('defaults tournament CLI time control to standard 3+2', () => {
@@ -77,6 +84,7 @@ test('defaults tournament CLI time control to standard 3+2', () => {
     initial_seconds: 180,
     increment_seconds: 2,
   });
+  assert.equal(config.variant, 'dark-chess');
 });
 
 test('builds reproducible tournament job metadata', () => {
@@ -105,4 +113,41 @@ test('builds reproducible tournament job metadata', () => {
       time_control_bucket: 'tc-180+2',
     },
   });
+});
+
+test('uses the tournament variant in the rating pool', () => {
+  const config = parseTournamentArgs(
+    ['--engine', 'a', '--engine', 'b', '--variant', 'xiangqi'],
+    {},
+  );
+  const jobConfig = tournamentJobConfig(config, 2);
+  assert.equal((jobConfig.rating_policy as { pool: { variant: string } }).pool.variant, 'xiangqi');
+  assert.deepEqual(config.timeControl, { kind: 'none' });
+  assert.equal(config.ratingAnchorEngineId, 'a');
+});
+
+test('assigns identical opening seeds to color-swapped games', () => {
+  const pairings = createRoundRobinPairings({ engines: ['a', 'b'], gamesPerPair: 4 });
+  assert.deepEqual(
+    pairings.map((pairing) =>
+      pairingOpeningPolicy({ kind: 'random_first_n_plies', n: 6 }, '50', pairing),
+    ),
+    [
+      { kind: 'random_first_n_plies', n: 6, seed: '50' },
+      { kind: 'random_first_n_plies', n: 6, seed: '50' },
+      { kind: 'random_first_n_plies', n: 6, seed: '51' },
+      { kind: 'random_first_n_plies', n: 6, seed: '51' },
+    ],
+  );
+});
+
+test('rejects an unpaired random-opening game count', () => {
+  assert.throws(
+    () =>
+      parseTournamentArgs(
+        ['--engine', 'a', '--engine', 'b', '--games-per-pair', '3', '--opening', 'random-first-4'],
+        {},
+      ),
+    /even --games-per-pair/,
+  );
 });

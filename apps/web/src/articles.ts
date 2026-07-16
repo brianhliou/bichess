@@ -18,7 +18,13 @@ import {
 import './community-rail.css';
 import './articles.css';
 import { type Announcement, announcements } from './announcements.js';
-import { type ArticleLang, translateArticle, translateArticleText } from './article-i18n.js';
+import {
+  type ArticleLang,
+  localizedArticleHref,
+  publishedArticleLang,
+  translateArticle,
+  translateArticleText,
+} from './article-i18n.js';
 import {
   type Article,
   type ArticleBlock,
@@ -44,6 +50,7 @@ import {
   type ShogiReplayBlock,
   type StaticBoardsBlock,
   type SubHeadingBlock,
+  withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
 } from './articles-data.js';
@@ -71,6 +78,7 @@ import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini
 import { mountShogiReplay, type ShogiReplayController } from './shogi-replay.js';
 import {
   boardAppearanceChangedEvent,
+  readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   shogiAppearanceChangedEvent,
   xiangqiAppearanceChangedEvent,
@@ -105,7 +113,12 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
   if (article.showInIndex === false) return false;
-  if (article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)) return false;
+  if (
+    article.kind === 'rules' &&
+    !rulesSlugPublicSurfaceEnabled(article.gameSpecId ?? article.slug)
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -167,15 +180,24 @@ function isArticleStatusBadge(status: Article['status']): status is 'draft' | 'o
   return status === 'draft' || status === 'outline';
 }
 
-export function buildArticlesIndex(lang?: ArticleLang): HTMLElement {
-  return buildContentIndex('article', lang);
+export type ArticleIndexView = 'community' | 'mistboard';
+
+export function buildArticlesIndex(
+  lang?: ArticleLang,
+  view: ArticleIndexView = 'mistboard',
+): HTMLElement {
+  return buildContentIndex('article', lang, view);
 }
 
 export function buildRulesIndex(lang?: ArticleLang): HTMLElement {
   return buildRulesLanding(lang);
 }
 
-function buildContentIndex(kind: Article['kind'], lang?: ArticleLang): HTMLElement {
+function buildContentIndex(
+  kind: Article['kind'],
+  lang?: ArticleLang,
+  articleView: ArticleIndexView = 'community',
+): HTMLElement {
   const locale = articleLocale(lang);
   const main = document.createElement('main');
   main.className =
@@ -186,7 +208,7 @@ function buildContentIndex(kind: Article['kind'], lang?: ArticleLang): HTMLEleme
   const layout = document.createElement('div');
   if (kind === 'article') {
     layout.className = 'community-layout articles-community-layout';
-    layout.append(buildArticleCommunityRail(locale));
+    layout.append(buildArticleCommunityRail(locale, articleView));
   }
 
   const sheet = document.createElement('div');
@@ -200,18 +222,18 @@ function buildContentIndex(kind: Article['kind'], lang?: ArticleLang): HTMLEleme
   heading.textContent = kind === 'article' ? 'Recent posts' : t('rules.heading', {}, locale);
   headingBlock.append(heading);
 
-  if (kind === 'article') {
-    headingBlock.append(buildArticleIndexControls());
-  }
-
   const list = document.createElement('ul');
   list.className = 'articles-index-list';
 
   const entries = articles
-    .filter((article) => article.kind === kind && isArticleListedInThisEnv(article))
+    .filter((article) => {
+      if (article.kind !== kind || !isArticleListedInThisEnv(article)) return false;
+      if (article.kind !== 'article') return true;
+      return article.publisher === articleView;
+    })
     .sort(compareArticlesNewestFirst);
   for (const article of entries) {
-    list.append(articleCard(lang ? translateArticle(article, lang) : article, lang));
+    list.append(articleCard(article, lang));
   }
 
   sheet.append(headingBlock);
@@ -221,7 +243,14 @@ function buildContentIndex(kind: Article['kind'], lang?: ArticleLang): HTMLEleme
     intro.textContent = t('rules.intro', {}, locale);
     sheet.append(intro);
   }
-  sheet.append(list);
+  if (entries.length > 0) {
+    sheet.append(list);
+  } else if (kind === 'article') {
+    const empty = document.createElement('p');
+    empty.className = 'articles-index-empty';
+    empty.textContent = 'No community posts yet.';
+    sheet.append(empty);
+  }
   if (kind === 'article') {
     layout.append(sheet);
     main.append(layout);
@@ -231,113 +260,28 @@ function buildContentIndex(kind: Article['kind'], lang?: ArticleLang): HTMLEleme
   return main;
 }
 
-function buildArticleCommunityRail(locale: Locale): HTMLElement {
+function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
   const rail = document.createElement('aside');
   rail.className = 'community-rail articles-community-rail';
   rail.setAttribute('aria-label', 'Blog navigation');
 
-  type RailItem =
-    | { label: string; href: string; active: boolean; enabled: true }
-    | { label: string; enabled: false };
-
-  const links: RailItem[] = [
-    { label: 'Community', href: localizedHref('/blog', locale), active: true, enabled: true },
-    { label: 'By month', enabled: false },
-    { label: 'By topic', enabled: false },
-    { label: 'By Mistboard', enabled: false },
-    { label: 'My likes', enabled: false },
-    { label: 'My friends', enabled: false },
-    { label: 'My blog', enabled: false },
+  const links: Array<{ label: string; href: string; view: ArticleIndexView }> = [
+    { label: 'By Mistboard', href: localizedHref('/blog', locale), view: 'mistboard' },
+    { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
   ];
 
   for (const item of links) {
-    if (item.enabled) {
-      const link = document.createElement('a');
-      link.href = item.href;
-      link.textContent = item.label;
-      if (item.active) {
-        link.className = 'community-rail-active';
-        link.setAttribute('aria-current', 'page');
-      }
-      rail.append(link);
-    } else {
-      const disabled = document.createElement('span');
-      disabled.className = 'community-rail-disabled';
-      disabled.setAttribute('aria-disabled', 'true');
-      disabled.title = 'Community blogs are not available yet.';
-      disabled.textContent = item.label;
-      rail.append(disabled);
+    const link = document.createElement('a');
+    link.href = item.href;
+    link.textContent = item.label;
+    if (item.view === activeView) {
+      link.className = 'community-rail-active';
+      link.setAttribute('aria-current', 'page');
     }
+    rail.append(link);
   }
 
   return rail;
-}
-
-function buildArticleIndexControls(): HTMLElement {
-  const controls = document.createElement('div');
-  controls.className = 'articles-index-controls';
-
-  const show = document.createElement('span');
-  show.className = 'articles-index-control-label';
-  show.textContent = 'Show';
-
-  const toggle = document.createElement('span');
-  toggle.className = 'articles-index-toggle';
-  toggle.setAttribute('aria-label', 'Post filter');
-  for (const [label, active] of [
-    ['best', true],
-    ['all', false],
-  ] as const) {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.disabled = true;
-    item.className = active ? 'articles-index-toggle-item active' : 'articles-index-toggle-item';
-    item.textContent = label;
-    item.title = 'Post sorting will unlock when community blogs launch.';
-    toggle.append(item);
-  }
-
-  const language = document.createElement('button');
-  language.type = 'button';
-  language.disabled = true;
-  language.className = 'articles-index-language';
-  language.textContent = 'All languages';
-  language.title = 'Language filtering will unlock when community blogs launch.';
-
-  const feed = document.createElement('span');
-  feed.className = 'articles-index-feed';
-  feed.setAttribute('aria-hidden', 'true');
-  feed.append(renderRssIcon());
-
-  controls.append(show, toggle, language, feed);
-  return controls;
-}
-
-function renderRssIcon(): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2.5');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  svg.setAttribute('focusable', 'false');
-
-  for (const d of ['M4 11a9 9 0 0 1 9 9', 'M4 4a16 16 0 0 1 16 16']) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    svg.append(path);
-  }
-
-  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  circle.setAttribute('cx', '5');
-  circle.setAttribute('cy', '19');
-  circle.setAttribute('r', '1');
-  circle.setAttribute('fill', 'currentColor');
-  circle.setAttribute('stroke', 'currentColor');
-  svg.append(circle);
-
-  return svg;
 }
 
 // /rules is a landing page in the pychess shape: a short intro in the sheet
@@ -361,12 +305,10 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 
   sheet.append(heading, intro);
 
-  for (const key of ['rules.body1', 'rules.body2'] as const) {
-    const p = document.createElement('p');
-    p.className = 'rules-landing-paragraph';
-    p.textContent = t(key, {}, locale);
-    sheet.append(p);
-  }
+  const body = document.createElement('p');
+  body.className = 'rules-landing-paragraph';
+  body.textContent = t('rules.body1', {}, locale);
+  sheet.append(body);
 
   const entries = articles.filter(
     (article) => article.kind === 'rules' && isArticleListedInThisEnv(article),
@@ -379,11 +321,12 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     const grid = document.createElement('ul');
     grid.className = 'rules-landing-grid';
     for (const article of group.items) {
-      const localized = lang ? translateArticle(article, lang) : article;
+      const articleLang = publishedArticleLang(article.slug, lang);
+      const localized = articleLang ? translateArticle(article, articleLang) : article;
       const li = document.createElement('li');
       const tile = document.createElement('a');
       tile.className = 'rules-landing-tile';
-      tile.href = localizedHref(`/rules/${article.slug}`, locale);
+      tile.href = localizedArticleHref(article, locale);
       const miniTile = renderVariantMiniThumb(article.slug);
       if (miniTile) tile.append(miniTile);
       else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail));
@@ -391,6 +334,12 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
       label.className = 'rules-landing-tile-label';
       label.textContent = variantNavLabel(localized.title);
       tile.append(label);
+      if (article.playableOnMistboard) {
+        const playable = document.createElement('span');
+        playable.className = 'rules-playable-badge';
+        playable.textContent = t('rules.playableHere', {}, locale);
+        tile.append(playable);
+      }
       li.append(tile);
       grid.append(li);
     }
@@ -523,11 +472,14 @@ function carouselNavButton(dir: 'prev' | 'next', glyph: string, locale: Locale):
 }
 
 function landingArticleCard(article: Article, locale: Locale): HTMLElement {
+  const requestedLang: ArticleLang | undefined =
+    locale === 'zh-Hans' || locale === 'zh-Hant' ? locale : undefined;
+  const articleLang = publishedArticleLang(article.slug, requestedLang);
+  const localized = articleLang ? translateArticle(article, articleLang) : article;
   const link = document.createElement('a');
   link.className = 'landing-article-card';
   link.dataset.cardKind = 'article';
-  const base = article.kind === 'rules' ? 'rules' : 'blog';
-  link.href = localizedHref(`/${base}/${article.slug}`, locale);
+  link.href = localizedArticleHref(article, locale);
 
   const thumb = document.createElement('div');
   thumb.className = 'landing-article-card-thumb';
@@ -554,7 +506,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
-  title.textContent = article.title;
+  title.textContent = localized.title;
 
   link.append(thumb, title);
   return link;
@@ -713,31 +665,22 @@ export function initLandingCarousel(root: HTMLElement): void {
 }
 
 export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement {
-  const locale = articleLocale(lang);
   const base = findArticle(slug);
+  const articleLang = base ? publishedArticleLang(base.slug, lang) : undefined;
+  const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
-  const article = lang ? translateArticle(base, lang) : base;
+  const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');
   main.className = 'site-section article-shell article-page';
   main.dataset.articleSlug = article.slug;
-  if (lang) main.dataset.articleLang = lang;
+  if (articleLang) main.dataset.articleLang = articleLang;
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
   const sheet = document.createElement('div');
   sheet.className = 'article-sheet';
-
-  const breadcrumb = document.createElement('p');
-  breadcrumb.className = 'article-breadcrumb';
-  const back = document.createElement('a');
-  back.href = localizedHref(article.kind === 'rules' ? '/rules' : '/blog', locale);
-  back.textContent =
-    article.kind === 'rules'
-      ? `← ${t('rules.allRules', {}, locale)}`
-      : `← ${t('articles.allArticles', {}, locale)}`;
-  breadcrumb.append(back);
 
   // Centered header block (lichess ublog grammar): fluid regular-weight
   // title, one quiet meta row (kind chip, dates, status), summary as lede.
@@ -751,14 +694,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 
   const metaRow = document.createElement('p');
   metaRow.className = 'article-meta-row';
-  const kindChip = document.createElement('span');
-  kindChip.className = 'article-chip';
-  kindChip.textContent = t(
-    article.kind === 'rules' ? 'rules.kind' : 'articles.articleKind',
-    {},
-    locale,
-  );
-  metaRow.append(kindChip);
   if (isArticleStatusBadge(article.status)) {
     const badge = document.createElement('span');
     badge.className = `article-status-badge article-status-${article.status}`;
@@ -780,7 +715,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     }
     metaRow.append(dates);
   }
-  header.append(metaRow);
+  if (metaRow.childElementCount > 0) header.append(metaRow);
 
   const showSummaryOnPage = article.showSummaryOnPage ?? true;
   if (showSummaryOnPage) {
@@ -790,12 +725,21 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     header.append(lede);
   }
 
-  sheet.append(breadcrumb, header);
+  if (article.kind === 'article') {
+    const breadcrumb = document.createElement('p');
+    breadcrumb.className = 'article-breadcrumb';
+    const back = document.createElement('a');
+    back.href = localizedHref('/blog', locale);
+    back.textContent = `← ${t('articles.allArticles', {}, locale)}`;
+    breadcrumb.append(back);
+    sheet.append(breadcrumb);
+  }
+  sheet.append(header);
 
   if (article.intro && article.intro.length > 0) {
     const intro = document.createElement('div');
     intro.className = 'article-intro';
-    for (const block of article.intro) intro.append(renderBlock(block, lang));
+    for (const block of article.intro) intro.append(renderBlock(block, articleLang));
     sheet.append(intro);
   }
 
@@ -827,7 +771,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     h2.textContent = section.heading;
     h2.id = uniqueId(section.heading, usedIds, headingIndex++);
     body.append(h2);
-    for (const node of renderSectionBody(section, lang)) {
+    for (const node of renderSectionBody(section, articleLang)) {
       if (node instanceof HTMLHeadingElement && node.tagName === 'H3') {
         node.id = uniqueId(node.textContent ?? '', usedIds, headingIndex++);
       }
@@ -836,12 +780,12 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   }
 
   if (article.kind === 'rules') {
-    const variantNav = buildVariantSidebar(base.slug, lang);
+    const variantNav = buildVariantSidebar(base.slug, articleLang);
     if (variantNav) main.append(variantNav);
   }
   sheet.append(body);
   main.append(sheet);
-  const sidebar = buildTocSidebar(body, lang);
+  const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
 
   return main;
@@ -879,14 +823,15 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
   nav.className = 'article-toc-nav';
   const list = document.createElement('ul');
   for (const entry of buildRulesArticleRailEntries(entries)) {
+    const entryLang = publishedArticleLang(entry.slug, lang);
     const li = document.createElement('li');
     const link = document.createElement('a');
     link.className = 'article-variant-link';
-    link.href = localizedHref(`/rules/${entry.slug}`, locale);
+    link.href = localizedArticleHref(entry, locale);
     const miniRail = renderVariantMiniThumb(entry.slug);
     if (miniRail) link.append(miniRail);
     else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail));
-    const localized = lang ? translateArticle(entry, lang) : entry;
+    const localized = entryLang ? translateArticle(entry, entryLang) : entry;
     const label = document.createElement('span');
     label.className = 'article-variant-label';
     label.textContent = variantNavLabel(localized.title);
@@ -938,8 +883,9 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
 function rulesArticleGroup(article: Article): RulesArticleGroupId {
   const baseGroup = BASE_RULE_GROUP_BY_SLUG[article.slug];
   if (baseGroup) return baseGroup;
-  if (!isGameSpecId(article.slug)) return 'other';
-  return rulesGroupForFamily(gameSpecForId(article.slug).family);
+  const gameSpecId = article.gameSpecId ?? article.slug;
+  if (!isGameSpecId(gameSpecId)) return 'other';
+  return rulesGroupForFamily(gameSpecForId(gameSpecId).family);
 }
 
 function rulesGroupForFamily(family: GameFamilyId): RulesArticleGroupId {
@@ -953,14 +899,16 @@ function rulesGroupForFamily(family: GameFamilyId): RulesArticleGroupId {
 function rulesArticleSortIndex(article: Article): number {
   const baseOrder = BASE_RULE_ORDER[article.slug];
   if (baseOrder !== undefined) return baseOrder;
-  if (isGameSpecId(article.slug)) return canonicalVariantOrderIndex(article.slug);
+  const gameSpecId = article.gameSpecId ?? article.slug;
+  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
 function rulesArticleRailSortIndex(article: Article): number {
   if (article.slug === 'shogi') return canonicalVariantOrderIndex(DARK_SHOGI_SPEC_ID) - 0.5;
   if (article.slug === 'shogi4') return canonicalVariantOrderIndex(DARK_SHOGI_SPEC_ID) + 0.5;
-  if (isGameSpecId(article.slug)) return canonicalVariantOrderIndex(article.slug);
+  const gameSpecId = article.gameSpecId ?? article.slug;
+  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -1439,12 +1387,15 @@ function paintXqDiagram(holder: HTMLElement, set: XiangqiPieceSet): void {
     Array.from(holder.children).find((child) =>
       child.classList.contains('article-figure-caption'),
     ) ?? null;
+  const layout = readStoredXiangqiBoardLayout();
   let html: string;
   try {
-    html = withXiangqiPieceSet(set, thunk);
+    html = withXiangqiBoardLayout(layout, () => withXiangqiPieceSet(set, thunk));
   } catch (err) {
     console.warn('xiangqi diagram render failed; falling back to default piece set', err);
-    html = withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk);
+    html = withXiangqiBoardLayout(layout, () =>
+      withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk),
+    );
   }
   const scratch = document.createElement('div');
   scratch.innerHTML = html;
@@ -1672,7 +1623,12 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
     if (!step) return;
     frame.innerHTML =
       typeof step.svg === 'function'
-        ? localizeSvgMarkup(withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg), lang)
+        ? localizeSvgMarkup(
+            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+              withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+            ),
+            lang,
+          )
         : localizeSvgMarkup(step.svg, lang);
     const hasXiangqiDiagram = Boolean(frame.querySelector('.xq-article-svg'));
     frame.classList.toggle('raw-svg-stepper-frame-xq', hasXiangqiDiagram);
@@ -1984,15 +1940,16 @@ function renderStaticBoardsBlock(block: StaticBoardsBlock): HTMLElement {
 // spec on each pending wrap and consume it in mountArticleThumbnails.
 const pendingThumbnails = new WeakMap<HTMLElement, ArticleThumbnail>();
 
-function articleCard(article: Article, lang?: ArticleLang): HTMLLIElement {
+function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   const locale = articleLocale(lang);
+  const articleLang = publishedArticleLang(baseArticle.slug, lang);
+  const article = articleLang ? translateArticle(baseArticle, articleLang) : baseArticle;
   const item = document.createElement('li');
   item.className = 'articles-index-item';
 
   const link = document.createElement('a');
   link.className = 'articles-index-card';
-  const base = article.kind === 'rules' ? 'rules' : 'blog';
-  link.href = localizedHref(`/${base}/${article.slug}`, locale);
+  link.href = localizedArticleHref(article, locale);
 
   const thumb = document.createElement('div');
   thumb.className = 'articles-index-card-media';
@@ -2069,7 +2026,12 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
         crossroadsThumbPainters.set(wrap, paint);
         ensureCrossroadsDiagramListener();
       } else {
-        const paint = () => applySvg(withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk));
+        const paint = () =>
+          applySvg(
+            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+              withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk),
+            ),
+          );
         paint();
         wrap.dataset.xqThumb = '';
         xqThumbPainters.set(wrap, paint);
@@ -2105,16 +2067,16 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
 // reads in one visual language.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   chess: 'chess',
-  'dark-chess': 'dark-chess',
+  'fog-chess': 'dark-chess',
   'dark-draft960': 'draft960',
   xiangqi: 'xiangqi',
-  'dark-xiangqi': 'dark-xiangqi',
+  'fog-xiangqi': 'dark-xiangqi',
   'mini-xiangqi': 'mini-xiangqi',
   'dark-mini-xiangqi': 'dark-mini-xiangqi',
   'drop-mini-xiangqi': 'drop-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
-  jieqi: 'jieqi',
-  banqi: 'banqi',
+  'reveal-xiangqi': 'jieqi',
+  'flip-xiangqi': 'banqi',
   'crossroads-chess': 'crossroads',
   'dark-crossroads-chess': 'dark-crossroads',
   kriegspiel: 'kriegspiel',

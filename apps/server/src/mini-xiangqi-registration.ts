@@ -13,7 +13,7 @@ import type {
 } from '@mistboard/game';
 import { type MiniXiangqiEvent, miniXiangqiTenant } from './mini-xiangqi-tenant.js';
 import * as persistence from './persistence.js';
-import { isAllowedTimeControl } from './routes/lib.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { handleMiniXiangqiCreate, requestsMiniXiangqi } from './routes/mini-xiangqi-rooms.js';
 import { scheduleMiniXiangqiEngineMove } from './server-mini-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
@@ -131,7 +131,7 @@ registerVariantTenant({
   },
   lobby: {
     supportsRated: false,
-    allowsTimeControl: isAllowedTimeControl,
+    allowsTimeControl: isAllowedFullTimeControl,
     createRoom: async (timeControl, rated) => {
       const created = await createMiniXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`mini_xiangqi_room_create_failed:${created.error}`);

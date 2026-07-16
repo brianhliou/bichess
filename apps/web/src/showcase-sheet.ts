@@ -5,7 +5,7 @@
 // class, so they share landing.css's widget styling with the homepage — tweak
 // there and every cell (and the homepage) updates. Never shipped (DEV-gated).
 
-import { displayParticipantName, type FeaturedGame } from './game-display.js';
+import { displayParticipantName, type FeaturedGame, matchupSeats } from './game-display.js';
 import { gameMetaForGame } from './game-meta.js';
 import { mountShowcaseBoard } from './showcase-board.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
@@ -15,12 +15,12 @@ const SHEET_VARIANTS: ReadonlyArray<{ label: string; channel: string }> = [
   { label: 'Fog Chess', channel: 'dark-chess' },
   { label: 'Jungle Chess', channel: 'jungle' },
   { label: 'Flip Jungle', channel: 'jungle-flip' },
-  { label: 'Half-Flip Chess', channel: 'banqi' },
-  { label: 'Flip Elephant Chess', channel: 'jieqi' },
+  { label: 'Flip Xiangqi', channel: 'banqi' },
+  { label: 'Reveal Xiangqi', channel: 'jieqi' },
   { label: 'Mini Xiangqi', channel: 'mini-xiangqi' },
   { label: 'Dark Mini Xiangqi', channel: 'dark-mini-xiangqi' },
   { label: 'Drop Mini Xiangqi', channel: 'drop-mini-xiangqi' },
-  { label: 'Fortress', channel: 'fortress-xiangqi' },
+  { label: 'Fortress Xiangqi', channel: 'fortress-xiangqi' },
 ];
 
 async function firstGameForChannel(channel: string): Promise<FeaturedGame | null> {
@@ -86,11 +86,8 @@ export async function mountShowcaseSheet(root: HTMLElement): Promise<void> {
           metadataByRoomId: { [game.roomId]: gameMetaForGame(game) },
           namesByRoomId: {
             [game.roomId]: {
-              first: displayParticipantName(
-                game,
-                game.participants?.some((p) => p.color === 'red') ? 'red' : 'white',
-              ),
-              second: displayParticipantName(game, 'black'),
+              first: displayParticipantName(game, matchupSeats(game)[0]),
+              second: displayParticipantName(game, matchupSeats(game)[1]),
             },
           },
           autoplay: false, // paused at the opening position

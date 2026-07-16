@@ -361,7 +361,7 @@ export const chessArticle: Article = {
         heading: 'Where to next',
         lead: 'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.',
         links: [
-          { label: 'Read Fog Chess', href: '/rules/dark-chess', emphasis: 'primary' },
+          { label: 'Read Fog Chess', href: '/rules/fog-chess', emphasis: 'primary' },
           { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],
       }),

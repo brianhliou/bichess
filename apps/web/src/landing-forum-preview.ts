@@ -1,3 +1,4 @@
+import { t } from './i18n/catalog.js';
 import { buildSiteBox } from './site-box.js';
 import './landing-forum-preview.css';
 
@@ -33,11 +34,11 @@ const maxLandingForumTopics = 5;
 
 export function buildLandingForumPreview(options: { hydrate?: boolean } = {}): HTMLElement {
   const { box, body } = buildSiteBox({
-    title: 'Active forum topics',
+    title: t('homeForum.heading'),
     href: '/forum',
     className: 'landing-forum',
   });
-  body.append(plainRow('Loading forum.'));
+  body.append(plainRow(t('homeForum.loading')));
   if (options.hydrate !== false) {
     void hydrateForumPreview(body);
   }
@@ -49,12 +50,12 @@ async function hydrateForumPreview(body: HTMLElement): Promise<void> {
     const topics = await fetchActiveTopics();
     body.replaceChildren();
     if (topics.length === 0) {
-      body.append(plainRow('No forum topics yet.'));
+      body.append(plainRow(t('homeForum.empty')));
       return;
     }
     body.append(...topics.map(topicRow));
   } catch {
-    body.replaceChildren(plainRow('Forum unavailable.'));
+    body.replaceChildren(plainRow(t('homeForum.unavailable')));
   }
 }
 
@@ -83,7 +84,8 @@ function topicRow(topic: ForumTopicSummary): HTMLElement {
 
   const replies = Math.max(0, topic.postCount - 1);
   const count = span('landing-forum-topic-count', String(replies));
-  count.title = `${replies} ${replies === 1 ? 'reply' : 'replies'}`;
+  count.title =
+    replies === 1 ? t('homeForum.repliesOne') : t('homeForum.replies', { count: replies });
 
   row.append(main, activity, count);
   return row;
@@ -118,19 +120,21 @@ function pageForPostCount(postCount: number): number {
 }
 
 function latestAuthorLabel(author: ForumAuthor): string {
-  return author?.displayName ? `by ${author.displayName}` : 'latest activity';
+  return author?.displayName
+    ? t('homeForum.by', { name: author.displayName })
+    : t('homeForum.latestActivity');
 }
 
 function formatTimeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   if (!Number.isFinite(ms)) return '';
   const minutes = Math.max(0, Math.round(ms / 60_000));
-  if (minutes < 1) return 'now';
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return t('homeForum.timeNow');
+  if (minutes < 60) return t('homeForum.timeMinutes', { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return t('homeForum.timeHours', { count: hours });
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days}d`;
+  if (days < 30) return t('homeForum.timeDays', { count: days });
   return new Date(iso).toLocaleDateString();
 }
 

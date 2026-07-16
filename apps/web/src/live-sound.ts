@@ -15,6 +15,7 @@ import {
   replayGameEvents,
   type Square,
 } from '@mistboard/game';
+import { readAccountPreferences } from './account-preferences.js';
 import {
   liveState,
   type RoomMode,
@@ -23,6 +24,8 @@ import {
   type SoundKind,
 } from './live-state.js';
 import {
+  DEFAULT_SOUND_SET,
+  isSynthesizedSet,
   readStoredSoundSet,
   type SoundSetId,
   soundFileFor,
@@ -32,6 +35,18 @@ import { readEffectiveSoundVolume, soundSettingsChangedEvent } from './theme.js'
 import { files, isColor } from './web-utils.js';
 
 const SOUND_MASTER_GAIN = 7.5;
+// Per-set output trim for file-backed sets. The lichess sets (futuristic/nes/
+// piano/sfx) ship near-0dBFS mp3s that play 2-3x louder than the synthesized
+// mist tones (peaks ~0.3-0.6), so they come down hard; the wood set is short
+// real-board recordings closer to reference, so it needs less. Tunable per set
+// after audition.
+const FILE_SET_MASTER_GAIN: Partial<Record<SoundSetId, number>> = {
+  wood: 0.8,
+  futuristic: 0.4,
+  nes: 0.4,
+  piano: 0.4,
+  sfx: 0.4,
+};
 
 let sound: SoundController | null = null;
 let lastSoundEventCount: number | null = null;
@@ -96,6 +111,7 @@ export function maybePlayLowTimeSound(
   remainingMs: number,
   initialMs: number | null,
 ): void {
+  if (!readAccountPreferences().lowTimeSound) return;
   if (lowTimeFiredGameId === gameId) return;
   const threshold = Math.min(30_000, Math.max(10_000, (initialMs ?? 150_000) * 0.1));
   if (remainingMs <= 0 || remainingMs > threshold) return;
@@ -229,7 +245,7 @@ function createSoundController(): SoundController {
 
   const preloadActiveSet = (): void => {
     const audio = ensureContext();
-    if (!audio || activeSet === 'mist') return;
+    if (!audio || isSynthesizedSet(activeSet)) return;
     for (const kind of [
       'move',
       'capture',
@@ -288,22 +304,51 @@ function createSoundController(): SoundController {
     }
   });
 
+  // Shared white-noise buffer for percussive (wood-clack) tones; built lazily
+  // once per AudioContext and reused across every play.
+  let noiseBuffer: AudioBuffer | null = null;
+  const ensureNoiseBuffer = (audio: AudioContext): AudioBuffer => {
+    if (noiseBuffer) return noiseBuffer;
+    const length = Math.floor(audio.sampleRate * 0.2);
+    const buffer = audio.createBuffer(1, length, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+    noiseBuffer = buffer;
+    return buffer;
+  };
+
   const playTones = (audio: AudioContext, kind: SoundKind): void => {
     const now = audio.currentTime;
-    for (const tone of tonesForSound(kind)) {
-      const osc = audio.createOscillator();
+    for (const tone of tonesForSound(kind, activeSet)) {
+      const start = now + tone.delay;
       const gain = audio.createGain();
-      osc.type = tone.type;
-      osc.frequency.setValueAtTime(tone.frequency, now + tone.delay);
-      gain.gain.setValueAtTime(0.0001, now + tone.delay);
+      gain.gain.setValueAtTime(0.0001, start);
       gain.gain.exponentialRampToValueAtTime(
         tone.gain * volume * SOUND_MASTER_GAIN,
-        now + tone.delay + 0.012,
+        start + (tone.attack ?? 0.012),
       );
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.delay + tone.duration);
-      osc.connect(gain).connect(audio.destination);
-      osc.start(now + tone.delay);
-      osc.stop(now + tone.delay + tone.duration + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + tone.duration);
+      gain.connect(audio.destination);
+      if (tone.noise) {
+        // A bandpass-filtered noise burst centered at `frequency`: the sharp
+        // "clack" transient of a wooden piece meeting a wooden board.
+        const source = audio.createBufferSource();
+        source.buffer = ensureNoiseBuffer(audio);
+        const band = audio.createBiquadFilter();
+        band.type = 'bandpass';
+        band.frequency.setValueAtTime(tone.frequency, start);
+        band.Q.value = tone.q ?? 1;
+        source.connect(band).connect(gain);
+        source.start(start);
+        source.stop(start + tone.duration + 0.03);
+      } else {
+        const osc = audio.createOscillator();
+        osc.type = tone.type;
+        osc.frequency.setValueAtTime(tone.frequency, start);
+        osc.connect(gain);
+        osc.start(start);
+        osc.stop(start + tone.duration + 0.03);
+      }
     }
   };
 
@@ -320,7 +365,7 @@ function createSoundController(): SoundController {
         source.buffer = buffer;
         source.playbackRate.value = spec.rate ?? 1;
         const gain = audio.createGain();
-        gain.gain.value = volume * (spec.gain ?? 1);
+        gain.gain.value = volume * (spec.gain ?? 1) * (FILE_SET_MASTER_GAIN[activeSet] ?? 0.4);
         source.connect(gain).connect(audio.destination);
         source.start();
         return;
@@ -359,9 +404,24 @@ export type SoundTone = {
   frequency: number;
   gain: number;
   type: OscillatorType;
+  // Envelope attack in seconds (default 0.012). A near-instant attack (~0.001)
+  // gives a percussive click instead of a soft swell.
+  attack?: number;
+  // When true, play a bandpass-filtered white-noise burst centered at
+  // `frequency` instead of an oscillator — the wood-clack transient. `type` is
+  // ignored for a noise tone.
+  noise?: boolean;
+  // Bandpass Q for a noise tone (default 1). Lower = broader / woodier.
+  q?: number;
 };
 
-export function tonesForSound(kind: SoundKind): SoundTone[] {
+export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_SET): SoundTone[] {
+  if (set === 'wood') {
+    const wood = woodTonesForSound(kind);
+    if (wood) return wood;
+    // Kinds the wood set doesn't override (win/lose/draw/king-*) fall through
+    // to the mist musical tones below.
+  }
   if (kind === 'capture')
     return [{ delay: 0, duration: 0.11, frequency: 180, gain: 0.075, type: 'triangle' }];
   if (kind === 'captured')
@@ -443,7 +503,216 @@ export function tonesForSound(kind: SoundKind): SoundTone[] {
       { delay: 0.01, duration: 0.13, frequency: 125, gain: 0.07, type: 'sine' },
     ];
   }
+  if (kind === 'learn-take') {
+    // Star/apple pickup: a bright two-note "bling", clearly not a capture.
+    return [
+      { delay: 0, duration: 0.07, frequency: 987.77, gain: 0.05, type: 'sine' },
+      { delay: 0.055, duration: 0.14, frequency: 1318.51, gain: 0.045, type: 'sine' },
+    ];
+  }
+  if (kind === 'learn-failure') {
+    // A soft "not quite": gentle descending pair, far kinder than the ranked
+    // 'lose' sting. Failing a lesson should invite a retry, not sting.
+    return [
+      { delay: 0, duration: 0.12, frequency: 329.63, gain: 0.032, type: 'sine' },
+      { delay: 0.11, duration: 0.18, frequency: 277.18, gain: 0.03, type: 'sine' },
+    ];
+  }
+  if (kind === 'level-start') {
+    // A single soft ping when a lesson level mounts.
+    return [{ delay: 0, duration: 0.12, frequency: 659.25, gain: 0.04, type: 'sine' }];
+  }
+  if (kind === 'level-end') {
+    // Level solved: a light rising arpeggio, quicker and smaller than 'win'.
+    return [
+      { delay: 0, duration: 0.08, frequency: 523.25, gain: 0.045, type: 'triangle' },
+      { delay: 0.07, duration: 0.1, frequency: 659.25, gain: 0.045, type: 'triangle' },
+      { delay: 0.15, duration: 0.18, frequency: 783.99, gain: 0.05, type: 'triangle' },
+    ];
+  }
+  if (kind === 'stage-start') {
+    // Opening a new chapter: a warm three-note flourish.
+    return [
+      { delay: 0, duration: 0.1, frequency: 392, gain: 0.045, type: 'sine' },
+      { delay: 0.09, duration: 0.12, frequency: 523.25, gain: 0.045, type: 'sine' },
+      { delay: 0.19, duration: 0.2, frequency: 659.25, gain: 0.045, type: 'sine' },
+    ];
+  }
+  if (kind === 'stage-end') {
+    // Stage complete: a major run with a high sparkle on top, grander than
+    // both 'win' and 'level-end'.
+    return [
+      { delay: 0, duration: 0.1, frequency: 392, gain: 0.05, type: 'triangle' },
+      { delay: 0.09, duration: 0.1, frequency: 493.88, gain: 0.05, type: 'triangle' },
+      { delay: 0.18, duration: 0.1, frequency: 587.33, gain: 0.05, type: 'triangle' },
+      { delay: 0.27, duration: 0.32, frequency: 783.99, gain: 0.055, type: 'triangle' },
+      { delay: 0.38, duration: 0.4, frequency: 1174.66, gain: 0.035, type: 'sine' },
+    ];
+  }
   return [{ delay: 0, duration: 0.09, frequency: 320, gain: 0.055, type: 'sine' }];
+}
+
+// The 'wood' set: wooden pieces clacked on a wooden board (xiangqi/shogi feel).
+// Each tactile kind is a sharp bandpass-noise "clack" transient over a short
+// low triangle "body" (the board's resonance). Non-tactile kinds
+// (win/lose/draw/king-*/low-time) return null and reuse the mist tones.
+function woodTonesForSound(kind: SoundKind): SoundTone[] | null {
+  switch (kind) {
+    case 'move':
+      return [
+        {
+          delay: 0,
+          duration: 0.03,
+          frequency: 2200,
+          gain: 0.09,
+          type: 'sine',
+          noise: true,
+          q: 0.6,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.07, frequency: 230, gain: 0.05, type: 'triangle', attack: 0.002 },
+      ];
+    case 'capture':
+      return [
+        {
+          delay: 0,
+          duration: 0.035,
+          frequency: 1900,
+          gain: 0.11,
+          type: 'sine',
+          noise: true,
+          q: 0.5,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.09, frequency: 200, gain: 0.07, type: 'triangle', attack: 0.002 },
+      ];
+    case 'captured':
+      // Done to you: lower and softer than a capture you make.
+      return [
+        {
+          delay: 0,
+          duration: 0.03,
+          frequency: 1500,
+          gain: 0.075,
+          type: 'sine',
+          noise: true,
+          q: 0.5,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.1, frequency: 165, gain: 0.055, type: 'triangle', attack: 0.003 },
+      ];
+    case 'cannon-capture':
+      // The xiangqi cannon slam: a hard crack over a deep board boom.
+      return [
+        {
+          delay: 0,
+          duration: 0.04,
+          frequency: 2400,
+          gain: 0.12,
+          type: 'sine',
+          noise: true,
+          q: 0.5,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.22, frequency: 72, gain: 0.09, type: 'sine', attack: 0.002 },
+      ];
+    case 'castle':
+      // Two clacks: the king, then the rook settling beside it.
+      return [
+        {
+          delay: 0,
+          duration: 0.028,
+          frequency: 2000,
+          gain: 0.07,
+          type: 'sine',
+          noise: true,
+          q: 0.7,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.06, frequency: 220, gain: 0.045, type: 'triangle', attack: 0.002 },
+        {
+          delay: 0.12,
+          duration: 0.028,
+          frequency: 2000,
+          gain: 0.06,
+          type: 'sine',
+          noise: true,
+          q: 0.7,
+          attack: 0.001,
+        },
+        {
+          delay: 0.12,
+          duration: 0.06,
+          frequency: 210,
+          gain: 0.04,
+          type: 'triangle',
+          attack: 0.002,
+        },
+      ];
+    case 'drop':
+      // A piece placed from hand: a firm, slightly deeper wood tap.
+      return [
+        {
+          delay: 0,
+          duration: 0.03,
+          frequency: 1700,
+          gain: 0.08,
+          type: 'sine',
+          noise: true,
+          q: 0.6,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.09, frequency: 175, gain: 0.06, type: 'triangle', attack: 0.002 },
+      ];
+    case 'flip':
+      // A face-down tile turned over: a crisp tick into a short woody body.
+      return [
+        {
+          delay: 0,
+          duration: 0.025,
+          frequency: 2600,
+          gain: 0.075,
+          type: 'sine',
+          noise: true,
+          q: 0.8,
+          attack: 0.001,
+        },
+        {
+          delay: 0.015,
+          duration: 0.06,
+          frequency: 300,
+          gain: 0.045,
+          type: 'triangle',
+          attack: 0.002,
+        },
+      ];
+    case 'game-start':
+      // Two settling taps as the pieces take the board.
+      return [
+        {
+          delay: 0,
+          duration: 0.03,
+          frequency: 1600,
+          gain: 0.06,
+          type: 'sine',
+          noise: true,
+          q: 0.7,
+          attack: 0.001,
+        },
+        {
+          delay: 0.11,
+          duration: 0.03,
+          frequency: 2100,
+          gain: 0.06,
+          type: 'sine',
+          noise: true,
+          q: 0.7,
+          attack: 0.001,
+        },
+      ];
+    default:
+      return null;
+  }
 }
 
 function shouldUseRevealedEventSounds(nextView: PlayerView | null): boolean {

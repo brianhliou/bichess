@@ -152,10 +152,17 @@ function renderThreadContent(
   container.replaceChildren();
 
   if (viewerIsAdmin) {
+    // Admin-only entry point. Amber-tint it + tag it "Admin only" (matching the
+    // forum moderation badge) so it never reads as ordinary inbox navigation.
     const reports = document.createElement('a');
-    reports.className = 'inbox-back-link';
+    reports.className = 'inbox-admin-link';
     reports.href = '/inbox/reports';
-    reports.textContent = 'Reports';
+    const reportsLabel = document.createElement('span');
+    reportsLabel.textContent = 'Message reports';
+    const reportsBadge = document.createElement('span');
+    reportsBadge.className = 'inbox-admin-badge';
+    reportsBadge.textContent = 'Admin only';
+    reports.append(reportsLabel, reportsBadge);
     container.append(reports);
   }
 

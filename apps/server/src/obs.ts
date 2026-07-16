@@ -263,6 +263,85 @@ function isTimeoutish(error: string | null | undefined): boolean {
 
 export const engineCounters = new EngineCounters();
 
+export type AuthStartOutcome = 'delivery_failed' | 'rate_limited' | 'rejected' | 'sent';
+export type AuthConfirmOutcome = 'rate_limited' | 'rejected' | 'success';
+
+// Aggregate auth outcomes only. These counters deliberately never receive an
+// email address, IP address, challenge id, or account id.
+export class AuthCounters {
+  totalStartRequests = 0;
+  totalCodesSent = 0;
+  totalStartRateLimited = 0;
+  totalDeliveryFailures = 0;
+  totalConfirmRequests = 0;
+  totalConfirmSuccesses = 0;
+  totalConfirmRateLimited = 0;
+  private lastEmittedStartRequests = 0;
+  private lastEmittedCodesSent = 0;
+  private lastEmittedStartRateLimited = 0;
+  private lastEmittedDeliveryFailures = 0;
+  private lastEmittedConfirmRequests = 0;
+  private lastEmittedConfirmSuccesses = 0;
+  private lastEmittedConfirmRateLimited = 0;
+
+  recordStart(outcome: AuthStartOutcome): void {
+    this.totalStartRequests += 1;
+    if (outcome === 'sent') this.totalCodesSent += 1;
+    if (outcome === 'rate_limited') this.totalStartRateLimited += 1;
+    if (outcome === 'delivery_failed') this.totalDeliveryFailures += 1;
+  }
+
+  recordConfirm(outcome: AuthConfirmOutcome): void {
+    this.totalConfirmRequests += 1;
+    if (outcome === 'success') this.totalConfirmSuccesses += 1;
+    if (outcome === 'rate_limited') this.totalConfirmRateLimited += 1;
+  }
+
+  snapshot(): {
+    codesSent: number;
+    codesSentDelta: number;
+    confirmRateLimited: number;
+    confirmRateLimitedDelta: number;
+    confirmRequests: number;
+    confirmRequestsDelta: number;
+    confirmSuccesses: number;
+    confirmSuccessesDelta: number;
+    deliveryFailures: number;
+    deliveryFailuresDelta: number;
+    startRateLimited: number;
+    startRateLimitedDelta: number;
+    startRequests: number;
+    startRequestsDelta: number;
+  } {
+    const result = {
+      codesSent: this.totalCodesSent,
+      codesSentDelta: this.totalCodesSent - this.lastEmittedCodesSent,
+      confirmRateLimited: this.totalConfirmRateLimited,
+      confirmRateLimitedDelta: this.totalConfirmRateLimited - this.lastEmittedConfirmRateLimited,
+      confirmRequests: this.totalConfirmRequests,
+      confirmRequestsDelta: this.totalConfirmRequests - this.lastEmittedConfirmRequests,
+      confirmSuccesses: this.totalConfirmSuccesses,
+      confirmSuccessesDelta: this.totalConfirmSuccesses - this.lastEmittedConfirmSuccesses,
+      deliveryFailures: this.totalDeliveryFailures,
+      deliveryFailuresDelta: this.totalDeliveryFailures - this.lastEmittedDeliveryFailures,
+      startRateLimited: this.totalStartRateLimited,
+      startRateLimitedDelta: this.totalStartRateLimited - this.lastEmittedStartRateLimited,
+      startRequests: this.totalStartRequests,
+      startRequestsDelta: this.totalStartRequests - this.lastEmittedStartRequests,
+    };
+    this.lastEmittedCodesSent = this.totalCodesSent;
+    this.lastEmittedConfirmRateLimited = this.totalConfirmRateLimited;
+    this.lastEmittedConfirmRequests = this.totalConfirmRequests;
+    this.lastEmittedConfirmSuccesses = this.totalConfirmSuccesses;
+    this.lastEmittedDeliveryFailures = this.totalDeliveryFailures;
+    this.lastEmittedStartRateLimited = this.totalStartRateLimited;
+    this.lastEmittedStartRequests = this.totalStartRequests;
+    return result;
+  }
+}
+
+export const authCounters = new AuthCounters();
+
 type EngineCounterSnapshot = ReturnType<EngineCounters['snapshot']>;
 
 export type EngineAlertFields = {
@@ -519,6 +598,7 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
     lastTickAt = now;
     const mem = process.memoryUsage();
     const engine = engineCounters.snapshot();
+    const auth = authCounters.snapshot();
     const ws = wsCounters.snapshot();
     const loopLagP50Ms = nsToMs(histogram.percentile(50));
     const loopLagP99Ms = nsToMs(histogram.percentile(99));
@@ -554,6 +634,20 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
         heap_used_mb: heapUsedMb,
         rss_mb: rssMb,
         tick_ms: tickMs,
+        auth_start_requests_total: auth.startRequests,
+        auth_start_requests_tick: auth.startRequestsDelta,
+        auth_codes_sent_total: auth.codesSent,
+        auth_codes_sent_tick: auth.codesSentDelta,
+        auth_start_rate_limited_total: auth.startRateLimited,
+        auth_start_rate_limited_tick: auth.startRateLimitedDelta,
+        auth_delivery_failures_total: auth.deliveryFailures,
+        auth_delivery_failures_tick: auth.deliveryFailuresDelta,
+        auth_confirm_requests_total: auth.confirmRequests,
+        auth_confirm_requests_tick: auth.confirmRequestsDelta,
+        auth_confirm_successes_total: auth.confirmSuccesses,
+        auth_confirm_successes_tick: auth.confirmSuccessesDelta,
+        auth_confirm_rate_limited_total: auth.confirmRateLimited,
+        auth_confirm_rate_limited_tick: auth.confirmRateLimitedDelta,
         engine_moves_total: engine.moves,
         engine_fallbacks_total: engine.fallbacks,
         engine_move_failures_total: engine.moveFailures,

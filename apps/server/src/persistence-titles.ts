@@ -37,6 +37,23 @@ export function isPlayerTitle(value: unknown): value is PlayerTitle {
   return typeof value === 'string' && (PLAYER_TITLES as readonly string[]).includes(value);
 }
 
+// Titles a player can currently REQUEST via /api/titles/verify. Scoped to
+// xiangqi for now: chess titles stay in PLAYER_TITLES (so an already-granted
+// chess badge still renders and can be approved) but new requests for them are
+// rejected fail-closed. Mirror of REQUESTABLE_PLAYER_TITLES in
+// apps/web/src/player-titles.ts. Re-enabling chess is a one-line change here.
+export const REQUESTABLE_PLAYER_TITLES: readonly PlayerTitle[] = [
+  'xgm',
+  'xim',
+  'xnm',
+  'xwgm',
+  'xwim',
+];
+
+export function isRequestableTitle(value: unknown): value is PlayerTitle {
+  return isPlayerTitle(value) && (REQUESTABLE_PLAYER_TITLES as readonly string[]).includes(value);
+}
+
 export type TitleVerificationStatus = 'pending' | 'approved' | 'rejected';
 
 export type TitleVerificationRequest = {

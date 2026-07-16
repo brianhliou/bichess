@@ -5,6 +5,7 @@ import {
   buildXiangqiSolutionFromPv,
   createInitialXiangqiState,
   detectXiangqiBlunderCandidates,
+  isXiangqiSolverMoveUnique,
   isXiangqiUniquelyWinning,
   makeXiangqiPuzzleInitial,
   tagXiangqiPuzzleThemes,
@@ -168,6 +169,96 @@ test('isXiangqiUniquelyWinning accepts a lone mate over a non-mate second line',
       UNIQUE_OPTS,
     ),
     false,
+  );
+});
+
+// ── Winning-floor per-ply uniqueness (gated re-mine) ─────────────────────────
+
+// winHi 0.80 ~ +240cp, winLo 0.60 ~ +70cp on the K=400 logistic.
+const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, materialGapCp: 250 };
+
+test('isXiangqiSolverMoveUnique: only-move (no runner-up) is unique', () => {
+  assert.equal(
+    isXiangqiSolverMoveUnique({ scoreCp: 400, mate: null }, undefined, SOLVER_UNIQUE_OPTS),
+    true,
+  );
+});
+
+test('isXiangqiSolverMoveUnique: best must clear the winning floor', () => {
+  // +150cp is winning-ish but below winHi (~+240): not a puzzle move.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: 150, mate: null },
+      { scoreCp: -50, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    false,
+  );
+});
+
+test('isXiangqiSolverMoveUnique: two still-winning moves a small gap apart are NOT unique', () => {
+  // +600 vs +550: both crushing, 50cp apart — forcing one is unfair.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: 600, mate: null },
+      { scoreCp: 550, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    false,
+  );
+});
+
+test('isXiangqiSolverMoveUnique: unique when the runner-up loses the win', () => {
+  // +600 vs +40 (~win% 0.53, below winLo): the alternative throws the win.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: 600, mate: null },
+      { scoreCp: 40, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    true,
+  );
+});
+
+test('isXiangqiSolverMoveUnique: unique when the runner-up trails by a whole piece', () => {
+  // +900 vs +600: both winning, but a 300cp material margin (win the chariot).
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: 900, mate: null },
+      { scoreCp: 600, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    true,
+  );
+});
+
+test('isXiangqiSolverMoveUnique: mates use strictly-fastest-mate, not cp/win%', () => {
+  // Faster mate over a slower mate: unique.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 5, mate: 5 },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    true,
+  );
+  // Two mates of equal distance: not unique.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    false,
+  );
+  // Lone mate over a non-mate second line: unique.
+  assert.equal(
+    isXiangqiSolverMoveUnique(
+      { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
+      { scoreCp: 800, mate: null },
+      SOLVER_UNIQUE_OPTS,
+    ),
+    true,
   );
 });
 

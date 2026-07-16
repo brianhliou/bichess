@@ -2,11 +2,16 @@
  * Full Dark Xiangqi engine request builder — the 9x10 sibling of the chess and
  * DMX builders.
  *
- * The private full-Xiangqi engine currently models every occupied square in its
- * visible set as fully identified. The public player UI still renders some
- * blocker/screen squares as shrouded, but this local-only engine request keeps
- * the bot compatible with the measured 20M-cap profile while still excluding
- * off-vision pieces entirely.
+ * By default every occupied square in the visible set is fully identified (the
+ * historical behavior). With `MISTBOARD_XIANGQI_SHROUD_BLOCKERS=1`, cannon
+ * screens and blocked horse-legs / elephant-eyes are sent COLOR-ONLY (shrouded),
+ * matching the human player view and closing the info asymmetry.
+ *
+ * ⚠ This flag MUST be flipped in lockstep with the engine's
+ * `FOW_XIANGQI_SHROUD_BLOCKERS`: if the server sends shrouded squares while the
+ * engine still expects full identity, the engine's belief-consistency check
+ * rejects every world and the belief empties. Default off keeps the served bot
+ * byte-identical (and off-vision pieces are excluded in both modes).
  */
 
 import {
@@ -25,10 +30,21 @@ import {
   type XiangqiMove,
   type XiangqiPieceRole,
   type XiangqiSquare,
+  type XiangqiVisibleBoardEntry,
   coordOf as xiangqiCoordOf,
 } from '@mistboard/game';
 import type { DarkXiangqiEvent } from '../dark-xiangqi-runtime.js';
 import { buildSessionId, deriveEngineSeed } from './build.js';
+
+/**
+ * Whether to redact cannon-screen / horse-leg / elephant-eye identity to
+ * color-only for the engine (matching the human view). Must be flipped in
+ * lockstep with the engine's FOW_XIANGQI_SHROUD_BLOCKERS — see the module header.
+ */
+function shroudBlockersEnabled(): boolean {
+  const v = process.env.MISTBOARD_XIANGQI_SHROUD_BLOCKERS;
+  return v !== undefined && v !== '' && v !== '0' && v !== 'false' && v !== 'False';
+}
 
 const ROLE_TO_LETTER: Record<XiangqiPieceRole, 'K' | 'A' | 'B' | 'N' | 'R' | 'C' | 'P'> = {
   general: 'K',
@@ -81,15 +97,39 @@ export function buildXiangqiObservationForPly(args: {
   }
 
   const visible_pieces: EngineObservation['visible_pieces'] = [];
-  for (const sq of view.visibleSquares) {
-    const piece = nextState.board[sq];
-    if (!piece) continue;
-    visible_pieces.push([
-      xiangqiSquareIndex(sq),
-      { type: ROLE_TO_LETTER[piece.role], color: toProtocolColor(piece.color) },
-    ]);
+  const shrouded: Array<[SquareIndex, Color]> = [];
+  if (shroudBlockersEnabled()) {
+    // Route shrouded blocker/screen squares to COLOR-ONLY; everything else keeps
+    // full identity. Iterates the player-view board (which carries the same
+    // per-square `shrouded` flag the human wire uses), so engine == human view.
+    for (const [sq, entry] of Object.entries(view.board) as Array<
+      [XiangqiSquare, XiangqiVisibleBoardEntry]
+    >) {
+      if (!entry) continue;
+      const idx = xiangqiSquareIndex(sq);
+      if (entry.shrouded) {
+        shrouded.push([idx, toProtocolColor(entry.piece.color)]);
+      } else {
+        visible_pieces.push([
+          idx,
+          { type: ROLE_TO_LETTER[entry.piece.role], color: toProtocolColor(entry.piece.color) },
+        ]);
+      }
+    }
+  } else {
+    // Legacy: every visible occupied square fully identified (byte-identical to
+    // pre-shroud behavior — kept default until rollout).
+    for (const sq of view.visibleSquares) {
+      const piece = nextState.board[sq];
+      if (!piece) continue;
+      visible_pieces.push([
+        xiangqiSquareIndex(sq),
+        { type: ROLE_TO_LETTER[piece.role], color: toProtocolColor(piece.color) },
+      ]);
+    }
   }
   visible_pieces.sort((a, b) => a[0] - b[0]);
+  shrouded.sort((a, b) => a[0] - b[0]);
 
   let own_capture_square: SquareIndex | null = null;
   let opp_capture_landing_square: SquareIndex | null = null;
@@ -113,7 +153,7 @@ export function buildXiangqiObservationForPly(args: {
         }
       : null;
 
-  return {
+  const obs: EngineObservation = {
     ply,
     kind,
     own_move: kind === 'own_move' && move ? (move as unknown as Move) : null,
@@ -123,6 +163,9 @@ export function buildXiangqiObservationForPly(args: {
     opp_capture_landing_square,
     game_over,
   };
+  // Emit shrouded only when non-empty ⇒ wire byte-identical to pre-shroud when off.
+  if (shrouded.length > 0) obs.shrouded = shrouded;
+  return obs;
 }
 
 export function buildXiangqiObservationTranscript(args: {

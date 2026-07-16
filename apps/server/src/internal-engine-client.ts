@@ -1,10 +1,22 @@
-import type { EngineTurnRequest, EngineTurnResponse, Move, Square } from '@mistboard/game';
+import type {
+  EngineObservationPush,
+  EngineTurnRequest,
+  EngineTurnResponse,
+  Move,
+  Square,
+} from '@mistboard/game';
 
 const ENGINE_TURN_PATH = '/internal/engine/turn';
+const ENGINE_OBSERVE_PATH = '/internal/engine/observe';
 const ENGINE_RESERVATIONS_PATH = '/internal/engine/reservations';
 const DEFAULT_TRANSPORT_GRACE_MS = 1_000;
 const DEFAULT_CONTROL_TIMEOUT_MS = 5_000;
 const ERROR_BODY_TAIL_CHARS = 1_000;
+// A well-formed EngineTurnResponse is a few hundred bytes; 1 MiB is a generous
+// ceiling that still stops a hostile (or broken) endpoint from streaming an
+// unbounded body to exhaust our memory. Applies to every engine response,
+// including our own worker's — its responses are far below this.
+const MAX_RESPONSE_BYTES = 1_048_576;
 
 export type InternalEngineClientErrorReason =
   | 'missing_config'
@@ -34,20 +46,37 @@ export class InternalEngineClientError extends Error {
   }
 }
 
-export async function requestInternalEngineTurn(
+/**
+ * A single engine HTTP endpoint (base URL + bearer token). The live path
+ * resolves this from the server's environment; the bot-match arbiter holds a
+ * distinct endpoint per seat so it can drive two independent engines (e.g. our
+ * live Misty and an external third-party bot) in one process.
+ */
+export type EngineEndpoint = { baseUrl: string; token: string };
+
+/**
+ * POST an `EngineTurnRequest` to an explicit engine endpoint. This is the
+ * endpoint-parameterized core; `requestInternalEngineTurn` wraps it with the
+ * server-environment endpoint for the live path.
+ */
+export async function requestEngineTurnAt(
+  endpoint: EngineEndpoint,
   request: EngineTurnRequest,
   watchdogTimeoutMs: number,
-  reservationId?: string,
-  options: { computeBudgetMs?: number } = {},
+  options: {
+    computeBudgetMs?: number;
+    reservationId?: string;
+    /**
+     * Whether to trust and pass through the response's free-form `diagnostics`
+     * blob. Defaults to true for our own worker. Set false for UNTRUSTED
+     * external endpoints so their arbitrary object never flows into our
+     * telemetry / storage / UI.
+     */
+    trustDiagnostics?: boolean;
+  } = {},
 ): Promise<EngineTurnResponse> {
-  const baseUrl = process.env.MISTBOARD_INTERNAL_ENGINE_URL?.trim();
-  const token = process.env.MISTBOARD_INTERNAL_ENGINE_TOKEN?.trim();
-  if (!baseUrl || !token) {
-    throw new InternalEngineClientError(
-      'missing_config',
-      'internal engine service URL/token is not configured',
-    );
-  }
+  const { baseUrl, token } = endpoint;
+  const reservationId = options.reservationId;
 
   const timeoutMs = Math.max(1, watchdogTimeoutMs + DEFAULT_TRANSPORT_GRACE_MS);
   const computeBudgetMs = Math.max(
@@ -71,29 +100,42 @@ export async function requestInternalEngineTurn(
     });
 
     if (!response.ok) {
+      const bodyTail = (
+        await readCappedText(response, ERROR_BODY_TAIL_CHARS * 4).catch(() => '')
+      ).slice(-ERROR_BODY_TAIL_CHARS);
       throw new InternalEngineClientError(
         'http_error',
         `internal engine service returned HTTP ${response.status}`,
         {
           status: response.status,
-          diagnostics: {
-            status: response.status,
-            bodyTail: (await response.text()).slice(-ERROR_BODY_TAIL_CHARS),
-          },
+          diagnostics: { status: response.status, bodyTail },
         },
+      );
+    }
+
+    let text: string;
+    try {
+      text = await readCappedText(response, MAX_RESPONSE_BYTES);
+    } catch (err) {
+      if (err instanceof InternalEngineClientError) throw err;
+      throw new InternalEngineClientError(
+        'network_error',
+        `failed reading engine response: ${(err as Error).message}`,
       );
     }
 
     let payload: unknown;
     try {
-      payload = await response.json();
+      payload = JSON.parse(text);
     } catch (err) {
       throw new InternalEngineClientError(
         'invalid_response',
         `internal engine service returned invalid JSON: ${(err as Error).message}`,
       );
     }
-    return parseEngineTurnResponse(payload, request);
+    return parseEngineTurnResponse(payload, request, {
+      includeDiagnostics: options.trustDiagnostics !== false,
+    });
   } catch (err) {
     if (err instanceof InternalEngineClientError) throw err;
     if (isAbortError(err)) {
@@ -112,6 +154,48 @@ export async function requestInternalEngineTurn(
   }
 }
 
+/**
+ * Live path: POST an engine turn to the server-environment engine service
+ * (`MISTBOARD_INTERNAL_ENGINE_URL` / `MISTBOARD_INTERNAL_ENGINE_TOKEN`).
+ * Thin wrapper over {@link requestEngineTurnAt}.
+ */
+export async function requestInternalEngineTurn(
+  request: EngineTurnRequest,
+  watchdogTimeoutMs: number,
+  reservationId?: string,
+  options: { computeBudgetMs?: number } = {},
+): Promise<EngineTurnResponse> {
+  const baseUrl = process.env.MISTBOARD_INTERNAL_ENGINE_URL?.trim();
+  const token = process.env.MISTBOARD_INTERNAL_ENGINE_TOKEN?.trim();
+  if (!baseUrl || !token) {
+    throw new InternalEngineClientError(
+      'missing_config',
+      'internal engine service URL/token is not configured',
+    );
+  }
+  return requestEngineTurnAt({ baseUrl, token }, request, watchdogTimeoutMs, {
+    computeBudgetMs: options.computeBudgetMs,
+    reservationId,
+  });
+}
+
+/**
+ * Push a post-move observation to an engine endpoint (the "observe right after
+ * you move" step). Fire-and-forget from the caller's view: it POSTs the push
+ * and returns once acked. Best-effort — callers (the arbiter) treat a failure as
+ * non-fatal, since the same observation also reaches the engine in its next turn
+ * request. No reservation required (this requests no compute).
+ */
+export async function pushEngineObservationAt(
+  endpoint: EngineEndpoint,
+  push: EngineObservationPush,
+): Promise<void> {
+  await engineControlJsonAt(endpoint, ENGINE_OBSERVE_PATH, {
+    method: 'POST',
+    body: JSON.stringify(push),
+  });
+}
+
 export type InternalEngineReservationResponse = {
   reservationId: string;
   engineId: string;
@@ -122,37 +206,46 @@ export type InternalEngineReservationResponse = {
   };
 };
 
-export async function requestInternalEngineReservation(input: {
-  color: 'white' | 'black';
-  engineId: string;
-}): Promise<InternalEngineReservationResponse> {
-  const response = await requestInternalEngineJson(ENGINE_RESERVATIONS_PATH, {
+/** Reserve an engine seat at an explicit endpoint (endpoint-parameterized core). */
+export async function requestEngineReservationAt(
+  endpoint: EngineEndpoint,
+  input: { color: 'white' | 'black'; engineId: string },
+): Promise<InternalEngineReservationResponse> {
+  const response = await engineControlJsonAt(endpoint, ENGINE_RESERVATIONS_PATH, {
     method: 'POST',
     body: JSON.stringify(input),
   });
   return parseReservationResponse(response);
 }
 
+/** Release an engine seat at an explicit endpoint. */
+export async function releaseEngineReservationAt(
+  endpoint: EngineEndpoint,
+  reservationId: string,
+  reason: string,
+): Promise<void> {
+  await engineControlJsonAt(
+    endpoint,
+    `${ENGINE_RESERVATIONS_PATH}/${encodeURIComponent(reservationId)}/release`,
+    { method: 'POST', body: JSON.stringify({ reason }) },
+  );
+}
+
+export async function requestInternalEngineReservation(input: {
+  color: 'white' | 'black';
+  engineId: string;
+}): Promise<InternalEngineReservationResponse> {
+  return requestEngineReservationAt(engineEndpointFromEnv(), input);
+}
+
 export async function releaseInternalEngineReservation(
   reservationId: string,
   reason: string,
 ): Promise<void> {
-  await requestInternalEngineJson(
-    `${ENGINE_RESERVATIONS_PATH}/${encodeURIComponent(reservationId)}/release`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    },
-  );
+  await releaseEngineReservationAt(engineEndpointFromEnv(), reservationId, reason);
 }
 
-async function requestInternalEngineJson(
-  path: string,
-  init: {
-    body?: string;
-    method: 'GET' | 'POST';
-  },
-): Promise<unknown> {
+function engineEndpointFromEnv(): EngineEndpoint {
   const baseUrl = process.env.MISTBOARD_INTERNAL_ENGINE_URL?.trim();
   const token = process.env.MISTBOARD_INTERNAL_ENGINE_TOKEN?.trim();
   if (!baseUrl || !token) {
@@ -161,6 +254,18 @@ async function requestInternalEngineJson(
       'internal engine service URL/token is not configured',
     );
   }
+  return { baseUrl, token };
+}
+
+async function engineControlJsonAt(
+  endpoint: EngineEndpoint,
+  path: string,
+  init: {
+    body?: string;
+    method: 'GET' | 'POST';
+  },
+): Promise<unknown> {
+  const { baseUrl, token } = endpoint;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_CONTROL_TIMEOUT_MS);
   try {
@@ -222,14 +327,23 @@ function internalEngineUrl(baseUrl: string, path: string): string {
   return new URL(path.slice(1), base).toString();
 }
 
-function parseEngineTurnResponse(value: unknown, request: EngineTurnRequest): EngineTurnResponse {
+function parseEngineTurnResponse(
+  value: unknown,
+  request: EngineTurnRequest,
+  options: { includeDiagnostics?: boolean } = {},
+): EngineTurnResponse {
   if (!isObject(value)) throw invalidResponse('top-level response is not an object');
   if (value.protocolVersion !== '1') throw invalidResponse('unsupported protocol version');
   if (value.gameId !== request.gameId) throw invalidResponse('response gameId mismatch');
   if (value.sessionId !== request.sessionId) throw invalidResponse('response sessionId mismatch');
 
   const move = parseMove(value.move);
-  const diagnostics = isObject(value.diagnostics) ? value.diagnostics : undefined;
+  // Untrusted endpoints (external bots) never get their arbitrary diagnostics
+  // blob into our system — only the validated move survives.
+  const diagnostics =
+    options.includeDiagnostics !== false && isObject(value.diagnostics)
+      ? value.diagnostics
+      : undefined;
   return {
     protocolVersion: '1',
     gameId: request.gameId,
@@ -304,4 +418,44 @@ function isAbortError(err: unknown): boolean {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Read a response body as text, aborting if it exceeds `maxBytes`. Defends
+ * against a hostile/broken endpoint streaming an unbounded body: we check the
+ * declared Content-Length first, then enforce the cap while streaming (a lying
+ * or absent header can't get past the streamed count).
+ */
+async function readCappedText(response: Response, maxBytes: number): Promise<string> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new InternalEngineClientError(
+      'invalid_response',
+      `engine response too large: content-length ${declared} exceeds ${maxBytes} bytes`,
+    );
+  }
+  const body = response.body;
+  if (!body) return response.text();
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        throw new InternalEngineClientError(
+          'invalid_response',
+          `engine response exceeded ${maxBytes} bytes`,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }

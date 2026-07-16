@@ -29,9 +29,6 @@ const DIAGRAM_WIDTH = 340;
 const BAKED_BOARD_STYLE = [
   '--board-light:#f0d9b5',
   '--board-dark:#b58863',
-  '--crossroads-frame:#5b4636',
-  '--crossroads-frame-inner:#6e5743',
-  '--crossroads-board-edge:#3a2817',
   '--crossroads-coord:rgba(60,45,30,0.55)',
   '--board-last-move:rgba(255,205,80,0.45)',
   '--board-fog-light-fill:rgba(6,10,8,0.5)',

@@ -38,7 +38,15 @@ type MinedXiangqiPuzzle = {
     | { type: 'checkmate'; winner?: XiangqiColor }
     | { type: 'winning-advantage'; winner?: XiangqiColor; centipawns?: number };
   themes: MinedXiangqiPuzzleTheme[];
-  sourceGame?: { gameId: string; ply: number };
+  sourceGame?: {
+    gameId: string;
+    ply: number;
+    event?: string;
+    playedOn?: string;
+    result?: string;
+    redName?: string;
+    blackName?: string;
+  };
 };
 
 export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
@@ -173,32 +181,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e6',
         to: 'e8',
       },
-      {
-        from: 'd8',
-        to: 'e9',
-      },
-      {
-        from: 'e8',
-        to: 'h8',
-      },
-      {
-        from: 'h7',
-        to: 'e7',
-      },
-      {
-        from: 'f5',
-        to: 'e7',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 452,
+      centipawns: 459,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_008c6b6eaef4238e418abc19',
       ply: 60,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1/2-1/2',
+      redName: '山东省棋牌运动管理中心 黄蕾蕾',
+      blackName: '广东省二沙体育训练中心 时凤兰',
     },
   },
   {
@@ -317,15 +314,24 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_00eed6ff437dad0cfb4c74fb',
       ply: 94,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-31',
+      result: '1-0',
+      redName: '陕西省社会体育运动发展中心 李小龙',
+      blackName: '新疆维吾尔自治区体育局 杨浩',
     },
   },
   {
-    id: 'xq-mined-hxq_054906ccf8a076f1a86158c9-59',
+    id: 'xq-mined-hxq_062502e85f871bce5a8c54e9-65',
     variant: 'xiangqi',
-    title: 'Black winning advantage',
+    title: 'Black mate in 3',
     initial: {
-      id: 'xq-mined-hxq_054906ccf8a076f1a86158c9-59',
+      id: 'xq-mined-hxq_062502e85f871bce5a8c54e9-65',
       board: {
+        d1: {
+          color: 'red',
+          role: 'chariot',
+        },
         e1: {
           color: 'red',
           role: 'general',
@@ -334,45 +340,49 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'advisor',
         },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
         e2: {
           color: 'red',
           role: 'advisor',
         },
-        e3: {
+        a3: {
           color: 'red',
           role: 'elephant',
         },
-        g3: {
+        h3: {
           color: 'red',
-          role: 'horse',
+          role: 'cannon',
+        },
+        i3: {
+          color: 'red',
+          role: 'elephant',
         },
         e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'horse',
+          color: 'black',
+          role: 'chariot',
         },
         i4: {
           color: 'red',
           role: 'soldier',
         },
-        b5: {
+        a5: {
           color: 'red',
-          role: 'chariot',
+          role: 'soldier',
         },
-        b6: {
+        h5: {
           color: 'black',
-          role: 'horse',
+          role: 'cannon',
         },
-        h6: {
+        c6: {
           color: 'black',
-          role: 'chariot',
+          role: 'elephant',
+        },
+        e6: {
+          color: 'black',
+          role: 'cannon',
+        },
+        c7: {
+          color: 'red',
+          role: 'cannon',
         },
         e7: {
           color: 'black',
@@ -386,19 +396,7 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'elephant',
         },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
+        e9: {
           color: 'black',
           role: 'advisor',
         },
@@ -406,60 +404,60 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'general',
         },
+        f10: {
+          color: 'black',
+          role: 'advisor',
+        },
       },
       status: {
         type: 'playing',
         turn: 'black',
       },
-      moveNumber: 30,
+      moveNumber: 33,
       progressClock: 0,
       positionCounts: {
-        'black|b5rc,b6bh,b9bc,c10be,d10ba,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,f1ra,f8ba,g1re,g3rh,g4rh,h6bc,i4rs,i7bs': 1,
+        'black|a3re,a5rs,c6be,c7rc,d1rc,e1rg,e10bg,e2ra,e4bc,e6bc,e7bs,e8be,e9ba,f1ra,f10ba,h3rc,h5bc,i3re,i4rs,i7bs': 1,
       },
       lastMove: {
-        to: 'g4',
-        from: 'e5',
+        to: 'c7',
+        from: 'c3',
       },
     },
     solution: [
       {
-        from: 'h6',
-        to: 'g6',
+        from: 'e4',
+        to: 'f4',
       },
       {
-        from: 'b5',
-        to: 'g5',
+        from: 'h3',
+        to: 'e3',
       },
       {
-        from: 'g6',
-        to: 'g5',
+        from: 'h5',
+        to: 'h1',
       },
       {
-        from: 'e3',
-        to: 'g5',
+        from: 'i3',
+        to: 'g1',
       },
       {
-        from: 'b9',
-        to: 'g9',
-      },
-      {
-        from: 'g5',
-        to: 'i3',
-      },
-      {
-        from: 'g9',
-        to: 'g3',
+        from: 'f4',
+        to: 'f1',
       },
     ],
     goal: {
-      type: 'winning-advantage',
+      type: 'checkmate',
       winner: 'black',
-      centipawns: 326,
     },
-    themes: ['winning', 'middlegame'],
+    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
     sourceGame: {
-      gameId: 'hxq_054906ccf8a076f1a86158c9',
-      ply: 59,
+      gameId: 'hxq_062502e85f871bce5a8c54e9',
+      ply: 65,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '0-1',
+      redName: '湖北省体育局棋牌运动管理中心 汪元知',
+      blackName: '河北省体育局棋牌运动中心 王子涵',
     },
   },
   {
@@ -577,32 +575,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e10',
         to: 'f10',
       },
-      {
-        from: 'e6',
-        to: 'e7',
-      },
-      {
-        from: 'i7',
-        to: 'i6',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'h2',
-        to: 'f2',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 318,
+      centipawns: 313,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_0638200b88f1ed849ab5a958',
       ply: 69,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-29',
+      result: '0-1',
+      redName: '杭州市智力运动队 蒋明成',
+      blackName: '广东省二沙体育训练中心 莫梓健',
     },
   },
   {
@@ -742,51 +729,40 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
       },
       {
         from: 'g2',
-        to: 'g1',
+        to: 'f2',
       },
       {
         from: 'h10',
-        to: 'h1',
+        to: 'g10',
       },
       {
-        from: 'g1',
-        to: 'h1',
-      },
-      {
-        from: 'e2',
-        to: 'f1',
-      },
-      {
-        from: 'b3',
-        to: 'b1',
+        from: 'g8',
+        to: 'g10',
       },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 942,
+      centipawns: 917,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_06a1d50388c3ae892103e9ee',
       ply: 39,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '0-1',
+      redName: '广东十虎 梁雅让',
+      blackName: '山东十好汉 李翰林',
     },
   },
   {
-    id: 'xq-mined-hxq_099dd5dda07082e7942b89ed-50',
+    id: 'xq-mined-hxq_09d8befd60e689880133928d-105',
     variant: 'xiangqi',
-    title: 'Red winning advantage',
+    title: 'Black mate in 4',
     initial: {
-      id: 'xq-mined-hxq_099dd5dda07082e7942b89ed-50',
+      id: 'xq-mined-hxq_09d8befd60e689880133928d-105',
       board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
         d1: {
           color: 'red',
           role: 'advisor',
@@ -795,83 +771,31 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'general',
         },
-        e2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i2: {
-          color: 'red',
-          role: 'horse',
-        },
-        b3: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d3: {
+        f1: {
           color: 'red',
           role: 'advisor',
+        },
+        d2: {
+          color: 'red',
+          role: 'chariot',
         },
         e3: {
           color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i3: {
-          color: 'black',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'red',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
           role: 'cannon',
         },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
+        e4: {
           color: 'black',
           role: 'chariot',
         },
-        e9: {
+        f4: {
           color: 'black',
-          role: 'advisor',
+          role: 'horse',
         },
-        c10: {
+        c6: {
           color: 'black',
           role: 'elephant',
         },
-        d10: {
+        d8: {
           color: 'black',
           role: 'advisor',
         },
@@ -879,64 +803,64 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'general',
         },
-        g10: {
-          color: 'black',
-          role: 'chariot',
-        },
       },
       status: {
         type: 'playing',
-        turn: 'red',
+        turn: 'black',
       },
-      moveNumber: 26,
+      moveNumber: 53,
       progressClock: 0,
       positionCounts: {
-        'red|a4rs,a7bs,b1rc,b3bc,b8bc,c1re,c10be,c5rs,c7bc,d1ra,d10ba,d3ra,e1rg,e10bg,e2rc,e3re,e5bs,e9ba,f2rc,f6rh,g10bc,g3bs,i2rh,i3bh,i4rs,i7bs': 1,
+        'black|c6be,d1ra,d2rc,d8ba,e1rg,e10bg,e3rc,e4bc,f1ra,f4bh': 1,
       },
       lastMove: {
-        to: 'c7',
-        from: 'c9',
+        to: 'e3',
+        from: 'e7',
       },
     },
     solution: [
       {
-        from: 'f6',
-        to: 'd7',
+        from: 'e4',
+        to: 'e3',
       },
       {
-        from: 'e9',
-        to: 'f10',
+        from: 'f1',
+        to: 'e2',
+      },
+      {
+        from: 'e3',
+        to: 'i3',
+      },
+      {
+        from: 'e1',
+        to: 'f1',
+      },
+      {
+        from: 'f4',
+        to: 'h3',
       },
       {
         from: 'e2',
-        to: 'e5',
-      },
-      {
-        from: 'g10',
-        to: 'h10',
-      },
-      {
-        from: 'i2',
-        to: 'g3',
+        to: 'd3',
       },
       {
         from: 'i3',
-        to: 'h1',
-      },
-      {
-        from: 'f2',
-        to: 'f8',
+        to: 'i1',
       },
     ],
     goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 411,
+      type: 'checkmate',
+      winner: 'black',
     },
-    themes: ['winning', 'middlegame'],
+    themes: ['checkmate', 'winning-material', 'crushing', 'endgame'],
     sourceGame: {
-      gameId: 'hxq_099dd5dda07082e7942b89ed',
-      ply: 50,
+      gameId: 'hxq_09d8befd60e689880133928d',
+      ply: 105,
+      event: '1996年华能杯全国象棋个人赛',
+      playedOn: '1996-10-28',
+      result: '0-1',
+      redName: '四川 黎德玲',
+      blackName: '南京 高懿屏',
     },
   },
   {
@@ -1075,14 +999,19 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_0b4fbbd113e9a61dc051ddec',
       ply: 68,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '1-0',
+      redName: '广东十虎 黎铎',
+      blackName: '山东十好汉 黄蕾蕾',
     },
   },
   {
-    id: 'xq-mined-hxq_10b13397c693c44b0197f95a-57',
+    id: 'xq-mined-hxq_0ea2af21d0d0aeacb1a8ffee-40',
     variant: 'xiangqi',
-    title: 'Black winning advantage',
+    title: 'Red mate in 3',
     initial: {
-      id: 'xq-mined-hxq_10b13397c693c44b0197f95a-57',
+      id: 'xq-mined-hxq_0ea2af21d0d0aeacb1a8ffee-40',
       board: {
         c1: {
           color: 'red',
@@ -1096,15 +1025,23 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'general',
         },
+        f1: {
+          color: 'red',
+          role: 'advisor',
+        },
         g1: {
           color: 'red',
           role: 'elephant',
         },
-        e2: {
+        a3: {
           color: 'red',
-          role: 'advisor',
+          role: 'cannon',
         },
-        c3: {
+        e3: {
+          color: 'red',
+          role: 'cannon',
+        },
+        g3: {
           color: 'red',
           role: 'horse',
         },
@@ -1112,31 +1049,23 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'soldier',
         },
-        e4: {
-          color: 'red',
-          role: 'soldier',
+        g4: {
+          color: 'black',
+          role: 'chariot',
         },
         i4: {
           color: 'red',
           role: 'soldier',
         },
-        d5: {
+        c5: {
           color: 'red',
-          role: 'horse',
-        },
-        f5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e6: {
-          color: 'black',
           role: 'soldier',
         },
-        h6: {
+        f6: {
           color: 'black',
           role: 'horse',
         },
-        i6: {
+        g6: {
           color: 'black',
           role: 'soldier',
         },
@@ -1144,23 +1073,19 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'soldier',
         },
-        b7: {
-          color: 'black',
-          role: 'chariot',
-        },
         c7: {
-          color: 'red',
-          role: 'cannon',
+          color: 'black',
+          role: 'soldier',
         },
-        c8: {
+        e7: {
           color: 'black',
           role: 'horse',
         },
-        e8: {
+        i7: {
           color: 'black',
-          role: 'elephant',
+          role: 'soldier',
         },
-        g8: {
+        e8: {
           color: 'red',
           role: 'chariot',
         },
@@ -1168,72 +1093,76 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'advisor',
         },
+        f9: {
+          color: 'red',
+          role: 'soldier',
+        },
+        d10: {
+          color: 'black',
+          role: 'advisor',
+        },
         e10: {
           color: 'black',
           role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
         },
         g10: {
           color: 'black',
           role: 'elephant',
         },
+        i10: {
+          color: 'black',
+          role: 'cannon',
+        },
       },
       status: {
         type: 'playing',
-        turn: 'black',
+        turn: 'red',
       },
-      moveNumber: 29,
+      moveNumber: 21,
       progressClock: 0,
       positionCounts: {
-        'black|a4rs,a7bs,b7bc,c1re,c3rh,c7rc,c8bh,d1ra,d5rh,e1rg,e10bg,e2ra,e4rs,e6bs,e8be,e9ba,f10ba,f5bc,g1re,g10be,g8rc,h6bh,i4rs,i6bs': 1,
+        'red|a3rc,a4rs,a7bs,c1re,c5rs,c7bs,d1ra,d10ba,e1rg,e10bg,e3rc,e7bh,e8rc,e9ba,f1ra,f6bh,f9rs,g1re,g10be,g3rh,g4bc,g6bs,i10bc,i4rs,i7bs': 1,
       },
       lastMove: {
-        to: 'g8',
-        from: 'g3',
+        to: 'f6',
+        from: 'g8',
       },
     },
     solution: [
       {
-        from: 'h6',
-        to: 'g8',
+        from: 'a3',
+        to: 'a7',
       },
       {
-        from: 'd5',
-        to: 'b6',
+        from: 'g4',
+        to: 'a4',
       },
       {
-        from: 'b7',
-        to: 'b6',
+        from: 'a7',
+        to: 'e7',
       },
       {
-        from: 'c3',
-        to: 'd5',
+        from: 'g6',
+        to: 'g5',
       },
       {
-        from: 'b6',
-        to: 'b7',
-      },
-      {
-        from: 'c7',
-        to: 'c3',
-      },
-      {
-        from: 'e6',
-        to: 'e5',
+        from: 'e8',
+        to: 'e9',
       },
     ],
     goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 530,
+      type: 'checkmate',
+      winner: 'red',
     },
-    themes: ['winning', 'winning-material', 'middlegame'],
+    themes: ['checkmate', 'matein3', 'winning-material', 'crushing', 'middlegame'],
     sourceGame: {
-      gameId: 'hxq_10b13397c693c44b0197f95a',
-      ply: 57,
+      gameId: 'hxq_0ea2af21d0d0aeacb1a8ffee',
+      ply: 40,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1-0',
+      redName: '江苏棋院 周雨霏',
+      blackName: '甘肃体彩队 傅安欣',
     },
   },
   {
@@ -1360,8 +1289,8 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         to: 'g10',
       },
       {
-        from: 'b1',
-        to: 'a1',
+        from: 'a4',
+        to: 'a5',
       },
       {
         from: 'a3',
@@ -1376,6 +1305,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_14d5d0d7fe8d4c382417c4aa',
       ply: 51,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '0-1',
+      redName: '山东十好汉 李越川',
+      blackName: '广东十虎 梁雅让',
     },
   },
   {
@@ -1470,8 +1404,8 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         to: 'c1',
       },
       {
-        from: 'a3',
-        to: 'a1',
+        from: 'a4',
+        to: 'a5',
       },
       {
         from: 'c1',
@@ -1486,193 +1420,19 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_14d5d0d7fe8d4c382417c4aa',
       ply: 59,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '0-1',
+      redName: '山东十好汉 李越川',
+      blackName: '广东十虎 梁雅让',
     },
   },
   {
-    id: 'xq-mined-hxq_180748d69c96be7c786bbd43-28',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_180748d69c96be7c786bbd43-28',
-      board: {
-        a1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 15,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1rc,a10bc,a5rs,a7bs,a8bh,b3rc,b5rh,c1re,c10be,c5rs,d1ra,d10ba,d3rh,e1rg,e10bg,e3re,e5rs,e8bc,e9bc,f1ra,f10ba,g10be,g2rc,g3rc,g4bc,g7bs,g8bh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'g4',
-        from: 'g5',
-      },
-    },
-    solution: [
-      {
-        from: 'g3',
-        to: 'g7',
-      },
-      {
-        from: 'e9',
-        to: 'e5',
-      },
-      {
-        from: 'd3',
-        to: 'e5',
-      },
-      {
-        from: 'g4',
-        to: 'e4',
-      },
-      {
-        from: 'g7',
-        to: 'g10',
-      },
-      {
-        from: 'f10',
-        to: 'e9',
-      },
-      {
-        from: 'g2',
-        to: 'g8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 553,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_180748d69c96be7c786bbd43',
-      ply: 28,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_18200b981ee6ee13f3c1057b-95',
+    id: 'xq-mined-hxq_1bbfca3e3bfade023879027b-99',
     variant: 'xiangqi',
     title: 'Black winning advantage',
     initial: {
-      id: 'xq-mined-hxq_18200b981ee6ee13f3c1057b-95',
+      id: 'xq-mined-hxq_1bbfca3e3bfade023879027b-99',
       board: {
         e1: {
           color: 'red',
@@ -1681,618 +1441,42 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         f1: {
           color: 'red',
           role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        b3: {
-          color: 'red',
-          role: 'horse',
-        },
-        h3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        h4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e5: {
-          color: 'black',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 48,
-      progressClock: 0,
-      positionCounts: {
-        'black|a6rs,b3rh,b4bc,c10be,d10ba,e1rg,e10bg,e2ra,e5bh,e8be,e9ba,f1ra,g5re,h3rc,h4bc,i4rc,i6bs': 1,
-      },
-      lastMove: {
-        to: 'i4',
-        from: 'i1',
-      },
-    },
-    solution: [
-      {
-        from: 'b4',
-        to: 'b3',
-      },
-      {
-        from: 'h3',
-        to: 'h2',
-      },
-      {
-        from: 'e5',
-        to: 'd3',
-      },
-      {
-        from: 'e2',
-        to: 'd3',
-      },
-      {
-        from: 'b3',
-        to: 'b1',
-      },
-      {
-        from: 'e1',
-        to: 'e2',
-      },
-      {
-        from: 'b1',
-        to: 'b2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 528,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_18200b981ee6ee13f3c1057b',
-      ply: 95,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_18d9ba41d925af93ca832b92-92',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_18d9ba41d925af93ca832b92-92',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'general',
-        },
-        f2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'black',
-          role: 'horse',
-        },
-        b6: {
-          color: 'red',
-          role: 'horse',
-        },
-        c6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f8: {
-          color: 'black',
-          role: 'general',
-        },
-        b9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d10: {
-          color: 'red',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 47,
-      progressClock: 0,
-      positionCounts: {
-        'red|b6rh,b9rc,c1re,c4rs,c6bs,c9rc,d1ra,d10rc,e2rg,e4bh,f2bc,f8bg,i1bc,i3re,i6bs': 1,
-      },
-      lastMove: {
-        to: 'f2',
-        from: 'f1',
-      },
-    },
-    solution: [
-      {
-        from: 'e2',
-        to: 'e3',
-      },
-      {
-        from: 'f2',
-        to: 'd2',
-      },
-      {
-        from: 'd10',
-        to: 'f10',
-      },
-      {
-        from: 'f8',
-        to: 'e8',
-      },
-      {
-        from: 'b6',
-        to: 'c8',
-      },
-      {
-        from: 'i1',
-        to: 'f1',
-      },
-      {
-        from: 'b9',
-        to: 'b8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 1192,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_18d9ba41d925af93ca832b92',
-      ply: 92,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_1b3b9306fc2e6c7de3f404b9-50',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_1b3b9306fc2e6c7de3f404b9-50',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        b7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e7: {
-          color: 'black',
-          role: 'horse',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 26,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4bc,a6bs,b7rc,c1re,c10be,c4rc,c9rc,d1ra,d10ba,e1rg,e10bg,e2ra,e3re,e4rs,e5rc,e7bh,e8be,e9ba,g3bc,g7bs,h6bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e7',
-        from: 'd9',
-      },
-    },
-    solution: [
-      {
-        from: 'c4',
-        to: 'c10',
-      },
-      {
-        from: 'e8',
-        to: 'c10',
-      },
-      {
-        from: 'b7',
-        to: 'e7',
-      },
-      {
-        from: 'h6',
-        to: 'h1',
-      },
-      {
-        from: 'e2',
-        to: 'f1',
-      },
-      {
-        from: 'h1',
-        to: 'f1',
-      },
-      {
-        from: 'e1',
-        to: 'f1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 583,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_1b3b9306fc2e6c7de3f404b9',
-      ply: 50,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_1c758282fcc991575f5ad5d6-32',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_1c758282fcc991575f5ad5d6-32',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'horse',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
         },
         g1: {
           color: 'red',
-          role: 'chariot',
+          role: 'elephant',
         },
         e2: {
           color: 'red',
           role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
         },
         a4: {
           color: 'red',
           role: 'soldier',
         },
-        c4: {
-          color: 'black',
-          role: 'soldier',
-        },
         e4: {
           color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
+          role: 'cannon',
         },
         f5: {
+          color: 'red',
+          role: 'horse',
+        },
+        g5: {
           color: 'black',
           role: 'chariot',
         },
-        d6: {
+        e6: {
           color: 'black',
-          role: 'horse',
+          role: 'cannon',
         },
         g6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        h6: {
-          color: 'red',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g9: {
           color: 'black',
           role: 'horse',
         },
-        h9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
+        i6: {
           color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 17,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b1rh,c1re,c10be,c4bs,d1ra,d10ba,d6bh,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8bc,f10ba,f5bc,f8bc,g1rc,g10be,g3rc,g6rs,g9bh,h6rh,h9rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'g9',
-        from: 'i8',
-      },
-    },
-    solution: [
-      {
-        from: 'g6',
-        to: 'f6',
-      },
-      {
-        from: 'g9',
-        to: 'h7',
-      },
-      {
-        from: 'h6',
-        to: 'f5',
-      },
-      {
-        from: 'd6',
-        to: 'f5',
-      },
-      {
-        from: 'f6',
-        to: 'f7',
-      },
-      {
-        from: 'f8',
-        to: 'f9',
-      },
-      {
-        from: 'f7',
-        to: 'g7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 480,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_1c758282fcc991575f5ad5d6',
-      ply: 32,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_1def32c5240e95833d9b0561-109',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_1def32c5240e95833d9b0561-109',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i4: {
-          color: 'red',
           role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d8: {
-          color: 'black',
-          role: 'advisor',
         },
         e8: {
           color: 'black',
@@ -2302,72 +1486,65 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'advisor',
         },
-        d9: {
+        e9: {
           color: 'black',
           role: 'general',
         },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
         g10: {
-          color: 'black',
-          role: 'cannon',
+          color: 'red',
+          role: 'chariot',
         },
       },
       status: {
         type: 'playing',
         turn: 'black',
       },
-      moveNumber: 55,
+      moveNumber: 50,
       progressClock: 0,
       positionCounts: {
-        'black|a6rs,b6rc,c10be,c6bc,d3ra,d8ba,d9bg,e1rg,e2ra,e5rc,e8be,f8ba,g10bc,i4rs': 1,
+        'black|a4rs,e1rg,e2ra,e4rc,e6bc,e8be,e9bg,f1ra,f5rh,f8ba,g1re,g10rc,g5bc,g6bh,i6bs': 1,
       },
       lastMove: {
-        to: 'e5',
-        from: 'i5',
+        to: 'f5',
+        from: 'g3',
       },
     },
     solution: [
       {
+        from: 'e9',
+        to: 'd9',
+      },
+      {
         from: 'g10',
-        to: 'e10',
+        to: 'g9',
       },
       {
-        from: 'e5',
-        to: 'c5',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-      {
-        from: 'b6',
-        to: 'd6',
-      },
-      {
-        from: 'd9',
+        from: 'f8',
         to: 'e9',
       },
       {
-        from: 'd6',
-        to: 'h6',
+        from: 'g9',
+        to: 'g7',
       },
       {
-        from: 'e8',
-        to: 'c6',
+        from: 'g5',
+        to: 'f5',
       },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 507,
+      centipawns: 291,
     },
-    themes: ['winning', 'endgame'],
+    themes: ['winning', 'middlegame'],
     sourceGame: {
-      gameId: 'hxq_1def32c5240e95833d9b0561',
-      ply: 109,
+      gameId: 'hxq_1bbfca3e3bfade023879027b',
+      ply: 99,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '1/2-1/2',
+      redName: '山东十好汉 刘新奥',
+      blackName: '广东十虎 黎铎',
     },
   },
   {
@@ -2498,6 +1675,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_1e4f4fb0cdfde167fa1b30e7',
       ply: 77,
+      event: '2026年广东十虎VS山东十好汉对抗赛',
+      playedOn: '2026-04-23',
+      result: '0-1',
+      redName: '山东十好汉 李加昆',
+      blackName: '广东十虎 黄文俊',
     },
   },
   {
@@ -2599,22 +1781,6 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e3',
         to: 'e7',
       },
-      {
-        from: 'e4',
-        to: 'e5',
-      },
-      {
-        from: 'e7',
-        to: 'c7',
-      },
-      {
-        from: 'e2',
-        to: 'd3',
-      },
-      {
-        from: 'd6',
-        to: 'e4',
-      },
     ],
     goal: {
       type: 'winning-advantage',
@@ -2625,173 +1791,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_1e83318ad021d20178785fe5',
       ply: 75,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_2253229719a466bb699d2a4f-40',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_2253229719a466bb699d2a4f-40',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        b3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g9: {
-          color: 'red',
-          role: 'horse',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 21,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b10bc,b3rc,b4bc,c1re,c10be,c5bs,c8bh,d1ra,e1rg,e10bg,e2ra,e6rc,e8be,e9ba,f10ba,f4bc,f9bc,g1re,g3rh,g4rs,g7rc,g9rh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c5',
-        from: 'c6',
-      },
-    },
-    solution: [
-      {
-        from: 'e6',
-        to: 'h6',
-      },
-      {
-        from: 'e9',
-        to: 'f8',
-      },
-      {
-        from: 'h6',
-        to: 'h9',
-      },
-      {
-        from: 'b10',
-        to: 'b9',
-      },
-      {
-        from: 'h9',
-        to: 'h4',
-      },
-      {
-        from: 'f4',
-        to: 'f5',
-      },
-      {
-        from: 'b3',
-        to: 'b4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 348,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_2253229719a466bb699d2a4f',
-      ply: 40,
+      event: '2022年中国-东盟象棋国际邀请赛',
+      playedOn: '2022-08-21',
+      result: '0-1',
+      redName: '中国 茹一淳',
+      blackName: '越南 阮成保',
     },
   },
   {
@@ -2934,15 +1938,24 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_2253229719a466bb699d2a4f',
       ply: 50,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-28',
+      result: '1-0',
+      redName: '广东省二沙体育训练中心 张婷',
+      blackName: '河南省全民健身中心 郑柯睿',
     },
   },
   {
-    id: 'xq-mined-hxq_2284debfdbe87a7af2229253-47',
+    id: 'xq-mined-hxq_2b2b6b6d803b6f4bbd3a12d5-58',
     variant: 'xiangqi',
-    title: 'Black winning advantage',
+    title: 'Red winning advantage',
     initial: {
-      id: 'xq-mined-hxq_2284debfdbe87a7af2229253-47',
+      id: 'xq-mined-hxq_2b2b6b6d803b6f4bbd3a12d5-58',
       board: {
+        c1: {
+          color: 'black',
+          role: 'chariot',
+        },
         d1: {
           color: 'red',
           role: 'advisor',
@@ -2951,85 +1964,57 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'general',
         },
-        c2: {
+        g1: {
           color: 'red',
-          role: 'cannon',
+          role: 'elephant',
+        },
+        h1: {
+          color: 'red',
+          role: 'chariot',
         },
         e2: {
           color: 'red',
           role: 'advisor',
         },
-        h2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'chariot',
-        },
         a4: {
           color: 'red',
           role: 'soldier',
         },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g5: {
+        b4: {
           color: 'red',
           role: 'chariot',
         },
-        a6: {
-          color: 'black',
+        i4: {
+          color: 'red',
           role: 'soldier',
         },
-        d6: {
-          color: 'black',
-          role: 'horse',
+        c6: {
+          color: 'red',
+          role: 'soldier',
         },
-        h6: {
+        a7: {
           color: 'black',
-          role: 'chariot',
+          role: 'soldier',
         },
         c7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d7: {
           color: 'red',
           role: 'horse',
         },
-        e7: {
+        d7: {
           color: 'black',
+          role: 'chariot',
+        },
+        f7: {
+          color: 'red',
+          role: 'horse',
+        },
+        g7: {
+          color: 'red',
           role: 'soldier',
         },
-        e8: {
+        i7: {
           color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i8: {
-          color: 'black',
-          role: 'horse',
+          role: 'soldier',
         },
         e9: {
           color: 'black',
@@ -3037,7 +2022,7 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         },
         c10: {
           color: 'black',
-          role: 'chariot',
+          role: 'elephant',
         },
         e10: {
           color: 'black',
@@ -3054,522 +2039,54 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
       },
       status: {
         type: 'playing',
-        turn: 'black',
+        turn: 'red',
       },
-      moveNumber: 24,
+      moveNumber: 30,
       progressClock: 0,
       positionCounts: {
-        'black|a3rh,a4rs,a6bs,c10bc,c2rc,c5re,c7bc,d1ra,d6bh,d7rh,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,e9ba,f10ba,f3rc,f8bc,g10be,g4rs,g5rc,h2rc,h6bc,i8bh': 1,
+        'red|a4rs,a7bs,b4rc,c1bc,c10be,c6rs,c7rh,d1ra,d7bc,e1rg,e10bg,e2ra,e9ba,f10ba,f7rh,g1re,g10be,g7rs,h1rc,i4rs,i7bs': 1,
       },
       lastMove: {
-        to: 'e3',
-        from: 'c1',
+        to: 'c10',
+        from: 'e8',
       },
     },
     solution: [
-      {
-        from: 'f8',
-        to: 'f7',
-      },
-      {
-        from: 'd7',
-        to: 'e9',
-      },
-      {
-        from: 'f10',
-        to: 'e9',
-      },
-      {
-        from: 'g5',
-        to: 'e5',
-      },
-      {
-        from: 'd6',
-        to: 'c8',
-      },
-      {
-        from: 'h2',
-        to: 'f2',
-      },
       {
         from: 'f7',
-        to: 'i7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 323,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_2284debfdbe87a7af2229253',
-      ply: 47,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_23aadbe8d9165902bbfe18a5-62',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_23aadbe8d9165902bbfe18a5-62',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d6: {
-          color: 'black',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f9: {
-          color: 'red',
-          role: 'horse',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        i10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 32,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6rc,d1ra,d10ba,d5bc,d6bh,e1rg,e10bg,e2ra,e3re,e7bs,e9ba,f8bc,f9rh,g1re,g6be,i10rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f8',
-        from: 'd8',
-      },
-    },
-    solution: [
-      {
-        from: 'f9',
-        to: 'h10',
+        to: 'g9',
       },
       {
-        from: 'e9',
-        to: 'f10',
+        from: 'e10',
+        to: 'd10',
       },
       {
-        from: 'a6',
-        to: 'a9',
-      },
-      {
-        from: 'd5',
-        to: 'h5',
-      },
-      {
-        from: 'a9',
-        to: 'f9',
-      },
-      {
-        from: 'h5',
-        to: 'h10',
-      },
-      {
-        from: 'f9',
-        to: 'f10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 476,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_23aadbe8d9165902bbfe18a5',
-      ply: 62,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_26355c6e0b704a89cdc64edd-46',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_26355c6e0b704a89cdc64edd-46',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'black',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'red',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d9: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rc,a4rs,a7bs,b5rc,c1re,c6rs,c8rh,d4bc,d7bc,d9bh,e1rg,e10bg,e2ra,e5rc,e8be,e9ba,f1ra,f10ba,f6bh,g10be,g6bs,i3re,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd7',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'a3',
-        to: 'a7',
-      },
-      {
-        from: 'd7',
-        to: 'a7',
-      },
-      {
-        from: 'c8',
-        to: 'a7',
-      },
-      {
-        from: 'd4',
-        to: 'h4',
-      },
-      {
-        from: 'b5',
-        to: 'b4',
-      },
-      {
-        from: 'h4',
+        from: 'h1',
         to: 'h6',
       },
       {
-        from: 'e1',
+        from: 'c1',
+        to: 'd1',
+      },
+      {
+        from: 'e2',
         to: 'd1',
       },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 470,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_26355c6e0b704a89cdc64edd',
-      ply: 46,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_273ad23a0e07c64b5efbd568-41',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_273ad23a0e07c64b5efbd568-41',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'horse',
-        },
-        h4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'black',
-          role: 'horse',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h7: {
-          color: 'red',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 21,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,a8bc,b6bc,c5rs,c7bs,d1ra,d10ba,d7bh,e1rg,e10bg,e3re,e5rs,e7bs,e8be,e9ba,f1ra,g1re,g10be,g3rc,g4rh,h4rc,h7rh,i4rs,i7bs,i8bh': 1,
-      },
-      lastMove: {
-        to: 'g4',
-        from: 'i3',
-      },
-    },
-    solution: [
-      {
-        from: 'b6',
-        to: 'b4',
-      },
-      {
-        from: 'h4',
-        to: 'h3',
-      },
-      {
-        from: 'b4',
-        to: 'g4',
-      },
-      {
-        from: 'h7',
-        to: 'f6',
-      },
-      {
-        from: 'g4',
-        to: 'd4',
-      },
-      {
-        from: 'f6',
-        to: 'd7',
-      },
-      {
-        from: 'd4',
-        to: 'd7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 340,
+      centipawns: 1394,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
-      gameId: 'hxq_273ad23a0e07c64b5efbd568',
-      ply: 41,
+      gameId: 'hxq_2b2b6b6d803b6f4bbd3a12d5',
+      ply: 58,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-30',
+      result: '1-0',
+      redName: '吉林省棋牌运动管理中心 康乃馨',
+      blackName: '安徽省棋院 陈欣圆',
     },
   },
   {
@@ -3711,203 +2228,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'd1',
         to: 'd10',
       },
-      {
-        from: 'h4',
-        to: 'h7',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'h7',
-        to: 'e7',
-      },
-      {
-        from: 'b7',
-        to: 'e7',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 432,
+      centipawns: 468,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_2f715e911c685566c763e03a',
       ply: 40,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_2fdd0dd15d96e8ce3d921896-26',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_2fdd0dd15d96e8ce3d921896-26',
-      board: {
-        a1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        c10: {
-          color: 'black',
-          role: 'horse',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 14,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1rc,a4rs,a7bs,a8be,b5rc,c1re,c10bh,c3rh,c5rs,c8bc,d1ra,d10ba,e1rg,e10bg,e3rc,e4rs,e7bs,e8bc,f1ra,f10ba,f5rh,g1re,g10be,g5bc,g8bh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c8',
-        from: 'b8',
-      },
-    },
-    solution: [
-      {
-        from: 'f5',
-        to: 'd6',
-      },
-      {
-        from: 'g5',
-        to: 'g1',
-      },
-      {
-        from: 'd6',
-        to: 'c8',
-      },
-      {
-        from: 'g8',
-        to: 'f6',
-      },
-      {
-        from: 'c8',
-        to: 'e7',
-      },
-      {
-        from: 'f6',
-        to: 'g4',
-      },
-      {
-        from: 'e7',
-        to: 'f5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 384,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_2fdd0dd15d96e8ce3d921896',
-      ply: 26,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-31',
+      result: '1-0',
+      redName: '湖北省体育局棋牌运动管理中心 汪元知',
+      blackName: '江苏棋院 周雨霏',
     },
   },
   {
@@ -4033,215 +2368,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'f2',
         to: 'f9',
       },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'f9',
-        to: 'h9',
-      },
-      {
-        from: 'g2',
-        to: 'i2',
-      },
-      {
-        from: 'e7',
-        to: 'i7',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 439,
+      centipawns: 438,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_30089ba1f5bd3a12878285bc',
       ply: 64,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_3069f4a31d6074a4613efa77-27',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_3069f4a31d6074a4613efa77-27',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'red',
-          role: 'horse',
-        },
-        d2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        h2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f6: {
-          color: 'red',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 14,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b1rc,b7bc,c10be,c5rs,c7bs,c8bh,d1ra,d10bg,d2rc,d6bc,e1rg,e3re,e4rs,e7bs,e8bc,e9ba,f1ra,f10ba,f3rc,f6rh,g1re,g10be,g7bs,g8bh,h1rh,h2bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd2',
-        from: 'g2',
-      },
-    },
-    solution: [
-      {
-        from: 'd6',
-        to: 'f6',
-      },
-      {
-        from: 'b1',
-        to: 'b7',
-      },
-      {
-        from: 'f6',
-        to: 'f3',
-      },
-      {
-        from: 'b7',
-        to: 'c7',
-      },
-      {
-        from: 'f3',
-        to: 'f8',
-      },
-      {
-        from: 'd2',
-        to: 'e2',
-      },
-      {
-        from: 'c8',
-        to: 'a9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 512,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_3069f4a31d6074a4613efa77',
-      ply: 27,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1-0',
+      redName: '广东省二沙体育训练中心 张婷',
+      blackName: '山东省棋牌运动管理中心 李越川',
     },
   },
   {
@@ -4379,171 +2520,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e10',
         to: 'e9',
       },
-      {
-        from: 'g5',
-        to: 'g6',
-      },
-      {
-        from: 'a1',
-        to: 'e1',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 571,
+      centipawns: 583,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_3087b9e177dc6e0a08d2872a',
       ply: 65,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_31f18ac4e4c74c2e8dca35d6-43',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_31f18ac4e4c74c2e8dca35d6-43',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 22,
-      progressClock: 0,
-      positionCounts: {
-        'black|a2bc,a3rc,a4rs,a8bc,c1re,c10be,d5bc,e1rg,e10bg,e3re,e4rs,e7rc,e8be,e9ba,f1ra,f10ba,g4rs,g6bs,h3rh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'a3',
-        from: 'c3',
-      },
-    },
-    solution: [
-      {
-        from: 'a2',
-        to: 'a1',
-      },
-      {
-        from: 'e1',
-        to: 'e2',
-      },
-      {
-        from: 'd5',
-        to: 'b5',
-      },
-      {
-        from: 'e3',
-        to: 'c5',
-      },
-      {
-        from: 'b5',
-        to: 'b2',
-      },
-      {
-        from: 'e2',
-        to: 'e3',
-      },
-      {
-        from: 'a8',
-        to: 'a3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 377,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_31f18ac4e4c74c2e8dca35d6',
-      ply: 43,
+      event: '2026年“春丘大叶杯”象棋大师擂台赛',
+      playedOn: '2026-03-21',
+      result: '0-1',
+      redName: '江苏棋院 刘柏宏',
+      blackName: '成都棋院 孟辰',
     },
   },
   {
@@ -4715,581 +2706,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_3299d03b4a5e8b8c4b4f0328',
       ply: 26,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_32ee0bb9cee3a2c3bcca6d8e-105',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_32ee0bb9cee3a2c3bcca6d8e-105',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        c2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'horse',
-        },
-        f5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c8: {
-          color: 'red',
-          role: 'horse',
-        },
-        d9: {
-          color: 'black',
-          role: 'general',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 53,
-      progressClock: 0,
-      positionCounts: {
-        'black|a8be,c2bc,c8rh,d1ra,d3bc,d9bg,e5bh,e6bs,e9ba,f1rg,f10ba,f5rc,i4rs,i7rc': 1,
-      },
-      lastMove: {
-        to: 'i7',
-        from: 'b7',
-      },
-    },
-    solution: [
-      {
-        from: 'd3',
-        to: 'd1',
-      },
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'e5',
-        to: 'c4',
-      },
-      {
-        from: 'c8',
-        to: 'e7',
-      },
-      {
-        from: 'd9',
-        to: 'd8',
-      },
-      {
-        from: 'e7',
-        to: 'c6',
-      },
-      {
-        from: 'a8',
-        to: 'c6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 978,
-    },
-    themes: ['winning', 'winning-material', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_32ee0bb9cee3a2c3bcca6d8e',
-      ply: 105,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_38640da85d56950f39e2b53e-50',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_38640da85d56950f39e2b53e-50',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 26,
-      progressClock: 0,
-      positionCounts: {
-        'red|a5rs,a7bs,c8bh,d1ra,e1rg,e10bg,e3re,e6bc,e8be,e9ba,f1ra,f10ba,f3rh,f5bs,g1re,g10be,g5rs,g6bs,g7rh,g8rc,i5rs,i7bs,i8bh': 1,
-      },
-      lastMove: {
-        to: 'e6',
-        from: 'b6',
-      },
-    },
-    solution: [
-      {
-        from: 'g7',
-        to: 'e6',
-      },
-      {
-        from: 'c8',
-        to: 'e7',
-      },
-      {
-        from: 'g8',
-        to: 'h8',
-      },
-      {
-        from: 'f5',
-        to: 'f4',
-      },
-      {
-        from: 'f3',
-        to: 'h4',
-      },
-      {
-        from: 'g6',
-        to: 'g5',
-      },
-      {
-        from: 'h8',
-        to: 'h7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 471,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_38640da85d56950f39e2b53e',
-      ply: 50,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_38640da85d56950f39e2b53e-51',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_38640da85d56950f39e2b53e-51',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 26,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rs,a7bs,c8bh,d1ra,e1rg,e10bg,e3re,e6bc,e8be,e9ba,f1ra,f10ba,f3rh,f5bs,g1re,g10be,g6rs,g7rh,g8rc,i5rs,i7bs,i8bh': 1,
-      },
-      lastMove: {
-        to: 'g6',
-        from: 'g5',
-      },
-    },
-    solution: [
-      {
-        from: 'e6',
-        to: 'g6',
-      },
-      {
-        from: 'f3',
-        to: 'h4',
-      },
-      {
-        from: 'g6',
-        to: 'g7',
-      },
-      {
-        from: 'g8',
-        to: 'g7',
-      },
-      {
-        from: 'i8',
-        to: 'g7',
-      },
-      {
-        from: 'd1',
-        to: 'e2',
-      },
-      {
-        from: 'c8',
-        to: 'd6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 381,
-    },
-    themes: ['winning', 'winning-material', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_38640da85d56950f39e2b53e',
-      ply: 51,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_393d82081c0d9b24fce91979-43',
-    variant: 'xiangqi',
-    title: 'Black mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_393d82081c0d9b24fce91979-43',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d4: {
-          color: 'black',
-          role: 'horse',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 22,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,c1re,c10be,c9rc,d4bh,d6bc,e1rg,e10bg,e2ra,e4rs,e5rc,e8bc,e9ba,f1ra,f10ba,g1re,g10be,g3rh,g5bs,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e2',
-        from: 'd1',
-      },
-    },
-    solution: [
-      {
-        from: 'd4',
-        to: 'c2',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'e10',
-        to: 'd10',
-      },
-      {
-        from: 'c9',
-        to: 'c7',
-      },
-      {
-        from: 'd6',
-        to: 'd7',
-      },
-      {
-        from: 'a4',
-        to: 'a5',
-      },
-      {
-        from: 'e8',
-        to: 'd8',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_393d82081c0d9b24fce91979',
-      ply: 43,
+      event: '2026年第十届北美杯象棋锦标赛',
+      playedOn: '2026-04-05',
+      result: '1-0',
+      redName: '洛杉矶 黎英豪',
+      blackName: '休斯顿 胡玉山',
     },
   },
   {
@@ -5460,574 +2881,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_395a0c2b3d05bc932c9a68ff',
       ply: 38,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_39986d8a32d8aec4d1d6560c-51',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_39986d8a32d8aec4d1d6560c-51',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        h1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        h4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'horse',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 26,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b10bh,b5bc,c10be,c7rs,d1ra,d3ra,e1rg,e10bg,e3bc,e7bs,e9ba,f1rc,f10ba,g10be,g2rc,g6bs,h1rc,h4bc,i3rh,i4bc,i7bs': 1,
-      },
-      lastMove: {
-        to: 'g2',
-        from: 'h2',
-      },
-    },
-    solution: [
-      {
-        from: 'h4',
-        to: 'h10',
-      },
-      {
-        from: 'e1',
-        to: 'e2',
-      },
-      {
-        from: 'h10',
-        to: 'i10',
-      },
-      {
-        from: 'f1',
-        to: 'f4',
-      },
-      {
-        from: 'i4',
-        to: 'i5',
-      },
-      {
-        from: 'h1',
-        to: 'h5',
-      },
-      {
-        from: 'b5',
-        to: 'h5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 433,
-    },
-    themes: ['winning', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_39986d8a32d8aec4d1d6560c',
-      ply: 51,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_39c4cc6751e8d2b8f8b00c8b-99',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_39c4cc6751e8d2b8f8b00c8b-99',
-      board: {
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'horse',
-        },
-        b4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f4: {
-          color: 'black',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 50,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rs,a7bs,b4bc,c10be,d10ba,d2rg,e10bg,e2ra,e3re,e6rc,e7bc,e8be,e9ba,f1ra,f3rh,f4bh,f5rc,g1re,i4rs': 1,
-      },
-      lastMove: {
-        to: 'd2',
-        from: 'd1',
-      },
-    },
-    solution: [
-      {
-        from: 'e7',
-        to: 'd7',
-      },
-      {
-        from: 'f5',
-        to: 'g5',
-      },
-      {
-        from: 'b4',
-        to: 'd4',
-      },
-      {
-        from: 'e2',
-        to: 'd3',
-      },
-      {
-        from: 'd4',
-        to: 'd3',
-      },
-      {
-        from: 'd2',
-        to: 'e2',
-      },
-      {
-        from: 'f4',
-        to: 'e6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 409,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_39c4cc6751e8d2b8f8b00c8b',
-      ply: 99,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_3a9ca5a036cec0d982da1a46-87',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_3a9ca5a036cec0d982da1a46-87',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a2: {
-          color: 'red',
-          role: 'horse',
-        },
-        f3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f4: {
-          color: 'black',
-          role: 'horse',
-        },
-        g5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a10: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 44,
-      progressClock: 0,
-      positionCounts: {
-        'black|a10rc,a2rh,a6rs,c10be,c4bc,d1ra,d10ba,e1rg,e10bg,e4bs,e8be,f1ra,f10ba,f3rc,f4bh,g1re,g5bs': 1,
-      },
-      lastMove: {
-        to: 'a2',
-        from: 'c1',
-      },
-    },
-    solution: [
-      {
-        from: 'e4',
-        to: 'e3',
-      },
-      {
-        from: 'f3',
-        to: 'f4',
-      },
-      {
-        from: 'c4',
-        to: 'f4',
-      },
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'f4',
-        to: 'e4',
-      },
-      {
-        from: 'd1',
-        to: 'e2',
-      },
-      {
-        from: 'e4',
-        to: 'e3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 291,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_3a9ca5a036cec0d982da1a46',
-      ply: 87,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_3bfb4996fc55802ed0ae7149-62',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_3bfb4996fc55802ed0ae7149-62',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        d4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'black',
-          role: 'horse',
-        },
-        a7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 32,
-      progressClock: 0,
-      positionCounts: {
-        'red|a7rc,b6rs,c1re,c3rh,c5re,c7bc,d10ba,d4bc,e1rg,e2ra,e4rs,e6bs,e8be,e9ba,f1ra,f10bg,f6bh,g7rc,i5rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd4',
-        from: 'c4',
-      },
-    },
-    solution: [
-      {
-        from: 'c3',
-        to: 'd5',
-      },
-      {
-        from: 'c7',
-        to: 'c6',
-      },
-      {
-        from: 'b6',
-        to: 'c6',
-      },
-      {
-        from: 'f6',
-        to: 'e4',
-      },
-      {
-        from: 'c1',
-        to: 'e3',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'g7',
-        to: 'b7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 414,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_3bfb4996fc55802ed0ae7149',
-      ply: 62,
+      event: '2026年“春丘大叶杯”象棋大师擂台赛',
+      playedOn: '2026-04-04',
+      result: '1-0',
+      redName: '湖北 曹岩磊',
+      blackName: '湖北 何文哲',
     },
   },
   {
@@ -6145,32 +3003,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'c6',
         to: 'e6',
       },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'e7',
-        to: 'c6',
-      },
-      {
-        from: 'g2',
-        to: 'e2',
-      },
-      {
-        from: 'e4',
-        to: 'e2',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 379,
+      centipawns: 385,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_3cca3ba32ec59c967213702c',
       ply: 73,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '0-1',
+      redName: '新疆生产建设兵团文化体育广电和旅游局 林川博',
+      blackName: '重庆市棋牌运动管理中心（重庆星源玻璃队） 赵键钧',
     },
   },
   {
@@ -6308,175 +3155,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'g3',
         to: 'i4',
       },
-      {
-        from: 'i8',
-        to: 'i4',
-      },
-      {
-        from: 'b1',
-        to: 'b4',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 513,
+      centipawns: 507,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_3e91f7538680c6ce2a514253',
       ply: 36,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_48acbf0ba88cf1c73e23db21-46',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_48acbf0ba88cf1c73e23db21-46',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,c1re,c10be,c3rh,c5rs,d1ra,e1rg,e10bg,e2ra,e3re,e5bc,e8bc,e9ba,f10ba,f3bc,g10be,g3rc,g4rs,g5rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f3',
-        from: 'f4',
-      },
-    },
-    solution: [
-      {
-        from: 'g3',
-        to: 'g1',
-      },
-      {
-        from: 'e8',
-        to: 'e3',
-      },
-      {
-        from: 'c1',
-        to: 'e3',
-      },
-      {
-        from: 'e5',
-        to: 'e8',
-      },
-      {
-        from: 'g5',
-        to: 'e5',
-      },
-      {
-        from: 'f3',
-        to: 'g3',
-      },
-      {
-        from: 'c5',
-        to: 'c6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 339,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_48acbf0ba88cf1c73e23db21',
-      ply: 46,
+      event: '2025年全国象棋团体赛',
+      playedOn: '2025-04-19',
+      result: '1-0',
+      redName: '厦门市体育事业发展中心 何昊松',
+      blackName: '宁波市全民健身指导中心 许鑫鑫',
     },
   },
   {
@@ -6579,8 +3272,8 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         to: 'e3',
       },
       {
-        from: 'e6',
-        to: 'f8',
+        from: 'i6',
+        to: 'h6',
       },
       {
         from: 'c4',
@@ -6595,6 +3288,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_48bf9184c02359dc7a389524',
       ply: 91,
+      event: '2025年全国象棋团体赛',
+      playedOn: '2025-04-18',
+      result: '1-0',
+      redName: '江苏棋院 刘子炀',
+      blackName: '成都棋院 陈田翼',
     },
   },
   {
@@ -6676,32 +3374,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'c7',
         to: 'c10',
       },
-      {
-        from: 'g8',
-        to: 'g1',
-      },
-      {
-        from: 'f1',
-        to: 'e2',
-      },
-      {
-        from: 'f8',
-        to: 'd8',
-      },
-      {
-        from: 'd10',
-        to: 'e8',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 508,
+      centipawns: 534,
     },
     themes: ['winning', 'endgame'],
     sourceGame: {
       gameId: 'hxq_4a2ee39b7102b47b958ad719',
       ply: 170,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '1-0',
+      redName: '湖北省体育局棋牌运动管理中心 曹岩磊',
+      blackName: '重庆市棋牌运动管理中心（重庆星源玻璃队） 杨应东',
     },
   },
   {
@@ -6831,40 +3518,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'a8',
         to: 'c9',
       },
-      {
-        from: 'c8',
-        to: 'c10',
-      },
-      {
-        from: 'c9',
-        to: 'e10',
-      },
-      {
-        from: 'c3',
-        to: 'f3',
-      },
-      {
-        from: 'e9',
-        to: 'f8',
-      },
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'g7',
-        to: 'g6',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 442,
+      centipawns: 445,
     },
     themes: ['winning', 'winning-material', 'crushing', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_4a41e15e9d8a17414cf249ee',
       ply: 41,
+      event: '2026年第十届北美杯象棋锦标赛',
+      playedOn: '2026-04-05',
+      result: '1/2-1/2',
+      redName: '金州 Son X Nguyen',
+      blackName: '温哥华 刘凯',
     },
   },
   {
@@ -6994,477 +3662,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'c8',
         to: 'c10',
       },
-      {
-        from: 'f10',
-        to: 'f9',
-      },
-      {
-        from: 'c9',
-        to: 'a9',
-      },
-      {
-        from: 'b5',
-        to: 'b1',
-      },
-      {
-        from: 'c3',
-        to: 'e3',
-      },
-      {
-        from: 'e7',
-        to: 'c8',
-      },
-      {
-        from: 'a9',
-        to: 'd9',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 307,
+      centipawns: 303,
     },
     themes: ['winning', 'winning-material', 'crushing', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_4a41e15e9d8a17414cf249ee',
       ply: 42,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_4a41e15e9d8a17414cf249ee-74',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_4a41e15e9d8a17414cf249ee-74',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'black',
-          role: 'horse',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'horse',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f9: {
-          color: 'black',
-          role: 'general',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 38,
-      progressClock: 0,
-      positionCounts: {
-        'red|a6bs,c5bh,c7bs,c9rc,d10ba,d3ra,e1rg,e2ra,e5rs,f6rh,f8ba,f9bg,g6bh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c5',
-        from: 'a4',
-      },
-    },
-    solution: [
-      {
-        from: 'c9',
-        to: 'c5',
-      },
-      {
-        from: 'c7',
-        to: 'c6',
-      },
-      {
-        from: 'c5',
-        to: 'd5',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-      {
-        from: 'd5',
-        to: 'd7',
-      },
-      {
-        from: 'a6',
-        to: 'a5',
-      },
-      {
-        from: 'e5',
-        to: 'e6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 425,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_4a41e15e9d8a17414cf249ee',
-      ply: 74,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_4cc70c6170ba3c776ebe5ea4-28',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_4cc70c6170ba3c776ebe5ea4-28',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 15,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rh,a4bc,a7bs,b10bc,c1re,c10be,c4rs,c7bs,d1ra,e1rg,e10bg,e3rc,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,f9rc,g1re,g2rc,g4bc,g6rs,h7bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e9',
-        from: 'd10',
-      },
-    },
-    solution: [
-      {
-        from: 'g2',
-        to: 'g4',
-      },
-      {
-        from: 'b10',
-        to: 'b6',
-      },
-      {
-        from: 'g6',
-        to: 'g7',
-      },
-      {
-        from: 'h7',
-        to: 'h6',
-      },
-      {
-        from: 'e3',
-        to: 'e7',
-      },
-      {
-        from: 'i7',
-        to: 'i6',
-      },
-      {
-        from: 'g7',
-        to: 'g8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 384,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_4cc70c6170ba3c776ebe5ea4',
-      ply: 28,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_500fd830aa37682e0200c936-54',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_500fd830aa37682e0200c936-54',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        b7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 28,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6bs,a8bh,b1rc,b7bc,c10be,c6bc,d5rh,e1rg,e10bg,e2ra,e3re,e4rc,e5rs,e8be,f1ra,f10ba,g1re,g3rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b7',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'd5',
-        to: 'b4',
-      },
-      {
-        from: 'b7',
-        to: 'b4',
-      },
-      {
-        from: 'e4',
-        to: 'b4',
-      },
-      {
-        from: 'i7',
-        to: 'i6',
-      },
-      {
-        from: 'b1',
-        to: 'd1',
-      },
-      {
-        from: 'c6',
-        to: 'g6',
-      },
-      {
-        from: 'g3',
-        to: 'i3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 466,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_500fd830aa37682e0200c936',
-      ply: 54,
+      event: '2026年第十届北美杯象棋锦标赛',
+      playedOn: '2026-04-05',
+      result: '1/2-1/2',
+      redName: '金州 Son X Nguyen',
+      blackName: '温哥华 刘凯',
     },
   },
   {
@@ -7594,183 +3806,29 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'f3',
         to: 'c3',
       },
-      {
-        from: 'h5',
-        to: 'h7',
-      },
-      {
-        from: 'c3',
-        to: 'c7',
-      },
-      {
-        from: 'h7',
-        to: 'c7',
-      },
-      {
-        from: 'd9',
-        to: 'c7',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 379,
+      centipawns: 376,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_5048149290e71c6bc1422d33',
       ply: 49,
+      event: '2025年全国象棋团体赛',
+      playedOn: '2025-04-19',
+      result: '1/2-1/2',
+      redName: '青岛市体育总会 迟信德',
+      blackName: '中国煤矿体育协会 蒋凤山',
     },
   },
   {
-    id: 'xq-mined-hxq_50cc3a491de7019b98fd0f3a-55',
+    id: 'xq-mined-hxq_51322e5779f093a3f0bb682f-50',
     variant: 'xiangqi',
-    title: 'Black winning advantage',
+    title: 'Red mate in 3',
     initial: {
-      id: 'xq-mined-hxq_50cc3a491de7019b98fd0f3a-55',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 28,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b7bc,c1re,c6be,d6bc,e1rg,e10bg,e2ra,e3re,e6bs,e8bc,e9ba,f1ra,f10ba,f6rc,g6rc,i3rh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'g6',
-        from: 'g4',
-      },
-    },
-    solution: [
-      {
-        from: 'e8',
-        to: 'e3',
-      },
-      {
-        from: 'e2',
-        to: 'd3',
-      },
-      {
-        from: 'c6',
-        to: 'e8',
-      },
-      {
-        from: 'f6',
-        to: 'e6',
-      },
-      {
-        from: 'd6',
-        to: 'd3',
-      },
-      {
-        from: 'g6',
-        to: 'g2',
-      },
-      {
-        from: 'd3',
-        to: 'c3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 383,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_50cc3a491de7019b98fd0f3a',
-      ply: 55,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_512a2a176efb85d4fe31408d-30',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_512a2a176efb85d4fe31408d-30',
+      id: 'xq-mined-hxq_51322e5779f093a3f0bb682f-50',
       board: {
         c1: {
           color: 'red',
@@ -7788,27 +3846,15 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'red',
           role: 'advisor',
         },
-        g1: {
+        g2: {
           color: 'red',
-          role: 'elephant',
-        },
-        c2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
+          role: 'chariot',
         },
         e3: {
           color: 'red',
-          role: 'cannon',
+          role: 'elephant',
         },
         a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
           color: 'red',
           role: 'soldier',
         },
@@ -7817,52 +3863,36 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           role: 'soldier',
         },
         f4: {
-          color: 'black',
-          role: 'chariot',
+          color: 'red',
+          role: 'cannon',
         },
         i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b6: {
           color: 'black',
           role: 'horse',
         },
-        c6: {
+        c5: {
+          color: 'red',
+          role: 'soldier',
+        },
+        a7: {
           color: 'black',
           role: 'soldier',
         },
         c7: {
           color: 'black',
-          role: 'chariot',
+          role: 'soldier',
         },
         e7: {
           color: 'black',
           role: 'soldier',
         },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        h7: {
-          color: 'red',
-          role: 'chariot',
-        },
         i7: {
           color: 'black',
           role: 'soldier',
         },
-        d8: {
+        c8: {
           color: 'black',
-          role: 'cannon',
+          role: 'horse',
         },
         e8: {
           color: 'black',
@@ -7870,19 +3900,23 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         },
         g8: {
           color: 'black',
-          role: 'horse',
-        },
-        c9: {
-          color: 'black',
           role: 'cannon',
         },
-        d9: {
-          color: 'red',
+        h8: {
+          color: 'black',
           role: 'chariot',
         },
         e9: {
           color: 'black',
           role: 'advisor',
+        },
+        f9: {
+          color: 'red',
+          role: 'chariot',
+        },
+        g9: {
+          color: 'red',
+          role: 'horse',
         },
         e10: {
           color: 'black',
@@ -7901,159 +3935,103 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         type: 'playing',
         turn: 'red',
       },
-      moveNumber: 16,
+      moveNumber: 26,
       progressClock: 0,
       positionCounts: {
-        'red|a3rh,a4rs,a6bs,b6bh,c1re,c2rc,c4rs,c6bs,c7bc,c9bc,d1ra,d8bc,d9rc,e1rg,e10bg,e3rc,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,f4bc,g1re,g10be,g5rs,g7rh,g8bh,h7rc,i4rs,i7bs': 1,
+        'red|a4rs,a7bs,c1re,c5rs,c7bs,c8bh,d1ra,e1rg,e10bg,e3re,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,f4rc,f9rc,g10be,g2rc,g8bc,g9rh,h8bc,i4bh,i7bs': 1,
       },
       lastMove: {
-        to: 'd8',
-        from: 'b8',
+        to: 'h8',
+        from: 'i8',
       },
     },
     solution: [
       {
-        from: 'g7',
-        to: 'e6',
+        from: 'f9',
+        to: 'f8',
       },
       {
-        from: 'd8',
-        to: 'd7',
+        from: 'e10',
+        to: 'd10',
       },
       {
-        from: 'h7',
-        to: 'e7',
+        from: 'g2',
+        to: 'd2',
       },
       {
-        from: 'g8',
-        to: 'e7',
+        from: 'e9',
+        to: 'd8',
       },
       {
-        from: 'e6',
-        to: 'c7',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-      {
-        from: 'd9',
-        to: 'c9',
+        from: 'd2',
+        to: 'd8',
       },
     ],
     goal: {
-      type: 'winning-advantage',
+      type: 'checkmate',
       winner: 'red',
-      centipawns: 397,
     },
-    themes: ['winning', 'middlegame'],
+    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
     sourceGame: {
-      gameId: 'hxq_512a2a176efb85d4fe31408d',
-      ply: 30,
+      gameId: 'hxq_51322e5779f093a3f0bb682f',
+      ply: 50,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1-0',
+      redName: '黑龙江省社会体育指导与棋牌运动管理中心 李丹阳',
+      blackName: '安徽省棋院 陈欣圆',
     },
   },
   {
-    id: 'xq-mined-hxq_5299fe14e58a6acd13d8dd33-29',
+    id: 'xq-mined-hxq_5299fe14e58a6acd13d8dd33-101',
     variant: 'xiangqi',
     title: 'Black winning advantage',
     initial: {
-      id: 'xq-mined-hxq_5299fe14e58a6acd13d8dd33-29',
+      id: 'xq-mined-hxq_5299fe14e58a6acd13d8dd33-101',
       board: {
         d1: {
           color: 'red',
           role: 'advisor',
         },
-        e1: {
+        h1: {
+          color: 'black',
+          role: 'chariot',
+        },
+        f2: {
           color: 'red',
           role: 'general',
         },
-        f1: {
+        d3: {
+          color: 'red',
+          role: 'cannon',
+        },
+        f3: {
           color: 'red',
           role: 'advisor',
         },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
         b4: {
           color: 'red',
-          role: 'cannon',
+          role: 'chariot',
         },
         c4: {
-          color: 'red',
+          color: 'black',
           role: 'cannon',
         },
-        e4: {
-          color: 'red',
+        f4: {
+          color: 'black',
           role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'horse',
-        },
-        h4: {
-          color: 'black',
-          role: 'cannon',
         },
         i4: {
           color: 'red',
           role: 'soldier',
         },
-        a5: {
+        e6: {
           color: 'black',
           role: 'soldier',
         },
-        c5: {
+        f7: {
           color: 'red',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'black',
           role: 'chariot',
-        },
-        c7: {
-          color: 'red',
-          role: 'horse',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
         },
         e8: {
           color: 'black',
@@ -8061,11 +4039,7 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         },
         c10: {
           color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
+          role: 'chariot',
         },
         e10: {
           color: 'black',
@@ -8075,64 +4049,192 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
           color: 'black',
           role: 'advisor',
         },
-        h10: {
+        g10: {
           color: 'black',
-          role: 'chariot',
+          role: 'elephant',
         },
       },
       status: {
         type: 'playing',
         turn: 'black',
       },
-      moveNumber: 15,
+      moveNumber: 51,
       progressClock: 0,
       positionCounts: {
-        'black|a2rc,a4rs,a5bs,a8bc,b2rc,b4rc,b7bc,c10be,c4rc,c5rs,c7rh,c8bh,d1ra,d10ba,e1rg,e10bg,e3re,e4rs,e7bs,e8be,f1ra,f10ba,g1re,g3rh,g4bh,g6bs,h10bc,h4bc,i4rs,i7bs': 1,
+        'black|b4rc,c10bc,c4bc,d1ra,d3rc,e10bg,e6bs,e8be,f10ba,f2rg,f3ra,f4bs,f7rc,g10be,h1bc,i4rs': 1,
       },
       lastMove: {
-        to: 'c4',
-        from: 'c3',
+        to: 'f7',
+        from: 'b7',
       },
     },
     solution: [
       {
-        from: 'g4',
-        to: 'e3',
+        from: 'h1',
+        to: 'h2',
+      },
+      {
+        from: 'f2',
+        to: 'f1',
       },
       {
         from: 'c4',
-        to: 'h4',
+        to: 'c1',
       },
       {
-        from: 'b7',
-        to: 'c7',
+        from: 'd1',
+        to: 'e2',
       },
       {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'a5',
-        to: 'b5',
-      },
-      {
-        from: 'b4',
-        to: 'c4',
-      },
-      {
-        from: 'c7',
-        to: 'b7',
+        from: 'c1',
+        to: 'a1',
       },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 333,
+      centipawns: 1130,
     },
-    themes: ['winning', 'winning-material', 'middlegame'],
+    themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_5299fe14e58a6acd13d8dd33',
-      ply: 29,
+      ply: 101,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '0-1',
+      redName: '吉林省棋牌运动管理中心 刘龙',
+      blackName: '北京棋院（北京市棋牌运动管理中心） 姚勤贺',
+    },
+  },
+  {
+    id: 'xq-mined-hxq_5d27fd7e8e35ce11b6facde6-90',
+    variant: 'xiangqi',
+    title: 'Red mate in 3',
+    initial: {
+      id: 'xq-mined-hxq_5d27fd7e8e35ce11b6facde6-90',
+      board: {
+        c1: {
+          color: 'red',
+          role: 'elephant',
+        },
+        d1: {
+          color: 'red',
+          role: 'advisor',
+        },
+        e1: {
+          color: 'red',
+          role: 'general',
+        },
+        i1: {
+          color: 'black',
+          role: 'cannon',
+        },
+        e2: {
+          color: 'red',
+          role: 'advisor',
+        },
+        e3: {
+          color: 'red',
+          role: 'elephant',
+        },
+        a4: {
+          color: 'red',
+          role: 'soldier',
+        },
+        h4: {
+          color: 'black',
+          role: 'chariot',
+        },
+        i4: {
+          color: 'red',
+          role: 'soldier',
+        },
+        g5: {
+          color: 'black',
+          role: 'soldier',
+        },
+        a7: {
+          color: 'black',
+          role: 'soldier',
+        },
+        g7: {
+          color: 'black',
+          role: 'horse',
+        },
+        i7: {
+          color: 'black',
+          role: 'soldier',
+        },
+        d8: {
+          color: 'red',
+          role: 'horse',
+        },
+        e8: {
+          color: 'black',
+          role: 'elephant',
+        },
+        a9: {
+          color: 'red',
+          role: 'chariot',
+        },
+        f9: {
+          color: 'red',
+          role: 'soldier',
+        },
+        d10: {
+          color: 'black',
+          role: 'general',
+        },
+      },
+      status: {
+        type: 'playing',
+        turn: 'red',
+      },
+      moveNumber: 46,
+      progressClock: 0,
+      positionCounts: {
+        'red|a4rs,a7bs,a9rc,c1re,d1ra,d10bg,d8rh,e1rg,e2ra,e3re,e8be,f9rs,g5bs,g7bh,h4bc,i1bc,i4rs,i7bs': 1,
+      },
+      lastMove: {
+        to: 'h4',
+        from: 'c4',
+      },
+    },
+    solution: [
+      {
+        from: 'd8',
+        to: 'b9',
+      },
+      {
+        from: 'd10',
+        to: 'd9',
+      },
+      {
+        from: 'f9',
+        to: 'e9',
+      },
+      {
+        from: 'd9',
+        to: 'e9',
+      },
+      {
+        from: 'b9',
+        to: 'd8',
+      },
+    ],
+    goal: {
+      type: 'checkmate',
+      winner: 'red',
+    },
+    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
+    sourceGame: {
+      gameId: 'hxq_5d27fd7e8e35ce11b6facde6',
+      ply: 90,
+      event: '2026年首届“天长杯”全国象棋公开赛',
+      playedOn: '2026-04-11',
+      result: '1-0',
+      redName: '浙江省智力运动管理中心 申恩炫',
+      blackName: '杭州市智力运动队 郭中基',
     },
   },
   {
@@ -8242,32 +4344,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'f7',
         to: 'f8',
       },
-      {
-        from: 'g6',
-        to: 'g1',
-      },
-      {
-        from: 'e2',
-        to: 'f1',
-      },
-      {
-        from: 'e8',
-        to: 'g6',
-      },
-      {
-        from: 'f9',
-        to: 'f10',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 984,
+      centipawns: 747,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_5d986a2b712c3117607ae899',
       ply: 66,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1-0',
+      redName: '广东省二沙体育训练中心 黄光颖',
+      blackName: '湖北省体育局棋牌运动管理中心 刘云峰',
     },
   },
   {
@@ -8381,211 +4472,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e7',
         to: 'e5',
       },
-      {
-        from: 'g6',
-        to: 'g5',
-      },
-      {
-        from: 'e5',
-        to: 'e2',
-      },
-      {
-        from: 'e10',
-        to: 'f10',
-      },
-      {
-        from: 'e2',
-        to: 'i2',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 316,
+      centipawns: 314,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_5de45f7a31381053e30a369b',
       ply: 62,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_5e17d09c750ee5b40b1520c4-48',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_5e17d09c750ee5b40b1520c4-48',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'horse',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        h6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i6: {
-          color: 'black',
-          role: 'horse',
-        },
-        c7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        b8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 25,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rc,a4rs,a6bs,a8bh,b1rh,b10bc,b5rc,b8rc,c4rs,c7bc,d2rc,d6bc,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,g1re,g10be,g3rh,h6bc,i4rs,i6bh,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b10',
-        from: 'c10',
-      },
-    },
-    solution: [
-      {
-        from: 'b8',
-        to: 'a8',
-      },
-      {
-        from: 'b10',
-        to: 'b1',
-      },
-      {
-        from: 'a3',
-        to: 'd3',
-      },
-      {
-        from: 'i6',
-        to: 'h4',
-      },
-      {
-        from: 'b5',
-        to: 'b1',
-      },
-      {
-        from: 'c7',
-        to: 'd7',
-      },
-      {
-        from: 'b1',
-        to: 'b10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 391,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_5e17d09c750ee5b40b1520c4',
-      ply: 48,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-30',
+      result: '1-0',
+      redName: '广东省二沙体育训练中心 张婷',
+      blackName: '杭州市智力运动队 沈思凡',
     },
   },
   {
@@ -8747,32 +4648,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'h5',
         to: 'g3',
       },
-      {
-        from: 'd3',
-        to: 'e2',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-      {
-        from: 'b5',
-        to: 'c5',
-      },
-      {
-        from: 'g3',
-        to: 'h1',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 336,
+      centipawns: 330,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_5ee6f03007c1812718638628',
       ply: 31,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '0-1',
+      redName: '新疆生产建设兵团文化体育广电和旅游局 徐伟',
+      blackName: '吉林省棋牌运动管理中心 徐腾飞',
     },
   },
   {
@@ -8871,8 +4761,8 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         to: 'i10',
       },
       {
-        from: 'b8',
-        to: 'd9',
+        from: 'f4',
+        to: 'f3',
       },
       {
         from: 'g8',
@@ -8887,6 +4777,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_60e406e265642e412fbd2ba6',
       ply: 122,
+      event: '2026年广东十虎VS北京十杰象棋擂台赛',
+      playedOn: '2026-01-18',
+      result: '1-0',
+      redName: '广东十虎 黎铎',
+      blackName: '北京十杰 刘龙',
     },
   },
   {
@@ -9028,318 +4923,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'f7',
         to: 'f9',
       },
-      {
-        from: 'c10',
-        to: 'c9',
-      },
-      {
-        from: 'b9',
-        to: 'c9',
-      },
-      {
-        from: 'd6',
-        to: 'd9',
-      },
-      {
-        from: 'c9',
-        to: 'c5',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 756,
+      centipawns: 773,
     },
     themes: ['winning', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_62fa46323deb732d9c43137a',
       ply: 32,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_6659298c285885bcb6790b26-66',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_6659298c285885bcb6790b26-66',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'black',
-          role: 'horse',
-        },
-        f4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        b6: {
-          color: 'black',
-          role: 'horse',
-        },
-        c6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'red',
-          role: 'horse',
-        },
-        f6: {
-          color: 'red',
-          role: 'horse',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 34,
-      progressClock: 0,
-      positionCounts: {
-        'red|a6rc,b5rc,b6bh,c10be,c6rs,c7bs,d1rg,d10ba,d6rh,e2ra,e3bh,e7rs,e9ba,f1ra,f10bg,f4bc,f6rh,g1re,g7rs,h1bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e3',
-        from: 'g2',
-      },
-    },
-    solution: [
-      {
-        from: 'c6',
-        to: 'b6',
-      },
-      {
-        from: 'f4',
-        to: 'd4',
-      },
-      {
-        from: 'a6',
-        to: 'a9',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'a9',
-        to: 'a10',
-      },
-      {
-        from: 'f10',
-        to: 'f9',
-      },
-      {
-        from: 'g7',
-        to: 'g8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 866,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_6659298c285885bcb6790b26',
-      ply: 66,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_67d7f6fa59ce9ae59b3c85ba-64',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_67d7f6fa59ce9ae59b3c85ba-64',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'red',
-          role: 'horse',
-        },
-        c9: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 33,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3re,c10be,c7rs,c9bh,d10ba,d4rc,e1rg,e10bg,e2ra,e3re,e5bc,e6rc,e8be,e9ba,f1ra,f7bc,i4rs,i8rh': 1,
-      },
-      lastMove: {
-        to: 'e5',
-        from: 'e4',
-      },
-    },
-    solution: [
-      {
-        from: 'i8',
-        to: 'g9',
-      },
-      {
-        from: 'e10',
-        to: 'f10',
-      },
-      {
-        from: 'g9',
-        to: 'f7',
-      },
-      {
-        from: 'e5',
-        to: 'f5',
-      },
-      {
-        from: 'e6',
-        to: 'f6',
-      },
-      {
-        from: 'f10',
-        to: 'e10',
-      },
-      {
-        from: 'f7',
-        to: 'g9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 636,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_67d7f6fa59ce9ae59b3c85ba',
-      ply: 64,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-01',
+      result: '1-0',
+      redName: '吉林省棋牌运动管理中心 康乃馨',
+      blackName: '云南省棋牌运动管理中心 罗钰婷',
     },
   },
   {
@@ -9474,6 +5072,138 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_67d7f6fa59ce9ae59b3c85ba',
       ply: 66,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-31',
+      result: '1-0',
+      redName: '浙江省智力运动管理中心 王宇航',
+      blackName: '河北省体育局棋牌运动中心 杨世哲',
+    },
+  },
+  {
+    id: 'xq-mined-hxq_6ce5f5429efe309f44fb3c8f-86',
+    variant: 'xiangqi',
+    title: 'Red mate in 3',
+    initial: {
+      id: 'xq-mined-hxq_6ce5f5429efe309f44fb3c8f-86',
+      board: {
+        c1: {
+          color: 'red',
+          role: 'elephant',
+        },
+        e1: {
+          color: 'red',
+          role: 'general',
+        },
+        f1: {
+          color: 'red',
+          role: 'advisor',
+        },
+        g1: {
+          color: 'red',
+          role: 'elephant',
+        },
+        h1: {
+          color: 'black',
+          role: 'cannon',
+        },
+        e2: {
+          color: 'red',
+          role: 'advisor',
+        },
+        h3: {
+          color: 'black',
+          role: 'horse',
+        },
+        c4: {
+          color: 'red',
+          role: 'soldier',
+        },
+        e4: {
+          color: 'red',
+          role: 'chariot',
+        },
+        c6: {
+          color: 'black',
+          role: 'soldier',
+        },
+        b7: {
+          color: 'red',
+          role: 'soldier',
+        },
+        c7: {
+          color: 'red',
+          role: 'horse',
+        },
+        d7: {
+          color: 'black',
+          role: 'chariot',
+        },
+        d8: {
+          color: 'black',
+          role: 'general',
+        },
+        e9: {
+          color: 'black',
+          role: 'advisor',
+        },
+        f10: {
+          color: 'black',
+          role: 'advisor',
+        },
+        g10: {
+          color: 'red',
+          role: 'cannon',
+        },
+      },
+      status: {
+        type: 'playing',
+        turn: 'red',
+      },
+      moveNumber: 44,
+      progressClock: 0,
+      positionCounts: {
+        'red|b7rs,c1re,c4rs,c6bs,c7rh,d7bc,d8bg,e1rg,e2ra,e4rc,e9ba,f1ra,f10ba,g1re,g10rc,h1bc,h3bh': 1,
+      },
+      lastMove: {
+        to: 'd8',
+        from: 'd9',
+      },
+    },
+    solution: [
+      {
+        from: 'e2',
+        to: 'd3',
+      },
+      {
+        from: 'd7',
+        to: 'c7',
+      },
+      {
+        from: 'e4',
+        to: 'd4',
+      },
+      {
+        from: 'c7',
+        to: 'd7',
+      },
+      {
+        from: 'd4',
+        to: 'd7',
+      },
+    ],
+    goal: {
+      type: 'checkmate',
+      winner: 'red',
+    },
+    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
+    sourceGame: {
+      gameId: 'hxq_6ce5f5429efe309f44fb3c8f',
+      ply: 86,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-28',
+      result: '1-0',
+      redName: '北京棋院（北京市棋牌运动管理中心） 王禹博',
+      blackName: '甘肃体彩队 曹云鹏',
     },
   },
   {
@@ -9572,6 +5302,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_6e26ca7168fc40dbb91de547',
       ply: 134,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-04-02',
+      result: '1-0',
+      redName: '河南省全民健身中心 宋家豪',
+      blackName: '吉林省棋牌运动管理中心 刘龙',
     },
   },
   {
@@ -9717,32 +5452,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'f4',
         to: 'c4',
       },
-      {
-        from: 'g4',
-        to: 'g5',
-      },
-      {
-        from: 'g8',
-        to: 'e7',
-      },
-      {
-        from: 'b4',
-        to: 'b7',
-      },
-      {
-        from: 'g7',
-        to: 'g6',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 356,
+      centipawns: 368,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_72bb841aa04794a9e86a3ccd',
       ply: 33,
+      event: '2026年第十届北美杯象棋锦标赛',
+      playedOn: '2026-04-05',
+      result: '0-1',
+      redName: 'HTown David Nguyen',
+      blackName: '新奥尔良 张文鑫',
     },
   },
   {
@@ -9868,374 +5592,21 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         from: 'e7',
         to: 'g6',
       },
-      {
-        from: 'b6',
-        to: 'd7',
-      },
-      {
-        from: 'h5',
-        to: 'h6',
-      },
-      {
-        from: 'c3',
-        to: 'c6',
-      },
-      {
-        from: 'g6',
-        to: 'e7',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'red',
-      centipawns: 584,
+      centipawns: 583,
     },
     themes: ['winning', 'winning-material', 'crushing', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_75c1e77dc113464ae3860a54',
       ply: 64,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_75f809638532b26e1e6300fb-34',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_75f809638532b26e1e6300fb-34',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'horse',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'black',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        b8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'red|a10bc,a4rs,a6bs,a8bh,b8rc,c1re,c4rh,c5rs,c7bs,d10ba,d7bh,e1rg,e10bg,e2ra,e3rc,e5bc,e6bs,e8be,e9ba,f1ra,g1re,g3rh,g4rs,g6bs,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e6',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'c4',
-        to: 'e5',
-      },
-      {
-        from: 'd7',
-        to: 'e5',
-      },
-      {
-        from: 'e3',
-        to: 'e6',
-      },
-      {
-        from: 'c7',
-        to: 'c6',
-      },
-      {
-        from: 'b8',
-        to: 'e8',
-      },
-      {
-        from: 'a8',
-        to: 'c7',
-      },
-      {
-        from: 'e8',
-        to: 'a8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 420,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_75f809638532b26e1e6300fb',
-      ply: 34,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_761689feb2235627b18ef1b9-32',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_761689feb2235627b18ef1b9-32',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        d3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        d8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 17,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6bs,a8bh,b10bc,b4rc,b6bc,c1re,c10be,c3rh,c5rs,c7bs,d1ra,d10ba,d3rc,d8bc,e1rg,e10bg,e3re,e4rs,e7bs,e8be,f1ra,f10ba,g3rc,g4rh,g8bh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b6',
-        from: 'b8',
-      },
-    },
-    solution: [
-      {
-        from: 'b4',
-        to: 'd4',
-      },
-      {
-        from: 'd8',
-        to: 'b8',
-      },
-      {
-        from: 'd3',
-        to: 'd10',
-      },
-      {
-        from: 'b10',
-        to: 'b9',
-      },
-      {
-        from: 'd10',
-        to: 'd8',
-      },
-      {
-        from: 'b9',
-        to: 'd9',
-      },
-      {
-        from: 'g3',
-        to: 'g8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 348,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_761689feb2235627b18ef1b9',
-      ply: 32,
+      event: '2025年全国象棋团体赛',
+      playedOn: '2025-04-17',
+      result: '1-0',
+      redName: '安徽省棋院 李冰',
+      blackName: '陕西省社会体育运动发展中心 孙继尧',
     },
   },
   {
@@ -10378,39 +5749,28 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
         to: 'g4',
       },
       {
-        from: 'g2',
-        to: 'h2',
+        from: 'i3',
+        to: 'g4',
       },
       {
         from: 'b6',
         to: 'b3',
       },
-      {
-        from: 'h2',
-        to: 'h10',
-      },
-      {
-        from: 'g8',
-        to: 'h10',
-      },
-      {
-        from: 'i3',
-        to: 'g4',
-      },
-      {
-        from: 'g5',
-        to: 'g4',
-      },
     ],
     goal: {
       type: 'winning-advantage',
       winner: 'black',
-      centipawns: 500,
+      centipawns: 503,
     },
     themes: ['winning', 'winning-material', 'middlegame'],
     sourceGame: {
       gameId: 'hxq_7b642cdd00cf885f385004e7',
       ply: 29,
+      event: '2026年第十届北美杯象棋锦标赛',
+      playedOn: '2026-04-05',
+      result: '0-1',
+      redName: '北加州 孙一鸣',
+      blackName: '休斯顿 胡玉山',
     },
   },
   {
@@ -10545,10600 +5905,11 @@ export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = [
     sourceGame: {
       gameId: 'hxq_7db834820ae4bd7adf98262f',
       ply: 71,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_8506f1f154db6058fbc4f40a-66',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_8506f1f154db6058fbc4f40a-66',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 34,
-      progressClock: 0,
-      positionCounts: {
-        'red|a10bc,b6rc,c5bs,d1ra,e1rg,e10bg,e8be,f1ra,g1re,g4rs,i2bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'a10',
-        from: 'a3',
-      },
-    },
-    solution: [
-      {
-        from: 'b6',
-        to: 'b8',
-      },
-      {
-        from: 'a10',
-        to: 'a9',
-      },
-      {
-        from: 'b8',
-        to: 'e8',
-      },
-      {
-        from: 'e10',
-        to: 'f10',
-      },
-      {
-        from: 'e8',
-        to: 'e10',
-      },
-      {
-        from: 'f10',
-        to: 'f9',
-      },
-      {
-        from: 'e10',
-        to: 'e2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 340,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_8506f1f154db6058fbc4f40a',
-      ply: 66,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_85fdd095ba6bedfc33040d6f-66',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_85fdd095ba6bedfc33040d6f-66',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        c2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'horse',
-        },
-        d5: {
-          color: 'black',
-          role: 'horse',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d7: {
-          color: 'red',
-          role: 'horse',
-        },
-        g8: {
-          color: 'red',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 34,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7rc,c10be,c2rc,d1rg,d5bh,d7rh,e10bg,e2ra,e3re,e6bs,e9ba,f1ra,f10ba,f9bc,g1re,g10be,g4bh,g6bs,g8rh,g9bc': 1,
-      },
-      lastMove: {
-        to: 'c10',
-        from: 'e8',
-      },
-    },
-    solution: [
-      {
-        from: 'a7',
-        to: 'a10',
-      },
-      {
-        from: 'e9',
-        to: 'd10',
-      },
-      {
-        from: 'd1',
-        to: 'e1',
-      },
-      {
-        from: 'f9',
-        to: 'd9',
-      },
-      {
-        from: 'd7',
-        to: 'c5',
-      },
-      {
-        from: 'd5',
-        to: 'c3',
-      },
-      {
-        from: 'c5',
-        to: 'e6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 394,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_85fdd095ba6bedfc33040d6f',
-      ply: 66,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_876ff1d89537599228efb9c4-130',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_876ff1d89537599228efb9c4-130',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        c2: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c9: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 66,
-      progressClock: 0,
-      positionCounts: {
-        'red|c2bs,c9rs,d1ra,d10bg,d8bc,e1rg,e2ra,e7rs,e9ba,f7rc,g10be,g2bs': 1,
-      },
-      lastMove: {
-        to: 'd10',
-        from: 'e10',
-      },
-    },
-    solution: [
-      {
-        from: 'f7',
-        to: 'f9',
-      },
-      {
-        from: 'd10',
-        to: 'e10',
-      },
-      {
-        from: 'c9',
-        to: 'd9',
-      },
-      {
-        from: 'd8',
-        to: 'd9',
-      },
-      {
-        from: 'e7',
-        to: 'e8',
-      },
-      {
-        from: 'e9',
-        to: 'd10',
-      },
-      {
-        from: 'f9',
-        to: 'd9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 547,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_876ff1d89537599228efb9c4',
-      ply: 130,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_87f1be18352551424d4aa57b-30',
-    variant: 'xiangqi',
-    title: 'Red mate in 2',
-    initial: {
-      id: 'xq-mined-hxq_87f1be18352551424d4aa57b-30',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h6: {
-          color: 'black',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 16,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rc,a4rs,a7bs,b1rc,c1re,c5rs,c7bs,d1ra,d10ba,d7bc,e1rg,e10bg,e5rs,e7rc,e8be,e9ba,f1ra,f4rc,g1re,g10be,g3rh,g4rs,g6bs,g9bc,h6bh,h8bc,i4rs,i7bs,i8bc': 1,
-      },
-      lastMove: {
-        to: 'e9',
-        from: 'f10',
-      },
-    },
-    solution: [
-      {
-        from: 'a3',
-        to: 'b3',
-      },
-      {
-        from: 'g6',
-        to: 'g5',
-      },
-      {
-        from: 'b3',
-        to: 'b10',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein2', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_87f1be18352551424d4aa57b',
-      ply: 30,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_87f1be18352551424d4aa57b-34',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_87f1be18352551424d4aa57b-34',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h6: {
-          color: 'black',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rc,a4rs,a7bs,b1rc,c1re,c5rs,c7bs,d1ra,d10ba,d7rc,e1rg,e10bg,e5rs,e7rc,e8be,e9ba,f1ra,f8bc,g1re,g10be,g3rh,g4rs,g5bs,g9bc,h6bh,i4rs,i7bs,i8bc': 1,
-      },
-      lastMove: {
-        to: 'g5',
-        from: 'g6',
-      },
-    },
-    solution: [
-      {
-        from: 'b1',
-        to: 'b10',
-      },
-      {
-        from: 'e10',
-        to: 'f10',
-      },
-      {
-        from: 'e7',
-        to: 'e9',
-      },
-      {
-        from: 'f10',
-        to: 'f9',
-      },
-      {
-        from: 'd7',
-        to: 'd10',
-      },
-      {
-        from: 'i8',
-        to: 'i10',
-      },
-      {
-        from: 'e9',
-        to: 'e10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 1017,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_87f1be18352551424d4aa57b',
-      ply: 34,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_883bb1816da3db309f1fb245-34',
-    variant: 'xiangqi',
-    title: 'Red mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_883bb1816da3db309f1fb245-34',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'horse',
-        },
-        f7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        h9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        i10: {
-          color: 'black',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3re,a4rs,a6bs,a8bh,c10be,c3rh,c4bc,c5rs,c7bs,c9bc,d1ra,d10rc,d9rc,e1rg,e10bg,e3rc,e4rs,e7bh,e8be,e9ba,f1ra,f7bc,g1re,g5rs,g7bs,h9rc,i10bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f7',
-        from: 'f10',
-      },
-    },
-    solution: [
-      {
-        from: 'd9',
-        to: 'e9',
-      },
-      {
-        from: 'e10',
-        to: 'd10',
-      },
-      {
-        from: 'h9',
-        to: 'h10',
-      },
-      {
-        from: 'e8',
-        to: 'g10',
-      },
-      {
-        from: 'h10',
-        to: 'g10',
-      },
-      {
-        from: 'f7',
-        to: 'f10',
-      },
-      {
-        from: 'g10',
-        to: 'f10',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'winning-material', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_883bb1816da3db309f1fb245',
-      ply: 34,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_8afb994f7ac3df708a839cae-39',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_8afb994f7ac3df708a839cae-39',
-      board: {
-        c1: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'horse',
-        },
-        h3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d5: {
-          color: 'black',
-          role: 'horse',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 20,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a5rc,b7rc,b8bc,c1bc,d1ra,d2bc,d5bh,e1rg,e10bg,e2ra,e3rh,e4rs,e7bs,e8be,e9ba,f10ba,f5rh,g1re,g10be,g5rs,g7bs,g8bh,h3rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b7',
-        from: 'a7',
-      },
-    },
-    solution: [
-      {
-        from: 'd5',
-        to: 'c3',
-      },
-      {
-        from: 'e2',
-        to: 'd3',
-      },
-      {
-        from: 'd2',
-        to: 'd3',
-      },
-      {
-        from: 'a5',
-        to: 'd5',
-      },
-      {
-        from: 'd3',
-        to: 'd5',
-      },
-      {
-        from: 'f5',
-        to: 'd4',
-      },
-      {
-        from: 'd5',
-        to: 'd4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 1359,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_8afb994f7ac3df708a839cae',
-      ply: 39,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_901b7606df72ecde7e73314a-80',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_901b7606df72ecde7e73314a-80',
-      board: {
-        a1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        d2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d3: {
-          color: 'red',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d9: {
-          color: 'black',
-          role: 'general',
-        },
-        b10: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'red',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 41,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1bc,b10rc,c1re,c10be,c6be,d1ra,d2bc,d3rh,d5bs,d9bg,e1rg,e10rc,e8bc,f7rc,f8ba,g5rs,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e8',
-        from: 'd8',
-      },
-    },
-    solution: [
-      {
-        from: 'e10',
-        to: 'd10',
-      },
-      {
-        from: 'd9',
-        to: 'e9',
-      },
-      {
-        from: 'd10',
-        to: 'd5',
-      },
-      {
-        from: 'a1',
-        to: 'd1',
-      },
-      {
-        from: 'f7',
-        to: 'd7',
-      },
-      {
-        from: 'd1',
-        to: 'd3',
-      },
-      {
-        from: 'd7',
-        to: 'd3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 313,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_901b7606df72ecde7e73314a',
-      ply: 80,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_943d507a8a1c92615c9b582b-73',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_943d507a8a1c92615c9b582b-73',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i2: {
-          color: 'black',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'red',
-          role: 'horse',
-        },
-        f8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g8: {
-          color: 'red',
-          role: 'horse',
-        },
-        i8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 37,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,d1ra,d10ba,e10bg,e2ra,e3re,e4rs,e5bs,f1rg,f10ba,f2rc,f5bc,f8bc,g1re,g10be,g7rc,g8rh,i2bh,i4rs,i7rh,i8be': 1,
-      },
-      lastMove: {
-        to: 'g7',
-        from: 'h7',
-      },
-    },
-    solution: [
-      {
-        from: 'f5',
-        to: 'g5',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'g5',
-        to: 'g7',
-      },
-      {
-        from: 'f2',
-        to: 'f8',
-      },
-      {
-        from: 'g7',
-        to: 'f7',
-      },
-      {
-        from: 'd1',
-        to: 'e2',
-      },
-      {
-        from: 'f7',
-        to: 'f8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 358,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_943d507a8a1c92615c9b582b',
-      ply: 73,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9635fa5dda8163df31edf713-100',
-    variant: 'xiangqi',
-    title: 'Red mate in 2',
-    initial: {
-      id: 'xq-mined-hxq_9635fa5dda8163df31edf713-100',
-      board: {
-        e2: {
-          color: 'red',
-          role: 'general',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e5: {
-          color: 'black',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'horse',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'red',
-          role: 'horse',
-        },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        a9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f9: {
-          color: 'black',
-          role: 'general',
-        },
-        h9: {
-          color: 'red',
-          role: 'horse',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 51,
-      progressClock: 0,
-      positionCounts: {
-        'red|a9rc,c10be,d10ba,e2rg,e3re,e5bh,e8rh,f3ra,f8ba,f9bg,g6bh,h9rh,i6bs': 1,
-      },
-      lastMove: {
-        to: 'd10',
-        from: 'e9',
-      },
-    },
-    solution: [
-      {
-        from: 'h9',
-        to: 'g7',
-      },
-      {
-        from: 'f9',
-        to: 'e9',
-      },
-      {
-        from: 'e8',
-        to: 'c9',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein2', 'crushing', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_9635fa5dda8163df31edf713',
-      ply: 100,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9ab1df8359860327e0361c03-29',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9ab1df8359860327e0361c03-29',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'horse',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'horse',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 15,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b1rc,b5rh,c1re,c10be,c6bc,c7rs,d1ra,d10ba,d2bc,d8bc,e1rg,e10bg,e3rc,e5rs,e7bs,e9bh,f1ra,f10ba,g1re,g10be,g5rs,g7rh,g8bh,h1rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e5',
-        from: 'e4',
-      },
-    },
-    solution: [
-      {
-        from: 'd8',
-        to: 'd1',
-      },
-      {
-        from: 'c1',
-        to: 'a3',
-      },
-      {
-        from: 'd1',
-        to: 'f1',
-      },
-      {
-        from: 'e1',
-        to: 'f1',
-      },
-      {
-        from: 'c6',
-        to: 'c2',
-      },
-      {
-        from: 'e3',
-        to: 'e2',
-      },
-      {
-        from: 'd2',
-        to: 'e2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 430,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9ab1df8359860327e0361c03',
-      ply: 29,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9c00e0b3696d4047f7264a3a-54',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9c00e0b3696d4047f7264a3a-54',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 28,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3re,c10be,d1ra,d10ba,d7bc,e1rg,e4rs,e9ba,f1ra,f10bg,f5rh,f7rc,g1re,g6be,g8bh,h8rc,i4rs,i7bs,i8bc': 1,
-      },
-      lastMove: {
-        to: 'd7',
-        from: 'd8',
-      },
-    },
-    solution: [
-      {
-        from: 'h8',
-        to: 'g8',
-      },
-      {
-        from: 'd7',
-        to: 'f7',
-      },
-      {
-        from: 'g8',
-        to: 'g10',
-      },
-      {
-        from: 'f10',
-        to: 'f9',
-      },
-      {
-        from: 'f5',
-        to: 'g7',
-      },
-      {
-        from: 'f7',
-        to: 'g7',
-      },
-      {
-        from: 'g10',
-        to: 'g7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 363,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9c00e0b3696d4047f7264a3a',
-      ply: 54,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9c0e7fb55282f2a919196bb7-62',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9c0e7fb55282f2a919196bb7-62',
-      board: {
-        a1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h5: {
-          color: 'red',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e7: {
-          color: 'black',
-          role: 'horse',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 32,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1bc,a3re,a4rs,a7bs,b2bc,c10be,c5rs,c7bs,d1rg,d3rc,d7bc,e10bg,e2ra,e5bs,e7bh,f1ra,f10ba,f7rc,f8rc,g1re,h5rh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e5',
-        from: 'e6',
-      },
-    },
-    solution: [
-      {
-        from: 'f8',
-        to: 'f10',
-      },
-      {
-        from: 'e10',
-        to: 'e9',
-      },
-      {
-        from: 'h5',
-        to: 'f6',
-      },
-      {
-        from: 'b2',
-        to: 'b1',
-      },
-      {
-        from: 'd1',
-        to: 'd2',
-      },
-      {
-        from: 'b1',
-        to: 'b2',
-      },
-      {
-        from: 'd2',
-        to: 'd1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 905,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9c0e7fb55282f2a919196bb7',
-      ply: 62,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9c25fb08342f0cce5988c61a-48',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9c25fb08342f0cce5988c61a-48',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        i8: {
-          color: 'red',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'general',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'red',
-          role: 'chariot',
-        },
-        h10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 25,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3bc,a8bh,c10be,c3rh,c7bs,d1ra,d10ba,e1rg,e3re,e4rs,e7bs,e9bg,f1ra,f10ba,g1re,g10rc,g4bc,g6bs,h10rc,i1bc,i5rs,i7bs,i8rh': 1,
-      },
-      lastMove: {
-        to: 'e9',
-        from: 'e10',
-      },
-    },
-    solution: [
-      {
-        from: 'h10',
-        to: 'h9',
-      },
-      {
-        from: 'e9',
-        to: 'e10',
-      },
-      {
-        from: 'g10',
-        to: 'g6',
-      },
-      {
-        from: 'a8',
-        to: 'c9',
-      },
-      {
-        from: 'h9',
-        to: 'h10',
-      },
-      {
-        from: 'e10',
-        to: 'e9',
-      },
-      {
-        from: 'g6',
-        to: 'g9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 682,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9c25fb08342f0cce5988c61a',
-      ply: 48,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9ecf82237969a77ee46ac505-83',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9ecf82237969a77ee46ac505-83',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        c2: {
-          color: 'black',
-          role: 'horse',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'horse',
-        },
-        f7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        b9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c9: {
-          color: 'red',
-          role: 'horse',
-        },
-        f9: {
-          color: 'red',
-          role: 'horse',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 42,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rs,a8bc,b9rc,c1re,c10be,c2bh,c9rh,d3ra,e10bg,e2ra,e5bs,e8be,f1rg,f7bc,f9rh,g6bh,g7rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c9',
-        from: 'b7',
-      },
-    },
-    solution: [
-      {
-        from: 'e10',
-        to: 'f10',
-      },
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'g6',
-        to: 'f4',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'a8',
-        to: 'a9',
-      },
-      {
-        from: 'c9',
-        to: 'd7',
-      },
-      {
-        from: 'a9',
-        to: 'f9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 483,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9ecf82237969a77ee46ac505',
-      ply: 83,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9fba1c77687f316e9e5cca7f-159',
-    variant: 'xiangqi',
-    title: 'Black mate in 2',
-    initial: {
-      id: 'xq-mined-hxq_9fba1c77687f316e9e5cca7f-159',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        b4: {
-          color: 'black',
-          role: 'horse',
-        },
-        g5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c7: {
-          color: 'red',
-          role: 'horse',
-        },
-        d7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d9: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c10: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 80,
-      progressClock: 0,
-      positionCounts: {
-        'black|b4bh,c10rc,c7rh,d7bc,d9rs,e1rg,e10bg,e2ra,f3ra,g5bs,g6be': 1,
-      },
-      lastMove: {
-        to: 'e1',
-        from: 'd1',
-      },
-    },
-    solution: [
-      {
-        from: 'b4',
-        to: 'd3',
-      },
-      {
-        from: 'e1',
-        to: 'f1',
-      },
-      {
-        from: 'd7',
-        to: 'f7',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'matein2', 'crushing', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_9fba1c77687f316e9e5cca7f',
-      ply: 159,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_9fba1c77687f316e9e5cca7f-54',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_9fba1c77687f316e9e5cca7f-54',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        h4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        e5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c7: {
-          color: 'red',
-          role: 'horse',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 28,
-      progressClock: 0,
-      positionCounts: {
-        'red|a5rs,a7rc,c1re,c6bc,c7rh,d1ra,d10ba,d5rh,d8bc,e1rg,e10bg,e2ra,e5rc,e8be,e9ba,g10be,g7bs,h4bc,i4rs,i7bs,i8bh': 1,
-      },
-      lastMove: {
-        to: 'c6',
-        from: 'f6',
-      },
-    },
-    solution: [
-      {
-        from: 'a7',
-        to: 'a10',
-      },
-      {
-        from: 'e8',
-        to: 'c10',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'd8',
-        to: 'e8',
-      },
-      {
-        from: 'c7',
-        to: 'e8',
-      },
-      {
-        from: 'g10',
-        to: 'e8',
-      },
-      {
-        from: 'e5',
-        to: 'e8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 410,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_9fba1c77687f316e9e5cca7f',
-      ply: 54,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a0282601861fd221fe9a4955-56',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a0282601861fd221fe9a4955-56',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        h5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 29,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b7bc,b8bh,c1re,c6be,d1ra,d2rc,e1rg,e10bg,e4rs,e6bs,e8be,f1ra,f10ba,f8ba,f9bc,g1re,g3rc,g7rc,g8bc,h5rh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f8',
-        from: 'e9',
-      },
-    },
-    solution: [
-      {
-        from: 'g3',
-        to: 'g8',
-      },
-      {
-        from: 'f9',
-        to: 'c9',
-      },
-      {
-        from: 'c1',
-        to: 'a3',
-      },
-      {
-        from: 'b7',
-        to: 'b5',
-      },
-      {
-        from: 'h5',
-        to: 'f6',
-      },
-      {
-        from: 'b5',
-        to: 'b7',
-      },
-      {
-        from: 'd2',
-        to: 'g2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 371,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a0282601861fd221fe9a4955',
-      ply: 56,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a0679ecd83c6301b97a636e6-56',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a0679ecd83c6301b97a636e6-56',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'horse',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 29,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b6rc,c6rs,d1ra,d10bh,e1rg,e10bg,e2rc,e3bc,e8be,e9ba,f1ra,f10ba,f6bc,g1re,g10be,g3rc,g5rs,g6bs': 1,
-      },
-      lastMove: {
-        to: 'e3',
-        from: 'e6',
-      },
-    },
-    solution: [
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'f6',
-        to: 'b6',
-      },
-      {
-        from: 'c6',
-        to: 'b6',
-      },
-      {
-        from: 'd10',
-        to: 'c8',
-      },
-      {
-        from: 'b6',
-        to: 'b7',
-      },
-      {
-        from: 'c8',
-        to: 'd6',
-      },
-      {
-        from: 'b7',
-        to: 'a7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 312,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a0679ecd83c6301b97a636e6',
-      ply: 56,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a121d9c1ed50855dcb0fc4f7-124',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a121d9c1ed50855dcb0fc4f7-124',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 63,
-      progressClock: 0,
-      positionCounts: {
-        'red|b5rc,b6rs,d1ra,d10bg,e1rg,e2ra,e7bc,e8be,g1re,g10be,i3re': 1,
-      },
-      lastMove: {
-        to: 'd10',
-        from: 'e10',
-      },
-    },
-    solution: [
-      {
-        from: 'b6',
-        to: 'b7',
-      },
-      {
-        from: 'e7',
-        to: 'd7',
-      },
-      {
-        from: 'b7',
-        to: 'b8',
-      },
-      {
-        from: 'd7',
-        to: 'd8',
-      },
-      {
-        from: 'b8',
-        to: 'b9',
-      },
-      {
-        from: 'd8',
-        to: 'd9',
-      },
-      {
-        from: 'b5',
-        to: 'f5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 388,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_a121d9c1ed50855dcb0fc4f7',
-      ply: 124,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a20d49ae7aedf66d3dca7161-63',
-    variant: 'xiangqi',
-    title: 'Black mate in 3',
-    initial: {
-      id: 'xq-mined-hxq_a20d49ae7aedf66d3dca7161-63',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        h4: {
-          color: 'black',
-          role: 'horse',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'horse',
-        },
-        d5: {
-          color: 'black',
-          role: 'horse',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 32,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3re,a5rs,a7bs,b3rc,c10be,c5rh,d10ba,d5bh,e1rg,e10bg,e2ra,e6bc,e8be,e9ba,f3ra,g3rc,g7bs,h1bc,h4bh,i5rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'i5',
-        from: 'i4',
-      },
-    },
-    solution: [
-      {
-        from: 'h4',
-        to: 'f3',
-      },
-      {
-        from: 'e1',
-        to: 'f1',
-      },
-      {
-        from: 'f3',
-        to: 'g1',
-      },
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'e6',
-        to: 'e2',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'matein3', 'winning-material', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a20d49ae7aedf66d3dca7161',
-      ply: 63,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a3df3ec28f5644678078a7ba-162',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a3df3ec28f5644678078a7ba-162',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'red',
-          role: 'horse',
-        },
-        d8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f9: {
-          color: 'black',
-          role: 'general',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'red',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 82,
-      progressClock: 0,
-      positionCounts: {
-        'red|b7rs,c10be,d7rh,d8ba,e1rg,e2ra,e3re,e4bc,e8be,f1ra,f9bg,g3bs,g6bs,h10rc,i5bc': 1,
-      },
-      lastMove: {
-        to: 'f9',
-        from: 'f10',
-      },
-    },
-    solution: [
-      {
-        from: 'h10',
-        to: 'h9',
-      },
-      {
-        from: 'f9',
-        to: 'f10',
-      },
-      {
-        from: 'd7',
-        to: 'f6',
-      },
-      {
-        from: 'e8',
-        to: 'g10',
-      },
-      {
-        from: 'f6',
-        to: 'e4',
-      },
-      {
-        from: 'i5',
-        to: 'e5',
-      },
-      {
-        from: 'h9',
-        to: 'h10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 491,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a3df3ec28f5644678078a7ba',
-      ply: 162,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a8f2d92a7f87eaf2e2e813e7-66',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a8f2d92a7f87eaf2e2e813e7-66',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'red',
-          role: 'horse',
-        },
-        e7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        f7: {
-          color: 'black',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'horse',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 34,
-      progressClock: 0,
-      positionCounts: {
-        'red|a7bs,a8be,b7rh,c8bc,e1rg,e10bg,e2ra,e3re,e6bs,e7rc,e8be,e9ba,f1ra,f10ba,f7bh,g1re,g5rs,g9bh,h3rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c8',
-        from: 'c4',
-      },
-    },
-    solution: [
-      {
-        from: 'e7',
-        to: 'e8',
-      },
-      {
-        from: 'f7',
-        to: 'h8',
-      },
-      {
-        from: 'e8',
-        to: 'c8',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'c8',
-        to: 'a8',
-      },
-      {
-        from: 'g9',
-        to: 'f7',
-      },
-      {
-        from: 'a8',
-        to: 'a10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 606,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a8f2d92a7f87eaf2e2e813e7',
-      ply: 66,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a92d8ab5a67ccd789774a8bc-55',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a92d8ab5a67ccd789774a8bc-55',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d2: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'black',
-          role: 'horse',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        c3: {
-          color: 'black',
-          role: 'horse',
-        },
-        d3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 28,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rh,a5bc,a6bs,c1re,c10be,c3bh,c5rc,d10ba,d2rg,d3rc,e10bg,e2ra,e5rs,e7rs,e8be,f1ra,f10ba,f5rh,g2bh,g6bc,i3re,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd2',
-        from: 'd1',
-      },
-    },
-    solution: [
-      {
-        from: 'g6',
-        to: 'd6',
-      },
-      {
-        from: 'd3',
-        to: 'g3',
-      },
-      {
-        from: 'c3',
-        to: 'e4',
-      },
-      {
-        from: 'd2',
-        to: 'd1',
-      },
-      {
-        from: 'e4',
-        to: 'c5',
-      },
-      {
-        from: 'a3',
-        to: 'c4',
-      },
-      {
-        from: 'c5',
-        to: 'a4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 386,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a92d8ab5a67ccd789774a8bc',
-      ply: 55,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_a96cf85fa2333890d9cbaf16-60',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_a96cf85fa2333890d9cbaf16-60',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'red',
-          role: 'horse',
-        },
-        e6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 31,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7rc,c1re,c6rh,d1ra,d10bg,e1rg,e2rc,e6bc,e8be,e9ba,f1ra,f10ba,g1re,g10be,g4rs,g6bs,g8bh,g9bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd10',
-        from: 'e10',
-      },
-    },
-    solution: [
-      {
-        from: 'a7',
-        to: 'a10',
-      },
-      {
-        from: 'd10',
-        to: 'd9',
-      },
-      {
-        from: 'c6',
-        to: 'b8',
-      },
-      {
-        from: 'd9',
-        to: 'd8',
-      },
-      {
-        from: 'a10',
-        to: 'a8',
-      },
-      {
-        from: 'g8',
-        to: 'e7',
-      },
-      {
-        from: 'c1',
-        to: 'e3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 542,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_a96cf85fa2333890d9cbaf16',
-      ply: 60,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_aa5c173414e95608d17e2ba9-49',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_aa5c173414e95608d17e2ba9-49',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 25,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rc,a4rs,a7bs,c1re,c6rs,d10bc,d6rc,e1rg,e10bg,e2ra,e6rc,e7bc,e8be,e9ba,f1ra,f10ba,g1re,g10be,g4bh,g6bs,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c6',
-        from: 'c5',
-      },
-    },
-    solution: [
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'd6',
-        to: 'd8',
-      },
-      {
-        from: 'e7',
-        to: 'e6',
-      },
-      {
-        from: 'a3',
-        to: 'a7',
-      },
-      {
-        from: 'f10',
-        to: 'e9',
-      },
-      {
-        from: 'a7',
-        to: 'a10',
-      },
-      {
-        from: 'e8',
-        to: 'c10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 267,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_aa5c173414e95608d17e2ba9',
-      ply: 49,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_aca4f12c814cc80bb3babc25-73',
-    variant: 'xiangqi',
-    title: 'Black mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_aca4f12c814cc80bb3babc25-73',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g4: {
-          color: 'black',
-          role: 'horse',
-        },
-        a5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'horse',
-        },
-        d5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        h5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 37,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5bs,c1re,c5rh,d1ra,d5rc,e10bg,e2ra,e6bc,e8be,e9ba,f1rg,f10ba,g10be,g4bh,h5bs': 1,
-      },
-      lastMove: {
-        to: 'c5',
-        from: 'e4',
-      },
-    },
-    solution: [
-      {
-        from: 'g4',
-        to: 'h2',
-      },
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'e6',
-        to: 'i6',
-      },
-      {
-        from: 'd5',
-        to: 'g5',
-      },
-      {
-        from: 'h5',
-        to: 'g5',
-      },
-      {
-        from: 'c5',
-        to: 'b7',
-      },
-      {
-        from: 'i6',
-        to: 'i2',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_aca4f12c814cc80bb3babc25',
-      ply: 73,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_acc4547ca0295598d7631533-101',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_acc4547ca0295598d7631533-101',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b2: {
-          color: 'black',
-          role: 'horse',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c3: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g6: {
-          color: 'red',
-          role: 'horse',
-        },
-        d8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f9: {
-          color: 'black',
-          role: 'general',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 51,
-      progressClock: 0,
-      positionCounts: {
-        'black|b2bh,c10be,c3bs,d10ba,d4bs,d8ba,e1rg,e2ra,e3re,e4bc,e8be,f1ra,f2rc,f9bg,g1re,g6rh': 1,
-      },
-      lastMove: {
-        to: 'f2',
-        from: 'f7',
-      },
-    },
-    solution: [
-      {
-        from: 'e8',
-        to: 'g6',
-      },
-      {
-        from: 'f2',
-        to: 'b2',
-      },
-      {
-        from: 'c3',
-        to: 'c2',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'c2',
-        to: 'b2',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'b2',
-        to: 'c2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 434,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_acc4547ca0295598d7631533',
-      ply: 101,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ae2a5e50a97bd2da4683685b-94',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ae2a5e50a97bd2da4683685b-94',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b4: {
-          color: 'black',
-          role: 'horse',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f7: {
-          color: 'red',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 48,
-      progressClock: 0,
-      positionCounts: {
-        'red|a5rs,b4bh,c10be,c5rc,d9bc,e1rg,e10bg,e2ra,e3re,e8be,e9ba,f1ra,f10ba,f7rh,g10bc,g5re,i10rc': 1,
-      },
-      lastMove: {
-        to: 'd9',
-        from: 'd10',
-      },
-    },
-    solution: [
-      {
-        from: 'c5',
-        to: 'c10',
-      },
-      {
-        from: 'e9',
-        to: 'd10',
-      },
-      {
-        from: 'c10',
-        to: 'c9',
-      },
-      {
-        from: 'g10',
-        to: 'i10',
-      },
-      {
-        from: 'f7',
-        to: 'g9',
-      },
-      {
-        from: 'd9',
-        to: 'f9',
-      },
-      {
-        from: 'g9',
-        to: 'i10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 452,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ae2a5e50a97bd2da4683685b',
-      ply: 94,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b01c3ad0a368b420eea93689-80',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b01c3ad0a368b420eea93689-80',
-      board: {
-        a1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d1: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'general',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e4: {
-          color: 'red',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 41,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1bc,c5rs,c7bs,d1bc,d2bc,d3ra,e10bg,e2rg,e3re,e4rh,e8be,e9ba,f10ba,g1re,g10be,g3rh,g5rs,g7rc,i4rc,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd1',
-        from: 'b1',
-      },
-    },
-    solution: [
-      {
-        from: 'e4',
-        to: 'c3',
-      },
-      {
-        from: 'd1',
-        to: 'c1',
-      },
-      {
-        from: 'i4',
-        to: 'a4',
-      },
-      {
-        from: 'c1',
-        to: 'c3',
-      },
-      {
-        from: 'e2',
-        to: 'd2',
-      },
-      {
-        from: 'c3',
-        to: 'c2',
-      },
-      {
-        from: 'd2',
-        to: 'd1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 386,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b01c3ad0a368b420eea93689',
-      ply: 80,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b0aead982dc341409e02ea5b-58',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b0aead982dc341409e02ea5b-58',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'black',
-          role: 'horse',
-        },
-        a5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        b5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'red',
-          role: 'horse',
-        },
-        f6: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a7: {
-          color: 'black',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 30,
-      progressClock: 0,
-      positionCounts: {
-        'red|a3rc,a4bc,a5rc,a7bh,b5rc,c1re,c10bc,d1ra,e1rg,e10bg,e2ra,e3re,e4rs,e6rh,e9ba,f10ba,f6rh,g10be,g6be,i4bh,i7bs,i8bc': 1,
-      },
-      lastMove: {
-        to: 'a7',
-        from: 'c8',
-      },
-    },
-    solution: [
-      {
-        from: 'b5',
-        to: 'b10',
-      },
-      {
-        from: 'g6',
-        to: 'e8',
-      },
-      {
-        from: 'a5',
-        to: 'e5',
-      },
-      {
-        from: 'a7',
-        to: 'c6',
-      },
-      {
-        from: 'f6',
-        to: 'e8',
-      },
-      {
-        from: 'g10',
-        to: 'e8',
-      },
-      {
-        from: 'e5',
-        to: 'e8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 569,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b0aead982dc341409e02ea5b',
-      ply: 58,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b16afb5c21dded10eec2e5b8-68',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b16afb5c21dded10eec2e5b8-68',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        h7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'red',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        i10: {
-          color: 'black',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 35,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6bs,b5bc,c10be,c8rh,d1ra,e1rg,e10bg,e2ra,e3re,e7rc,e8be,e9ba,f10ba,g1re,g5rs,g7rh,h7bc,i10bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b5',
-        from: 'e5',
-      },
-    },
-    solution: [
-      {
-        from: 'g7',
-        to: 'e8',
-      },
-      {
-        from: 'c10',
-        to: 'e8',
-      },
-      {
-        from: 'e7',
-        to: 'h7',
-      },
-      {
-        from: 'i10',
-        to: 'i4',
-      },
-      {
-        from: 'h7',
-        to: 'b7',
-      },
-      {
-        from: 'b5',
-        to: 'd5',
-      },
-      {
-        from: 'b7',
-        to: 'b10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 496,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b16afb5c21dded10eec2e5b8',
-      ply: 68,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b344887a88cc3a0a14370809-43',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b344887a88cc3a0a14370809-43',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d6: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        d8: {
-          color: 'black',
-          role: 'general',
-        },
-        i8: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g9: {
-          color: 'red',
-          role: 'horse',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 22,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b10bc,c1re,c10be,c6bc,c8bh,d1ra,d10ba,d2bc,d6rh,d8bg,e1rg,e3rc,e4rs,e7bs,f1ra,f10ba,g1re,g6rc,g9rh,i4bc,i8rc': 1,
-      },
-      lastMove: {
-        to: 'g6',
-        from: 'g5',
-      },
-    },
-    solution: [
-      {
-        from: 'c6',
-        to: 'g6',
-      },
-      {
-        from: 'g9',
-        to: 'e8',
-      },
-      {
-        from: 'g6',
-        to: 'g8',
-      },
-      {
-        from: 'e8',
-        to: 'f10',
-      },
-      {
-        from: 'c10',
-        to: 'e8',
-      },
-      {
-        from: 'f1',
-        to: 'e2',
-      },
-      {
-        from: 'c8',
-        to: 'd6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 670,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b344887a88cc3a0a14370809',
-      ply: 43,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b6e7edc3540d44405f9fc3f3-73',
-    variant: 'xiangqi',
-    title: 'Black mate in 3',
-    initial: {
-      id: 'xq-mined-hxq_b6e7edc3540d44405f9fc3f3-73',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        h2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        h3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f4: {
-          color: 'red',
-          role: 'horse',
-        },
-        h4: {
-          color: 'black',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'red',
-          role: 'horse',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 37,
-      progressClock: 0,
-      positionCounts: {
-        'black|a7rh,c1re,c5rs,d3ra,e1rg,e10bg,e7bs,e8be,e9ba,f1ra,f10ba,f4rh,g10be,g2bc,h2bc,h3rc,h4bh,i3re,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e1',
-        from: 'e2',
-      },
-    },
-    solution: [
-      {
-        from: 'h4',
-        to: 'f3',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'g2',
-        to: 'g1',
-      },
-      {
-        from: 'f1',
-        to: 'e2',
-      },
-      {
-        from: 'h2',
-        to: 'h1',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b6e7edc3540d44405f9fc3f3',
-      ply: 73,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b7c908ec00982c098827d1ff-32',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b7c908ec00982c098827d1ff-32',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'black',
-          role: 'horse',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 17,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,c1re,c10be,c3rh,c4bh,c6bs,c7rc,c8bc,d1ra,d10ba,d5bc,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,f10ba,f5rh,g1rc,g8bh,h3rc,h8bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'd5',
-        from: 'd9',
-      },
-    },
-    solution: [
-      {
-        from: 'c7',
-        to: 'c4',
-      },
-      {
-        from: 'c8',
-        to: 'c4',
-      },
-      {
-        from: 'g1',
-        to: 'g8',
-      },
-      {
-        from: 'd5',
-        to: 'f5',
-      },
-      {
-        from: 'g8',
-        to: 'h8',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-      {
-        from: 'h8',
-        to: 'h7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 283,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b7c908ec00982c098827d1ff',
-      ply: 32,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b7c908ec00982c098827d1ff-34',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_b7c908ec00982c098827d1ff-34',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,b8bc,c1re,c10be,c3rh,c4rc,c6bs,d1ra,d10ba,d5bc,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,f10ba,f5rh,g1rc,g8bh,h3rc,h8bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b8',
-        from: 'c8',
-      },
-    },
-    solution: [
-      {
-        from: 'c4',
-        to: 'c10',
-      },
-      {
-        from: 'e8',
-        to: 'c10',
-      },
-      {
-        from: 'c3',
-        to: 'd5',
-      },
-      {
-        from: 'c10',
-        to: 'e8',
-      },
-      {
-        from: 'g1',
-        to: 'g7',
-      },
-      {
-        from: 'f10',
-        to: 'e9',
-      },
-      {
-        from: 'f5',
-        to: 'd6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 625,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b7c908ec00982c098827d1ff',
-      ply: 34,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_b7d924d6dd0dff3108229b6e-46',
-    variant: 'xiangqi',
-    title: 'Red mate in 2',
-    initial: {
-      id: 'xq-mined-hxq_b7d924d6dd0dff3108229b6e-46',
-      board: {
-        a1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'black',
-          role: 'chariot',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        h2: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c9: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1rc,a4rs,a7bs,b7rc,c1re,c10be,c5rs,c8rc,c9rs,d1ra,e1rg,e10bg,e3rc,e8be,e9ba,f1ra,f10ba,f7bc,g1bc,h1bc,h2bs,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f7',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'b7',
-        to: 'b10',
-      },
-      {
-        from: 'c10',
-        to: 'a8',
-      },
-      {
-        from: 'c9',
-        to: 'c10',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein2', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_b7d924d6dd0dff3108229b6e',
-      ply: 46,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_bb946e9c57b400df1e88c6d7-149',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_bb946e9c57b400df1e88c6d7-149',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f2: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f3: {
-          color: 'black',
-          role: 'horse',
-        },
-        d5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'advisor',
-        },
-        h9: {
-          color: 'red',
-          role: 'horse',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 75,
-      progressClock: 0,
-      positionCounts: {
-        'black|d10bg,d3ra,d5rc,d6rs,d7rs,e1rg,e8be,f2bs,f3bh,f5bc,f8ba,g5re,h9rh': 1,
-      },
-      lastMove: {
-        to: 'd5',
-        from: 'e5',
-      },
-    },
-    solution: [
-      {
-        from: 'f3',
-        to: 'e5',
-      },
-      {
-        from: 'h9',
-        to: 'f8',
-      },
-      {
-        from: 'f5',
-        to: 'd5',
-      },
-      {
-        from: 'd3',
-        to: 'e2',
-      },
-      {
-        from: 'd5',
-        to: 'd4',
-      },
-      {
-        from: 'f8',
-        to: 'h7',
-      },
-      {
-        from: 'd4',
-        to: 'e4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 288,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_bb946e9c57b400df1e88c6d7',
-      ply: 149,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c08f67b5882b070bc49b409b-74',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_c08f67b5882b070bc49b409b-74',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c9: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'horse',
-        },
-        c10: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 38,
-      progressClock: 0,
-      positionCounts: {
-        'red|b10bh,b9rc,c10rs,c9rs,d1ra,d4bc,e1rg,e10bg,e2ra,e4bc,e8rc,e9ba,f10ba,f5bs,i3re,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e4',
-        from: 'e3',
-      },
-    },
-    solution: [
-      {
-        from: 'c10',
-        to: 'd10',
-      },
-      {
-        from: 'd4',
-        to: 'd10',
-      },
-      {
-        from: 'e8',
-        to: 'e4',
-      },
-      {
-        from: 'f5',
-        to: 'f4',
-      },
-      {
-        from: 'e4',
-        to: 'f4',
-      },
-      {
-        from: 'e9',
-        to: 'f8',
-      },
-      {
-        from: 'f4',
-        to: 'f8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 1011,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_c08f67b5882b070bc49b409b',
-      ply: 74,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c0b47c662d9812c570cb9422-64',
-    variant: 'xiangqi',
-    title: 'Red mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_c0b47c662d9812c570cb9422-64',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'black',
-          role: 'horse',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        h8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 33,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4bh,a7bs,c10be,c6bs,c8bh,d1ra,d10ba,d9rc,e1rg,e10bg,e2ra,e3re,e4rs,e6bs,e8be,e9ba,f8bc,f9rc,g1re,g10rc,g3rh,g5rs,h7bc,h8bc,i4rs,i9rc': 1,
-      },
-      lastMove: {
-        to: 'c10',
-        from: 'a8',
-      },
-    },
-    solution: [
-      {
-        from: 'i9',
-        to: 'i10',
-      },
-      {
-        from: 'h8',
-        to: 'h10',
-      },
-      {
-        from: 'g10',
-        to: 'g8',
-      },
-      {
-        from: 'h10',
-        to: 'i10',
-      },
-      {
-        from: 'g8',
-        to: 'e8',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'd9',
-        to: 'e9',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_c0b47c662d9812c570cb9422',
-      ply: 64,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c4ecf402a41dacdf919b40a0-76',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_c4ecf402a41dacdf919b40a0-76',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'general',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'horse',
-        },
-        f6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 39,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,a8be,b5bs,d1ra,d10ba,d8rc,e1rc,e10bg,e3rg,e6bh,e7bs,e9bc,f1ra,f10ba,f4bc,f6bc,g3rh,g4rs,h7rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e6',
-        from: 'c7',
-      },
-    },
-    solution: [
-      {
-        from: 'e1',
-        to: 'e6',
-      },
-      {
-        from: 'e7',
-        to: 'e6',
-      },
-      {
-        from: 'e3',
-        to: 'd3',
-      },
-      {
-        from: 'e9',
-        to: 'd9',
-      },
-      {
-        from: 'd8',
-        to: 'd9',
-      },
-      {
-        from: 'f10',
-        to: 'e9',
-      },
-      {
-        from: 'h7',
-        to: 'e7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 416,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_c4ecf402a41dacdf919b40a0',
-      ply: 76,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c54e0914bb048c4f5df809e4-80',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_c54e0914bb048c4f5df809e4-80',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 41,
-      progressClock: 0,
-      positionCounts: {
-        'red|a7bs,d1rg,d3ra,e3re,e8be,e9bg,f1ra,f10ba,f7rc,g5bs,i5bc,i8be': 1,
-      },
-      lastMove: {
-        to: 'e8',
-        from: 'c10',
-      },
-    },
-    solution: [
-      {
-        from: 'f7',
-        to: 'i7',
-      },
-      {
-        from: 'i8',
-        to: 'g6',
-      },
-      {
-        from: 'i7',
-        to: 'i5',
-      },
-      {
-        from: 'g5',
-        to: 'g4',
-      },
-      {
-        from: 'i5',
-        to: 'i4',
-      },
-      {
-        from: 'g4',
-        to: 'g3',
-      },
-      {
-        from: 'i4',
-        to: 'b4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 381,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_c54e0914bb048c4f5df809e4',
-      ply: 80,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c7a03cbc45a1f06b3496e593-37',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_c7a03cbc45a1f06b3496e593-37',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        h1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'black',
-          role: 'horse',
-        },
-        h6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'red',
-          role: 'horse',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'black',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 19,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rh,a4rs,a6bs,b6bh,c1re,c4rs,d1ra,d10ba,e1rg,e3re,e4bc,e9ba,f1ra,f10bg,g10be,g5rs,g7bs,g8rc,g9rh,h1rc,h10bc,h6bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e3',
-        from: 'g1',
-      },
-    },
-    solution: [
-      {
-        from: 'h6',
-        to: 'e6',
-      },
-      {
-        from: 'g9',
-        to: 'e8',
-      },
-      {
-        from: 'e4',
-        to: 'e3',
-      },
-      {
-        from: 'd1',
-        to: 'e2',
-      },
-      {
-        from: 'e3',
-        to: 'h3',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'g10',
-        to: 'e8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 435,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_c7a03cbc45a1f06b3496e593',
-      ply: 37,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_c7acc3b1e872c04051008ad8-46',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_c7acc3b1e872c04051008ad8-46',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c6: {
-          color: 'black',
-          role: 'horse',
-        },
-        f6: {
-          color: 'black',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        h9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rc,a5rs,a7rc,a9bc,b9bc,c6bh,d10ba,d3rc,d5rh,e1rg,e10bg,e2ra,e3re,e4rs,e8be,f1ra,f10ba,f6bh,g1re,g10be,g3rh,g6bs,h9bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c6',
-        from: 'b8',
-      },
-    },
-    solution: [
-      {
-        from: 'a7',
-        to: 'a9',
-      },
-      {
-        from: 'f6',
-        to: 'd5',
-      },
-      {
-        from: 'a9',
-        to: 'b9',
-      },
-      {
-        from: 'h9',
-        to: 'b9',
-      },
-      {
-        from: 'd3',
-        to: 'd5',
-      },
-      {
-        from: 'g6',
-        to: 'g5',
-      },
-      {
-        from: 'e3',
-        to: 'g5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 348,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_c7acc3b1e872c04051008ad8',
-      ply: 46,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ca0df8089738b3ea5991b042-31',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ca0df8089738b3ea5991b042-31',
-      board: {
-        a1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        b1: {
-          color: 'red',
-          role: 'horse',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e2: {
-          color: 'red',
-          role: 'general',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        h3: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'black',
-          role: 'horse',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 16,
-      progressClock: 0,
-      positionCounts: {
-        'black|a1rc,a10bc,a4rs,a7bs,b1rh,c5re,c8bc,d1ra,d2rc,d3rc,e10bg,e2rg,e4rs,e5rc,e7bh,e8be,e9ba,f1ra,f10ba,f6rs,g1bc,g10be,g3rh,h10bh,h3bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e2',
-        from: 'e1',
-      },
-    },
-    solution: [
-      {
-        from: 'g1',
-        to: 'd1',
-      },
-      {
-        from: 'a1',
-        to: 'a3',
-      },
-      {
-        from: 'd1',
-        to: 'd3',
-      },
-      {
-        from: 'a3',
-        to: 'd3',
-      },
-      {
-        from: 'h10',
-        to: 'g8',
-      },
-      {
-        from: 'f6',
-        to: 'e6',
-      },
-      {
-        from: 'e7',
-        to: 'g6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 552,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ca0df8089738b3ea5991b042',
-      ply: 31,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ca22593c89bfa64ebeaa9170-78',
-    variant: 'xiangqi',
-    title: 'Red mate in 3',
-    initial: {
-      id: 'xq-mined-hxq_ca22593c89bfa64ebeaa9170-78',
-      board: {
-        b1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f7: {
-          color: 'red',
-          role: 'horse',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        b9: {
-          color: 'red',
-          role: 'horse',
-        },
-        c9: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        h9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 40,
-      progressClock: 0,
-      positionCounts: {
-        'red|b1bc,b9rh,c1re,c10bc,c7rc,c9bh,d1ra,d6rs,e1rg,e10bg,e2ra,e3re,e7bc,e8be,e9ba,f10ba,f7rh,g10be,g4rs,g7bs,g8bh,h9rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b1',
-        from: 'b7',
-      },
-    },
-    solution: [
-      {
-        from: 'f7',
-        to: 'g9',
-      },
-      {
-        from: 'e10',
-        to: 'd10',
-      },
-      {
-        from: 'c7',
-        to: 'd7',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-      {
-        from: 'd7',
-        to: 'd8',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ca22593c89bfa64ebeaa9170',
-      ply: 78,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_cb037c53d2630b0f4bf220a1-101',
-    variant: 'xiangqi',
-    title: 'Black mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_cb037c53d2630b0f4bf220a1-101',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d2: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f2: {
-          color: 'red',
-          role: 'general',
-        },
-        e4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'horse',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        h7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h8: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'red',
-          role: 'horse',
-        },
-        d10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 51,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rs,b2bc,c1re,d10bg,d2bs,e2ra,e4bs,e8be,e9ba,f10ba,f2rg,f5bh,f6rc,g1re,g10be,g9rh,h7rc,h8rs,i5rs': 1,
-      },
-      lastMove: {
-        to: 'h7',
-        from: 'h5',
-      },
-    },
-    solution: [
-      {
-        from: 'e4',
-        to: 'e3',
-      },
-      {
-        from: 'h7',
-        to: 'h2',
-      },
-      {
-        from: 'd2',
-        to: 'e2',
-      },
-      {
-        from: 'f2',
-        to: 'f1',
-      },
-      {
-        from: 'b2',
-        to: 'h2',
-      },
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'f5',
-        to: 'g3',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_cb037c53d2630b0f4bf220a1',
-      ply: 101,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ccebdc6efc19ed27e551a7a9-43',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ccebdc6efc19ed27e551a7a9-43',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        i3: {
-          color: 'red',
-          role: 'horse',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        i8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        b9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 22,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rc,b10bc,b9rc,d1ra,d10ba,e1rg,e10bg,e2ra,e3re,e6bc,e7bs,e8be,e9ba,f7bc,g1re,g4rs,g5rc,g8bh,i3rh,i4rs,i7bs,i8be': 1,
-      },
-      lastMove: {
-        to: 'g5',
-        from: 'b5',
-      },
-    },
-    solution: [
-      {
-        from: 'b10',
-        to: 'b9',
-      },
-      {
-        from: 'g5',
-        to: 'g8',
-      },
-      {
-        from: 'f7',
-        to: 'f2',
-      },
-      {
-        from: 'a5',
-        to: 'e5',
-      },
-      {
-        from: 'b9',
-        to: 'b3',
-      },
-      {
-        from: 'g8',
-        to: 'g5',
-      },
-      {
-        from: 'e6',
-        to: 'e3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 323,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ccebdc6efc19ed27e551a7a9',
-      ply: 43,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ccebdc6efc19ed27e551a7a9-67',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ccebdc6efc19ed27e551a7a9-67',
-      board: {
-        b1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        i2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g4: {
-          color: 'red',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 34,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rc,b1bc,b2bc,c5rc,d10ba,e1rg,e10bg,e2ra,e6bs,e8be,e9ba,f1ra,g1re,g4rh,g5rs,i2bc,i4rs,i6bs,i8be': 1,
-      },
-      lastMove: {
-        to: 'g4',
-        from: 'i3',
-      },
-    },
-    solution: [
-      {
-        from: 'b1',
-        to: 'f1',
-      },
-      {
-        from: 'e2',
-        to: 'd1',
-      },
-      {
-        from: 'f1',
-        to: 'd1',
-      },
-      {
-        from: 'a3',
-        to: 'h3',
-      },
-      {
-        from: 'i2',
-        to: 'g2',
-      },
-      {
-        from: 'g1',
-        to: 'i3',
-      },
-      {
-        from: 'd1',
-        to: 'd8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 847,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ccebdc6efc19ed27e551a7a9',
-      ply: 67,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d1771948fbede71d230cd39c-33',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d1771948fbede71d230cd39c-33',
-      board: {
-        b1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        f6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        h6: {
-          color: 'black',
-          role: 'horse',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 17,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b1rc,b10bc,b4bc,c5rs,c7bs,c8bh,d10ba,d4rc,d5rh,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,e9ba,f1ra,f3rc,f6bc,g1re,g10be,g2rh,g5rc,h6bh,h8bc,i6bs': 1,
-      },
-      lastMove: {
-        to: 'd5',
-        from: 'c3',
-      },
-    },
-    solution: [
-      {
-        from: 'f6',
-        to: 'f3',
-      },
-      {
-        from: 'g2',
-        to: 'f4',
-      },
-      {
-        from: 'h6',
-        to: 'f7',
-      },
-      {
-        from: 'g5',
-        to: 'h5',
-      },
-      {
-        from: 'f3',
-        to: 'g3',
-      },
-      {
-        from: 'c5',
-        to: 'c6',
-      },
-      {
-        from: 'b4',
-        to: 'e4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 280,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d1771948fbede71d230cd39c',
-      ply: 33,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d6fd02f35e086c2c09fd7fdb-111',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d6fd02f35e086c2c09fd7fdb-111',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e4: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c5: {
-          color: 'red',
-          role: 'horse',
-        },
-        i5: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        f8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 56,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3re,a7bc,c1re,c5rh,c7bc,d1ra,d10ba,e10bg,e2ra,e4rc,e8be,e9ba,f1rg,f7rc,f8bh,g6be,i5bs': 1,
-      },
-      lastMove: {
-        to: 'f7',
-        from: 'd7',
-      },
-    },
-    solution: [
-      {
-        from: 'c7',
-        to: 'c1',
-      },
-      {
-        from: 'a3',
-        to: 'c1',
-      },
-      {
-        from: 'a7',
-        to: 'f7',
-      },
-      {
-        from: 'f1',
-        to: 'e1',
-      },
-      {
-        from: 'f7',
-        to: 'e7',
-      },
-      {
-        from: 'e4',
-        to: 'b4',
-      },
-      {
-        from: 'e9',
-        to: 'd8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 409,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d6fd02f35e086c2c09fd7fdb',
-      ply: 111,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d86e060d473abdd8f834ed98-42',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d86e060d473abdd8f834ed98-42',
-      board: {
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'black',
-          role: 'horse',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b2: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        f3: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'horse',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        a9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 22,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,a8be,a9bc,b2rc,b5rh,c5rs,c7bs,d3rc,e1rg,e10bg,e4rs,e5rc,e8be,e9ba,f1bh,f10ba,f3ra,g1re,g4bs,g9bc,h1bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f1',
-        from: 'e3',
-      },
-    },
-    solution: [
-      {
-        from: 'b5',
-        to: 'c7',
-      },
-      {
-        from: 'g9',
-        to: 'g1',
-      },
-      {
-        from: 'e1',
-        to: 'e2',
-      },
-      {
-        from: 'h1',
-        to: 'h3',
-      },
-      {
-        from: 'd3',
-        to: 'd6',
-      },
-      {
-        from: 'h3',
-        to: 'h7',
-      },
-      {
-        from: 'c7',
-        to: 'e8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 488,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d86e060d473abdd8f834ed98',
-      ply: 42,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d8fd1a1f9494472b246efff9-35',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d8fd1a1f9494472b246efff9-35',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        f2: {
-          color: 'red',
-          role: 'horse',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        f3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        h3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        f7: {
-          color: 'black',
-          role: 'horse',
-        },
-        h7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'black|a5rs,a7bs,a8bh,b3rc,c1re,c10be,c5rs,c7bs,d10ba,d2rc,d6bc,e1rg,e10bg,e2ra,e3re,e4rs,e8be,e9bc,f1ra,f10ba,f2rh,f3rc,f7bh,g4rs,g6bs,h3rc,h7bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'h3',
-        from: 'i3',
-      },
-    },
-    solution: [
-      {
-        from: 'h7',
-        to: 'h3',
-      },
-      {
-        from: 'd2',
-        to: 'd6',
-      },
-      {
-        from: 'h3',
-        to: 'f3',
-      },
-      {
-        from: 'b3',
-        to: 'f3',
-      },
-      {
-        from: 'f7',
-        to: 'd6',
-      },
-      {
-        from: 'f3',
-        to: 'i3',
-      },
-      {
-        from: 'a8',
-        to: 'c9',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 350,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d8fd1a1f9494472b246efff9',
-      ply: 35,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d943285f006d614498ef31ae-30',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d943285f006d614498ef31ae-30',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'horse',
-        },
-        e7: {
-          color: 'black',
-          role: 'horse',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'black',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 16,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b2bc,b8bc,c10be,c5rs,c7rh,d1rc,d10ba,e1rg,e10bg,e2ra,e3re,e4rs,e7bh,f1ra,f10ba,f5rh,f7rc,g1re,g10be,g6bs,h1bc,h10bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e7',
-        from: 'c8',
-      },
-    },
-    solution: [
-      {
-        from: 'd1',
-        to: 'd10',
-      },
-      {
-        from: 'e10',
-        to: 'e9',
-      },
-      {
-        from: 'f5',
-        to: 'e7',
-      },
-      {
-        from: 'b8',
-        to: 'e8',
-      },
-      {
-        from: 'e7',
-        to: 'c8',
-      },
-      {
-        from: 'e8',
-        to: 'd8',
-      },
-      {
-        from: 'f7',
-        to: 'f10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 1186,
-    },
-    themes: ['winning', 'winning-material', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d943285f006d614498ef31ae',
-      ply: 30,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_d943285f006d614498ef31ae-45',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_d943285f006d614498ef31ae-45',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        b2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'red',
-          role: 'horse',
-        },
-        d9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        f10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 23,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b2bc,b8bc,c10be,c5rs,d1rg,d10ba,d9rc,e2ra,e3re,e4rs,e8rh,e9ba,f1bc,f10bg,g1re,g2bc,g3rh,g6bs,g9rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'e8',
-        from: 'c7',
-      },
-    },
-    solution: [
-      {
-        from: 'b2',
-        to: 'b1',
-      },
-      {
-        from: 'e3',
-        to: 'c1',
-      },
-      {
-        from: 'b1',
-        to: 'c1',
-      },
-      {
-        from: 'd1',
-        to: 'd2',
-      },
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'e2',
-        to: 'f3',
-      },
-      {
-        from: 'c1',
-        to: 'c2',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 460,
-    },
-    themes: ['winning', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_d943285f006d614498ef31ae',
-      ply: 45,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_db70eec993fcfcfc247986aa-47',
-    variant: 'xiangqi',
-    title: 'Black mate in 4',
-    initial: {
-      id: 'xq-mined-hxq_db70eec993fcfcfc247986aa-47',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'horse',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b2: {
-          color: 'black',
-          role: 'horse',
-        },
-        d2: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        h10: {
-          color: 'black',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b2bh,b4rc,b7rc,c10be,c5rs,d1ra,d2bc,e1rg,e10bg,e2ra,e3re,e4rs,e8be,e9ba,f1rh,f10ba,f4bs,g1re,g7rc,h1bc,h10bc,i4rs': 1,
-      },
-      lastMove: {
-        to: 'b7',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'd2',
-        to: 'd1',
-      },
-      {
-        from: 'e2',
-        to: 'd1',
-      },
-      {
-        from: 'b2',
-        to: 'd3',
-      },
-      {
-        from: 'e1',
-        to: 'e2',
-      },
-      {
-        from: 'h10',
-        to: 'h2',
-      },
-      {
-        from: 'g7',
-        to: 'g2',
-      },
-      {
-        from: 'h2',
-        to: 'g2',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'black',
-    },
-    themes: ['checkmate', 'winning-material', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_db70eec993fcfcfc247986aa',
-      ply: 47,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_dcda5d6a737124574aa989c4-47',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_dcda5d6a737124574aa989c4-47',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        h4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i4: {
-          color: 'red',
-          role: 'horse',
-        },
-        c5: {
-          color: 'black',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        i6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7rc,c10be,c5bh,d1ra,d10ba,e1rg,e10bg,e2ra,e7bs,e8be,f10ba,f4rc,g5re,h4bc,h6bc,i4rh,i6rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'i6',
-        from: 'i5',
-      },
-    },
-    solution: [
-      {
-        from: 'h4',
-        to: 'a4',
-      },
-      {
-        from: 'f4',
-        to: 'a4',
-      },
-      {
-        from: 'h6',
-        to: 'h1',
-      },
-      {
-        from: 'e2',
-        to: 'f1',
-      },
-      {
-        from: 'c5',
-        to: 'a4',
-      },
-      {
-        from: 'i4',
-        to: 'h6',
-      },
-      {
-        from: 'i7',
-        to: 'i6',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 448,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_dcda5d6a737124574aa989c4',
-      ply: 47,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_eb03b4cb0cfc57a33a246f0c-78',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_eb03b4cb0cfc57a33a246f0c-78',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        g5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        h5: {
-          color: 'red',
-          role: 'horse',
-        },
-        i5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        h6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 40,
-      progressClock: 0,
-      positionCounts: {
-        'red|c1re,c10be,e1rg,e10bg,e2ra,e3re,e4bc,e7bs,e8bh,e9ba,f1ra,f10ba,g10be,g5rc,g7rs,h10rc,h5rh,h6bc,i5rs': 1,
-      },
-      lastMove: {
-        to: 'e4',
-        from: 'h4',
-      },
-    },
-    solution: [
-      {
-        from: 'g7',
-        to: 'f7',
-      },
-      {
-        from: 'e8',
-        to: 'g9',
-      },
-      {
-        from: 'g5',
-        to: 'g9',
-      },
-      {
-        from: 'c10',
-        to: 'e8',
-      },
-      {
-        from: 'g9',
-        to: 'g6',
-      },
-      {
-        from: 'e4',
-        to: 'e6',
-      },
-      {
-        from: 'g6',
-        to: 'g4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 438,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_eb03b4cb0cfc57a33a246f0c',
-      ply: 78,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ef34f4db5bd3d1bbfc58feb0-35',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ef34f4db5bd3d1bbfc58feb0-35',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'horse',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        h2: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'black',
-          role: 'horse',
-        },
-        e5: {
-          color: 'black',
-          role: 'cannon',
-        },
-        f5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h9: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 18,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,c1rh,c4rs,c6bs,c8bh,d10ba,d5bh,d7rc,e1rg,e10bg,e2ra,e3re,e5bc,e8be,f1ra,f10ba,f5rh,g1re,g10be,g5rs,g7rc,h1rc,h2bc,h9bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c1',
-        from: 'b3',
-      },
-    },
-    solution: [
-      {
-        from: 'h9',
-        to: 'b9',
-      },
-      {
-        from: 'h1',
-        to: 'h2',
-      },
-      {
-        from: 'b9',
-        to: 'b1',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'd5',
-        to: 'c3',
-      },
-      {
-        from: 'd1',
-        to: 'd2',
-      },
-      {
-        from: 'b1',
-        to: 'c1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 464,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ef34f4db5bd3d1bbfc58feb0',
-      ply: 35,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ef6b1293584e887bead9e894-76',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_ef6b1293584e887bead9e894-76',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        b8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        h8: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        i9: {
-          color: 'red',
-          role: 'horse',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 39,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,a8bh,b10bc,b8rc,c5re,c8bc,d1ra,d10ba,e1rg,e10bg,e2ra,e7bs,f10ba,g1re,h8rc,i4rs,i7bs,i8bc,i9rh': 1,
-      },
-      lastMove: {
-        to: 'b10',
-        from: 'c10',
-      },
-    },
-    solution: [
-      {
-        from: 'h8',
-        to: 'h10',
-      },
-      {
-        from: 'e10',
-        to: 'e9',
-      },
-      {
-        from: 'b8',
-        to: 'c8',
-      },
-      {
-        from: 'b10',
-        to: 'b4',
-      },
-      {
-        from: 'c8',
-        to: 'i8',
-      },
-      {
-        from: 'b4',
-        to: 'g4',
-      },
-      {
-        from: 'i8',
-        to: 'a8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 640,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ef6b1293584e887bead9e894',
-      ply: 76,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_efdbae2d76f1938bd42a70cb-80',
-    variant: 'xiangqi',
-    title: 'Red mate in 3',
-    initial: {
-      id: 'xq-mined-hxq_efdbae2d76f1938bd42a70cb-80',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e5: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        b7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        c10: {
-          color: 'red',
-          role: 'horse',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 41,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6bs,b7rc,c10rh,d1ra,d6bc,e1rg,e10bg,e3re,e4rs,e5rc,e8be,e9ba,f1ra,f10ba,g1re,g10be,g8rs,i4bc': 1,
-      },
-      lastMove: {
-        to: 'd6',
-        from: 'b6',
-      },
-    },
-    solution: [
-      {
-        from: 'b7',
-        to: 'b10',
-      },
-      {
-        from: 'd6',
-        to: 'd1',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'i4',
-        to: 'a4',
-      },
-      {
-        from: 'c10',
-        to: 'd8',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein3', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_efdbae2d76f1938bd42a70cb',
-      ply: 80,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f26237ed72d0714227ba3a35-104',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f26237ed72d0714227ba3a35-104',
-      board: {
-        a1: {
-          color: 'black',
-          role: 'cannon',
-        },
-        b1: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        c5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a6: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        d10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 53,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1bc,a6rs,a8be,b1bc,c1re,c5rc,d10ba,d6rc,e1rg,e10bg,e2ra,e9ba,f1ra,g1re,i6bs': 1,
-      },
-      lastMove: {
-        to: 'a1',
-        from: 'a4',
-      },
-    },
-    solution: [
-      {
-        from: 'd6',
-        to: 'd1',
-      },
-      {
-        from: 'b1',
-        to: 'b2',
-      },
-      {
-        from: 'd1',
-        to: 'a1',
-      },
-      {
-        from: 'b2',
-        to: 'a2',
-      },
-      {
-        from: 'a1',
-        to: 'b1',
-      },
-      {
-        from: 'a2',
-        to: 'a6',
-      },
-      {
-        from: 'b1',
-        to: 'b10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 338,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f26237ed72d0714227ba3a35',
-      ply: 104,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f49780b9f20303e59a03685c-47',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f49780b9f20303e59a03685c-47',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        c2: {
-          color: 'red',
-          role: 'horse',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e4: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f4: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h4: {
-          color: 'black',
-          role: 'horse',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        d5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 24,
-      progressClock: 0,
-      positionCounts: {
-        'black|a10bc,a4rs,a6bs,c1re,c2rh,c4rs,c7bs,d4rc,d5rc,e1rg,e10bg,e2ra,e4bc,e9ba,f1ra,f10ba,f4bs,g1re,h4bh,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'c2',
-        from: 'a3',
-      },
-    },
-    solution: [
-      {
-        from: 'h4',
-        to: 'f3',
-      },
-      {
-        from: 'e1',
-        to: 'd1',
-      },
-      {
-        from: 'f3',
-        to: 'd4',
-      },
-      {
-        from: 'c2',
-        to: 'd4',
-      },
-      {
-        from: 'a10',
-        to: 'd10',
-      },
-      {
-        from: 'd5',
-        to: 'd10',
-      },
-      {
-        from: 'e10',
-        to: 'd10',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 481,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f49780b9f20303e59a03685c',
-      ply: 47,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-17',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-17',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        a10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 9,
-      progressClock: 0,
-      positionCounts: {
-        'black|a10bc,a3rh,a4rs,a7bs,a8bh,b3rc,c1re,c5rs,c7bs,c8bc,d1ra,d3rc,e1rg,e10bg,e4rs,e7rc,e8be,e9ba,f1ra,f10ba,f6bc,g1re,g10be,g3rh,g4rs,g7bs,g8bh,h2rc,h8bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'h2',
-        from: 'a2',
-      },
-    },
-    solution: [
-      {
-        from: 'g8',
-        to: 'e7',
-      },
-      {
-        from: 'b3',
-        to: 'c3',
-      },
-      {
-        from: 'c7',
-        to: 'c6',
-      },
-      {
-        from: 'd3',
-        to: 'd7',
-      },
-      {
-        from: 'e7',
-        to: 'f5',
-      },
-      {
-        from: 'h2',
-        to: 'f2',
-      },
-      {
-        from: 'c6',
-        to: 'c5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 428,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f5cdea252a4a2be8664c126e',
-      ply: 17,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-23',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-23',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        h7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 12,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rh,a4rs,a7bs,a8bh,b3rc,b6bc,c1re,c8bc,d1ra,d3rc,e1rg,e10bg,e4rs,e7rc,e8be,e9ba,f1ra,f10ba,f6bc,g1re,g10be,g3rh,g4rs,g7bs,g8bh,h7rc,h8bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'h7',
-        from: 'h2',
-      },
-    },
-    solution: [
-      {
-        from: 'g8',
-        to: 'e7',
-      },
-      {
-        from: 'h7',
-        to: 'h5',
-      },
-      {
-        from: 'a8',
-        to: 'c7',
-      },
-      {
-        from: 'b3',
-        to: 'c3',
-      },
-      {
-        from: 'b6',
-        to: 'b3',
-      },
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'b3',
-        to: 'c3',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 505,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f5cdea252a4a2be8664c126e',
-      ply: 23,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-25',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f5cdea252a4a2be8664c126e-25',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        h2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        b3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        d3: {
-          color: 'red',
-          role: 'chariot',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a8: {
-          color: 'black',
-          role: 'horse',
-        },
-        c8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        h8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 13,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rh,a4rs,a7bs,a8bh,b10bc,b3rc,c1re,c8bc,d1ra,d3rc,e1rg,e10bg,e4rs,e7rc,e8be,e9ba,f1ra,f10ba,f6bc,g1re,g10be,g3rh,g4rs,g7bs,g8bh,h2rc,h8bc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'h2',
-        from: 'h7',
-      },
-    },
-    solution: [
-      {
-        from: 'g8',
-        to: 'e7',
-      },
-      {
-        from: 'h2',
-        to: 'h5',
-      },
-      {
-        from: 'a8',
-        to: 'c7',
-      },
-      {
-        from: 'd1',
-        to: 'e2',
-      },
-      {
-        from: 'e7',
-        to: 'd5',
-      },
-      {
-        from: 'b3',
-        to: 'b1',
-      },
-      {
-        from: 'f6',
-        to: 'f4',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 524,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f5cdea252a4a2be8664c126e',
-      ply: 25,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_f775736824b4b6025dd77278-31',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_f775736824b4b6025dd77278-31',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g2: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        h5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        c6: {
-          color: 'black',
-          role: 'cannon',
-        },
-        d6: {
-          color: 'red',
-          role: 'horse',
-        },
-        f6: {
-          color: 'black',
-          role: 'horse',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        b10: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 16,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b10bc,b5rh,c1re,c6bc,c7rc,c8bh,d1ra,d6rh,e1rg,e10bg,e3rc,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,f6bh,g1re,g10be,g2rc,g5rc,h5bc,i4rs,i7bs,i8bc': 1,
-      },
-      lastMove: {
-        to: 'g2',
-        from: 'i2',
-      },
-    },
-    solution: [
-      {
-        from: 'b10',
-        to: 'b5',
-      },
-      {
-        from: 'g5',
-        to: 'h5',
-      },
-      {
-        from: 'b5',
-        to: 'h5',
-      },
-      {
-        from: 'g2',
-        to: 'b2',
-      },
-      {
-        from: 'h5',
-        to: 'd5',
-      },
-      {
-        from: 'd6',
-        to: 'c8',
-      },
-      {
-        from: 'i8',
-        to: 'c8',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 439,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_f775736824b4b6025dd77278',
-      ply: 31,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_fac4921f14b5e149683e08ec-104',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_fac4921f14b5e149683e08ec-104',
-      board: {
-        b1: {
-          color: 'black',
-          role: 'chariot',
-        },
-        f1: {
-          color: 'red',
-          role: 'general',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        g3: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        d9: {
-          color: 'black',
-          role: 'general',
-        },
-        i9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        c10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 53,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a6bs,b1bc,c10be,d9bg,e2ra,e3re,e7bc,e8rs,f1rg,f8rc,g1re,g3bs,i9rc': 1,
-      },
-      lastMove: {
-        to: 'b1',
-        from: 'b6',
-      },
-    },
-    solution: [
-      {
-        from: 'f1',
-        to: 'f2',
-      },
-      {
-        from: 'g3',
-        to: 'g2',
-      },
-      {
-        from: 'f2',
-        to: 'f3',
-      },
-      {
-        from: 'e7',
-        to: 'e2',
-      },
-      {
-        from: 'i9',
-        to: 'i1',
-      },
-      {
-        from: 'e2',
-        to: 'f2',
-      },
-      {
-        from: 'i1',
-        to: 'b1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 422,
-    },
-    themes: ['winning', 'endgame'],
-    sourceGame: {
-      gameId: 'hxq_fac4921f14b5e149683e08ec',
-      ply: 104,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_fb77a706f0cf9be1201e9063-38',
-    variant: 'xiangqi',
-    title: 'Red winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_fb77a706f0cf9be1201e9063-38',
-      board: {
-        a1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        d3: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        b5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'chariot',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        g7: {
-          color: 'red',
-          role: 'horse',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'red',
-          role: 'chariot',
-        },
-        c9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        h10: {
-          color: 'red',
-          role: 'cannon',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 20,
-      progressClock: 0,
-      positionCounts: {
-        'red|a1rc,a4rs,a7bs,b5bc,c8bh,c9bc,d3rc,d5rh,e1rg,e10bg,e2ra,e3re,e4rs,e7bs,e8be,e9ba,f1ra,f10ba,g10be,g6bc,g7rh,g8rc,g9bc,h10rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'b5',
-        from: 'b10',
-      },
-    },
-    solution: [
-      {
-        from: 'd5',
-        to: 'f6',
-      },
-      {
-        from: 'g9',
-        to: 'h9',
-      },
-      {
-        from: 'g7',
-        to: 'e8',
-      },
-      {
-        from: 'g6',
-        to: 'g8',
-      },
-      {
-        from: 'f6',
-        to: 'g8',
-      },
-      {
-        from: 'b5',
-        to: 'b6',
-      },
-      {
-        from: 'g8',
-        to: 'i7',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'red',
-      centipawns: 431,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_fb77a706f0cf9be1201e9063',
-      ply: 38,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_fc1f311a27c345db9b8c3751-29',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_fc1f311a27c345db9b8c3751-29',
-      board: {
-        d1: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        e2: {
-          color: 'red',
-          role: 'advisor',
-        },
-        b3: {
-          color: 'black',
-          role: 'cannon',
-        },
-        g3: {
-          color: 'red',
-          role: 'horse',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        c5: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d5: {
-          color: 'red',
-          role: 'horse',
-        },
-        h5: {
-          color: 'red',
-          role: 'chariot',
-        },
-        e6: {
-          color: 'red',
-          role: 'cannon',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        i6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        g8: {
-          color: 'black',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-        i10: {
-          color: 'black',
-          role: 'chariot',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 15,
-      progressClock: 0,
-      positionCounts: {
-        'black|a4rs,a7bs,b3bc,b8bc,c5bc,d1rc,d5rh,e1rg,e10bg,e2ra,e4rs,e6rc,e8be,e9ba,f1ra,f10ba,g1re,g10be,g3rh,g4rs,g6bs,g8bh,h5rc,i10bc,i4rs,i6bs': 1,
-      },
-      lastMove: {
-        to: 'd1',
-        from: 'a1',
-      },
-    },
-    solution: [
-      {
-        from: 'i10',
-        to: 'i7',
-      },
-      {
-        from: 'g1',
-        to: 'e3',
-      },
-      {
-        from: 'b3',
-        to: 'g3',
-      },
-      {
-        from: 'g4',
-        to: 'g5',
-      },
-      {
-        from: 'c5',
-        to: 'c6',
-      },
-      {
-        from: 'e4',
-        to: 'e5',
-      },
-      {
-        from: 'b8',
-        to: 'b5',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 394,
-    },
-    themes: ['winning', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_fc1f311a27c345db9b8c3751',
-      ply: 29,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_fecbb255865799343fb30424-41',
-    variant: 'xiangqi',
-    title: 'Black winning advantage',
-    initial: {
-      id: 'xq-mined-hxq_fecbb255865799343fb30424-41',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        a3: {
-          color: 'red',
-          role: 'horse',
-        },
-        e3: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'black',
-          role: 'cannon',
-        },
-        e4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        h4: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        c7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        d7: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e7: {
-          color: 'red',
-          role: 'cannon',
-        },
-        f7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g10: {
-          color: 'black',
-          role: 'elephant',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'black',
-      },
-      moveNumber: 21,
-      progressClock: 0,
-      positionCounts: {
-        'black|a3rh,a4bc,a7bs,c1re,c7bc,d1ra,d7bc,e1rg,e10bg,e3re,e4rs,e7rc,e8be,e9ba,f1ra,f10ba,f7rc,g10be,h4rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'h4',
-        from: 'h3',
-      },
-    },
-    solution: [
-      {
-        from: 'a4',
-        to: 'h4',
-      },
-      {
-        from: 'f7',
-        to: 'h7',
-      },
-      {
-        from: 'h4',
-        to: 'g4',
-      },
-      {
-        from: 'h7',
-        to: 'g7',
-      },
-      {
-        from: 'g4',
-        to: 'h4',
-      },
-      {
-        from: 'g7',
-        to: 'g4',
-      },
-      {
-        from: 'h4',
-        to: 'h1',
-      },
-    ],
-    goal: {
-      type: 'winning-advantage',
-      winner: 'black',
-      centipawns: 380,
-    },
-    themes: ['winning', 'winning-material', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_fecbb255865799343fb30424',
-      ply: 41,
-    },
-  },
-  {
-    id: 'xq-mined-hxq_ff066f501cd363320837f802-60',
-    variant: 'xiangqi',
-    title: 'Red mate in 2',
-    initial: {
-      id: 'xq-mined-hxq_ff066f501cd363320837f802-60',
-      board: {
-        c1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        d1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        e1: {
-          color: 'red',
-          role: 'general',
-        },
-        f1: {
-          color: 'red',
-          role: 'advisor',
-        },
-        g1: {
-          color: 'red',
-          role: 'elephant',
-        },
-        a4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        g4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        i4: {
-          color: 'red',
-          role: 'soldier',
-        },
-        f5: {
-          color: 'black',
-          role: 'horse',
-        },
-        g6: {
-          color: 'black',
-          role: 'soldier',
-        },
-        a7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        d7: {
-          color: 'red',
-          role: 'chariot',
-        },
-        i7: {
-          color: 'black',
-          role: 'soldier',
-        },
-        b8: {
-          color: 'black',
-          role: 'chariot',
-        },
-        e8: {
-          color: 'black',
-          role: 'elephant',
-        },
-        b9: {
-          color: 'red',
-          role: 'horse',
-        },
-        e9: {
-          color: 'black',
-          role: 'advisor',
-        },
-        g9: {
-          color: 'red',
-          role: 'cannon',
-        },
-        e10: {
-          color: 'black',
-          role: 'general',
-        },
-        f10: {
-          color: 'black',
-          role: 'advisor',
-        },
-      },
-      status: {
-        type: 'playing',
-        turn: 'red',
-      },
-      moveNumber: 31,
-      progressClock: 0,
-      positionCounts: {
-        'red|a4rs,a7bs,b8bc,b9rh,c1re,d1ra,d7rc,e1rg,e10bg,e8be,e9ba,f1ra,f10ba,f5bh,g1re,g4rs,g6bs,g9rc,i4rs,i7bs': 1,
-      },
-      lastMove: {
-        to: 'f5',
-        from: 'e7',
-      },
-    },
-    solution: [
-      {
-        from: 'g9',
-        to: 'g10',
-      },
-      {
-        from: 'e8',
-        to: 'g10',
-      },
-      {
-        from: 'd7',
-        to: 'd10',
-      },
-    ],
-    goal: {
-      type: 'checkmate',
-      winner: 'red',
-    },
-    themes: ['checkmate', 'matein2', 'crushing', 'middlegame'],
-    sourceGame: {
-      gameId: 'hxq_ff066f501cd363320837f802',
-      ply: 60,
+      event: '2026年全国象棋团体赛',
+      playedOn: '2026-03-28',
+      result: '0-1',
+      redName: '重庆市棋牌运动管理中心（重庆星源玻璃队） 杨应东',
+      blackName: '上海金外滩象棋队 华辰昊',
     },
   },
 ];

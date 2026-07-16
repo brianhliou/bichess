@@ -4,14 +4,16 @@ import {
   DROP_MINI_XIANGQI_SPEC_ID,
   getStandardXiangqiLegalMoves,
   MINI_XIANGQI_PUZZLES,
+  MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_PUZZLES,
+  XIANGQI_SPEC_ID,
   type XiangqiMove,
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountPuzzles } from './puzzles.js';
+import { mountPuzzles, puzzleMoveRowNumber, sourceGameLines } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
 function publicSummary(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
@@ -709,6 +711,21 @@ describe('standard xiangqi puzzles', () => {
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
   });
 
+  it('repaints a mounted standard puzzle when the board layout changes', async () => {
+    const puzzle = minedByPlyCount(3);
+    vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
+    const root = document.createElement('div');
+
+    await mountPuzzles(root, puzzle.id);
+    expect(root.querySelector('.xq-live-svg--intersection')).not.toBeNull();
+
+    window.history.replaceState(null, '', '/puzzles?xqLayout=cell');
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+
+    await vi.waitFor(() => expect(root.querySelector('.xq-live-svg--cell')).not.toBeNull());
+    expect(root.querySelector('.xq-live-cell-river')).not.toBeNull();
+  });
+
   it('solves a mined puzzle, auto-playing the scripted opponent reply', async () => {
     const puzzle = minedByPlyCount(3);
     const solver = solverMovesOf(puzzle);
@@ -751,6 +768,10 @@ describe('standard xiangqi puzzles', () => {
     };
     const root = document.createElement('div');
     document.body.append(root);
+    // The gold last-move ring also fades in on arrival (a non-piece <circle> with
+    // no data-piece-square, so it records as null); this test only cares about
+    // which PIECE slots glide, so filter the marker fades out.
+    const pieceGlides = (): Array<string | null> => glides.filter((square) => square !== null);
     try {
       await mountPuzzles(root, puzzle.id);
       expect(glides).toHaveLength(0); // the initial paint is discrete
@@ -760,11 +781,11 @@ describe('standard xiangqi puzzles', () => {
       // Both moves landed in one render; only the reply glides (the solver
       // chose their own move an instant ago).
       const reply = puzzle.solution[1]!;
-      expect(glides).toEqual([reply.to]);
+      expect(pieceGlides()).toEqual([reply.to]);
 
       // Replay back-step reverse-glides the undone reply at its origin square.
       root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
-      expect(glides).toEqual([reply.to, reply.from]);
+      expect(pieceGlides()).toEqual([reply.to, reply.from]);
     } finally {
       if (originalAnimate === undefined) delete proto.animate;
       else proto.animate = originalAnimate;
@@ -869,3 +890,65 @@ function stubWindowLocalStorage(storage: Storage): void {
     value: storage,
   });
 }
+
+describe('puzzleMoveRowNumber', () => {
+  it('numbers a red-to-move line by full move, red then black per row', () => {
+    // plies 0..3 -> rows 1,1,2,2 (red idx0 leads row 1).
+    expect([0, 1, 2, 3].map((i) => puzzleMoveRowNumber('red', i))).toEqual([1, 1, 2, 2]);
+  });
+
+  it('offsets a black-to-move line so black leads row 1 alone', () => {
+    // Regression for the reported xiangqi puzzle: black moves first, so its
+    // opening move must sit in row 1 (red cell blank) and red's reply drops to
+    // row 2 — otherwise the row reads "1. <red> <black>" in reversed order.
+    // plies 0..6 -> rows 1,2,2,3,3,4,4.
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => puzzleMoveRowNumber('black', i))).toEqual([
+      1, 2, 2, 3, 3, 4, 4,
+    ]);
+  });
+});
+
+describe('sourceGameLines', () => {
+  it('renders a "From game" header with both players when a xiangqi puzzle carries attribution', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'hxq_test',
+        ply: 12,
+        event: '2026 Team Championship',
+        playedOn: '2026-04-02',
+        result: '1/2-1/2',
+        redName: 'Red Player',
+        blackName: 'Black Player',
+      },
+    });
+    expect(lines).toHaveLength(3);
+    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship (2026)');
+    expect(lines[1]?.textContent).toContain('Red Player');
+    expect(lines[2]?.textContent).toContain('Black Player');
+    // Draw shows ½ on both players.
+    expect(lines[1]?.textContent).toContain('½');
+    expect(lines[2]?.textContent).toContain('½');
+  });
+
+  it('marks only the winner on a decisive result', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { gameId: 'g', ply: 1, redName: 'R', blackName: 'B', result: '1-0' },
+    });
+    expect(lines[1]?.querySelector('.puzzle-source-result')?.textContent).toBe('1');
+    expect(lines[2]?.querySelector('.puzzle-source-result')).toBeNull();
+  });
+
+  it('falls back to "From set <variant>" without attribution', () => {
+    expect(sourceGameLines({ variant: MINI_XIANGQI_SPEC_ID }).map((l) => l.textContent)).toEqual([
+      'From set Mini Xiangqi',
+    ]);
+    // A xiangqi puzzle with only {gameId, ply} and no names/event is not enough.
+    expect(
+      sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: { gameId: 'g', ply: 1 } }).map(
+        (l) => l.textContent,
+      ),
+    ).toEqual(['From set Xiangqi']);
+  });
+});

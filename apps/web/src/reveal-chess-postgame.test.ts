@@ -56,16 +56,23 @@ describe('Reveal Chess postgame page', () => {
     expect(root.textContent).toContain('White view');
     expect(root.textContent).toContain('Server truth');
     expect(root.textContent).toContain('Black view');
-    expect(root.textContent).toContain('Ply 1 of 1');
+    // The scrubber's "Ply X of Y" status was removed with the lichess control bar;
+    // the nav buttons disable at the bounds instead. Opens at the final ply (1 of 1):
+    // next/last disabled.
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    expect(nav('Next move')?.disabled).toBe(true);
     // Three boards in the triptych, each the reveal-chess SVG.
     expect(root.querySelectorAll('.reveal-chess-live-svg')).toHaveLength(3);
     // The per-color views still carry face-down discs; the truth view does not.
     expect(root.querySelector('.reveal-chess-facedown')).not.toBeNull();
 
-    root.querySelector<HTMLButtonElement>('[aria-label="Previous ply"]')?.click();
-    expect(root.textContent).toContain('Ply 0 of 1');
-    root.querySelector<HTMLButtonElement>('[aria-label="Final ply"]')?.click();
-    expect(root.textContent).toContain('Ply 1 of 1');
+    nav('Previous move')?.click();
+    // Ply 0 (start): first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
+    nav('Last move')?.click();
+    // Back at the final ply.
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 
   it('renders black wins with chess copy', async () => {

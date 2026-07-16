@@ -20,7 +20,9 @@
 
 import {
   fairyStockfishBestmove,
+  fairyStockfishPath,
   resolveFsfVariantIniPath,
+  runUciEval,
   UciEnginePool,
 } from './uci-engine-harness.js';
 
@@ -87,6 +89,7 @@ const FORTRESS_XIANGQI_ENGINE_BY_ID: ReadonlyMap<string, FortressXiangqiEngineTi
 // Small FSF slot pool, separate from the other variants. Promote to a shared
 // pool only under real concurrent load.
 const fsfPool = new UciEnginePool({
+  name: 'fortress-xiangqi-fsf',
   maxProcessesEnvVar: 'MISTBOARD_FORTRESS_XIANGQI_FSF_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_FORTRESS_XIANGQI_FSF_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'fsf concurrency queue timed out',
@@ -159,4 +162,73 @@ export function fortressXiangqiEngineMove(
     nodes: opts.nodes,
     movetimeMs: opts.movetimeMs ?? 800,
   });
+}
+
+// ── Whole-game analysis (fixed-depth eval, NOT the playable tier) ─────────────
+
+/** Fixed-depth analysis eval, Red POV. Distinct from the playable move provider:
+ *  full strength (no Skill Level / node cap), `go depth N`, and read the score. */
+export const FORTRESS_XIANGQI_ANALYSIS_DEPTH = 12;
+
+// The cache engine_id for the analysis sweep. Deliberately NOT a playable tier id
+// (those key on strength, which is irrelevant to a fixed-depth eval); version-
+// suffixed so an engine/.ini change invalidates the cached evals.
+export const FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID = `fairy-stockfish-fortress-xiangqi-analysis@${FORTRESS_XIANGQI_ENGINE_VERSION}`;
+
+export type FortressXiangqiPositionEval = {
+  /** Centipawns from RED's POV (positive = Red better); null when mate is set. */
+  cp: number | null;
+  /** Signed moves-to-mate from RED's POV; null otherwise. */
+  mate: number | null;
+  /** Best move in FSF UCI (already fortress coords; may be a drop like `Q@d4`). */
+  best: string | null;
+  depth: number;
+};
+
+/**
+ * Evaluate the fortress position after `moves` (FSF UCI) at a fixed depth, returning
+ * the score from RED's POV. Mirrors evaluateXiangqiPosition (Pikafish) but drives
+ * Fairy-Stockfish's custom fortressxiangqi variant. Gated through fsfPool so an
+ * analysis sweep runs sequentially rather than stampeding the engine.
+ */
+export async function evaluateFortressXiangqiPosition(
+  moves: string[],
+  opts: { depth?: number } = {},
+): Promise<FortressXiangqiPositionEval> {
+  const depth = Math.max(1, Math.floor(opts.depth ?? FORTRESS_XIANGQI_ANALYSIS_DEPTH));
+  const position =
+    moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
+  const commands = [
+    'uci',
+    `setoption name VariantPath value ${fortressXiangqiVariantIniPath()}`,
+    `setoption name UCI_Variant value ${VARIANT}`,
+    'ucinewgame',
+    'isready',
+    position,
+    `go depth ${depth}`,
+  ];
+  const release = await fsfPool.acquire();
+  try {
+    const evaluation = await runUciEval({
+      bin: fairyStockfishPath(),
+      commands,
+      timeoutMs: 20_000,
+      timeoutMessage: 'fortress-xiangqi eval timed out',
+    });
+    // Red moves first, so Black is to move after an odd number of plies; flip the
+    // side-to-move score to Red's POV. `mate 0` (side-to-move already mated) can't
+    // carry a sign, so encode it as a decisive cp for the other side.
+    const sign = moves.length % 2 === 0 ? 1 : -1;
+    if (evaluation.mate === 0) {
+      return { cp: sign * -30000, mate: null, best: evaluation.best, depth: evaluation.depth };
+    }
+    return {
+      cp: evaluation.cp == null ? null : evaluation.cp * sign,
+      mate: evaluation.mate == null ? null : evaluation.mate * sign,
+      best: evaluation.best,
+      depth: evaluation.depth,
+    };
+  } finally {
+    release();
+  }
 }

@@ -3,12 +3,17 @@ import {
   getJunglePlayerView,
   JUNGLE_SPEC_ID,
   type JungleColor,
+  type JungleMove,
   type JunglePlayerView,
   oppositeJungleColor,
 } from '@mistboard/game';
+import { currentAccountUser } from './../account-session.js';
 import { jungleEnabled } from './../feature-flags.js';
+import { resolveJungleAnalysis, VacuousAnalysisError } from './../jungle-analysis.js';
+import { jungleEngineBinaryAvailable } from './../jungle-engine.js';
 import type { JungleEvent } from './../jungle-runtime.js';
 import { jungleTenant } from './../jungle-tenant.js';
+import { logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import {
   applyTenantEvent,
@@ -65,6 +70,79 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  // Computer analysis: fixed-strength eval of every ply, Red POV, cached + coalesced.
+  // GET returns only the cached result (204 on a miss, so the client can auto-load on
+  // open); POST computes on a miss and is account-gated (the whole-game sweep is the
+  // expensive path). Mirrors the fortress analysis route.
+  const analysisMatch = pathname.match(/^\/api\/jungle\/games\/([^/]+)\/analysis$/);
+  if (analysisMatch) {
+    const method = request.method ?? 'GET';
+    if (method !== 'GET' && method !== 'POST') {
+      writeJson(response, 405, { error: 'method_not_allowed' });
+      return true;
+    }
+    if (!jungleEnabled()) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    if (method === 'POST') {
+      const user = await currentAccountUser(request);
+      if (!user) {
+        writeJson(response, 401, { error: 'not_signed_in' });
+        return true;
+      }
+      // Fail closed, not open: the analysis engine is the Rust binary ONLY (no TS
+      // fallback). If it is missing this is a broken deploy, so surface it (alertable
+      // log + 503) instead of silently serving a weaker eval. Gated to the compute path
+      // — GET only reads the cache and never needs the engine.
+      if (!jungleEngineBinaryAvailable()) {
+        logger.error(
+          { kind: 'jungle_analysis_engine_unavailable' },
+          'Jungle analysis requested but the jungle-engine binary is not present; failing closed',
+        );
+        writeJson(response, 503, { error: 'analysis_engine_unavailable' });
+        return true;
+      }
+    }
+    const analysisRoomId = decodeURIComponent(analysisMatch[1]!);
+    const analysisPayload = await junglePostgameForApi(analysisRoomId);
+    if (!analysisPayload) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const moves = analysisPayload.timeline
+      .filter((entry): entry is JunglePostgameMove => entry.type === 'move-played')
+      .map((entry) => entry.move as JungleMove);
+    let analysis: Awaited<ReturnType<typeof resolveJungleAnalysis>>;
+    try {
+      analysis = await resolveJungleAnalysis(
+        analysisRoomId,
+        moves,
+        undefined,
+        undefined,
+        method === 'POST',
+      );
+    } catch (err) {
+      // A scoreless sweep (engine emitted moves but no evals) fails closed like a missing
+      // binary: 503, nothing cached, rather than a bogus flawless-game result.
+      if (err instanceof VacuousAnalysisError) {
+        logger.error(
+          { kind: 'jungle_analysis_engine_vacuous', room_id: analysisRoomId },
+          'Jungle analysis produced no evals (engine emitted no score); failing closed',
+        );
+        writeJson(response, 503, { error: 'analysis_engine_unavailable' });
+        return true;
+      }
+      throw err;
+    }
+    if (!analysis) {
+      response.writeHead(204).end();
+      return true;
+    }
+    writeJson(response, 200, analysis);
+    return true;
+  }
+
   const postgameMatch = pathname.match(/^\/api\/jungle\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
 

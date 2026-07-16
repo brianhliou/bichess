@@ -15,3 +15,10 @@
   -webkit-mask: var(--variant-marker-mask) center / contain no-repeat;
   mask: var(--variant-marker-mask) center / contain no-repeat;
 }
+
+/* The one-color silhouettes read heavier against light panels than they do
+   against dark ones. Let a little of the surface through in light mode while
+   keeping the dark-theme contrast unchanged. */
+:root:not([data-effective-theme="dark"]) .variant-marker {
+  opacity: 0.78;
+}

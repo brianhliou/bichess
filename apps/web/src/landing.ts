@@ -4,7 +4,13 @@ import './landing.css';
 import './game-route.css';
 import { buildHomeArticleCards, initLandingCarousel, mountArticleThumbnails } from './articles.js';
 import { buildDobutsuUiIcon } from './dobutsu-ui-icons.js';
-import { displayParticipantName, type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import {
+  displayParticipantName,
+  type FeaturedGame,
+  matchupLabel,
+  matchupSeats,
+  variantDisplayLabel,
+} from './game-display.js';
 import { gameMetaForGame } from './game-meta.js';
 import {
   cachedHomeDailyPuzzle,
@@ -16,6 +22,7 @@ import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
+import { buildLandingCommunityWidgets } from './landing-community-widgets.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
   buildLandingPlayPanel,
@@ -95,9 +102,9 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   // fallback pool, then merged with each live-showcase refresh below.
   const metadataByRoomId: Record<string, GameMeta> = {};
   const povByRoomId: Record<string, 'white' | 'black'> = {};
-  // Red/black participant names for the tenant compact seats. GameMeta's
-  // white/black slots mangle red/black variants, so derive them straight from the
-  // feed's participants; first = red/first-mover side, second = black.
+  // First/second-mover participant names for the tenant compact seats, resolved
+  // through the shared seat model (red/black for xiangqi and jungle, white/red
+  // for crossroads, white/black otherwise).
   const namesByRoomId: Record<string, { first: string; second: string }> = {};
   // When each game finished, for the honest "recent · 2h ago" caption. Undefined
   // for the bundled cold-start demos (no real finish time) -> caption reads "demo".
@@ -108,12 +115,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     metadataByRoomId[game.roomId] ??= gameMetaForGame(game);
     const pov = povByRoomId[game.roomId] ?? pickHeroPovForGame(game);
     povByRoomId[game.roomId] = pov;
+    const [firstSeat, secondSeat] = matchupSeats(game);
     namesByRoomId[game.roomId] ??= {
-      first: displayParticipantName(
-        game,
-        game.participants?.some((p) => p.color === 'red') ? 'red' : 'white',
-      ),
-      second: displayParticipantName(game, 'black'),
+      first: displayParticipantName(game, firstSeat),
+      second: displayParticipantName(game, secondSeat),
     };
     endedAtByRoomId[game.roomId] = game.endedAt;
     variantByRoomId[game.roomId] = game.variant;
@@ -679,6 +684,8 @@ function buildLandingStage(
   lowerStrip.append(buildLandingAnnouncements(locale));
   lowerStrip.append(buildLandingForumPreview({ hydrate: !opts.skipLiveWidgets }));
 
+  const communityStrip = buildLandingCommunityWidgets({ hydrate: !opts.skipLiveWidgets });
+
   // ── Play column (grid-area: play, row 1 right): the small h1 tagline flush to the
   // top-left, then the pairing CTAs + activity box vertically centered against the
   // tall open-challenges panel. ──
@@ -742,6 +749,7 @@ function buildLandingStage(
     playColumn,
     puzzleColumn,
     lowerStrip,
+    communityStrip,
   );
 
   // Both side board boxes (viewer left, daily puzzle right) track the center block
@@ -859,7 +867,5 @@ function buildGameExportLinks(roomId: string, variant: string | undefined): HTML
 }
 
 function buildGamePageTitle(game: FeaturedGame): string {
-  const white = game.whiteName ?? 'White';
-  const black = game.blackName ?? 'Black';
-  return `${white} vs ${black} · Mistboard`;
+  return `${matchupLabel(game)} · Mistboard`;
 }

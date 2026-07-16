@@ -10,19 +10,47 @@ type ChatState = {
 };
 
 const POLL_MS = 7000;
+const LIVE_POLL_MS = 2000;
 const VISIBLE_LINES = 80;
 const TOKEN_PATTERN = /(@[a-z0-9_-]+|(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)/gi;
+const QUICK_CHAT_MESSAGES = ['GG', 'WP', 'TY', 'GTG', 'BYE'] as const;
+
+type GameChatOptions = {
+  ariaLabel: string;
+  live: boolean;
+  pollMs: number;
+  title: string;
+};
 
 export function buildSpectatorChat(roomId: string): HTMLElement {
+  return buildGameChat(roomId, {
+    ariaLabel: 'Spectator chat',
+    live: false,
+    pollMs: POLL_MS,
+    title: 'Spectator room',
+  });
+}
+
+export function buildLiveRoomChat(roomId: string): HTMLElement {
+  return buildGameChat(roomId, {
+    ariaLabel: 'Game chat',
+    live: true,
+    pollMs: LIVE_POLL_MS,
+    title: 'Chat room',
+  });
+}
+
+function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'review-spectator-chat';
-  panel.setAttribute('aria-label', 'Spectator chat');
+  if (options.live) panel.classList.add('review-spectator-chat--live');
+  panel.setAttribute('aria-label', options.ariaLabel);
 
   const header = document.createElement('div');
   header.className = 'review-spectator-chat__tabs';
   const tab = document.createElement('div');
   tab.className = 'review-spectator-chat__tab review-spectator-chat__tab--active';
-  tab.textContent = 'Spectator room';
+  tab.textContent = options.title;
   header.append(tab);
 
   const feed = document.createElement('div');
@@ -35,8 +63,8 @@ export function buildSpectatorChat(roomId: string): HTMLElement {
   panel.append(header, feed, footer);
 
   const known = new Set<string>();
-  void hydrateSpectatorChat(roomId, feed, footer, known);
-  if (import.meta.env.MODE !== 'test') startPolling(roomId, panel, feed, known);
+  void hydrateGameChat(roomId, feed, footer, known, options);
+  if (import.meta.env.MODE !== 'test') startPolling(roomId, panel, feed, known, options.pollMs);
 
   return panel;
 }
@@ -45,21 +73,22 @@ export function gameChatApiUrl(roomId: string): string {
   return `/api/chat/game/${encodeURIComponent(roomId)}`;
 }
 
-async function hydrateSpectatorChat(
+async function hydrateGameChat(
   roomId: string,
   feed: HTMLElement,
   footer: HTMLElement,
   known: Set<string>,
+  options: GameChatOptions,
 ): Promise<void> {
   const state = await fetchGameChat(roomId);
-  if (!state) {
-    renderStatus(footer, 'Spectator chat is unavailable.');
+  if (!state || !Array.isArray(state.lines)) {
+    renderStatus(footer, 'Game chat is unavailable.');
     return;
   }
   feed.replaceChildren();
   known.clear();
   appendLines(feed, state.lines.slice(-VISIBLE_LINES), known, state, roomId);
-  renderFooter(footer, state, roomId, feed, known);
+  renderFooter(footer, state, roomId, feed, known, options);
 }
 
 function startPolling(
@@ -67,6 +96,7 @@ function startPolling(
   panel: HTMLElement,
   feed: HTMLElement,
   known: Set<string>,
+  pollMs: number,
 ): void {
   const timer = window.setInterval(async () => {
     if (!panel.isConnected) {
@@ -78,7 +108,7 @@ function startPolling(
     if (!state) return;
     const incoming = state.lines.filter((line) => !known.has(line.id)).slice(-VISIBLE_LINES);
     appendLines(feed, incoming, known, state, roomId);
-  }, POLL_MS);
+  }, pollMs);
 }
 
 function renderFooter(
@@ -87,10 +117,11 @@ function renderFooter(
   roomId: string,
   feed: HTMLElement,
   known: Set<string>,
+  options: GameChatOptions,
 ): void {
   footer.replaceChildren();
   if (state.canPost) {
-    footer.append(buildComposer(roomId, feed, known, state));
+    footer.append(buildComposer(roomId, feed, known, state, options.live));
     return;
   }
   if (state.timeoutUntil) {
@@ -109,6 +140,7 @@ function buildComposer(
   feed: HTMLElement,
   known: Set<string>,
   state: ChatState,
+  includeQuickChat: boolean,
 ): HTMLElement {
   const form = document.createElement('form');
   form.className = 'review-spectator-chat__composer';
@@ -123,27 +155,58 @@ function buildComposer(
   status.className = 'review-spectator-chat__status';
   status.hidden = true;
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-    input.disabled = true;
+  const sendMessage = async (text: string): Promise<boolean> => {
+    if (!text) return false;
+    setComposerDisabled(form, true);
     status.hidden = true;
     try {
       const line = await postGameChatLine(roomId, text);
       input.value = '';
       appendLines(feed, [line], known, state, roomId);
+      return true;
     } catch (error) {
       status.textContent = postErrorCopy(error instanceof ChatPostError ? error.code : undefined);
       status.hidden = false;
+      return false;
     } finally {
-      input.disabled = false;
-      input.focus();
+      setComposerDisabled(form, false);
     }
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    await sendMessage(text);
+    input.focus();
   });
 
   form.append(input, status);
+  if (includeQuickChat) form.append(buildQuickChat(sendMessage));
   return form;
+}
+
+function buildQuickChat(sendMessage: (text: string) => Promise<boolean>): HTMLElement {
+  const quickChat = document.createElement('div');
+  quickChat.className = 'review-spectator-chat__quick';
+  quickChat.setAttribute('aria-label', 'Quick chat');
+  for (const message of QUICK_CHAT_MESSAGES) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'review-spectator-chat__quick-button';
+    button.textContent = message;
+    button.addEventListener('click', () => void sendMessage(message));
+    quickChat.append(button);
+  }
+  return quickChat;
+}
+
+function setComposerDisabled(form: HTMLFormElement, disabled: boolean): void {
+  for (const control of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+    'input, button',
+  )) {
+    control.disabled = disabled;
+  }
 }
 
 function appendLines(

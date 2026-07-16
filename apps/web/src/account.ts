@@ -9,6 +9,12 @@
 
 import './account-profile.css';
 import { setAccountNavUser } from './account-nav.js';
+import {
+  type AccountPreferenceId,
+  type AccountPreferences,
+  normalizeAccountPreferences,
+  replaceAccountPreferences,
+} from './account-preferences.js';
 import { identify, resetIdentity, track } from './analytics.js';
 import { requestedAuthReferrer } from './auth-redirect.js';
 import {
@@ -21,32 +27,32 @@ import {
 } from './display-preferences.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
+import { refreshNotifications } from './notification-nav.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
 
 type AccountSettingsSection =
   | 'profile'
   | 'display'
-  | 'game-behavior'
+  | 'clock'
+  | 'behavior'
   | 'privacy'
-  | 'messaging'
   | 'notifications'
+  | 'username'
   | 'account'
   | 'security'
-  | 'close-account';
+  | 'close';
 
-const accountSettingsSections: readonly AccountSettingsSection[] = [
-  'profile',
-  'display',
-  'game-behavior',
-  'privacy',
-  'messaging',
-  'notifications',
-  'account',
-  'security',
-  'close-account',
+const accountSettingsSectionGroups: readonly (readonly AccountSettingsSection[])[] = [
+  ['profile'],
+  ['display', 'clock', 'behavior', 'privacy', 'notifications'],
+  ['username', 'account', 'security'],
+  ['close'],
 ];
 
-const profileVisibilityOptions = ['public', 'unlisted', 'private'] as const;
+const accountSettingsSections = accountSettingsSectionGroups.flat();
+
+const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>(['pieceAnimation']);
+const pieceAnimationSaveQueues = new WeakMap<AuthUser, Promise<void>>();
 
 // ── Page mounts ──────────────────────────────────────────────────────────────
 
@@ -308,6 +314,7 @@ function buildAccountSettingsPage(
   section: AccountSettingsSection,
   locale: Locale = currentLocale(),
 ): DocumentFragment {
+  replaceAccountPreferences(user.accountPreferences);
   const fragment = document.createDocumentFragment();
   fragment.append(
     buildAccountSettingsRail(section, locale),
@@ -324,17 +331,25 @@ function buildAccountSettingsRail(
   rail.className = 'account-settings-rail';
   rail.setAttribute('aria-label', t('account.settingsNav', {}, locale));
 
-  for (const section of accountSettingsSections) {
-    const link = document.createElement('a');
-    link.href = accountSettingsSectionHref(section, locale);
-    link.className = 'account-settings-rail-link';
-    link.textContent = accountSettingsSectionLabel(section, locale);
-    if (section === active) {
-      link.classList.add('active');
-      link.setAttribute('aria-current', 'page');
+  accountSettingsSectionGroups.forEach((group, groupIndex) => {
+    if (groupIndex > 0) {
+      const separator = document.createElement('div');
+      separator.className = 'account-settings-rail-separator';
+      separator.setAttribute('role', 'separator');
+      rail.append(separator);
     }
-    rail.append(link);
-  }
+    for (const section of group) {
+      const link = document.createElement('a');
+      link.href = accountSettingsSectionHref(section, locale);
+      link.className = 'account-settings-rail-link';
+      link.textContent = accountSettingsSectionLabel(section, locale);
+      if (section === active) {
+        link.classList.add('active');
+        link.setAttribute('aria-current', 'page');
+      }
+      rail.append(link);
+    }
+  });
   return rail;
 }
 
@@ -343,26 +358,121 @@ function buildAccountSettingsSection(
   section: AccountSettingsSection,
   locale: Locale = currentLocale(),
 ): HTMLElement {
-  if (section === 'profile') return buildProfileSettings(user, locale);
-  if (section === 'display') return buildDisplaySettings(locale);
+  if (section === 'profile') return buildPublicProfileSettings(user, locale);
+  if (section === 'display') return buildDisplaySettings(user, locale);
+  if (section === 'clock') return buildClockSettings(user, locale);
+  if (section === 'behavior') return buildGameBehaviorSettings(user, locale);
   if (section === 'privacy') return buildPrivacySettings(user, locale);
-  if (section === 'messaging') return buildMessagingSettings(user, locale);
+  if (section === 'notifications') return buildNotificationSettings(user, locale);
+  if (section === 'username') return buildUsernameSettings(user, locale);
   if (section === 'account') return buildAccountAccessSettings(user, locale);
-  return buildDeferredSettings(section, locale);
+  if (section === 'security') return buildSecuritySettings(locale);
+  if (section === 'close') return buildCloseAccountSettings(user, locale);
+  return buildDisplaySettings(user, locale);
+}
+
+function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel(
+    'profile',
+    t('account.settingsEditProfile', {}, locale),
+    t('account.publicProfileOptional', {}, locale),
+  );
+  const form = document.createElement('form');
+  form.className = 'account-settings-form account-public-profile-form';
+
+  const bio = labeledTextarea(
+    t('account.biography', {}, locale),
+    'bio',
+    user.bio,
+    t('account.biographyPlaceholder', {}, locale),
+    5,
+  );
+  bio.input.maxLength = 500;
+  bio.help.textContent = t('account.biographyHelp', {}, locale);
+
+  const location = labeledInput(
+    t('account.location', {}, locale),
+    'location',
+    user.location,
+    t('account.locationPlaceholder', {}, locale),
+  );
+  location.input.maxLength = 80;
+
+  const links = labeledTextarea(
+    t('account.publicLinks', {}, locale),
+    'profileLinks',
+    user.profileLinks.join('\n'),
+    'https://example.com',
+    4,
+  );
+  links.input.maxLength = 1504;
+  links.help.textContent = t('account.publicLinksHelp', {}, locale);
+
+  const status = document.createElement('p');
+  status.className = 'account-status';
+  status.setAttribute('aria-live', 'polite');
+
+  const actions = document.createElement('div');
+  actions.className = 'account-actions';
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'landing-setup-start';
+  save.textContent = t('account.save', {}, locale);
+  const profile = document.createElement('a');
+  profile.className = 'landing-setup-back';
+  profile.href = `/@/${encodeURIComponent(user.handle)}`;
+  profile.textContent = t('account.viewProfile', {}, locale);
+  actions.append(save, profile);
+
+  form.append(bio.wrap, location.wrap, links.wrap, actions, status);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const profileLinks = links.input.value
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (profileLinks.length > 5) {
+      status.textContent = t('account.invalidPublicProfile', {}, locale);
+      return;
+    }
+    save.disabled = true;
+    try {
+      const resp = await fetch('/api/account/public-profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          bio: bio.input.value,
+          location: location.input.value,
+          profileLinks,
+        }),
+      });
+      const data = (await resp.json()) as { user?: AuthUser; error?: string };
+      if (!resp.ok || !data.user) throw new Error(t('account.invalidPublicProfile', {}, locale));
+      user.bio = data.user.bio;
+      user.location = data.user.location;
+      user.profileLinks = data.user.profileLinks;
+      bio.input.value = user.bio;
+      location.input.value = user.location;
+      links.input.value = user.profileLinks.join('\n');
+      status.textContent = t('account.publicProfileSaved', {}, locale);
+    } catch (err) {
+      status.textContent = err instanceof Error ? err.message : t('account.saveFailed', {}, locale);
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  panel.append(form);
+  return panel;
 }
 
 function buildSettingsPanel(
   section: AccountSettingsSection,
   titleText: string,
   copyText: string,
-  locale: Locale = currentLocale(),
 ): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'account-panel account-settings-panel';
-
-  const eyebrow = document.createElement('span');
-  eyebrow.className = 'account-eyebrow';
-  eyebrow.textContent = t('account.settings', {}, locale);
 
   const title = document.createElement('h1');
   title.className = 'site-section-heading';
@@ -373,15 +483,16 @@ function buildSettingsPanel(
   copy.textContent = copyText;
 
   panel.dataset.settingsSection = section;
-  panel.append(eyebrow, title, copy);
+  panel.append(title);
+  if (copyText) panel.append(copy);
   return panel;
 }
 
-function buildProfileSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+function buildUsernameSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
   const panel = buildSettingsPanel(
-    'profile',
-    t('account.publicProfile', {}, locale),
-    t('account.settingsCopy', {}, locale),
+    'username',
+    t('account.settingsUsername', {}, locale),
+    t('account.settingsUsernameCopy', {}, locale),
   );
 
   const form = document.createElement('form');
@@ -398,10 +509,6 @@ function buildProfileSettings(user: AuthUser, locale: Locale = currentLocale()):
   handle.input.required = true;
   handle.help.textContent = handleHelpText(user, locale);
 
-  const email = labeledInput(t('account.email', {}, locale), 'email', user.email, '');
-  email.input.disabled = true;
-  email.help.textContent = t('account.emailPrivate', {}, locale);
-
   const status = document.createElement('p');
   status.className = 'account-status';
   status.setAttribute('aria-live', 'polite');
@@ -414,18 +521,13 @@ function buildProfileSettings(user: AuthUser, locale: Locale = currentLocale()):
   save.className = 'landing-setup-start';
   save.textContent = t('account.save', {}, locale);
 
-  const account = document.createElement('a');
-  account.className = 'landing-setup-back';
-  account.href = localizedHref('/account', locale);
-  account.textContent = t('account.account', {}, locale);
-
   const profile = document.createElement('a');
   profile.className = 'landing-setup-back';
   profile.href = `/@/${encodeURIComponent(user.handle)}`;
   profile.textContent = t('account.viewProfile', {}, locale);
 
-  actions.append(save, profile, account);
-  form.append(handle.wrap, email.wrap, actions, status);
+  actions.append(save, profile);
+  form.append(handle.wrap, actions, status);
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -444,9 +546,8 @@ function buildProfileSettings(user: AuthUser, locale: Locale = currentLocale()):
       }
       handle.input.value = data.user.handle;
       handle.help.textContent = handleHelpText(data.user, locale);
-      email.input.value = data.user.email;
       profile.href = `/@/${encodeURIComponent(data.user.handle)}`;
-      status.textContent = t('account.profileSaved', {}, locale);
+      status.textContent = t('account.usernameSaved', {}, locale);
     } catch (err) {
       status.textContent = err instanceof Error ? err.message : t('account.saveFailed', {}, locale);
     } finally {
@@ -458,16 +559,22 @@ function buildProfileSettings(user: AuthUser, locale: Locale = currentLocale()):
   return panel;
 }
 
-function buildDisplaySettings(locale: Locale = currentLocale()): HTMLElement {
-  const panel = buildSettingsPanel(
-    'display',
-    t('account.settingsDisplay', {}, locale),
-    t('account.settingsDisplayCopy', {}, locale),
-  );
-  const preferences = readDisplayPreferences();
+function buildDisplaySettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel('display', t('account.settingsDisplay', {}, locale), '');
+  let preferences = readDisplayPreferences();
+  const accountPieceAnimation = user.displayPreferences.pieceAnimation;
+  if (accountPieceAnimation && accountPieceAnimation !== preferences.pieceAnimation) {
+    preferences = writeDisplayPreference('pieceAnimation', accountPieceAnimation);
+  } else if (!accountPieceAnimation) {
+    queuePieceAnimationPreferenceSave(user, preferences.pieceAnimation);
+  }
   const list = document.createElement('div');
   list.className = 'account-display-settings';
   for (const definition of DISPLAY_PREFERENCE_DEFINITIONS) {
+    // Only expose preferences that already affect a game surface. The remaining
+    // definitions stay available for incremental wiring without presenting
+    // controls that merely write inert localStorage values.
+    if (!implementedDisplayPreferenceIds.has(definition.id)) continue;
     if (isBooleanDisplayPreference(definition)) {
       list.append(buildBooleanDisplayPreference(definition.id, preferences[definition.id], locale));
       continue;
@@ -478,11 +585,255 @@ function buildDisplaySettings(locale: Locale = currentLocale()): HTMLElement {
         definition.options,
         preferences[definition.id],
         locale,
+        definition.id === 'pieceAnimation'
+          ? (next, group, row) => {
+              const pieceAnimation = next as DisplayPreferenceValue<'pieceAnimation'>;
+              writeDisplayPreference('pieceAnimation', pieceAnimation);
+              queuePieceAnimationPreferenceSave(user, pieceAnimation, group, row, locale);
+            }
+          : undefined,
       ),
     );
   }
   panel.append(list);
   return panel;
+}
+
+function buildClockSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel('clock', t('account.settingsClock', {}, locale), '');
+  const list = document.createElement('div');
+  list.className = 'account-display-settings';
+  list.append(
+    buildAccountPreferenceOptions(
+      user,
+      'clockTenths',
+      t('account.clockTenths', {}, locale),
+      '',
+      [
+        { value: 'never', label: t('account.clockTenthsNever', {}, locale) },
+        { value: 'low-time', label: t('account.clockTenthsLowTime', {}, locale) },
+        { value: 'always', label: t('account.clockTenthsAlways', {}, locale) },
+      ],
+      locale,
+    ),
+    buildBooleanAccountPreference(
+      user,
+      'lowTimeSound',
+      t('account.lowTimeSound', {}, locale),
+      t('account.lowTimeSoundHelp', {}, locale),
+      locale,
+    ),
+  );
+  panel.append(list);
+  return panel;
+}
+
+function buildGameBehaviorSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel('behavior', t('account.settingsGameBehavior', {}, locale), '');
+  const list = document.createElement('div');
+  list.className = 'account-display-settings';
+  list.append(
+    buildBooleanAccountPreference(
+      user,
+      'premoves',
+      t('account.premoves', {}, locale),
+      t('account.premovesHelp', {}, locale),
+      locale,
+    ),
+    buildBooleanAccountPreference(
+      user,
+      'confirmGameActions',
+      t('account.confirmGameActions', {}, locale),
+      t('account.confirmGameActionsHelp', {}, locale),
+      locale,
+    ),
+  );
+  panel.append(list);
+  return panel;
+}
+
+function buildBooleanAccountPreference(
+  user: AuthUser,
+  id: Extract<AccountPreferenceId, 'lowTimeSound' | 'premoves' | 'confirmGameActions'>,
+  title: string,
+  help: string,
+  locale: Locale,
+): HTMLElement {
+  return buildAccountPreferenceOptions(
+    user,
+    id,
+    title,
+    help,
+    [
+      { value: true, label: t('account.optionYes', {}, locale) },
+      { value: false, label: t('account.optionNo', {}, locale) },
+    ],
+    locale,
+  );
+}
+
+function buildAccountPreferenceOptions<Id extends AccountPreferenceId>(
+  user: AuthUser,
+  id: Id,
+  title: string,
+  help: string,
+  options: ReadonlyArray<{ value: AccountPreferences[Id]; label: string }>,
+  locale: Locale,
+): HTMLElement {
+  const row = preferenceRow(title, help);
+  const preferences = normalizeAccountPreferences(user.accountPreferences);
+  const group = buildSegmentedPreference(
+    id,
+    options.map((option) => ({ value: String(option.value), label: option.label })),
+    String(preferences[id]),
+    (next) => {
+      const option = options.find((candidate) => String(candidate.value) === next);
+      if (option) void saveAccountPreference(user, id, option.value, group, row, locale);
+    },
+  );
+  const helpNode = row.querySelector('.account-preference-help');
+  row.insertBefore(group, helpNode);
+  return row;
+}
+
+function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel(
+    'notifications',
+    t('account.settingsNotifications', {}, locale),
+    '',
+  );
+  const table = document.createElement('table');
+  table.className = 'account-notification-settings';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.append(
+    notificationHeading(''),
+    notificationHeading(t('account.notificationBell', {}, locale)),
+    notificationHeading(t('account.notificationEmail', {}, locale)),
+  );
+  head.append(headRow);
+  const body = document.createElement('tbody');
+  body.append(
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationDirectMessages', {}, locale),
+      'inboxBell',
+      null,
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationCorrespondenceTurn', {}, locale),
+      'correspondenceBell',
+      null,
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationCorrespondenceDeadline', {}, locale),
+      null,
+      'correspondenceDeadlineEmail',
+      locale,
+    ),
+  );
+  table.append(head, body);
+  panel.append(table);
+  return panel;
+}
+
+function notificationHeading(text: string): HTMLTableCellElement {
+  const heading = document.createElement('th');
+  heading.scope = 'col';
+  heading.textContent = text;
+  return heading;
+}
+
+function buildNotificationPreferenceRow(
+  user: AuthUser,
+  labelText: string,
+  bell: 'inboxBell' | 'correspondenceBell' | null,
+  email: 'correspondenceDeadlineEmail' | null,
+  locale: Locale,
+): HTMLTableRowElement {
+  const row = document.createElement('tr');
+  const label = document.createElement('th');
+  label.scope = 'row';
+  label.textContent = labelText;
+  row.append(
+    label,
+    notificationPreferenceCell(user, bell, labelText, locale),
+    notificationPreferenceCell(user, email, labelText, locale),
+  );
+  return row;
+}
+
+function notificationPreferenceCell(
+  user: AuthUser,
+  id: 'inboxBell' | 'correspondenceBell' | 'correspondenceDeadlineEmail' | null,
+  labelText: string,
+  locale: Locale,
+): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  if (!id) {
+    cell.className = 'account-notification-unavailable';
+    cell.textContent = '–';
+    return cell;
+  }
+  const control = document.createElement('label');
+  control.className = 'account-preference-switch';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = id;
+  input.checked = normalizeAccountPreferences(user.accountPreferences)[id];
+  const channel = id === 'correspondenceDeadlineEmail' ? 'notificationEmail' : 'notificationBell';
+  input.setAttribute('aria-label', `${labelText}: ${t(`account.${channel}`, {}, locale)}`);
+  const track = document.createElement('span');
+  track.className = 'account-preference-switch-track';
+  control.append(input, track);
+  input.addEventListener('change', () => {
+    void saveAccountPreference(user, id, input.checked, control, cell, locale);
+  });
+  cell.append(control);
+  return cell;
+}
+
+async function saveAccountPreference<Id extends AccountPreferenceId>(
+  user: AuthUser,
+  id: Id,
+  value: AccountPreferences[Id],
+  group: HTMLElement,
+  statusHost: HTMLElement,
+  locale: Locale,
+): Promise<void> {
+  const previous = normalizeAccountPreferences(user.accountPreferences)[id];
+  setPreferenceGroupDisabled(group, true);
+  try {
+    const resp = await fetch('/api/account/preferences', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ [id]: value }),
+    });
+    if (!resp.ok) throw new Error(`account preference save failed: ${resp.status}`);
+    const data = (await resp.json()) as { user: AuthUser };
+    const next = normalizeAccountPreferences(data.user.accountPreferences);
+    user.accountPreferences = next;
+    replaceAccountPreferences(next);
+    setDisplayPreferenceStatus(statusHost, t('account.preferenceSaved', {}, locale));
+    if (id === 'inboxBell' || id === 'correspondenceBell') void refreshNotifications();
+  } catch (err) {
+    console.warn(err);
+    restorePreferenceGroup(group, previous);
+    setDisplayPreferenceStatus(statusHost, t('account.saveFailed', {}, locale));
+  } finally {
+    setPreferenceGroupDisabled(group, false);
+  }
+}
+
+function restorePreferenceGroup(group: HTMLElement, previous: string | boolean): void {
+  for (const input of group.querySelectorAll<HTMLInputElement>('input')) {
+    input.checked =
+      input.type === 'checkbox' ? Boolean(previous) : input.value === String(previous);
+  }
 }
 
 function buildBooleanDisplayPreference(
@@ -514,26 +865,115 @@ function buildSelectDisplayPreference(
   options: readonly string[],
   value: string,
   locale: Locale,
+  onChange?: (value: string, group: HTMLElement, row: HTMLElement) => void,
 ): HTMLElement {
   const row = displayPreferenceRow(id, locale);
-  const select = document.createElement('select');
-  select.name = id;
-  select.className = 'account-preference-select';
-  for (const optionValue of options) {
-    const option = document.createElement('option');
-    option.value = optionValue;
-    option.textContent = displayPreferenceOptionLabel(id, optionValue, locale);
-    option.selected = optionValue === value;
-    select.append(option);
-  }
-  select.addEventListener('change', () => {
-    writeDisplayPreference(id, select.value as DisplayPreferenceValue<typeof id>);
-  });
-  row.append(select);
+  const group = buildSegmentedPreference(
+    id,
+    options.map((optionValue) => ({
+      value: optionValue,
+      label: displayPreferenceOptionLabel(id, optionValue, locale),
+    })),
+    value,
+    (next) => {
+      if (onChange) onChange(next, group, row);
+      else writeDisplayPreference(id, next as DisplayPreferenceValue<typeof id>);
+    },
+  );
+  row.append(group);
   return row;
 }
 
+function queuePieceAnimationPreferenceSave(
+  user: AuthUser,
+  pieceAnimation: NonNullable<AuthUser['displayPreferences']['pieceAnimation']>,
+  group?: HTMLElement,
+  row?: HTMLElement,
+  locale: Locale = currentLocale(),
+): void {
+  if (group) setPreferenceGroupDisabled(group, true);
+  const queued = (pieceAnimationSaveQueues.get(user) ?? Promise.resolve()).then(() =>
+    savePieceAnimationPreference(user, pieceAnimation, row, locale),
+  );
+  pieceAnimationSaveQueues.set(
+    user,
+    queued.finally(() => {
+      if (group) setPreferenceGroupDisabled(group, false);
+    }),
+  );
+}
+
+async function savePieceAnimationPreference(
+  user: AuthUser,
+  pieceAnimation: NonNullable<AuthUser['displayPreferences']['pieceAnimation']>,
+  row: HTMLElement | undefined,
+  locale: Locale,
+): Promise<void> {
+  try {
+    const resp = await fetch('/api/account/display-preferences', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pieceAnimation }),
+    });
+    if (!resp.ok) throw new Error(`display preference save failed: ${resp.status}`);
+    const data = (await resp.json()) as { user: AuthUser };
+    user.displayPreferences = data.user.displayPreferences;
+    setDisplayPreferenceStatus(row, t('account.displayPreferenceSaved', {}, locale));
+  } catch (err) {
+    console.warn(err);
+    setDisplayPreferenceStatus(row, t('account.displayPreferenceSaveFailed', {}, locale));
+  }
+}
+
+function setDisplayPreferenceStatus(row: HTMLElement | undefined, text: string): void {
+  if (!row) return;
+  let status = row.querySelector<HTMLElement>('.account-preference-help');
+  if (!status) {
+    status = document.createElement('span');
+    status.className = 'account-preference-help';
+    status.setAttribute('aria-live', 'polite');
+    row.append(status);
+  }
+  status.textContent = text;
+}
+
+function buildSegmentedPreference(
+  name: string,
+  options: ReadonlyArray<{ value: string; label: string }>,
+  value: string,
+  onChange: (value: string) => void,
+): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'account-preference-options';
+  group.setAttribute('role', 'radiogroup');
+
+  for (const option of options) {
+    const label = document.createElement('label');
+    label.className = 'account-preference-option';
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = name;
+    input.value = option.value;
+    input.checked = option.value === value;
+    input.addEventListener('change', () => {
+      if (input.checked) onChange(option.value);
+    });
+
+    const text = document.createElement('span');
+    text.textContent = option.label;
+    label.append(input, text);
+    group.append(label);
+  }
+
+  return group;
+}
+
 function displayPreferenceRow(id: DisplayPreferenceId, locale: Locale): HTMLElement {
+  return preferenceRow(displayPreferenceLabel(id, locale), displayPreferenceHelp(id, locale));
+}
+
+function preferenceRow(titleText: string, helpText = ''): HTMLElement {
   const row = document.createElement('div');
   row.className = 'account-preference-row';
   const copy = document.createElement('div');
@@ -541,40 +981,22 @@ function displayPreferenceRow(id: DisplayPreferenceId, locale: Locale): HTMLElem
 
   const title = document.createElement('span');
   title.className = 'account-preference-title';
-  title.textContent = displayPreferenceLabel(id, locale);
+  title.textContent = titleText;
   copy.append(title);
+  row.append(copy);
 
-  const helpText = displayPreferenceHelp(id, locale);
   if (helpText) {
     const help = document.createElement('span');
     help.className = 'account-preference-help';
     help.textContent = helpText;
-    copy.append(help);
+    row.append(help);
   }
 
-  row.append(copy);
   return row;
 }
 
 function buildPrivacySettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
-  const panel = buildSettingsPanel(
-    'privacy',
-    t('account.settingsPrivacy', {}, locale),
-    t('account.settingsPrivacyCopy', {}, locale),
-  );
-  const form = document.createElement('form');
-  form.className = 'account-settings-form';
-  form.append(buildProfileVisibilityControl(user, locale));
-  panel.append(form);
-  return panel;
-}
-
-function buildMessagingSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
-  const panel = buildSettingsPanel(
-    'messaging',
-    t('account.settingsMessaging', {}, locale),
-    t('account.settingsMessagingCopy', {}, locale),
-  );
+  const panel = buildSettingsPanel('privacy', t('account.settingsPrivacy', {}, locale), '');
   const form = document.createElement('form');
   form.className = 'account-settings-form';
   form.append(buildDmPolicyControl(user, locale));
@@ -590,128 +1012,458 @@ function buildAccountAccessSettings(user: AuthUser, locale: Locale = currentLoca
   );
   const list = document.createElement('dl');
   list.className = 'account-settings-summary';
+  const emailSummary = summaryRow(t('account.email', {}, locale), user.email);
   list.append(
-    summaryRow(t('account.username', {}, locale), `@${user.handle}`),
-    summaryRow(t('account.email', {}, locale), user.email),
+    emailSummary,
+    summaryRow(
+      t('account.emailStatus', {}, locale),
+      user.emailVerified
+        ? t('account.emailVerified', {}, locale)
+        : t('account.emailUnverified', {}, locale),
+    ),
   );
-  panel.append(list);
+
+  const form = document.createElement('form');
+  form.className = 'account-settings-form account-email-change-form';
+  const newEmail = labeledInput(
+    t('account.newEmail', {}, locale),
+    'email',
+    '',
+    t('account.emailAddress', {}, locale),
+  );
+  newEmail.input.type = 'email';
+  newEmail.input.autocomplete = 'email';
+  newEmail.input.required = true;
+  newEmail.help.textContent = t('account.emailChangeHelp', {}, locale);
+
+  const code = labeledInput(
+    t('account.emailChangeCode', {}, locale),
+    'code',
+    '',
+    t('account.emailChangeCode', {}, locale),
+  );
+  code.input.inputMode = 'numeric';
+  code.input.autocomplete = 'one-time-code';
+  code.wrap.hidden = true;
+
+  const status = document.createElement('p');
+  status.className = 'account-status';
+  status.setAttribute('aria-live', 'polite');
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'landing-setup-start';
+  submit.textContent = t('account.sendVerificationCode', {}, locale);
+
+  let changeId: string | null = null;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    try {
+      if (!changeId) {
+        const resp = await fetch('/api/account/email/start', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: newEmail.input.value }),
+        });
+        const data = (await resp.json()) as {
+          changeId?: string;
+          devCode?: string;
+          error?: string;
+        };
+        if (!resp.ok || !data.changeId)
+          throw new Error(emailChangeErrorMessage(data.error, locale));
+        changeId = data.changeId;
+        newEmail.input.disabled = true;
+        code.wrap.hidden = false;
+        code.input.required = true;
+        if (data.devCode) code.input.value = data.devCode;
+        submit.textContent = t('account.confirmEmailChange', {}, locale);
+        status.textContent = data.devCode
+          ? t('account.devCodeFilled', {}, locale)
+          : t('account.emailChangeCheck', {}, locale);
+        code.input.focus();
+      } else {
+        const resp = await fetch('/api/account/email/confirm', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ changeId, code: code.input.value }),
+        });
+        const data = (await resp.json()) as { user?: AuthUser; error?: string };
+        if (!resp.ok || !data.user) throw new Error(emailChangeErrorMessage(data.error, locale));
+        user.email = data.user.email;
+        user.emailVerified = data.user.emailVerified;
+        const emailValue = emailSummary.querySelector('dd');
+        if (emailValue) emailValue.textContent = user.email;
+        changeId = null;
+        newEmail.input.disabled = false;
+        newEmail.input.value = '';
+        code.input.value = '';
+        code.input.required = false;
+        code.wrap.hidden = true;
+        submit.textContent = t('account.sendVerificationCode', {}, locale);
+        status.textContent = t('account.emailChanged', {}, locale);
+      }
+    } catch (err) {
+      status.textContent =
+        err instanceof Error ? err.message : t('account.emailChangeFailed', {}, locale);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  form.append(newEmail.wrap, code.wrap, submit, status);
+  panel.append(list, form);
   return panel;
 }
 
-function buildDeferredSettings(
-  section: AccountSettingsSection,
-  locale: Locale = currentLocale(),
-): HTMLElement {
+function emailChangeErrorMessage(error: string | undefined, locale: Locale): string {
+  if (error === 'invalid_email') return t('account.invalidEmail', {}, locale);
+  if (error === 'email_unchanged') return t('account.emailUnchanged', {}, locale);
+  if (error === 'email_taken') return t('account.emailTaken', {}, locale);
+  if (error === 'invalid_email_change_code') {
+    return t('account.invalidEmailChangeCode', {}, locale);
+  }
+  if (error === 'rate_limited') return t('account.tooManyAttempts', {}, locale);
+  return t('account.emailChangeFailed', {}, locale);
+}
+
+type AccountSessionView = {
+  id: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  userAgent: string | null;
+  current: boolean;
+};
+
+function buildSecuritySettings(locale: Locale = currentLocale()): HTMLElement {
   const panel = buildSettingsPanel(
-    section,
-    accountSettingsSectionLabel(section, locale),
-    t('account.settingsDeferredCopy', {}, locale),
+    'security',
+    t('account.settingsSecurity', {}, locale),
+    t('account.securityCopy', {}, locale),
   );
-  const note = document.createElement('p');
-  note.className = 'account-settings-deferred';
-  note.textContent = t('account.settingsDeferredNote', {}, locale);
-  panel.append(note);
+  const content = document.createElement('div');
+  content.className = 'account-session-settings';
+  content.textContent = t('account.sessionsLoading', {}, locale);
+  panel.append(content);
+  void loadAccountSessions(content, locale);
   return panel;
+}
+
+async function loadAccountSessions(content: HTMLElement, locale: Locale): Promise<void> {
+  try {
+    const resp = await fetch('/api/account/sessions');
+    const data = (await resp.json()) as { sessions?: AccountSessionView[] };
+    if (!resp.ok || !data.sessions) throw new Error(`session load failed: ${resp.status}`);
+    renderAccountSessions(content, data.sessions, locale);
+  } catch (err) {
+    console.warn(err);
+    content.textContent = t('account.sessionsLoadFailed', {}, locale);
+  }
+}
+
+function renderAccountSessions(
+  content: HTMLElement,
+  sessions: AccountSessionView[],
+  locale: Locale,
+): void {
+  const list = document.createElement('ul');
+  list.className = 'account-session-list';
+  const status = document.createElement('p');
+  status.className = 'account-status';
+  status.setAttribute('aria-live', 'polite');
+
+  for (const session of sessions) {
+    const item = document.createElement('li');
+    item.className = 'account-session-row';
+    item.dataset.sessionId = session.id;
+
+    const details = document.createElement('div');
+    details.className = 'account-session-details';
+    const device = document.createElement('strong');
+    device.textContent = accountSessionDeviceLabel(session.userAgent, locale);
+    const activity = document.createElement('span');
+    activity.textContent = t(
+      'account.sessionLastActive',
+      { date: formatAccountSessionDate(session.lastSeenAt, locale) },
+      locale,
+    );
+    const created = document.createElement('span');
+    created.textContent = t(
+      'account.sessionCreated',
+      { date: formatAccountSessionDate(session.createdAt, locale) },
+      locale,
+    );
+    details.append(device, activity, created);
+
+    if (session.current) {
+      const current = document.createElement('span');
+      current.className = 'account-session-current';
+      current.textContent = t('account.currentSession', {}, locale);
+      item.append(details, current);
+    } else {
+      const revoke = document.createElement('button');
+      revoke.type = 'button';
+      revoke.className = 'landing-setup-back account-session-revoke';
+      revoke.textContent = t('account.revokeSession', {}, locale);
+      revoke.addEventListener('click', async () => {
+        revoke.disabled = true;
+        try {
+          const resp = await fetch(`/api/account/sessions/${encodeURIComponent(session.id)}`, {
+            method: 'DELETE',
+          });
+          if (!resp.ok) throw new Error(`session revoke failed: ${resp.status}`);
+          item.remove();
+          status.textContent = t('account.sessionRevoked', {}, locale);
+          updateRevokeOtherSessionsButton(content);
+        } catch (err) {
+          console.warn(err);
+          revoke.disabled = false;
+          status.textContent = t('account.sessionRevokeFailed', {}, locale);
+        }
+      });
+      item.append(details, revoke);
+    }
+    list.append(item);
+  }
+
+  const revokeOthers = document.createElement('button');
+  revokeOthers.type = 'button';
+  revokeOthers.className = 'landing-setup-back account-session-revoke-others';
+  revokeOthers.textContent = t('account.revokeOtherSessions', {}, locale);
+  revokeOthers.addEventListener('click', async () => {
+    revokeOthers.disabled = true;
+    try {
+      const resp = await fetch('/api/account/sessions', { method: 'DELETE' });
+      if (!resp.ok) throw new Error(`other sessions revoke failed: ${resp.status}`);
+      for (const row of list.querySelectorAll<HTMLElement>('.account-session-row')) {
+        if (!row.querySelector('.account-session-current')) row.remove();
+      }
+      status.textContent = t('account.otherSessionsRevoked', {}, locale);
+      updateRevokeOtherSessionsButton(content);
+    } catch (err) {
+      console.warn(err);
+      revokeOthers.disabled = false;
+      status.textContent = t('account.sessionRevokeFailed', {}, locale);
+    }
+  });
+
+  content.replaceChildren(list, revokeOthers, status);
+  updateRevokeOtherSessionsButton(content);
+}
+
+function updateRevokeOtherSessionsButton(content: HTMLElement): void {
+  const hasOtherSessions = [...content.querySelectorAll('.account-session-row')].some(
+    (row) => !row.querySelector('.account-session-current'),
+  );
+  const button = content.querySelector<HTMLButtonElement>('.account-session-revoke-others');
+  if (button) button.hidden = !hasOtherSessions;
+}
+
+function accountSessionDeviceLabel(userAgent: string | null, locale: Locale): string {
+  if (!userAgent) return t('account.unknownDevice', {}, locale);
+  const browser = userAgent.includes('Firefox/')
+    ? 'Firefox'
+    : userAgent.includes('Edg/')
+      ? 'Edge'
+      : userAgent.includes('Chrome/')
+        ? 'Chrome'
+        : userAgent.includes('Safari/')
+          ? 'Safari'
+          : null;
+  const device = /iPhone|iPad/.test(userAgent)
+    ? 'iPhone or iPad'
+    : userAgent.includes('Android')
+      ? 'Android'
+      : userAgent.includes('Windows')
+        ? 'Windows'
+        : userAgent.includes('Mac OS X')
+          ? 'Mac'
+          : userAgent.includes('Linux')
+            ? 'Linux'
+            : null;
+  if (browser && device) return `${browser} · ${device}`;
+  return browser ?? device ?? t('account.unknownDevice', {}, locale);
+}
+
+function formatAccountSessionDate(value: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function buildCloseAccountSettings(user: AuthUser, locale: Locale = currentLocale()): HTMLElement {
+  const panel = buildSettingsPanel(
+    'close',
+    t('account.settingsCloseAccount', {}, locale),
+    t('account.closeAccountCopy', {}, locale),
+  );
+  const consequences = document.createElement('ul');
+  consequences.className = 'account-close-consequences';
+  for (const key of [
+    'account.closeRemovesIdentity',
+    'account.closePreservesHistory',
+    'account.closeRevokesSessions',
+  ] as const) {
+    const item = document.createElement('li');
+    item.textContent = t(key, {}, locale);
+    consequences.append(item);
+  }
+
+  const form = document.createElement('form');
+  form.className = 'account-settings-form account-close-form';
+  const acknowledgement = document.createElement('label');
+  acknowledgement.className = 'account-close-acknowledgement';
+  const acknowledgeInput = document.createElement('input');
+  acknowledgeInput.type = 'checkbox';
+  acknowledgeInput.required = true;
+  const acknowledgeText = document.createElement('span');
+  acknowledgeText.textContent = t('account.closeAcknowledge', {}, locale);
+  acknowledgement.append(acknowledgeInput, acknowledgeText);
+
+  const code = labeledInput(
+    t('account.closeAccountCode', {}, locale),
+    'code',
+    '',
+    t('account.closeAccountCode', {}, locale),
+  );
+  code.input.inputMode = 'numeric';
+  code.input.autocomplete = 'one-time-code';
+  code.wrap.hidden = true;
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'account-danger-button';
+  submit.textContent = t('account.sendClosureCode', {}, locale);
+
+  const status = document.createElement('p');
+  status.className = 'account-status';
+  status.setAttribute('aria-live', 'polite');
+
+  let closureId: string | null = null;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    try {
+      if (!closureId) {
+        const resp = await fetch('/api/account/closure/start', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        });
+        const data = (await resp.json()) as {
+          closureId?: string;
+          devCode?: string;
+          error?: string;
+        };
+        if (!resp.ok || !data.closureId) {
+          throw new Error(accountClosureErrorMessage(data.error, locale));
+        }
+        closureId = data.closureId;
+        acknowledgeInput.disabled = true;
+        code.wrap.hidden = false;
+        code.input.required = true;
+        if (data.devCode) code.input.value = data.devCode;
+        submit.textContent = t('account.confirmAccountClosure', {}, locale);
+        status.textContent = data.devCode
+          ? t('account.devCodeFilled', {}, locale)
+          : t('account.closeAccountCheckEmail', { email: user.email }, locale);
+        code.input.focus();
+      } else {
+        const resp = await fetch('/api/account/closure/confirm', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ closureId, code: code.input.value }),
+        });
+        const data = (await resp.json()) as { closed?: boolean; error?: string };
+        if (!resp.ok || !data.closed) {
+          throw new Error(accountClosureErrorMessage(data.error, locale));
+        }
+        resetIdentity();
+        setAccountNavUser(null);
+        const complete = document.createElement('p');
+        complete.className = 'account-close-complete';
+        complete.textContent = t('account.accountClosed', {}, locale);
+        const home = document.createElement('a');
+        home.className = 'landing-setup-back';
+        home.href = localizedHref('/', locale);
+        home.textContent = t('account.returnHome', {}, locale);
+        form.replaceChildren(complete, home);
+      }
+    } catch (err) {
+      status.textContent =
+        err instanceof Error ? err.message : t('account.closeAccountFailed', {}, locale);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  form.append(acknowledgement, code.wrap, submit, status);
+  panel.append(consequences, form);
+  return panel;
+}
+
+function accountClosureErrorMessage(error: string | undefined, locale: Locale): string {
+  if (error === 'active_subscription') return t('account.closeActiveSubscription', {}, locale);
+  if (error === 'invalid_account_closure_code') {
+    return t('account.invalidClosureCode', {}, locale);
+  }
+  if (error === 'rate_limited') return t('account.tooManyAttempts', {}, locale);
+  return t('account.closeAccountFailed', {}, locale);
 }
 
 // DM policy select: saves immediately on change via the preferences PATCH
 // (independent of the profile form's save button, like the locale picker).
 // Replies in existing threads always deliver; the policy gates new threads.
 function buildDmPolicyControl(user: AuthUser, locale: Locale): HTMLElement {
-  const wrap = document.createElement('label');
-  wrap.className = 'account-field';
+  const row = preferenceRow(
+    t('account.dmPolicyLabel', {}, locale),
+    t('account.dmPolicyHelp', {}, locale),
+  );
 
-  const label = document.createElement('span');
-  label.textContent = t('account.dmPolicyLabel', {}, locale);
+  const options = [
+    { value: 'never', label: t('account.dmPolicyNever', {}, locale) },
+    { value: 'friends', label: t('account.dmPolicyFriends', {}, locale) },
+    { value: 'always', label: t('account.dmPolicyAlways', {}, locale) },
+  ];
+  const group = buildSegmentedPreference('dmPolicy', options, user.dmPolicy, (next) => {
+    void saveDmPolicy(next as AuthUser['dmPolicy']);
+  });
+  const help = row.querySelector<HTMLElement>('.account-preference-help');
 
-  const select = document.createElement('select');
-  for (const [value, key] of [
-    ['always', 'account.dmPolicyAlways'],
-    ['friends', 'account.dmPolicyFriends'],
-    ['never', 'account.dmPolicyNever'],
-  ] as const) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = t(key, {}, locale);
-    option.selected = user.dmPolicy === value;
-    select.append(option);
-  }
-
-  const help = document.createElement('span');
-  help.className = 'account-field-help';
-  help.textContent = t('account.dmPolicyHelp', {}, locale);
-
-  select.addEventListener('change', async () => {
+  async function saveDmPolicy(next: AuthUser['dmPolicy']): Promise<void> {
     const previous = user.dmPolicy;
-    select.disabled = true;
+    setPreferenceGroupDisabled(group, true);
     try {
       const resp = await fetch('/api/account/preferences', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dmPolicy: select.value }),
+        body: JSON.stringify({ dmPolicy: next }),
       });
       if (!resp.ok) throw new Error(`dm policy save failed: ${resp.status}`);
       const data = (await resp.json()) as { user: AuthUser };
       user.dmPolicy = data.user.dmPolicy;
-      help.textContent = t('account.dmPolicySaved', {}, locale);
+      if (help) help.textContent = t('account.dmPolicySaved', {}, locale);
     } catch (err) {
       console.warn(err);
-      select.value = previous;
-      help.textContent = t('account.saveFailed', {}, locale);
+      for (const input of group.querySelectorAll<HTMLInputElement>('input')) {
+        input.checked = input.value === previous;
+      }
+      if (help) help.textContent = t('account.saveFailed', {}, locale);
     } finally {
-      select.disabled = false;
+      setPreferenceGroupDisabled(group, false);
     }
-  });
-
-  wrap.append(label, select, help);
-  return wrap;
-}
-
-function buildProfileVisibilityControl(user: AuthUser, locale: Locale): HTMLElement {
-  const wrap = document.createElement('label');
-  wrap.className = 'account-field';
-
-  const label = document.createElement('span');
-  label.textContent = t('account.profileVisibilityLabel', {}, locale);
-
-  const select = document.createElement('select');
-  select.name = 'profileVisibility';
-  for (const value of profileVisibilityOptions) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = profileVisibilityOptionLabel(value, locale);
-    option.selected = user.profileVisibility === value;
-    select.append(option);
   }
 
-  const help = document.createElement('span');
-  help.className = 'account-field-help';
-  help.textContent = profileVisibilityHelp(user.profileVisibility, locale);
+  const helpNode = row.querySelector('.account-preference-help');
+  row.insertBefore(group, helpNode);
+  return row;
+}
 
-  select.addEventListener('change', async () => {
-    const previous = user.profileVisibility;
-    select.disabled = true;
-    try {
-      const resp = await fetch('/api/account/preferences', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ profileVisibility: select.value }),
-      });
-      if (!resp.ok) throw new Error(`profile visibility save failed: ${resp.status}`);
-      const data = (await resp.json()) as { user: AuthUser };
-      user.profileVisibility = data.user.profileVisibility;
-      help.textContent = t('account.profileVisibilitySaved', {}, locale);
-    } catch (err) {
-      console.warn(err);
-      select.value = previous;
-      help.textContent = t('account.saveFailed', {}, locale);
-    } finally {
-      select.disabled = false;
-    }
-  });
-
-  wrap.append(label, select, help);
-  return wrap;
+function setPreferenceGroupDisabled(group: HTMLElement, disabled: boolean): void {
+  for (const input of group.querySelectorAll<HTMLInputElement>('input')) input.disabled = disabled;
 }
 
 function summaryRow(labelText: string, valueText: string): HTMLElement {
@@ -733,6 +1485,7 @@ function accountSettingsSectionFromPath(
     normalized === '/account/settings'
       ? 'profile'
       : normalized.match(/^\/account\/settings\/([^/]+)$/)?.[1];
+  if (raw === 'messaging') return 'privacy';
   return isAccountSettingsSection(raw) ? raw : 'profile';
 }
 
@@ -755,13 +1508,14 @@ function accountSettingsSectionLabel(
   const keyBySection = {
     profile: 'account.settingsEditProfile',
     display: 'account.settingsDisplay',
-    'game-behavior': 'account.settingsGameBehavior',
+    clock: 'account.settingsClock',
+    behavior: 'account.settingsGameBehavior',
     privacy: 'account.settingsPrivacy',
-    messaging: 'account.settingsMessaging',
     notifications: 'account.settingsNotifications',
+    username: 'account.settingsUsername',
     account: 'account.settingsAccount',
     security: 'account.settingsSecurity',
-    'close-account': 'account.settingsCloseAccount',
+    close: 'account.settingsCloseAccount',
   } as const;
   return t(keyBySection[section], {}, locale);
 }
@@ -818,21 +1572,6 @@ function displayPreferenceOptionLabel(
   return key ? t(key, {}, locale) : value;
 }
 
-function profileVisibilityOptionLabel(
-  visibility: AuthUser['profileVisibility'],
-  locale: Locale,
-): string {
-  if (visibility === 'public') return t('account.profileVisibilityPublic', {}, locale);
-  if (visibility === 'unlisted') return t('account.profileVisibilityUnlisted', {}, locale);
-  return t('account.profileVisibilityPrivate', {}, locale);
-}
-
-function profileVisibilityHelp(visibility: AuthUser['profileVisibility'], locale: Locale): string {
-  if (visibility === 'public') return t('account.profileVisibilityPublicHelp', {}, locale);
-  if (visibility === 'unlisted') return t('account.profileVisibilityUnlistedHelp', {}, locale);
-  return t('account.profileVisibilityPrivateHelp', {}, locale);
-}
-
 function labeledInput(
   labelText: string,
   name: string,
@@ -851,6 +1590,28 @@ function labeledInput(
   help.className = 'account-field-help';
   wrap.append(label, input, help);
   return { help, input, wrap };
+}
+
+function labeledTextarea(
+  labelText: string,
+  name: string,
+  value: string,
+  placeholder: string,
+  rows: number,
+): { help: HTMLSpanElement; input: HTMLTextAreaElement; wrap: HTMLLabelElement } {
+  const wrap = document.createElement('label');
+  wrap.className = 'account-field';
+  const label = document.createElement('span');
+  label.textContent = labelText;
+  const input = document.createElement('textarea');
+  input.name = name;
+  input.value = value;
+  input.placeholder = placeholder;
+  input.rows = rows;
+  const help = document.createElement('span');
+  help.className = 'account-field-help';
+  wrap.append(label, input, help);
+  return { wrap, input, help };
 }
 
 function accountSettingsErrorMessage(
@@ -889,40 +1650,6 @@ function formatAccountDate(date: Date, locale: Locale): string {
 
 // ── Login / register form ────────────────────────────────────────────────────
 
-function buildAccountAuthTabs(
-  active: 'login' | 'register',
-  locale: Locale = currentLocale(),
-): HTMLElement {
-  const tabs = document.createElement('div');
-  tabs.className = 'account-auth-tabs';
-  tabs.setAttribute('role', 'tablist');
-  tabs.setAttribute('aria-label', t('account.access', {}, locale));
-
-  const signIn = buildAccountAuthTab(
-    t('nav.signIn', {}, locale),
-    localizedHref('/account?tab=login', locale),
-    active === 'login',
-  );
-  const register = buildAccountAuthTab(
-    t('nav.register', {}, locale),
-    localizedHref('/account?tab=register', locale),
-    active === 'register',
-  );
-
-  tabs.append(signIn, register);
-  return tabs;
-}
-
-function buildAccountAuthTab(label: string, href: string, isActive: boolean): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.href = href;
-  link.textContent = label;
-  link.className = isActive ? 'account-auth-tab active' : 'account-auth-tab';
-  link.setAttribute('role', 'tab');
-  link.setAttribute('aria-selected', isActive ? 'true' : 'false');
-  return link;
-}
-
 function buildLoginForm(
   tab: 'login' | 'register' = 'login',
   onAuth: (user: AuthUser) => void = () => undefined,
@@ -931,8 +1658,7 @@ function buildLoginForm(
 ): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'account-panel account-auth-panel';
-
-  panel.append(buildAccountAuthTabs(tab, locale));
+  panel.dataset.entryPoint = tab;
 
   const eyebrow = document.createElement('span');
   eyebrow.className = 'account-eyebrow';
@@ -940,128 +1666,340 @@ function buildLoginForm(
 
   const title = document.createElement('h1');
   title.className = 'site-section-heading';
-  title.textContent =
-    tab === 'register' ? t('account.createAccountTitle', {}, locale) : t('nav.signIn', {}, locale);
+  title.textContent = t('account.continueTitle', {}, locale);
 
   const copy = document.createElement('p');
   copy.className = 'account-copy';
-  copy.textContent =
-    tab === 'register' ? t('account.registerCopy', {}, locale) : t('account.loginCopy', {}, locale);
+  copy.textContent = t('account.continueCopy', {}, locale);
 
   const form = document.createElement('form');
   form.className = 'account-form';
 
+  const emailField = document.createElement('label');
+  emailField.className = 'account-auth-field';
+  const emailLabel = document.createElement('span');
+  emailLabel.className = 'account-auth-field-label';
+  emailLabel.textContent = t('account.emailAddress', {}, locale);
   const email = document.createElement('input');
   email.type = 'email';
   email.name = 'email';
   email.autocomplete = 'email';
   email.placeholder = t('account.emailAddress', {}, locale);
+  email.setAttribute('aria-describedby', 'account-auth-email-help');
   email.required = true;
+  const emailHelp = document.createElement('span');
+  emailHelp.id = 'account-auth-email-help';
+  emailHelp.className = 'account-auth-field-help';
+  emailHelp.textContent = t('account.emailCodeHelp', {}, locale);
+  emailField.append(emailLabel, email, emailHelp);
 
+  const emailStage = document.createElement('div');
+  emailStage.className = 'account-auth-stage account-auth-email-stage';
+  const newAccountNotice = document.createElement('p');
+  newAccountNotice.className = 'account-auth-new-account';
+  newAccountNotice.textContent = t('account.newAccountNotice', {}, locale);
+  emailStage.append(emailField, newAccountNotice);
+
+  const codeField = document.createElement('label');
+  codeField.className = 'account-auth-field';
+  const codeLabel = document.createElement('span');
+  codeLabel.className = 'account-auth-field-label';
+  codeLabel.textContent = t('account.loginCode', {}, locale);
   const code = document.createElement('input');
   code.type = 'text';
   code.name = 'code';
   code.inputMode = 'numeric';
   code.autocomplete = 'one-time-code';
   code.placeholder = t('account.loginCode', {}, locale);
-  code.hidden = true;
+  code.maxLength = 8;
+  code.pattern = '[0-9]{8}';
+  code.setAttribute('aria-describedby', 'account-auth-status');
+  codeField.append(codeLabel, code);
+
+  const codeStage = document.createElement('div');
+  codeStage.className = 'account-auth-stage account-auth-code-stage';
+  codeStage.hidden = true;
+  const codePrompt = document.createElement('p');
+  codePrompt.className = 'account-auth-code-prompt';
+  const codeTiming = document.createElement('p');
+  codeTiming.className = 'account-auth-code-timing';
+  const codeActions = document.createElement('div');
+  codeActions.className = 'account-auth-code-actions';
+  const resendCode = document.createElement('button');
+  resendCode.type = 'button';
+  resendCode.className = 'account-auth-reset account-auth-resend';
+  const changeEmail = document.createElement('button');
+  changeEmail.type = 'button';
+  changeEmail.className = 'account-auth-reset';
+  changeEmail.textContent = t('account.useDifferentEmail', {}, locale);
+  codeActions.append(resendCode, changeEmail);
+  codeStage.append(codePrompt, codeField, codeTiming, codeActions);
 
   const submit = document.createElement('button');
   submit.type = 'submit';
   submit.className = 'landing-setup-start';
   submit.textContent = t('account.sendCode', {}, locale);
+  submit.setAttribute('aria-describedby', 'account-auth-status');
 
   const status = document.createElement('p');
+  status.id = 'account-auth-status';
   status.className = 'account-status';
+  status.hidden = true;
   status.setAttribute('aria-live', 'polite');
+  status.setAttribute('role', 'status');
 
   let loginId: string | null = null;
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  let expiresAt = 0;
+  let resendAvailableAt = 0;
+  let countdownTimer: number | null = null;
+  let authBusy = false;
+
+  const clearCountdown = (): void => {
+    if (countdownTimer !== null) window.clearInterval(countdownTimer);
+    countdownTimer = null;
+  };
+
+  const showStatus = (message: string, state: 'error' | 'success'): void => {
+    status.textContent = message;
+    status.hidden = false;
+    status.dataset.state = state;
+  };
+
+  const hideStatus = (): void => {
+    status.hidden = true;
+    status.textContent = '';
+    status.removeAttribute('data-state');
+  };
+
+  const updateCountdown = (): void => {
+    const now = Date.now();
+    const expiresIn = Math.max(0, expiresAt - now);
+    const resendIn = Math.max(0, resendAvailableAt - now);
+    codeTiming.textContent =
+      expiresIn > 0
+        ? t('account.codeExpiresIn', { time: formatAuthCountdown(expiresIn) }, locale)
+        : t('account.codeExpired', {}, locale);
+    codeTiming.dataset.state = expiresIn > 0 ? 'active' : 'expired';
+    submit.disabled = authBusy || expiresIn <= 0;
+    resendCode.disabled = authBusy || resendIn > 0;
+    changeEmail.disabled = authBusy;
+    resendCode.textContent =
+      resendIn > 0
+        ? t('account.resendIn', { time: formatAuthCountdown(resendIn) }, locale)
+        : t('account.resendCode', {}, locale);
+    if (expiresIn <= 0 && resendIn <= 0) clearCountdown();
+  };
+
+  const startCountdown = (): void => {
+    clearCountdown();
+    updateCountdown();
+    countdownTimer = window.setInterval(updateCountdown, 1_000);
+  };
+
+  const resetToEmail = (): void => {
+    clearCountdown();
+    loginId = null;
+    expiresAt = 0;
+    resendAvailableAt = 0;
+    authBusy = false;
+    email.readOnly = false;
+    email.removeAttribute('aria-invalid');
+    code.value = '';
+    code.required = false;
+    code.removeAttribute('aria-invalid');
+    emailStage.hidden = false;
+    codeStage.hidden = true;
+    hideStatus();
+    submit.disabled = false;
+    changeEmail.disabled = false;
+    submit.textContent = t('account.sendCode', {}, locale);
+    email.focus();
+  };
+
+  changeEmail.addEventListener('click', () => {
+    resetToEmail();
+  });
+
+  const requestCode = async (isResend: boolean): Promise<void> => {
+    if (authBusy) return;
+    authBusy = true;
     submit.disabled = true;
+    resendCode.disabled = true;
+    changeEmail.disabled = true;
+    hideStatus();
+    email.removeAttribute('aria-invalid');
+    code.removeAttribute('aria-invalid');
+    submit.textContent = t('account.sendCodeBusy', {}, locale);
+    if (isResend) resendCode.textContent = t('account.sendCodeBusy', {}, locale);
     try {
-      if (!loginId) {
-        const { data, resp } = await fetchAuthJson<{
-          loginId?: string;
-          devCode?: string;
-          error?: string;
-        }>('/api/auth/email/start', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ email: email.value }),
-        });
-        if (!resp.ok || !data.loginId)
-          throw new Error(data.error ?? `start failed: ${resp.status}`);
-        loginId = data.loginId;
-        code.hidden = false;
-        code.required = true;
-        if (data.devCode) code.value = data.devCode;
-        submit.textContent = t('account.confirm', {}, locale);
-        status.textContent = data.devCode
-          ? t('account.devCodeFilled', {}, locale)
-          : t('account.checkEmail', {}, locale);
-        code.focus();
-      } else {
-        const { data, resp } = await fetchAuthJson<{
-          user?: AuthUser;
-          isNewUser?: boolean;
-          error?: string;
-        }>('/api/auth/email/confirm', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ loginId, code: code.value }),
-        });
-        if (!resp.ok || !data.user) throw new Error(data.error ?? `confirm failed: ${resp.status}`);
-        // Identify immediately; the shared account-nav cache is updated below,
-        // so there may be no full page reload before the next pageview.
-        identify(data.user.id, {
-          handle: data.user.handle,
-          account_role: data.user.accountRole,
-          email_verified: data.user.emailVerified,
-        });
-        if (data.isNewUser) track('signup_completed');
-        setAccountNavUser(data.user);
-        if (options.redirectOnSuccess) {
-          window.location.href = requestedAuthReferrer() ?? localizedHref('/', locale);
-          return;
-        }
-        onAuth(data.user);
+      const { data, resp } = await fetchAuthJson<{
+        devCode?: string;
+        email?: string;
+        error?: string;
+        expiresAt?: string;
+        loginId?: string;
+        resendAvailableAt?: string;
+      }>('/api/auth/email/start', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: email.value }),
+      });
+      if (!resp.ok || !data.loginId || !data.expiresAt || !data.resendAvailableAt) {
+        throw new Error(data.error ?? `start failed: ${resp.status}`);
       }
+      loginId = data.loginId;
+      expiresAt = Date.parse(data.expiresAt);
+      resendAvailableAt = Date.parse(data.resendAvailableAt);
+      if (!Number.isFinite(expiresAt) || !Number.isFinite(resendAvailableAt)) {
+        throw new Error('auth_bad_response');
+      }
+      email.readOnly = true;
+      emailStage.hidden = true;
+      codeStage.hidden = false;
+      code.required = true;
+      codePrompt.textContent = t('account.codePrompt', { email: email.value }, locale);
+      code.value = data.devCode ?? '';
+      submit.textContent = t('account.confirm', {}, locale);
+      if (data.devCode) showStatus(t('account.devCodeFilled', {}, locale), 'success');
+      else if (isResend) showStatus(t('account.codeResent', {}, locale), 'success');
+      startCountdown();
+      code.focus();
+      code.select();
     } catch (err) {
-      status.textContent =
+      showStatus(
         err instanceof Error
           ? authErrorMessage(err.message, locale)
-          : t('account.signInFailed', {}, locale);
-    } finally {
+          : t('account.signInFailed', {}, locale),
+        'error',
+      );
+      if (!loginId) email.setAttribute('aria-invalid', 'true');
       submit.disabled = false;
+      submit.textContent = loginId
+        ? t('account.confirm', {}, locale)
+        : t('account.sendCode', {}, locale);
+      if (loginId) updateCountdown();
+    } finally {
+      authBusy = false;
+      if (loginId) updateCountdown();
+      else submit.disabled = false;
+    }
+  };
+
+  resendCode.addEventListener('click', () => {
+    void requestCode(true);
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!loginId) {
+      await requestCode(false);
+      return;
+    }
+    if (expiresAt <= Date.now()) {
+      showStatus(t('account.codeExpired', {}, locale), 'error');
+      code.setAttribute('aria-invalid', 'true');
+      return;
+    }
+    if (authBusy) return;
+    authBusy = true;
+    submit.disabled = true;
+    changeEmail.disabled = true;
+    hideStatus();
+    email.removeAttribute('aria-invalid');
+    code.removeAttribute('aria-invalid');
+    submit.textContent = t('account.confirmBusy', {}, locale);
+    try {
+      const { data, resp } = await fetchAuthJson<{
+        user?: AuthUser;
+        isNewUser?: boolean;
+        error?: string;
+      }>('/api/auth/email/confirm', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ loginId, code: code.value }),
+      });
+      if (!resp.ok || !data.user) throw new Error(data.error ?? `confirm failed: ${resp.status}`);
+      clearCountdown();
+      // Identify immediately; the shared account-nav cache is updated below,
+      // so there may be no full page reload before the next pageview.
+      identify(data.user.id, {
+        handle: data.user.handle,
+        account_role: data.user.accountRole,
+        email_verified: data.user.emailVerified,
+      });
+      if (data.isNewUser) track('signup_completed');
+      setAccountNavUser(data.user);
+      if (options.redirectOnSuccess) {
+        window.location.href = requestedAuthReferrer() ?? localizedHref('/', locale);
+        return;
+      }
+      onAuth(data.user);
+    } catch (err) {
+      showStatus(
+        err instanceof Error
+          ? authErrorMessage(err.message, locale)
+          : t('account.signInFailed', {}, locale),
+        'error',
+      );
+      code.setAttribute('aria-invalid', 'true');
+    } finally {
+      authBusy = false;
+      submit.textContent = t('account.confirm', {}, locale);
+      updateCountdown();
     }
   });
 
-  form.append(email, code, submit, status);
+  form.append(emailStage, codeStage, submit, status);
 
-  // Terms/Privacy assent at the point of account creation. The footer is now
-  // homepage-only, so the register form is the surface that surfaces these.
-  if (tab === 'register') {
-    const legal = document.createElement('p');
-    legal.className = 'account-legal';
-    const termsLink = document.createElement('a');
-    termsLink.href = localizedHref('/terms', locale);
-    termsLink.textContent = t('footer.terms', {}, locale);
-    const privacyLink = document.createElement('a');
-    privacyLink.href = localizedHref('/privacy', locale);
-    privacyLink.textContent = t('footer.privacy', {}, locale);
-    legal.append(
-      t('account.legalPrefix', {}, locale),
-      termsLink,
-      t('account.legalAnd', {}, locale),
-      privacyLink,
-      t('account.legalSuffix', {}, locale),
-    );
-    form.append(legal);
+  // Verification can create an account from either historical entry point, so
+  // expectations and legal assent must be visible in both cases.
+  const principles = document.createElement('details');
+  principles.className = 'account-auth-principles';
+  principles.open = tab === 'register';
+  const principlesSummary = document.createElement('summary');
+  principlesSummary.textContent = t('account.principlesSummary', {}, locale);
+  const principlesBody = document.createElement('div');
+  principlesBody.className = 'account-auth-principles-body';
+  const principlesTitle = document.createElement('h2');
+  principlesTitle.textContent = t('account.registerPrinciplesTitle', {}, locale);
+  const principlesList = document.createElement('ul');
+  for (const key of [
+    'account.registerFairPlay',
+    'account.registerRespect',
+    'account.registerOneAccount',
+  ] as const) {
+    const item = document.createElement('li');
+    item.textContent = t(key, {}, locale);
+    principlesList.append(item);
   }
+  principlesBody.append(principlesTitle, principlesList);
+  principles.append(principlesSummary, principlesBody);
+
+  const legal = document.createElement('p');
+  legal.className = 'account-legal';
+  const termsLink = document.createElement('a');
+  termsLink.href = localizedHref('/terms', locale);
+  termsLink.textContent = t('footer.terms', {}, locale);
+  const privacyLink = document.createElement('a');
+  privacyLink.href = localizedHref('/privacy', locale);
+  privacyLink.textContent = t('footer.privacy', {}, locale);
+  legal.append(
+    t('account.legalPrefix', {}, locale),
+    termsLink,
+    t('account.legalAnd', {}, locale),
+    privacyLink,
+    t('account.legalSuffix', {}, locale),
+  );
+  form.append(principles, legal);
 
   panel.append(eyebrow, title, copy, form);
   return panel;
+}
+
+function formatAuthCountdown(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
 }
 
 async function fetchAuthJson<T>(
@@ -1089,7 +2027,9 @@ function authErrorMessage(value: string, locale: Locale = currentLocale()): stri
   if (value === 'email_delivery_failed') return t('account.emailDeliveryFailed', {}, locale);
   if (value === 'persistence_disabled') return t('account.persistenceDisabled', {}, locale);
   if (value === 'invalid_login_code') return t('account.invalidLoginCode', {}, locale);
+  if (value === 'rate_limited') return t('account.tooManyAttempts', {}, locale);
   if (value === 'invalid_email') return t('account.invalidEmail', {}, locale);
+  if (value === 'account_closed') return t('account.accountAlreadyClosed', {}, locale);
   return t('account.signInFailed', {}, locale);
 }
 

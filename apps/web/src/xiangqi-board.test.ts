@@ -35,6 +35,36 @@ const NON_SELECTABLE_RIVER_GROUP =
   '<g class="xq-live-river" aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;">';
 
 describe('standard Xiangqi board SVG', () => {
+  it('renders a 9 by 10 square grid without moving the logical board centers', () => {
+    const state = createInitialXiangqiState('xq-board-cell-layout');
+    const view = getStandardXiangqiPlayerView(state, 'red');
+    const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
+    expect(svg).toContain('data-xiangqi-layout="cell"');
+    expect(svg).toContain('viewBox="6 6 540 612"');
+    expect(svg.match(/class="xq-live-cell xq-live-cell--/g)).toHaveLength(90);
+    expect(svg.match(/class="xq-live-cell-line"/g)).toHaveLength(24);
+    expect(svg).toContain(
+      '<rect class="xq-live-cell-river" x="6" y="306" width="540" height="12"/>',
+    );
+    expect(svg.match(/class="xq-live-palace-band"/g)).toHaveLength(2);
+    expect(svg).toContain('<g class="xq-live-palace"></g>');
+    expect(svg).not.toContain('<line class="xq-live-cell-line" x1="6" y1="6"');
+    // The river is a real gutter: the fifth row ends at 306 and the sixth begins
+    // at 318. Red a1 shifts with its half and remains centered in its square.
+    expect(svg).toContain('x="6" y="246" width="60" height="60"');
+    expect(svg).toContain('x="6" y="318" width="60" height="60"');
+    expect(svg).toContain('x="9" y="561" width="54" height="54"');
+  });
+
+  it('retains the traditional palace diagonals on intersection boards', () => {
+    const state = createInitialXiangqiState('xq-board-classic-palace');
+    const view = getStandardXiangqiPlayerView(state, 'red');
+    const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'intersection' });
+
+    expect(svg).toContain('<line x1="216" y1="36" x2="336" y2="156"/>');
+    expect(svg).toContain('<line x1="336" y1="36" x2="216" y2="156"/>');
+  });
+
   it('renders the river label as theme-controlled non-selectable board furniture', () => {
     const state = createInitialXiangqiState('xq-board-render');
     const view = getStandardXiangqiPlayerView(state, 'red');
@@ -47,6 +77,14 @@ describe('standard Xiangqi board SVG', () => {
 
   it('re-exports ONE renderer from live-xiangqi (no duplicate implementation)', () => {
     expect(renderLiveXiangqiBoardSvg).toBe(renderSharedXiangqiBoardSvg);
+  });
+
+  it('keeps the background full-bleed so the CSS wrapper owns responsive corner clipping', () => {
+    const view = getStandardXiangqiPlayerView(createInitialXiangqiState('xq-board-corners'), 'red');
+    const svg = renderSharedXiangqiBoardSvg(view);
+
+    expect(svg).toContain('<rect class="xq-live-bg" x="0" y="0" width="552" height="612"/>');
+    expect(svg).not.toMatch(/class="xq-live-bg"[^>]*\srx=/);
   });
 
   it('marks the last move with an origin shadow and a destination ring', () => {
@@ -64,7 +102,7 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toContain(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="27"/>',
     );
-    expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"/>');
+    expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="26"/>');
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
@@ -73,7 +111,35 @@ describe('standard Xiangqi board SVG', () => {
     expect(flipped).toContain(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="156" r="27"/>',
     );
-    expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="29"/>');
+    expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="26"/>');
+  });
+
+  it('marks the last move with complete source and destination cells on a square grid', () => {
+    const state = applyXiangqiMove(createInitialXiangqiState('xq-board-cell-lastmove'), {
+      from: 'b3',
+      to: 'e3',
+    });
+    const view = getStandardXiangqiPlayerView(state, 'red');
+
+    // The red-perspective bottom half includes the 12-unit river gutter:
+    // b3 center=(96,468), e3 center=(276,468), then inset half a 60-unit cell.
+    const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
+    expect(svg).toContain(
+      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="66" y="438" width="60" height="60"/>',
+    );
+    expect(svg).toContain(
+      '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="438" width="60" height="60"/>',
+    );
+    expect(svg).not.toContain('xq-live-lastmove-cell');
+    expect(svg).not.toContain('xq-live-lastmove-ring');
+
+    const flipped = renderSharedXiangqiBoardSvg(view, 'black', { layout: 'cell' });
+    expect(flipped).toContain(
+      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="66" y="126" width="60" height="60"/>',
+    );
+    expect(flipped).toContain(
+      '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="126" width="60" height="60"/>',
+    );
   });
 
   it('renders no last-move marker when the view has no lastMove', () => {
@@ -81,6 +147,7 @@ describe('standard Xiangqi board SVG', () => {
     expect(view.lastMove).toBeUndefined();
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-cell');
     expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-ring');
+    expect(renderSharedXiangqiBoardSvg(view)).not.toContain('xq-live-lastmove-square');
   });
 });
 
@@ -117,6 +184,25 @@ describe('keyed piece slots + animateXiangqiBoardMove', () => {
       { transform: 'none' },
     ]);
     expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 250 });
+  });
+
+  it('includes the mounted river gutter in a cross-river glide', () => {
+    const move = { from: 'b3', to: 'b7' } as const;
+    const state = applyXiangqiMove(createInitialXiangqiState('xq-board-cell-anim'), move);
+    const view = getStandardXiangqiPlayerView(state, 'red');
+    const host = document.createElement('div');
+    host.innerHTML = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
+    const slot = host.querySelector('[data-piece-square="b7"]');
+    const animate = vi.fn();
+    Object.assign(slot as object, { animate });
+
+    animateXiangqiBoardMove(host, move, 'red');
+
+    // Classic b3-b7 spans 240 units. The square board adds its 12-unit river.
+    expect(animate.mock.calls[0]![0]).toEqual([
+      { transform: 'translate(0px, 252px)' },
+      { transform: 'none' },
+    ]);
   });
 
   it('reverse-animates the origin slot on a back-step and skips missing slots', () => {
@@ -240,6 +326,23 @@ describe('interactive board arrow overlay', () => {
     board.setArrows([]);
     expect(host.querySelectorAll('.xq-live-arrows .xq-arrow')).toHaveLength(0);
     host.remove();
+  });
+
+  it('patches streamed arrows and markers using the mounted square-grid geometry', () => {
+    window.history.replaceState(null, '', '/analysis/xiangqi?xqLayout=cell');
+    const { host, board } = mountBoard();
+    try {
+      board.setArrows([{ from: 'b3', to: 'b7' }]);
+      board.setMarkers([{ square: 'b3', kind: 'circle' }]);
+
+      const arrow = host.querySelector('.xq-live-arrows')?.innerHTML ?? '';
+      expect(arrow).toContain('<line x1="96" y1="456" x2="96" y2="260"');
+      expect(arrow).toContain('<polygon points="96,240 107,260 85,260"');
+      expect(host.querySelector('.xq-live-markers')?.innerHTML).toContain('cx="96" cy="468"');
+    } finally {
+      host.remove();
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('renders posted ceval MultiPV lines as ranked arrows and clears them again', async () => {

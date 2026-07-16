@@ -8,33 +8,35 @@ import {
   XQ_START_TRIPTYCH,
   XQ_VISIBILITY_GRID,
   XQ_VISION_MOVE_PAIR,
+  playClosing,
 } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const darkXiangqiArticle: Article = {
-    slug: 'dark-xiangqi',
+    slug: 'fog-xiangqi',
+    gameSpecId: 'dark-xiangqi',
     boardFamily: 'xiangqi',
     kind: 'rules',
-    title: 'Fog Elephant Chess Rules',
+    title: 'Fog Xiangqi Rules',
     summary:
-      'Fog Elephant Chess rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
+      'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
     showSummaryOnPage: false,
     status: 'published',
     playableOnMistboard: true,
     publishedAt: '2026-05-26',
     updatedAt: '2026-05-30',
     audience:
-      'Elephant Chess players, Fog Chess players, and anyone who wants a clean first explanation of xiangqi under fog.',
+      'Xiangqi players, Fog Chess players, and anyone who wants a clean first explanation of xiangqi under fog.',
     thumbnail: { kind: 'svg', svg: XQ_DARK_XIANGQI_THUMBNAIL },
     intro: [
       {
         kind: 'paragraph',
-        text: 'Fog Elephant Chess is xiangqi (象棋) under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.',
+        text: 'Fog Xiangqi is xiangqi (象棋) under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.',
       },
       {
         kind: 'paragraph',
         text:
-          'If Elephant Chess is new to you, start with [Elephant Chess Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.',
+          'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.',
       },
     ],
     sections: [
@@ -127,7 +129,7 @@ export const darkXiangqiArticle: Article = {
           { kind: 'sub-heading', text: 'Facing generals' },
           {
             kind: 'paragraph',
-            text: 'Orthodox xiangqi forbids facing generals. Fog Elephant Chess allows the position; if one general sees the other on a clear file, it can capture across that file.',
+            text: 'Orthodox xiangqi forbids facing generals. Fog Xiangqi allows the position; if one general sees the other on a clear file, it can capture across that file.',
           },
           {
             kind: 'raw-svg-stepper',
@@ -135,20 +137,18 @@ export const darkXiangqiArticle: Article = {
           } as ArticleBlock,
         ],
       },
-      {
-        heading: 'Play status',
-        blocks: [
+      playClosing({
+        heading: 'Play on Mistboard',
+        lead: 'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        playLabel: 'Play vs computer',
+        playHref: '/?play=computer&gameSpecId=dark-xiangqi',
+        secondary: [
           {
-            kind: 'paragraph',
-            text: 'Fog Elephant Chess is playable on Mistboard. Create an invite for a friend or play the engine from the homepage play panel.',
+            label: 'Challenge a friend',
+            href: '/?play=friend&gameSpecId=dark-xiangqi',
+            emphasis: 'secondary',
           },
-          {
-            kind: 'cta',
-            buttons: [
-              { label: 'Back to all rules', href: '/rules', emphasis: 'secondary' },
-            ],
-          } as ArticleBlock,
         ],
-      },
+      }),
     ],
 };

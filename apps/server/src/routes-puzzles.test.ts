@@ -5,6 +5,7 @@ import {
   FORTRESS_XIANGQI_PUZZLES,
   JUNGLE_PUZZLES,
   MINI_XIANGQI_PUZZLES,
+  puzzleShortCode,
   XIANGQI_PUZZLES,
 } from '@mistboard/game';
 import type { HttpApiContext } from './routes/lib.js';
@@ -68,12 +69,12 @@ test('puzzle list returns public Mini and Drop Mini summaries without solutions'
   };
 
   assert.equal(response.status, 200);
+  // Fortress is hidden from the discoverable pool while the variant is demoted
+  // (awaiting a re-mine with the per-ply uniqueness gate), so the unfiltered
+  // list excludes it.
   assert.equal(
     body.puzzles.length,
-    MINI_XIANGQI_PUZZLES.length +
-      FORTRESS_XIANGQI_PUZZLES.length +
-      JUNGLE_PUZZLES.length +
-      XIANGQI_PUZZLES.length,
+    MINI_XIANGQI_PUZZLES.length + JUNGLE_PUZZLES.length + XIANGQI_PUZZLES.length,
   );
   assert.deepEqual(
     body.puzzles.slice(0, 6).map((puzzle) => puzzle.variant),
@@ -87,10 +88,7 @@ test('puzzle list returns public Mini and Drop Mini summaries without solutions'
     ],
   );
   assert.equal(body.puzzles.filter((puzzle) => puzzle.variant === 'drop-mini-xiangqi').length, 30);
-  assert.equal(
-    body.puzzles.filter((puzzle) => puzzle.variant === 'fortress-xiangqi').length,
-    FORTRESS_XIANGQI_PUZZLES.length,
-  );
+  assert.equal(body.puzzles.filter((puzzle) => puzzle.variant === 'fortress-xiangqi').length, 0);
   assert.equal(
     body.puzzles.every((puzzle) => puzzle.solution === undefined),
     true,
@@ -141,18 +139,15 @@ test('puzzle list filters by supported puzzle variant', async () => {
   );
 });
 
-test('puzzle list filters to Fortress Xiangqi puzzles', async () => {
+test('puzzle list hides Fortress Xiangqi puzzles while the variant is demoted', async () => {
+  // Fortress is omitted from the discoverable pool pending a re-mine with the
+  // per-ply uniqueness gate; the list returns nothing even for an explicit
+  // variant filter. Individual fortress puzzles stay resolvable by id (below).
   const response = await route('/api/puzzles?variant=fortress-xiangqi');
-  const body = JSON.parse(response.body) as {
-    puzzles: Array<{ variant: string; solutionPlyCount: number }>;
-  };
+  const body = JSON.parse(response.body) as { puzzles: unknown[] };
 
   assert.equal(response.status, 200);
-  assert.equal(body.puzzles.length, FORTRESS_XIANGQI_PUZZLES.length);
-  assert.equal(
-    body.puzzles.every((puzzle) => puzzle.variant === 'fortress-xiangqi'),
-    true,
-  );
+  assert.equal(body.puzzles.length, 0);
 });
 
 test('puzzle list filters to Jungle puzzles', async () => {
@@ -198,6 +193,24 @@ test('puzzle list filters to standard Xiangqi puzzles', async () => {
     body.puzzles.every((puzzle) => puzzle.solution === undefined),
     true,
   );
+});
+
+test('puzzle detail resolves a lichess-style short code to the full puzzle', async () => {
+  const target = XIANGQI_PUZZLES[0]!;
+  const code = puzzleShortCode(target.id);
+  const response = await route(`/api/puzzles/${code}`);
+  const body = JSON.parse(response.body) as { puzzle: { id: string } };
+
+  assert.equal(response.status, 200);
+  // The short-code request resolves to the canonical full-id puzzle.
+  assert.equal(body.puzzle.id, target.id);
+});
+
+test('puzzle detail still 404s for an unknown short code', async () => {
+  // Well-formed code shape, but no puzzle hashes to it.
+  const response = await route('/api/puzzles/zzzzz');
+  assert.equal(response.status, 404);
+  assert.deepEqual(JSON.parse(response.body), { error: 'not_found' });
 });
 
 test('puzzle rating route accepts the standard xiangqi variant', async () => {
@@ -447,6 +460,94 @@ test('attempts omit rating info when there is no rated session', async () => {
 
 test('puzzle routes reject non-GET methods', async () => {
   const response = await route('/api/puzzles', 'POST');
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(JSON.parse(response.body), { error: 'method_not_allowed' });
+});
+
+// ── Solution reveal / hint ───────────────────────────────────────────────────
+// The reveal endpoint is the ONLY route that returns solution move data; the
+// detail (and list/attempt) routes must stay count-only. These tests pin that
+// invariant plus the new hint/solution payload shapes. Standard xiangqi is the
+// priority variant, so it leads.
+
+test('reveal endpoint returns the full solution line, and it is the only leak path', async () => {
+  const puzzle = XIANGQI_PUZZLES[0];
+  assert.ok(puzzle, 'expected a mined standard-xiangqi puzzle');
+
+  // Detail route stays solution-hidden: count only, no move data.
+  const detail = await route(`/api/puzzles/${puzzle.id}`);
+  const detailBody = JSON.parse(detail.body) as {
+    puzzle: { solution?: unknown; solutionPlyCount: number };
+  };
+  assert.equal(detail.status, 200);
+  assert.equal(detailBody.puzzle.solution, undefined);
+  assert.equal(detailBody.puzzle.solutionPlyCount, puzzle.solution.length);
+
+  // Reveal route is the one place the line is exposed.
+  const reveal = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'solution' });
+  const revealBody = JSON.parse(reveal.body) as { solution: unknown[]; rating?: unknown };
+  assert.equal(reveal.status, 200);
+  assert.deepEqual(revealBody.solution, puzzle.solution);
+  // Anonymous caller: no rating booked.
+  assert.equal(revealBody.rating, undefined);
+});
+
+test('reveal endpoint in hint mode returns only the next move, never the full line', async () => {
+  const puzzle = XIANGQI_PUZZLES[0];
+  assert.ok(puzzle, 'expected a mined standard-xiangqi puzzle');
+
+  // Fresh puzzle (0 plies played): the hint is the solver's first move.
+  const first = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', {
+    mode: 'hint',
+    playedPlyCount: 0,
+  });
+  const firstBody = JSON.parse(first.body) as { move: unknown; solution?: unknown };
+  assert.equal(first.status, 200);
+  assert.deepEqual(firstBody.move, puzzle.solution[0]);
+  // Hint mode must not leak the rest of the line.
+  assert.equal(firstBody.solution, undefined);
+
+  // After the solver move + scripted reply (2 plies), the hint is solution[2].
+  if (puzzle.solution.length > 2) {
+    const next = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', {
+      mode: 'hint',
+      playedPlyCount: 2,
+    });
+    const nextBody = JSON.parse(next.body) as { move: unknown };
+    assert.deepEqual(nextBody.move, puzzle.solution[2]);
+  }
+
+  // A missing/out-of-range ply count falls back to the first move, not a crash.
+  const fallback = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'hint' });
+  const fallbackBody = JSON.parse(fallback.body) as { move: unknown };
+  assert.equal(fallback.status, 200);
+  assert.deepEqual(fallbackBody.move, puzzle.solution[0]);
+});
+
+test('reveal endpoint reads the solution generically across variants', async () => {
+  for (const puzzle of [FORTRESS_XIANGQI_PUZZLES[0], JUNGLE_PUZZLES[0], MINI_XIANGQI_PUZZLES[0]]) {
+    assert.ok(puzzle, 'expected a puzzle in each variant registry');
+    const reveal = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'solution' });
+    const body = JSON.parse(reveal.body) as { solution: unknown[] };
+    assert.equal(reveal.status, 200, puzzle.id);
+    assert.deepEqual(body.solution, puzzle.solution, puzzle.id);
+  }
+});
+
+test('reveal endpoint 404s unknown puzzle ids', async () => {
+  const response = await route('/api/puzzles/not-a-real-puzzle/reveal', 'POST', {
+    mode: 'solution',
+  });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(JSON.parse(response.body), { error: 'not_found' });
+});
+
+test('reveal endpoint rejects non-POST methods', async () => {
+  const puzzle = XIANGQI_PUZZLES[0];
+  assert.ok(puzzle, 'expected a mined standard-xiangqi puzzle');
+  const response = await route(`/api/puzzles/${puzzle.id}/reveal`, 'GET');
 
   assert.equal(response.status, 405);
   assert.deepEqual(JSON.parse(response.body), { error: 'method_not_allowed' });

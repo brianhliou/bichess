@@ -88,9 +88,11 @@ test('submit creates a pending request', async () => {
   assert.equal(request.status, 'pending');
 });
 
-test('submit rejects unknown titles fail-closed', async () => {
+test('submit rejects unknown and non-requestable titles fail-closed', async () => {
   const { deps, requests } = makeFake();
-  for (const bad of ['XGM', 'ngm', 'grandmaster', 42, null, undefined]) {
+  // 'gm'/'wcm' are valid PlayerTitles but chess titles are not requestable while
+  // the pipeline is scoped to xiangqi, so they reject like unknown values.
+  for (const bad of ['XGM', 'ngm', 'grandmaster', 'gm', 'wcm', 42, null, undefined]) {
     const result = await submitTitleVerificationForApi(
       untitled,
       { title: bad, evidence: 'evidence' },
@@ -104,17 +106,17 @@ test('submit rejects unknown titles fail-closed', async () => {
 
 test('submit requires evidence and bounds its length', async () => {
   const { deps } = makeFake();
-  const missing = await submitTitleVerificationForApi(untitled, { title: 'gm' }, deps);
+  const missing = await submitTitleVerificationForApi(untitled, { title: 'xgm' }, deps);
   assert.deepEqual([missing.status, missing.payload.error], [400, 'evidence_required']);
   const blank = await submitTitleVerificationForApi(
     untitled,
-    { title: 'gm', evidence: '   ' },
+    { title: 'xgm', evidence: '   ' },
     deps,
   );
   assert.deepEqual([blank.status, blank.payload.error], [400, 'evidence_required']);
   const tooLong = await submitTitleVerificationForApi(
     untitled,
-    { title: 'gm', evidence: 'x'.repeat(TITLE_EVIDENCE_MAX + 1) },
+    { title: 'xgm', evidence: 'x'.repeat(TITLE_EVIDENCE_MAX + 1) },
     deps,
   );
   assert.deepEqual([tooLong.status, tooLong.payload.error], [400, 'evidence_too_long']);
@@ -176,7 +178,7 @@ test('reject leaves the user untitled and allows a resubmit', async () => {
   const { deps, userTitles } = makeFake();
   const submitted = await submitTitleVerificationForApi(
     untitled,
-    { title: 'gm', evidence: 'weak evidence' },
+    { title: 'xgm', evidence: 'weak evidence' },
     deps,
   );
   const id = (submitted.payload.request as { id: string }).id;
@@ -187,7 +189,7 @@ test('reject leaves the user untitled and allows a resubmit', async () => {
 
   const again = await submitTitleVerificationForApi(
     untitled,
-    { title: 'gm', evidence: 'stronger evidence: FIDE profile link' },
+    { title: 'xgm', evidence: 'stronger evidence: WXF profile link' },
     deps,
   );
   assert.equal(again.status, 200);
@@ -200,7 +202,7 @@ test('deciding an unknown or already-decided request is a 404', async () => {
 
   const submitted = await submitTitleVerificationForApi(
     untitled,
-    { title: 'gm', evidence: 'e' },
+    { title: 'xgm', evidence: 'e' },
     deps,
   );
   const id = (submitted.payload.request as { id: string }).id;
@@ -214,7 +216,7 @@ test('admin list defaults to pending, supports decided, rejects unknown filters'
   await submitTitleVerificationForApi(untitled, { title: 'xnm', evidence: 'e' }, deps);
   await submitTitleVerificationForApi(
     { id: 'user-2', title: null },
-    { title: 'wgm', evidence: 'e2' },
+    { title: 'xwgm', evidence: 'e2' },
     deps,
   );
   const pendingDefault = await adminListTitleRequestsForApi(null, deps);

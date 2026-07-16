@@ -18,7 +18,7 @@ import {
   handleDropMiniXiangqiCreate,
   requestsDropMiniXiangqi,
 } from './routes/drop-mini-xiangqi-rooms.js';
-import { isAllowedTimeControl } from './routes/lib.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleDropMiniXiangqiEngineMove } from './server-drop-mini-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -144,7 +144,7 @@ registerVariantTenant({
   },
   lobby: {
     supportsRated: true,
-    allowsTimeControl: isAllowedTimeControl,
+    allowsTimeControl: isAllowedFullTimeControl,
     createRoom: async (timeControl, rated) => {
       const created = await createDropMiniXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`drop_mini_xiangqi_room_create_failed:${created.error}`);

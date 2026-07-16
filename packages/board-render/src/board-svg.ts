@@ -56,9 +56,9 @@ export function renderBoardSvg(
   opts: {
     palette?: BoardPalette;
     fogStyle?: FogStyle;
-    // When set, the board content is clipped to a rounded rect and the frame is
-    // rounded too, matching the shared base corner radius (--board-corner-radius,
-    // 1.9%). The id must be unique within the containing <svg> document. Omit for
+    // When set, the board content is clipped to a rounded rect matching the shared
+    // base corner radius (--board-corner-radius, 1.9%). The id must be unique
+    // within the containing <svg> document. Omit for
     // square corners (the default, used by the live draft-picker thumbnails).
     clipId?: string;
     // Corner radius in user units; defaults to the 1.9% base radius.
@@ -131,11 +131,6 @@ export function renderBoardSvg(
     }
   }
   if (round) out.push(`</g>`);
-  out.push(
-    `<rect x="${x}" y="${y}" width="${size}" height="${size}" ${
-      round ? `rx="${radius}" ` : ''
-    }fill="none" stroke="${palette.frame}" stroke-width="2"/>`,
-  );
   out.push(`</g>`);
   return out.join('');
 }

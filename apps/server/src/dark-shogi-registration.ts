@@ -63,12 +63,9 @@ registerVariantTenant({
   kind: darkShogiTenant.kind,
   gameSpecId: darkShogiTenant.gameSpecId,
   roomIdPrefix: darkShogiTenant.roomIdPrefix,
-  watch: {
-    channelId: darkShogiTenant.gameSpecId,
-    label: 'Fog Shogi',
-    family: 'shogi',
-    legacyVariants: ['dark-shogi'],
-  },
+  // Parked for the xiangqi-focused launch. Runtime/postgame support stays
+  // registered, but Mistboard TV must not advertise a Shogi channel.
+  watch: null,
   ownsSpecRouting: true,
   errorPrefix: 'dark_shogi',
   enabled: darkShogiTenant.enabled,

@@ -31,14 +31,6 @@
     0 7px 16px var(--landing-chat-ambient-shadow);
 }
 
-/* Empty/quiet state: with no message lines the box is just the one-line "Quiet
-   right now" invitation plus the composer, so the fixed 292px height strands the
-   input under a tall blank gap. Collapse to content height; the box reclaims its
-   full height the moment the first line lands (quiet mode swaps to the room). */
-.landing-chat:not(:has(.landing-chat-line)) {
-  height: auto;
-}
-
 .landing-chat .site-box-top {
   flex: 0 0 auto;
   align-items: center;
@@ -211,6 +203,7 @@
 }
 
 .landing-chat-quiet {
+  flex: 1 1 auto;
   margin: 0;
   padding: 8px 11px;
   font-size: 12px;

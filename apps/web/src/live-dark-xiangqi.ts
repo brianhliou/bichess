@@ -8,9 +8,8 @@
 //
 // Move-list note: Dark Xiangqi is masked (opponent plies render as a dimmed
 // placeholder) but keeps EVERY row during a scrub (plyWindow: 'all') — stepping
-// back only moves the active highlight, it never drops rows — and its zero-moves
-// row is a bare `<li class="move-row masked">` (emptyRow override), unlike the
-// single-span placeholder the other fog tenants use.
+// back only moves the active highlight, it never drops rows. Zero moves render
+// an empty list (shared core behavior, lichess parity).
 //
 // Wire shape pinned by dark-xiangqi-golden-wire.test.ts: the tenant core snapshot
 // with NO extras (no mode/pveEngineId/rated/forfeitDeadline/rematch), so the
@@ -35,6 +34,7 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -74,9 +74,6 @@ const CELL = 60;
 const MARGIN = 36;
 const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
-// Corner rounding (viewBox units). Kept in sync with the `.xiangqi-live-board`
-// container border-radius so the SVG background and the clipped container agree.
-const BOARD_RADIUS = 16;
 const RIVER_TOP = MARGIN + 4 * CELL;
 const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const PIECE_SIZE = tokenPieceSize(CELL);
@@ -96,7 +93,7 @@ let draggingFrom: XiangqiSquare | null = null;
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const darkXiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
-  displayName: 'Fog Elephant Chess',
+  displayName: 'Fog Xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
@@ -104,9 +101,9 @@ const darkXiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   enabled: darkXiangqiEnabled,
   reviewUrl: (roomId) => `/dark-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: darkXiangqiReasonPhrase,
-  disabledTitle: 'Fog Elephant Chess disabled',
+  disabledTitle: 'Fog Xiangqi disabled',
   disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Fog Elephant Chess room is not active. Create a new invite to start a game.',
+  rejectedBody: 'This Fog Xiangqi room is not active. Create a new invite to start a game.',
   spectatorBody: 'Watching without private information.',
   selectInstruction: 'Select one of your visible pieces, then choose a destination.',
 };
@@ -159,6 +156,9 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   setup: (ctx) => {
     core = ctx;
     installDarkXiangqiBoardInteraction(ctx.refs);
+    // Hot-reload the viewer's xiangqi piece set mid-game (the fog board renders
+    // revealed pieces from the stored set); mirrors the chess appearance hook.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
@@ -178,15 +178,6 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
     // the active highlight; it must never drop rows. The ceiling is the full
     // game length, not the scrubbed ply.
     plyWindow: 'all',
-    emptyText: 'No visible moves yet',
-    // Dark Xiangqi's zero-moves row is a bare full-width li (not the grid row the
-    // other fog tenants use), so it overrides the default placeholder.
-    emptyRow: () => {
-      const item = document.createElement('li');
-      item.className = 'move-row masked';
-      item.textContent = 'No visible moves yet';
-      return item;
-    },
     notate: (move) => `${move.from}-${move.to}`,
     isMoveEvent: isDarkXiangqiMoveEvent,
   },
@@ -217,9 +208,36 @@ export function renderDarkXiangqiBoardSvg(
   return boardSvg(view, perspective, { interactive: false, showFog: options.showFog ?? true });
 }
 
+// Interactive (review/analysis) render: like the live board but with selection +
+// drag state passed in EXPLICITLY rather than read from this module's live-room
+// globals, so several independent boards (the fog triptych) can coexist. Mirrors
+// createBanqiInteractiveBoard's renderer contract. Used by dark-xiangqi-tree-board.ts.
+export function renderDarkXiangqiInteractiveBoardSvg(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  state: {
+    selectedSquare: XiangqiSquare | null;
+    draggingFrom: XiangqiSquare | null;
+    showFog?: boolean;
+  },
+): string {
+  return boardSvg(view, perspective, {
+    interactive: true,
+    showFog: state.showFog ?? true,
+    selectedSquare: state.selectedSquare,
+    draggingFrom: state.draggingFrom,
+  });
+}
+
+// The floating drag ghost (a single visible piece). Exported for the review
+// interactive board's installBoardDrag wiring.
+export function darkXiangqiInteractivePieceGhostSvg(piece: XiangqiPiece): string {
+  return darkXiangqiPieceGhostSvg(piece);
+}
+
 function renderBoard(liveRefs: LiveRefs, view: DarkXiangqiWireView | null): void {
   liveRefs.board.className = 'board xiangqi-live-board';
-  liveRefs.board.setAttribute('aria-label', 'Fog Elephant Chess board');
+  liveRefs.board.setAttribute('aria-label', 'Fog Xiangqi board');
   if (!view) {
     liveRefs.board.replaceChildren();
     return;
@@ -258,8 +276,18 @@ function renderLiveCapturedGlyph(piece: { color: XiangqiColor; role: XiangqiPiec
 function boardSvg(
   view: DarkXiangqiWireView,
   perspective: XiangqiColor,
-  options: { interactive: boolean; showFog?: boolean },
+  options: {
+    interactive: boolean;
+    showFog?: boolean;
+    // Explicit selection/drag state; when omitted (the live room) the module
+    // globals are used, so an independent review board can pass its own state
+    // without disturbing the live board. `null` = explicitly nothing selected.
+    selectedSquare?: XiangqiSquare | null;
+    draggingFrom?: XiangqiSquare | null;
+  },
 ): string {
+  const sel = options.selectedSquare !== undefined ? options.selectedSquare : selectedSquare;
+  const drag = options.draggingFrom !== undefined ? options.draggingFrom : draggingFrom;
   // Key the fog mask by the VIEW's own perspective, not the render orientation.
   // The postgame triptych draws the red, truth, and black views in one document,
   // all with the same board orientation and the same view.id (one game) — keying
@@ -270,17 +298,17 @@ function boardSvg(
   const fog = options.showFog === false ? '' : fogLayer(view, perspective, maskId);
   return `
     <svg class="xq-live-svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${BOARD_RADIUS}"/>
+      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
       <g class="xq-live-palace-bands">${palaceBands(perspective)}</g>
       <g class="xq-live-grid">${gridLayer()}</g>
       <g class="xq-live-palace">${palaceLayer(perspective)}</g>
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${riverLayer(perspective)}</g>
       <g class="xq-live-fog">${fog}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
-      <g class="xq-live-selection">${selectionLayer(selectedSquare, perspective)}</g>
-      <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective)}</g>
-      <g class="xq-live-pieces">${pieceLayer(view, perspective, draggingFrom)}</g>
-      <g class="xq-live-clicks">${options.interactive ? clickLayer(view, perspective) : ''}</g>
+      <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
+      <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective, sel)}</g>
+      <g class="xq-live-pieces">${pieceLayer(view, perspective, drag)}</g>
+      <g class="xq-live-clicks">${options.interactive ? clickLayer(view, perspective, sel) : ''}</g>
     </svg>
   `;
 }
@@ -363,7 +391,9 @@ function fogLayer(view: DarkXiangqiWireView, perspective: XiangqiColor, maskId: 
     })
     .join('');
   return xiangqiFogRegion(
-    { width: WIDTH, height: HEIGHT, cell: CELL, margin: MARGIN, rx: BOARD_RADIUS },
+    // The `.xiangqi-live-board` wrapper clips every full-bleed SVG layer to its
+    // CSS radius. A second viewBox-unit radius would diverge when responsive.
+    { width: WIDTH, height: HEIGHT, cell: CELL, margin: MARGIN, rx: 0 },
     maskId,
     'xq-live-fog-mask',
     cutouts,
@@ -389,10 +419,14 @@ function selectionLayer(square: XiangqiSquare | null, perspective: XiangqiColor)
   return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
 }
 
-function hintLayer(view: DarkXiangqiWireView, perspective: XiangqiColor): string {
-  if (!selectedSquare) return '';
+function hintLayer(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  selected: XiangqiSquare | null,
+): string {
+  if (!selected) return '';
   return view.legalMoves
-    .filter((move) => move.from === selectedSquare)
+    .filter((move) => move.from === selected)
     .map((move) => {
       const coord = coordOf(move.to);
       const center = intersection(coord.file, coord.rank, perspective);
@@ -431,11 +465,15 @@ function pieceLayer(
   return parts.join('');
 }
 
-function clickLayer(view: DarkXiangqiWireView, perspective: XiangqiColor): string {
+function clickLayer(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  selected: XiangqiSquare | null,
+): string {
   const targets = new Map<XiangqiSquare, { capture: boolean }>();
-  if (selectedSquare) {
+  if (selected) {
     for (const move of view.legalMoves) {
-      if (move.from === selectedSquare) {
+      if (move.from === selected) {
         targets.set(move.to, { capture: view.board[move.to] !== undefined });
       }
     }

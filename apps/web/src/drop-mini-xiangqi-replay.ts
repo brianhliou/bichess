@@ -35,8 +35,6 @@ const RANKS = 7;
 const BOARD_W = MARGIN * 2 + (FILES - 1) * CELL;
 const BOARD_H = MARGIN * 2 + (RANKS - 1) * CELL;
 const RADIUS = 8;
-const STROKE = '#8b5a24';
-const STROKE_WIDTH = 1.5;
 const ARROW = '#15781B';
 const DROP_MARK = '#c8792d';
 
@@ -241,7 +239,6 @@ function boardSvg(
       ? arrowSvg(lastMove, perspective, `dmxqr-arrow-${key}`)
       : '',
     lastMove ? dropMarkSvg(lastMove, perspective) : '',
-    `<rect x="0" y="0" width="${BOARD_W}" height="${BOARD_H}" rx="${RADIUS}" fill="none" stroke="${STROKE}" stroke-width="${STROKE_WIDTH}"/>`,
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg" aria-label="Drop Mini Xiangqi board"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
 }

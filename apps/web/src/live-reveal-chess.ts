@@ -177,7 +177,6 @@ const client = createTenantLiveClient<RevealChessColor, RevealChessWireView, Rev
     cellPrefix: 'reveal-chess-move-row',
     listClass: 'reveal-chess-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     notate: uci,
     isMoveEvent: isRevealChessMoveEvent,
   },

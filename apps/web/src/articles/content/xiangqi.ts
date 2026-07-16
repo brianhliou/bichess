@@ -18,21 +18,21 @@ export const xiangqiArticle: Article = {
     boardFamily: 'xiangqi',
     kind: 'rules',
     playableOnMistboard: true,
-    title: 'Elephant Chess Rules',
+    title: 'Xiangqi Rules',
     summary:
-      'The rules of Elephant Chess (xiangqi, 象棋): palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.',
+      'The rules of xiangqi, also called Chinese chess (象棋): palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.',
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
     updatedAt: '2026-07-04',
     audience:
-      'Players new to Elephant Chess, and chess players who want to learn xiangqi and play it on Mistboard.',
+      'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },
     intro: [
       {
         kind: 'paragraph',
         text:
-          'Elephant Chess is xiangqi (象棋), the two-player strategy game with roots in China going back many centuries. Its modern form, including the cannon, took shape around the Song dynasty (960 to 1279).',
+          'Xiangqi (象棋), also known as Chinese chess, is a two-player strategy game with roots in China going back many centuries. Its modern form, including the cannon, took shape around the Song dynasty (960 to 1279).',
       },
       {
         kind: 'paragraph',
@@ -47,7 +47,7 @@ export const xiangqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'The board has 9 files and 10 ranks, but pieces sit on the intersections of the lines, not inside squares.',
+              'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.',
           },
           {
             kind: 'raw-svg',
@@ -184,14 +184,12 @@ export const xiangqiArticle: Article = {
         ],
       },
       playClosing({
-        heading: 'Play it',
-        lead: 'Elephant Chess is live on Mistboard. Play the Pikafish engine at three strengths, or challenge a friend. For a twist, add Fog of War in Fog Elephant Chess, where enemy pieces outside your vision disappear and the general falls by capture.',
-        playLabel: 'Play Elephant Chess',
+        heading: 'Play on Mistboard',
+        lead: 'Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=xiangqi',
         secondary: [
           { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=xiangqi', emphasis: 'secondary' },
-          { label: 'Fog Elephant Chess', href: '/rules/dark-xiangqi', emphasis: 'secondary' },
-          { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],
       }),
     ],

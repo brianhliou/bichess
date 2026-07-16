@@ -7,6 +7,46 @@ import type { Article, ArticleBlock, ArticleSection } from './articles-data.js';
 
 export type Prose = { path: string; text: string };
 
+function decodeSvgText(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'");
+}
+
+// Every English source string that the article translator can consume. This
+// is broader than prose coverage: raw SVG renderers localize their text/title/
+// desc nodes separately, so those generated labels are live dictionary keys
+// even though they are intentionally excluded from prose-completeness counts.
+export function articleTranslationSourceStrings(sourceArticles: readonly Article[]): Set<string> {
+  const strings = new Set<string>();
+  const collect = (value: unknown, key?: string): void => {
+    if (typeof value === 'string') {
+      strings.add(value);
+      for (const match of value.matchAll(/<(text|title|desc)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
+        const visible = decodeSvgText(match[2].replace(/<[^>]+>/g, '')).trim();
+        if (visible) strings.add(visible);
+      }
+      return;
+    }
+    if (typeof value === 'function') {
+      if (key === 'svg') collect((value as () => string)(), key);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item);
+      return;
+    }
+    if (value && typeof value === 'object') {
+      for (const [childKey, item] of Object.entries(value)) collect(item, childKey);
+    }
+  };
+  for (const article of sourceArticles) collect(article);
+  return strings;
+}
+
 function caption(block: { caption?: string }): string[] {
   return block.caption ? [block.caption] : [];
 }

@@ -14,6 +14,7 @@ describe('site appearance preference', () => {
     });
     document.documentElement.removeAttribute('data-site-theme');
     document.documentElement.removeAttribute('data-effective-theme');
+    document.documentElement.removeAttribute('data-xiangqi-board-layout');
     document.documentElement.removeAttribute('style');
     document.head.innerHTML = '<meta name="theme-color" content="#1f2521">';
   });
@@ -51,6 +52,15 @@ describe('site appearance preference', () => {
 
     expect(document.documentElement.dataset.siteTheme).toBe('system');
     expect(document.documentElement.dataset.effectiveTheme).toBe('dark');
+  });
+
+  it('exposes the stored xiangqi layout to shared CSS sizing', () => {
+    window.localStorage.setItem('mistboard.xiangqiBoardLayout', 'cell');
+    window.localStorage.setItem('mistboard.xiangqiBoardLayoutVersion', '1');
+
+    initializeThemeSettings();
+
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
   });
 });
 
@@ -101,7 +111,7 @@ describe('appearance family gating', () => {
   });
 
   it('puts signed-out language choices inside the gear menu', () => {
-    window.history.replaceState(null, '', '/zh-hant/rules/banqi');
+    window.history.replaceState(null, '', '/zh-hant/rules/flip-xiangqi');
 
     rebuildThemePanel();
 
@@ -115,7 +125,7 @@ describe('appearance family gating', () => {
       [...document.querySelectorAll<HTMLElement>('.appearance-language-option')].map(
         (option) => option.textContent,
       ),
-    ).toEqual(['English', '简体中文', '繁體中文', '日本語']);
+    ).toEqual(['English', '简体中文', '繁體中文']);
     expect(
       document
         .querySelector<HTMLElement>('.appearance-language-option.selected')
@@ -136,7 +146,12 @@ describe('appearance family gating', () => {
       [...document.querySelectorAll<HTMLButtonElement>('button[data-sound-option]')].map(
         (option) => option.textContent,
       ),
-    ).toEqual(['Silent', 'Standard', 'Piano', 'NES', 'SFX', 'Futuristic']);
+    ).toEqual(['Wood', 'Mist', 'Piano', 'SFX', 'Futuristic', 'NES', 'Silent']);
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('button[data-sound-option="wood"]')
+        ?.getAttribute('aria-checked'),
+    ).toBe('true');
 
     document.querySelector<HTMLButtonElement>('button[data-sound-option="silent"]')?.click();
     expect(window.localStorage.getItem('mistboard.soundMuted')).toBe('true');
@@ -162,7 +177,7 @@ describe('appearance family gating', () => {
     ).toEqual(['Device theme', 'Light', 'Dark']);
   });
 
-  it('surfaces xiangqi and shogi settings by default', () => {
+  it('surfaces current xiangqi and chess settings without retired shogi controls', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
@@ -176,16 +191,32 @@ describe('appearance family gating', () => {
       [...familyGroup!.querySelectorAll<HTMLButtonElement>('[data-board-family-option]')].map(
         (option) => option.dataset.boardFamilyOption,
       ),
-    ).toEqual(['chess', 'xiangqi', 'shogi']);
+    ).toEqual(['xiangqi', 'chess']);
     expect(document.querySelector('[data-theme-tile="piece"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="fog"]')).not.toBeNull();
+    expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
+    expect(document.querySelector('[data-theme-tile="shogiboard"]')).toBeNull();
+    expect(document.querySelector('[data-theme-tile="shogipiece"]')).toBeNull();
     expect(
       [...document.querySelectorAll<HTMLButtonElement>('[data-theme-tile="xqboard"]')].map((tile) =>
         tile.getAttribute('aria-label'),
       ),
-    ).toEqual(['International', 'Traditional']);
+    ).toEqual(['International', 'Traditional', 'Square grid']);
+
+    document
+      .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="cell"]')
+      ?.click();
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardLayout')).toBe('cell');
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
+
+    document
+      .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="traditional"]')
+      ?.click();
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('traditional');
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardLayout')).toBe('intersection');
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('intersection');
   });
 
   it('keeps Crossroads inside the xiangqi appearance family', () => {
@@ -201,9 +232,10 @@ describe('appearance family gating', () => {
       [...familyGroup!.querySelectorAll<HTMLButtonElement>('[data-board-family-option]')].map(
         (option) => option.dataset.boardFamilyOption,
       ),
-    ).toEqual(['chess', 'xiangqi', 'shogi']);
+    ).toEqual(['xiangqi', 'chess']);
 
     expect(document.querySelector('[data-theme-tile="piece"]')).not.toBeNull();
+    expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
   });
@@ -212,8 +244,29 @@ describe('appearance family gating', () => {
     rebuildThemePanel();
 
     expect(document.querySelector('[data-board-family-select]')).not.toBeNull();
+    expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
+  });
+
+  it('opens board and piece settings on the first Xiangqi family option by default', () => {
+    rebuildThemePanel();
+
+    for (const key of ['board', 'pieces']) {
+      document.querySelector<HTMLButtonElement>(`[data-appearance-target="${key}"]`)?.click();
+      const submenu = document.querySelector<HTMLElement>(`.appearance-submenu[data-key="${key}"]`);
+      const xiangqi = submenu?.querySelector<HTMLButtonElement>(
+        '[data-board-family-option="xiangqi"]',
+      );
+      const chess = submenu?.querySelector<HTMLButtonElement>('[data-board-family-option="chess"]');
+
+      expect(xiangqi?.classList.contains('selected')).toBe(true);
+      expect(xiangqi?.getAttribute('aria-checked')).toBe('true');
+      expect(chess?.classList.contains('selected')).toBe(false);
+      expect(chess?.getAttribute('aria-checked')).toBe('false');
+
+      submenu?.querySelector<HTMLButtonElement>('.appearance-submenu-back')?.click();
+    }
   });
 });
 

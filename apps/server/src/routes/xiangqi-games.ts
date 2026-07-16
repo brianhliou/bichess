@@ -8,6 +8,7 @@ import {
   type XiangqiMove,
   xiangqiMoveToPikafishUci,
 } from '@mistboard/game';
+import { currentAccountUser } from './../account-session.js';
 import { xiangqiEnabled } from './../feature-flags.js';
 import * as persistence from './../persistence.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
@@ -17,7 +18,7 @@ import {
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
 import { analyzeXiangqiGame, type PlyEval } from './../xiangqi-analysis.js';
-import { XIANGQI_DEFAULT_ENGINE_ID } from './../xiangqi-pikafish-engine.js';
+import { XIANGQI_DEFAULT_ENGINE_ID as XIANGQI_ANALYSIS_ENGINE_ID } from './../xiangqi-pikafish-engine.js';
 import { xiangqiRooms } from './../xiangqi-registration.js';
 import type { XiangqiEvent, XiangqiRuntimeRoom } from './../xiangqi-runtime.js';
 import { xiangqiTenant } from './../xiangqi-tenant.js';
@@ -77,6 +78,16 @@ export async function tryHandle(
     if (!xiangqiEnabled()) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
+    }
+    // Requesting a fresh server-side engine pass (POST) is account-gated — it is
+    // the expensive path (a whole-game Pikafish sweep). GET stays open so the
+    // cached result auto-loads for anyone opening the page.
+    if (method === 'POST') {
+      const user = await currentAccountUser(request);
+      if (!user) {
+        writeJson(response, 401, { error: 'not_signed_in' });
+        return true;
+      }
     }
     const roomId = decodeURIComponent(analysisMatch[1]!);
     const payload = await xiangqiPostgameForApi(roomId, livePersistence);
@@ -146,7 +157,7 @@ export async function analyzeXiangqiPostgame(
     .map((entry) => xiangqiMoveToPikafishUci(entry.move));
   const plies = await analyze(movesUci);
   return {
-    engineId: XIANGQI_DEFAULT_ENGINE_ID,
+    engineId: XIANGQI_ANALYSIS_ENGINE_ID,
     depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
     // `best` comes back as Pikafish UCI (0-indexed); hand the client our own square
     // notation so it never has to know the engine's rank convention.
@@ -195,7 +206,7 @@ export async function resolveXiangqiAnalysis(
   analyze?: (movesUci: string[]) => Promise<PlyEval[]>,
   computeIfMissing = true,
 ): Promise<XiangqiGameAnalysis | null> {
-  const engineId = XIANGQI_DEFAULT_ENGINE_ID;
+  const engineId = XIANGQI_ANALYSIS_ENGINE_ID;
   const depth = XIANGQI_ANALYSIS_REQUEST_DEPTH;
 
   const cached = await cache.get(roomId, engineId, depth);

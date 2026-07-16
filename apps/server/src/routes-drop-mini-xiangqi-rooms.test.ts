@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import type { ServerResponse } from 'node:http';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { DROP_MINI_XIANGQI_SPEC_ID } from '@mistboard/game';
 import type { DropMiniXiangqiRuntimeRoom } from './drop-mini-xiangqi-registration.js';
 import {
@@ -15,6 +15,13 @@ type ResponseCapture = {
   headers: Record<string, string>;
   status: number | null;
 };
+
+const dropMiniFlagBefore = process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED;
+process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED = 'true';
+after(() => {
+  if (dropMiniFlagBefore === undefined) delete process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED;
+  else process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED = dropMiniFlagBefore;
+});
 
 test('Drop Mini Xiangqi room route only claims canonical game spec requests', () => {
   assert.equal(requestsDropMiniXiangqi({ gameSpecId: DROP_MINI_XIANGQI_SPEC_ID }), true);

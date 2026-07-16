@@ -3,11 +3,11 @@ import type { GameFamilyId } from '@mistboard/game';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
 import { t } from './i18n/catalog.js';
 import {
-  APP_LOCALES,
   currentLocale,
   LOCALE_META,
   type Locale,
   localizedHref,
+  SUPPORTED_LOCALES,
   setStoredLocale,
 } from './i18n/locale.js';
 import {
@@ -22,10 +22,13 @@ import { SHOGI_PIECE_SETS, type ShogiPieceSet, shogiPieceTilePreview } from './s
 import { isLikelySignedIn } from './signed-in-state.js';
 import { readStoredSoundSet, SOUND_SETS, type SoundSetId, storeSoundSet } from './sound-sets.js';
 import {
+  readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
   readStoredXiangqiPieceSet,
+  writeStoredXiangqiBoardLayout,
   writeStoredXiangqiBoardTheme,
   writeStoredXiangqiPieceSet,
+  type XiangqiBoardLayout,
   type XiangqiBoardTheme,
 } from './xiangqi-appearance-storage.js';
 import {
@@ -35,7 +38,10 @@ import {
 } from './xiangqi-piece-sets.js';
 
 export { readStoredShogiPieceSet } from './shogi-appearance-storage.js';
-export { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+export {
+  readStoredXiangqiBoardLayout,
+  readStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 
 export type BoardTheme = 'standard' | 'contrast' | 'colorblind' | 'blue' | 'green' | 'mono';
 export type FogTheme = 'veil' | 'solid' | 'drift' | 'mistveil' | 'void' | 'invisible';
@@ -101,10 +107,15 @@ const xiangqiBoardThemes: Array<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
 ];
+type XiangqiBoardChoice = XiangqiBoardTheme | 'cell';
+const xiangqiBoardChoices: Array<{ id: XiangqiBoardChoice; label: string }> = [
+  ...xiangqiBoardThemes,
+  { id: 'cell', label: 'Square grid' },
+];
 const xiangqiPieceSets = XIANGQI_PIECE_SETS;
 const shogiBoardThemes = SHOGI_BOARD_THEMES;
 const shogiPieceSets = SHOGI_PIECE_SETS;
-const defaultBoardFamily: BoardFamily = 'chess';
+const defaultBoardFamily: BoardFamily = 'xiangqi';
 
 // Xiangqi appearance (board themes + piece sets) is shared by full Dark Xiangqi,
 // Dark Mini Xiangqi, Mini Xiangqi, and Crossroads Chess's xiangqi-side disk
@@ -114,15 +125,17 @@ export function xiangqiAppearanceEnabled(): boolean {
   return true;
 }
 
-// Shogi appearance (board theme + piece set) drives the Dark Shogi board.
+// Shogi is no longer a player-facing game family. Keep its render/storage
+// support available to historical surfaces, but do not advertise controls for
+// a game that cannot be selected from the product.
 export function shogiAppearanceEnabled(): boolean {
-  return true;
+  return false;
 }
 
 function enabledAppearanceFamilies(): Array<{ id: BoardFamily; label: string }> {
   return [
-    { id: 'chess', label: 'Chess' },
     ...(xiangqiAppearanceEnabled() ? [{ id: 'xiangqi' as BoardFamily, label: 'Xiangqi' }] : []),
+    { id: 'chess', label: 'Chess' },
     ...(shogiAppearanceEnabled() ? [{ id: 'shogi' as BoardFamily, label: 'Shogi' }] : []),
   ];
 }
@@ -135,12 +148,13 @@ export function initializeThemeSettings(): void {
   applyBoardTheme(readStoredTheme());
   applyFogTheme(readStoredFogTheme());
   applyPieceSet(readStoredPieceSet());
+  applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
   applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   applyShogiBoardTheme(readStoredShogiBoardTheme());
   applyShogiPieceSet(readStoredShogiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
-    document.documentElement.dataset.boardFamily = 'chess';
+    document.documentElement.dataset.boardFamily = defaultBoardFamily;
   }
   watchForSystemThemeChanges();
   mountThemeControls();
@@ -183,6 +197,10 @@ function applyPieceSet(pieceSet: PieceSet): void {
 
 function applyXiangqiBoardTheme(theme: XiangqiBoardTheme): void {
   document.documentElement.dataset.xiangqiBoardTheme = theme;
+}
+
+function applyXiangqiBoardLayout(layout: XiangqiBoardLayout): void {
+  document.documentElement.dataset.xiangqiBoardLayout = layout;
 }
 
 function applyXiangqiPieceSet(pieceSet: XiangqiPieceSet): void {
@@ -323,8 +341,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       createLanguageField(locale, options.onLocaleSelect),
     ]);
   }
-  addCategory('sound', 'Sound', [createSoundPanel()]);
-  addCategory('theme', 'Appearance', [createSiteThemeList()]);
+  addCategory('sound', t('prefs.sound', {}, locale), [createSoundPanel()]);
+  addCategory('theme', t('prefs.appearance', {}, locale), [createSiteThemeList()]);
 
   // The Game selector only appears when a xiangqi variant is enabled; otherwise
   // Board/Pieces drill straight into the chess tiles. It sits at the top of both
@@ -335,8 +353,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   boardBody.push(
     createTileField(
       'board',
-      'Board colors',
-      'Board color scheme',
+      t('prefs.boardColors', {}, locale),
+      t('prefs.boardColorScheme', {}, locale),
       themes,
       readStoredTheme(),
       (value) => {
@@ -353,13 +371,18 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
     boardBody.push(
       createTileField(
         'xqboard',
-        'Board style',
-        'Xiangqi board presentation',
-        xiangqiBoardThemes,
-        readStoredXiangqiBoardTheme(),
+        t('prefs.boardStyle', {}, locale),
+        t('prefs.xiangqiBoardPresentation', {}, locale),
+        xiangqiBoardChoices,
+        readXiangqiBoardChoice(),
         (value) => {
-          applyXiangqiBoardTheme(value);
-          writeStoredXiangqiBoardTheme(value);
+          if (value !== 'cell') {
+            applyXiangqiBoardTheme(value);
+            writeStoredXiangqiBoardTheme(value);
+          }
+          const layout: XiangqiBoardLayout = value === 'cell' ? 'cell' : 'intersection';
+          applyXiangqiBoardLayout(layout);
+          writeStoredXiangqiBoardLayout(layout);
           syncThemeControls();
           dispatchXiangqiAppearanceChanged();
         },
@@ -372,8 +395,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
     boardBody.push(
       createTileField(
         'shogiboard',
-        'Board colors',
-        'Shogi board color scheme',
+        t('prefs.boardColors', {}, locale),
+        t('prefs.shogiBoardColorScheme', {}, locale),
         shogiBoardThemes,
         readStoredShogiBoardTheme(),
         (value) => {
@@ -387,15 +410,15 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       ),
     );
   }
-  addCategory('board', 'Board', boardBody);
+  addCategory('board', t('prefs.board', {}, locale), boardBody);
 
   const pieceBody: HTMLElement[] = [];
   if (xiangqiAppearanceEnabled()) pieceBody.push(createBoardFamilyField('stacked'));
   pieceBody.push(
     createTileField(
       'piece',
-      'Pieces',
-      'Piece set',
+      t('prefs.pieces', {}, locale),
+      t('prefs.pieceSet', {}, locale),
       pieceSets,
       readStoredPieceSet(),
       (value) => {
@@ -412,8 +435,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
     pieceBody.push(
       createTileField(
         'xqpiece',
-        'Pieces',
-        'Xiangqi piece set',
+        t('prefs.pieces', {}, locale),
+        t('prefs.xiangqiPieceSet', {}, locale),
         xiangqiPieceSets,
         readStoredXiangqiPieceSet(),
         (value) => {
@@ -431,8 +454,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
     pieceBody.push(
       createTileField(
         'shogipiece',
-        'Pieces',
-        'Shogi piece set',
+        t('prefs.pieces', {}, locale),
+        t('prefs.shogiPieceSet', {}, locale),
         shogiPieceSets,
         readStoredShogiPieceSet(),
         (value) => {
@@ -446,15 +469,15 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       ),
     );
   }
-  addCategory('pieces', 'Pieces', pieceBody);
+  addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
 
   // Fog is our one row beyond the lichess set; keep it last so the shared five
   // stay in lichess order above it.
-  addCategory('fog', 'Fog', [
+  addCategory('fog', t('prefs.fog', {}, locale), [
     createTileField(
       'fog',
-      'Fog',
-      'Fog shading style',
+      t('prefs.fog', {}, locale),
+      t('prefs.fogShadingStyle', {}, locale),
       fogThemes,
       readStoredFogTheme(),
       (value) => {
@@ -528,7 +551,7 @@ function createLanguageField(
   list.setAttribute('role', 'radiogroup');
   list.setAttribute('aria-label', t('nav.language', {}, locale));
 
-  for (const optionLocale of APP_LOCALES) {
+  for (const optionLocale of SUPPORTED_LOCALES) {
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'appearance-language-option';
@@ -745,12 +768,12 @@ function createSoundPanel(): HTMLDivElement {
   const list = document.createElement('div');
   list.className = 'appearance-choice-list appearance-sound-list';
   list.setAttribute('role', 'radiogroup');
-  list.setAttribute('aria-label', 'Sound set');
+  list.setAttribute('aria-label', t('prefs.soundSet'));
 
-  list.append(createSoundOption('silent', 'Silent'));
-  for (const set of sortedSoundSetsForMenu()) {
-    list.append(createSoundOption(set.id, soundSetMenuLabel(set.id)));
+  for (const set of SOUND_SETS) {
+    list.append(createSoundOption(set.id, set.label));
   }
+  list.append(createSoundOption('silent', t('prefs.silent')));
 
   panel.append(volume, list);
   return panel;
@@ -762,7 +785,7 @@ function createVolumeField(): HTMLLabelElement {
   const row = document.createElement('span');
   row.className = 'theme-control-field-row';
   const label = document.createElement('span');
-  label.textContent = 'Volume';
+  label.textContent = t('prefs.volume');
   const value = document.createElement('output');
   value.dataset.soundVolumeValue = '';
   value.textContent = readStoredSoundMuted() ? 'Muted' : formatVolume(readEffectiveSoundVolume());
@@ -818,18 +841,6 @@ function createSoundOption(id: SoundSetId | 'silent', label: string): HTMLButton
   return button;
 }
 
-function sortedSoundSetsForMenu(): ReadonlyArray<{ id: SoundSetId; label: string }> {
-  const order: SoundSetId[] = ['mist', 'piano', 'nes', 'sfx', 'futuristic'];
-  return order
-    .map((id) => SOUND_SETS.find((set) => set.id === id))
-    .filter((set): set is { id: SoundSetId; label: string } => set !== undefined);
-}
-
-function soundSetMenuLabel(id: SoundSetId): string {
-  if (id === 'mist') return 'Standard';
-  return SOUND_SETS.find((set) => set.id === id)?.label ?? id;
-}
-
 function openThemeMenu(control: HTMLElement): void {
   resetAppearanceMenus(control);
   control.classList.add('open');
@@ -870,7 +881,7 @@ function syncThemeControls(): void {
   syncSiteThemeControls(siteTheme);
   syncBoardFamilyControls();
   syncTileRow('board', boardTheme);
-  syncTileRow('xqboard', readStoredXiangqiBoardTheme());
+  syncTileRow('xqboard', readXiangqiBoardChoice());
   syncTileRow('shogiboard', readStoredShogiBoardTheme());
   syncTileRow('fog', fogTheme);
   syncTileRow('piece', pieceSet);
@@ -893,6 +904,10 @@ function syncThemeControls(): void {
   document.querySelectorAll<HTMLElement>('.theme-control-volume-field').forEach((field) => {
     field.classList.toggle('muted', soundMuted);
   });
+}
+
+function readXiangqiBoardChoice(): XiangqiBoardChoice {
+  return readStoredXiangqiBoardLayout() === 'cell' ? 'cell' : readStoredXiangqiBoardTheme();
 }
 
 function syncSiteThemeControls(activeTheme: SiteTheme): void {

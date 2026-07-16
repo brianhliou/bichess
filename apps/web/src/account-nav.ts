@@ -1,5 +1,6 @@
 import './account-nav.css';
 
+import { type AccountPreferences, replaceAccountPreferences } from './account-preferences.js';
 import { identify, resetIdentity } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
@@ -12,7 +13,13 @@ import {
 } from './i18n/locale.js';
 import { clearSeatTokenForRoom, liveState } from './live-state.js';
 import { clearNotificationBells, mountNotificationBell } from './notification-nav.js';
-import { readSignedInHint, setResolvedSignedIn, writeSignedInHint } from './signed-in-state.js';
+import {
+  readSignedInHint,
+  setResolvedAdmin,
+  setResolvedSignedIn,
+  writeAdminHint,
+  writeSignedInHint,
+} from './signed-in-state.js';
 import {
   buildAppearanceMenu,
   gearIconSvg,
@@ -30,11 +37,6 @@ const ENVELOPE_ICON =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
 const PROFILE_CIRCLE_ICON =
   '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="8.7" r="3.15" fill="currentColor"/><path d="M6.6 17.9c.82-3.28 2.66-4.92 5.4-4.92s4.58 1.64 5.4 4.92c-1.33 1.2-3.12 1.92-5.4 1.92s-4.07-.72-5.4-1.92z" fill="currentColor"/></svg>';
-// Admin-group icons (Lucide "database" + "cpu"), same outline weight as above.
-const DATABASE_ICON =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>';
-const CPU_ICON =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M2 9h2"/><path d="M2 15h2"/><path d="M20 9h2"/><path d="M20 15h2"/></svg>';
 
 // Each mounted dropdown owns a connection-status footer; we poll only while its
 // menu is open. Keyed by the control element so multiple navs stay independent.
@@ -51,6 +53,7 @@ type AuthUser = {
   profileVisibility: 'private' | 'unlisted' | 'public';
   accountRole: 'player' | 'admin';
   locale: Locale | null;
+  accountPreferences?: Partial<AccountPreferences>;
   // Patron program: server-derived, present on /api/auth/me. Optional so older
   // cached payloads (pre-078) still parse.
   isPatron?: boolean;
@@ -74,6 +77,7 @@ export function initializeAccountNav(): void {
 async function primeAccountNav(): Promise<void> {
   const user = await loadCurrentUser();
   writeSignedInHint(user !== null);
+  writeAdminHint(user?.accountRole === 'admin');
   writeCachedUser(user);
   if (user) mountAccountNavs();
   else {
@@ -84,10 +88,13 @@ async function primeAccountNav(): Promise<void> {
 
 export function setAccountNavUser(user: AuthUser | null): void {
   applyResolvedAccountLocale(user);
+  if (user) replaceAccountPreferences(user.accountPreferences);
   cachedUser = user;
   userPromise = Promise.resolve(user);
   setResolvedSignedIn(user !== null);
+  setResolvedAdmin(user?.accountRole === 'admin');
   writeSignedInHint(user !== null);
+  writeAdminHint(user?.accountRole === 'admin');
   writeCachedUser(user);
 
   resetMountedAccountControls();
@@ -122,10 +129,15 @@ function mountAccountNavs(): void {
 // Signed-in-only nav links (e.g. Community > Friends) paint with a hint-based
 // initial visibility in site-shell's navLink; this is the authoritative
 // reconcile once auth resolves (and on every observer pass, so navs rebuilt by
-// SPA mounts stay in sync). Idempotent by construction.
+// SPA mounts stay in sync). Idempotent by construction. The admin-only tools
+// menu reconciles the same way off the resolved account role.
 function applySignedInOnlyNav(signedIn: boolean): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-signed-in-only]')) {
     el.hidden = !signedIn;
+  }
+  const isAdmin = signedIn && cachedUser?.accountRole === 'admin';
+  for (const el of document.querySelectorAll<HTMLElement>('[data-admin-only]')) {
+    el.hidden = !isAdmin;
   }
 }
 
@@ -310,13 +322,7 @@ function mountAccountNav(nav: HTMLElement, user: AuthUser): void {
   accountLinks.append(profile, inbox, settings, logout);
 
   panel.append(accountLinks, createAccountDivider(), appearance);
-  // Admin tools live in their own labeled group at the foot of the dropdown so
-  // internal surfaces read as clearly distinct from everyday account actions
-  // (issue #134). Only rendered for admins; /database and /engines are
-  // themselves admin-gated server-side.
-  if (user.accountRole === 'admin') {
-    panel.append(createAccountDivider(), buildAdminSection(locale));
-  }
+  // Admin tools live in the main nav's consolidated Admin menu.
   panel.append(createAccountDivider(), status.element);
   control.append(trigger, panel);
   slot.replaceWith(control);
@@ -353,6 +359,7 @@ async function handleLogout(
   invalidateAccountCache();
   resetIdentity();
   writeSignedInHint(false);
+  writeAdminHint(false);
   writeCachedUser(null);
   if (isInboxRoute()) {
     window.location.href = loginHrefForCurrentPage(locale);
@@ -410,34 +417,6 @@ function createAccountDivider(): HTMLDivElement {
   return divider;
 }
 
-// The admin-only tool group: an "Admin" heading over the internal /database and
-// /engines surfaces, tinted apart from the everyday rows (issue #134). Labels
-// stay English (these are internal admin tools whose own pages are English-only);
-// the heading reuses the existing profile.admin string.
-function buildAdminSection(locale: Locale): HTMLElement {
-  const section = document.createElement('div');
-  section.className = 'account-nav-links account-nav-admin';
-
-  const heading = document.createElement('p');
-  heading.className = 'account-nav-heading';
-  heading.textContent = t('profile.admin', {}, locale);
-  section.append(
-    heading,
-    createAdminLink('/database', DATABASE_ICON, 'Database'),
-    createAdminLink('/engines', CPU_ICON, 'Engines'),
-  );
-  return section;
-}
-
-function createAdminLink(href: string, icon: string, label: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'account-nav-item';
-  link.href = href;
-  link.setAttribute('role', 'menuitem');
-  link.append(createItemIcon(icon), createItemLabel(label));
-  return link;
-}
-
 function openAccountMenu(control: HTMLElement): void {
   resetAppearanceMenus(control);
   control.dataset.accountNavView = 'root';
@@ -475,8 +454,10 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
   userPromise = fetchCurrentUser()
     .then((user) => {
       applyResolvedAccountLocale(user);
+      if (user) replaceAccountPreferences(user.accountPreferences);
       cachedUser = user;
       setResolvedSignedIn(user !== null);
+      setResolvedAdmin(user?.accountRole === 'admin');
       // Canonical per-load auth resolution: identify so PostHog persons map to
       // DB accounts. Idempotent for returning users.
       if (user) {
@@ -491,6 +472,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
     .catch(() => {
       cachedUser = null;
       setResolvedSignedIn(false);
+      setResolvedAdmin(false);
       return null;
     });
   return userPromise;
@@ -512,6 +494,7 @@ async function fetchCurrentUser(): Promise<AuthUser | null> {
 function invalidateAccountCache(): void {
   cachedUser = undefined;
   setResolvedSignedIn(undefined);
+  setResolvedAdmin(undefined);
   userPromise = null;
 }
 

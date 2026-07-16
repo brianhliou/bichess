@@ -4,7 +4,11 @@
 // sync. Entitlement is ALWAYS derived here from status/is_lifetime, never
 // asserted by the client.
 
+import type pg from 'pg';
 import { getPool, withTransaction } from './persistence-db.js';
+
+export type PatronTransaction = pg.PoolClient;
+type PatronDatabase = pg.Pool | PatronTransaction;
 
 // A subscription/donation counts as "active patron" while lifetime, or while
 // Stripe reports the subscription as active or trialing. past_due keeps the
@@ -26,8 +30,12 @@ export type PatronSubscriptionInput = {
 // Record the account -> Stripe customer mapping so a returning donor reuses the
 // same customer and can open the billing portal. Idempotent; only writes when
 // the value actually changes.
-export async function setStripeCustomerId(accountId: string, customerId: string): Promise<void> {
-  await getPool().query(
+export async function setStripeCustomerId(
+  accountId: string,
+  customerId: string,
+  database: PatronDatabase = getPool(),
+): Promise<void> {
+  await database.query(
     `UPDATE users
        SET stripe_customer_id = $2, updated_at = now()
      WHERE id = $1 AND stripe_customer_id IS DISTINCT FROM $2`,
@@ -46,25 +54,37 @@ export async function getStripeCustomerId(accountId: string): Promise<string | n
 // Resolve the account behind a Stripe customer. Webhooks that carry only a
 // customer id (subscription.updated, invoice.*) map back to an account through
 // the customer id we stored at checkout.
-export async function findAccountIdByStripeCustomerId(customerId: string): Promise<string | null> {
-  const { rows } = await getPool().query<{ id: string }>(
+export async function findAccountIdByStripeCustomerId(
+  customerId: string,
+  database: PatronDatabase = getPool(),
+): Promise<string | null> {
+  const { rows } = await database.query<{ id: string }>(
     `SELECT id FROM users WHERE stripe_customer_id = $1 LIMIT 1`,
     [customerId],
   );
   return rows[0]?.id ?? null;
 }
 
-// Idempotency guard for Stripe webhook delivery: Stripe re-delivers events, so a
-// replayed event.id must not double-apply. Returns true if this event is new and
-// should be processed, false if it was already handled.
-export async function claimStripeEvent(eventId: string, type: string): Promise<boolean> {
-  const { rowCount } = await getPool().query(
-    `INSERT INTO stripe_events (event_id, type)
-     VALUES ($1, $2)
-     ON CONFLICT (event_id) DO NOTHING`,
-    [eventId, type],
-  );
-  return (rowCount ?? 0) > 0;
+// Apply a Stripe event exactly once. The event ledger insert and every patron
+// state write share one transaction: if processing throws, the claim rolls back
+// too, so Stripe's retry can safely process the event instead of being mistaken
+// for a completed duplicate.
+export async function processStripeEvent(
+  eventId: string,
+  type: string,
+  apply: (transaction: PatronTransaction) => Promise<void>,
+): Promise<boolean> {
+  return withTransaction(async (transaction) => {
+    const { rowCount } = await transaction.query(
+      `INSERT INTO stripe_events (event_id, type)
+       VALUES ($1, $2)
+       ON CONFLICT (event_id) DO NOTHING`,
+      [eventId, type],
+    );
+    if ((rowCount ?? 0) === 0) return false;
+    await apply(transaction);
+    return true;
+  });
 }
 
 // Upsert a subscription/donation row from Stripe and recompute the account's
@@ -72,8 +92,11 @@ export async function claimStripeEvent(eventId: string, type: string): Promise<b
 // underlying rows. Recurring rows upsert by stripe_subscription_id; one-time /
 // lifetime donations (no subscription id) insert a fresh row and rely on the
 // webhook event ledger for dedup.
-export async function applyPatronSubscription(input: PatronSubscriptionInput): Promise<void> {
-  await withTransaction(async (client) => {
+export async function applyPatronSubscription(
+  input: PatronSubscriptionInput,
+  transaction?: PatronTransaction,
+): Promise<void> {
+  const apply = async (client: PatronTransaction): Promise<void> => {
     if (input.stripeSubscriptionId) {
       await client.query(
         `INSERT INTO patron_subscriptions
@@ -125,5 +148,7 @@ export async function applyPatronSubscription(input: PatronSubscriptionInput): P
        WHERE u.id = $1 AND u.patron_since IS DISTINCT FROM sub.since`,
       [input.accountId, PATRON_ACTIVE_STATUSES],
     );
-  });
+  };
+  if (transaction) await apply(transaction);
+  else await withTransaction(apply);
 }

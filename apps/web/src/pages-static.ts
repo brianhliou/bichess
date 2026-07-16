@@ -4,11 +4,11 @@ import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { buildContact } from './contact.js';
-import { type I18nKey, t } from './i18n/catalog.js';
-import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
-import { SHOGI_IMAGE_SET_CREDITS } from './shogi-piece-sets.js';
+import { t } from './i18n/catalog.js';
+import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
 
 type PublicStatsMode = 'pvp' | 'pve' | 'eve';
 
@@ -26,39 +26,6 @@ type PublicSiteStats = {
   modeTotals: Record<PublicStatsMode, number>;
   dailyCompletedGames: PublicStatsDay[];
 };
-
-type StaticPageKey =
-  | 'about'
-  | 'news'
-  | 'faq'
-  | 'contact'
-  | 'patron'
-  | 'terms'
-  | 'privacy'
-  | 'source';
-
-type StaticRailLink = {
-  key?: StaticPageKey;
-  href: string;
-  labelKey: I18nKey;
-  external?: boolean;
-};
-
-const STATIC_RAIL_GROUPS: ReadonlyArray<ReadonlyArray<StaticRailLink>> = [
-  [
-    { key: 'about', href: '/about', labelKey: 'about.heading' },
-    { key: 'news', href: '/feed', labelKey: 'news.feedHeading' },
-    { key: 'faq', href: '/faq', labelKey: 'faq.heading' },
-    { key: 'contact', href: '/contact', labelKey: 'contact.heading' },
-    { key: 'patron', href: '/patron', labelKey: 'patron.heading' },
-    { key: 'terms', href: '/terms', labelKey: 'terms.heading' },
-    { key: 'privacy', href: '/privacy', labelKey: 'privacy.heading' },
-  ],
-  [
-    { key: 'source', href: '/source', labelKey: 'footer.source' },
-    { href: GITHUB_URL, labelKey: 'footer.github', external: true },
-  ],
-];
 
 const publicStatsModes: Array<{
   key: PublicStatsMode;
@@ -144,11 +111,12 @@ export function mountContact(root: HTMLElement): void {
 export async function mountArticlesIndex(
   root: HTMLElement,
   lang?: import('./article-i18n.js').ArticleLang | null,
+  view: import('./articles.js').ArticleIndexView = 'mistboard',
 ): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'articles-route');
   const { buildArticlesIndex, mountArticleThumbnails } = await import('./articles.js');
-  const index = buildArticlesIndex(lang ?? undefined);
+  const index = buildArticlesIndex(lang ?? undefined, view);
   root.append(buildNav(), index);
   mountArticleThumbnails(index);
 }
@@ -202,55 +170,6 @@ export async function mountArticle(
   mountArticleEnhancements(articlePage);
   // The variant rail carries board-kind thumbnails that mount like index cards.
   mountArticleThumbnails(articlePage);
-}
-
-function buildStaticPageLayout(
-  activeKey: StaticPageKey,
-  content: HTMLElement,
-  locale: Locale = currentLocale(),
-): HTMLElement {
-  const layout = document.createElement('div');
-  layout.className = 'static-page-layout';
-  layout.append(buildStaticPageRail(activeKey, locale), content);
-  return layout;
-}
-
-function buildStaticPageRail(
-  activeKey: StaticPageKey,
-  locale: Locale = currentLocale(),
-): HTMLElement {
-  const aside = document.createElement('aside');
-  aside.className = 'static-page-rail';
-
-  const nav = document.createElement('nav');
-  nav.className = 'static-page-rail-nav';
-  nav.setAttribute('aria-label', t('footer.about', {}, locale));
-
-  for (const group of STATIC_RAIL_GROUPS) {
-    const list = document.createElement('ul');
-    list.className = 'static-page-rail-group';
-    for (const item of group) {
-      const row = document.createElement('li');
-      const link = document.createElement('a');
-      link.className = 'static-page-rail-link';
-      link.href = item.external ? item.href : localizedHref(item.href, locale);
-      link.textContent = t(item.labelKey, {}, locale);
-      if (item.external) {
-        link.target = '_blank';
-        link.rel = 'noreferrer noopener';
-      }
-      if (item.key === activeKey) {
-        link.classList.add('active');
-        link.setAttribute('aria-current', 'page');
-      }
-      row.append(link);
-      list.append(row);
-    }
-    nav.append(list);
-  }
-
-  aside.append(nav);
-  return aside;
 }
 
 function buildAbout(locale: Locale = currentLocale()): HTMLElement {
@@ -654,24 +573,10 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.identityForksBrand', {}, locale)),
   ]);
 
-  // CC BY / CC BY-SA attribution for the bundled shogi image piece sets. Lives
-  // here rather than in the appearance picker so the settings dropdown stays clean.
-  const pieceArt = sourceBlock(
-    'Piece art',
-    SHOGI_IMAGE_SET_CREDITS.map((credit) => {
-      const line = document.createElement('span');
-      line.append(
-        document.createTextNode(`Shogi ${credit.sets} by `),
-        linkLine(credit.author, credit.authorUrl),
-        document.createTextNode(' ('),
-        linkLine(credit.license, credit.licenseUrl),
-        document.createTextNode(')'),
-      );
-      return line;
-    }),
-  );
-
-  section.append(heading, intro, source, thirdParty, identity, pieceArt);
+  // NOTE: the shogi image piece-set "Piece art" attribution block is hidden for
+  // now (SHOGI_IMAGE_SET_CREDITS still holds the CC BY / CC BY-SA credits when we
+  // reinstate it). See buildSource history before re-adding.
+  section.append(heading, intro, source, thirdParty, identity);
   return section;
 }
 
@@ -884,19 +789,42 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   const section = document.createElement('section');
   section.className = 'site-section not-found-section';
 
+  const code = document.createElement('div');
+  code.className = 'not-found-code';
+  code.setAttribute('aria-hidden', 'true');
+  code.textContent = '404';
+
   const heading = document.createElement('h1');
-  heading.className = 'site-section-heading';
+  heading.className = 'site-section-heading not-found-heading';
   heading.textContent = t('notFound.heading', {}, locale);
 
-  const p = document.createElement('p');
-  p.append(
-    document.createTextNode(t('notFound.prefix', {}, locale)),
-    aboutLink(t('notFound.homePage', {}, locale), '/'),
-    document.createTextNode(t('notFound.middle', {}, locale)),
+  const lede = document.createElement('p');
+  lede.className = 'not-found-lede';
+  lede.textContent = t('notFound.lede', {}, locale);
+
+  const home = aboutLink(t('notFound.homeCta', {}, locale), '/');
+  home.className = 'not-found-cta';
+
+  const quick = document.createElement('nav');
+  quick.className = 'not-found-links';
+  quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
+  for (const [labelKey, href] of [
+    ['nav.play', '/play'],
+    ['nav.rules', '/rules'],
+    ['nav.watch', '/watch'],
+    ['nav.puzzles', '/puzzles'],
+  ] as const) {
+    quick.append(aboutLink(t(labelKey, {}, locale), href));
+  }
+
+  const contact = document.createElement('p');
+  contact.className = 'not-found-contact';
+  contact.append(
+    document.createTextNode(t('notFound.stillLost', {}, locale)),
     aboutLink(t('notFound.contact', {}, locale), '/contact'),
     document.createTextNode(t('notFound.suffix', {}, locale)),
   );
 
-  section.append(heading, p);
+  section.append(code, heading, lede, home, quick, contact);
   return section;
 }

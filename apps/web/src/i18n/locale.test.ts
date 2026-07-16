@@ -7,7 +7,6 @@ import {
   localeFromLanguageTag,
   localeFromPath,
   localizedHref,
-  setStoredLocale,
   stripLocalePrefix,
 } from './locale.js';
 
@@ -26,31 +25,37 @@ describe('locale helpers', () => {
   });
 
   it('detects locales from current path prefixes', () => {
-    expect(localeFromPath('/zh-hans/rules/banqi')).toBe('zh-Hans');
+    expect(localeFromPath('/zh-hans/rules/flip-xiangqi')).toBe('zh-Hans');
     expect(localeFromPath('/zh-hant/blog')).toBe('zh-Hant');
-    expect(localeFromPath('/ja')).toBe('ja');
-    expect(localeFromPath('/rules/banqi')).toBeNull();
+    expect(localeFromPath('/ja')).toBeNull();
+    expect(localeFromPath('/rules/flip-xiangqi')).toBeNull();
   });
 
   it('maps browser language tags to supported locales', () => {
     expect(localeFromLanguageTag('zh-TW')).toBe('zh-Hant');
     expect(localeFromLanguageTag('zh-CN')).toBe('zh-Hans');
-    expect(localeFromLanguageTag('ja-JP')).toBe('ja');
+    expect(localeFromLanguageTag('ja-JP')).toBeNull();
     expect(localeFromLanguageTag('fr-FR')).toBeNull();
   });
 
   it('persists a locale from localized content URLs', () => {
-    window.history.replaceState(null, '', '/zh-hant/rules/banqi');
+    window.history.replaceState(null, '', '/zh-hant/rules/flip-xiangqi');
 
     expect(initializeLocaleFromCurrentUrl()).toBe('zh-Hant');
     expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('zh-Hant');
     expect(document.documentElement.lang).toBe('zh-Hant');
   });
 
-  it('uses stored locale outside localized content URLs', () => {
-    setStoredLocale('ja');
+  it('falls back from a dormant stored locale outside localized content URLs', () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'ja');
 
-    expect(currentLocale()).toBe('ja');
+    expect(currentLocale()).toBe('en');
+  });
+
+  it('falls back from a dormant account locale preference', () => {
+    expect(applyAccountLocalePreference('ja')).toBe(false);
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('applies account locale preferences on unprefixed URLs', () => {
@@ -61,7 +66,7 @@ describe('locale helpers', () => {
   });
 
   it('does not let account locale override explicit URL prefixes', () => {
-    window.history.replaceState(null, '', '/zh-hans/rules/banqi');
+    window.history.replaceState(null, '', '/zh-hans/rules/flip-xiangqi');
 
     expect(applyAccountLocalePreference('zh-Hant')).toBe(false);
     expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBeNull();
@@ -69,15 +74,18 @@ describe('locale helpers', () => {
   });
 
   it('keeps localized article and rules hrefs in supported content locales', () => {
-    expect(localizedHref('/rules/banqi?play=1', 'zh-Hant')).toBe('/zh-hant/rules/banqi?play=1');
+    expect(localizedHref('/rules/flip-xiangqi?play=1', 'zh-Hant')).toBe(
+      '/zh-hant/rules/flip-xiangqi?play=1',
+    );
     expect(localizedHref('/blog/misty', 'zh-Hans')).toBe('/zh-hans/blog/misty');
     expect(localizedHref('/account?tab=login', 'zh-Hant')).toBe('/account?tab=login');
-    expect(localizedHref('/rules/banqi', 'ja')).toBe('/rules/banqi');
   });
 
   it('strips existing locale prefixes before rebuilding hrefs', () => {
-    expect(stripLocalePrefix('/zh-hant/rules/banqi#top')).toBe('/rules/banqi#top');
-    expect(localizedHref('/zh-hans/rules/banqi', 'zh-Hant')).toBe('/zh-hant/rules/banqi');
+    expect(stripLocalePrefix('/zh-hant/rules/flip-xiangqi#top')).toBe('/rules/flip-xiangqi#top');
+    expect(localizedHref('/zh-hans/rules/flip-xiangqi', 'zh-Hant')).toBe(
+      '/zh-hant/rules/flip-xiangqi',
+    );
   });
 });
 

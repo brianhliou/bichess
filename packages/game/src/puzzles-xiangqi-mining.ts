@@ -25,6 +25,7 @@ import {
   type XiangqiPuzzleGoal,
   type XiangqiPuzzleTheme,
 } from './puzzles-xiangqi.js';
+import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import {
   positionRepetitionKey,
   type XiangqiColor,
@@ -144,6 +145,62 @@ export function isXiangqiUniquelyWinning(
   const secondMates = second.mate !== null && second.mate > 0;
   if (bestMates && !secondMates) return true;
   return best.scoreCp - second.scoreCp >= opts.uniqueGapCp;
+}
+
+// ── Winning-floor uniqueness (per-ply gate for the gated re-mine) ────────────
+//
+// A relative cp gap is the wrong test for a puzzle move: two moves 50cp apart
+// are both good, so forcing one is unfair. What makes a solver move THE answer
+// is that every alternative is actually wrong — it loses the win, or it wins a
+// whole piece less. This gate encodes that: best must keep a clear win, and the
+// runner-up must either drop out of "winning" or trail by a decisive material
+// margin. Mates bypass cp/win% (both saturate) and use strictly-fastest-mate.
+//
+// win% is a logistic map of cp; K is the eval scale (matches the audit tool's
+// mapping, so the miner and the audit agree on "unique"). The knobs are win%
+// thresholds plus one cp material margin.
+
+const XIANGQI_WINRATE_K = 400;
+
+/** Logistic cp -> win probability for the side to move. */
+export function xiangqiWinRate(cp: number): number {
+  return 1 / (1 + 10 ** (-cp / XIANGQI_WINRATE_K));
+}
+
+export type XiangqiSolverUniquenessOptions = {
+  /** Best line must reach at least this win probability to be a puzzle move. */
+  winHi: number;
+  /** A runner-up at or below this win probability has lost the win (=> wrong). */
+  winLo: number;
+  /** ...or a runner-up trailing best by at least this many cp is wrong even if
+   *  it is still nominally winning (win the chariot, not the horse). */
+  materialGapCp: number;
+};
+
+/** Per-ply gate for a solver move: is the best line uniquely correct? True when
+ *  best keeps a clear win AND the runner-up is actually wrong (lost the win or
+ *  trails by a whole piece). Mates: unique iff best is the strictly fastest
+ *  forced mate. No runner-up => the only move => unique. */
+export function isXiangqiSolverMoveUnique(
+  best: XiangqiVerifyLine | undefined,
+  second: XiangqiVerifyLine | undefined,
+  opts: XiangqiSolverUniquenessOptions,
+): boolean {
+  if (!best) return false;
+  const bestMates = best.mate !== null && best.mate > 0;
+  if (bestMates) {
+    if (!second) return true;
+    const secondMate = second.mate;
+    if (secondMate === null || secondMate <= 0) return true;
+    return (best.mate as number) < secondMate;
+  }
+  if (!second) return true; // only move
+  if (second.mate !== null && second.mate > 0) return false; // runner-up mates, best does not
+  if (xiangqiWinRate(best.scoreCp) < opts.winHi) return false;
+  return (
+    xiangqiWinRate(second.scoreCp) <= opts.winLo ||
+    best.scoreCp - second.scoreCp >= opts.materialGapCp
+  );
 }
 
 // ── Puzzle initial state ─────────────────────────────────────────────────────
@@ -300,6 +357,15 @@ export type XiangqiMineCandidateInput = {
   verifyScore: XiangqiVerifyLine;
   /** Scan-pass swing of the blunder, mover POV. */
   swingCp: number;
+  /** Denormalized attribution from the source game row (db mode only). Copied
+   *  onto sourceGame so the "From game" card renders without hosting the game. */
+  sourceMeta?: {
+    event?: string | null;
+    playedOn?: string | null;
+    result?: string | null;
+    redName?: string | null;
+    blackName?: string | null;
+  };
 };
 
 export type XiangqiMineReject = XiangqiSolutionBuildReject | 'not-playing' | 'validation-failed';
@@ -326,23 +392,53 @@ export function assembleMinedXiangqiPuzzle(
   const goal: XiangqiPuzzleGoal = built.endedByMate
     ? { type: 'checkmate', winner: solver }
     : { type: 'winning-advantage', winner: solver, centipawns: input.verifyScore.scoreCp };
+  // A winning-advantage line ends on its payoff: trim the quiet PV tail back to
+  // the solver's last capture. This can leave a bare 1-ply capture ("win the
+  // hanging piece") — kept as a legitimate easy puzzle, not re-floored.
+  const solution =
+    goal.type === 'winning-advantage'
+      ? trimXiangqiWinningAdvantageMoves(initial, built.moves)
+      : built.moves;
   const puzzle: XiangqiPuzzle = {
     id,
     variant: XIANGQI_SPEC_ID,
-    title: xiangqiPuzzleTitle(solver, goal, built.moves.length),
+    title: xiangqiPuzzleTitle(solver, goal, solution.length),
     initial,
-    solution: built.moves,
+    solution,
     goal,
     themes: tagXiangqiPuzzleThemes({
       initial,
-      solution: built.moves,
+      solution,
       goal,
       swingCp: input.swingCp,
     }),
-    sourceGame: { gameId: input.gameId, ply: input.blunderPly + 1 },
+    sourceGame: {
+      gameId: input.gameId,
+      ply: input.blunderPly + 1,
+      ...cleanSourceMeta(input.sourceMeta),
+    },
   };
   if (!validateStandardXiangqiPuzzle(puzzle).ok) {
     return { ok: false, reason: 'validation-failed' };
   }
   return { ok: true, puzzle };
+}
+
+/** Drop null/undefined/blank attribution fields so sourceGame stays minimal
+ *  ({ gameId, ply }) when the source row has no metadata. */
+function cleanSourceMeta(
+  meta: XiangqiMineCandidateInput['sourceMeta'],
+): Partial<
+  Pick<
+    NonNullable<XiangqiPuzzle['sourceGame']>,
+    'event' | 'playedOn' | 'result' | 'redName' | 'blackName'
+  >
+> {
+  if (!meta) return {};
+  const out: Record<string, string> = {};
+  for (const key of ['event', 'playedOn', 'result', 'redName', 'blackName'] as const) {
+    const value = meta[key];
+    if (typeof value === 'string' && value.trim().length > 0) out[key] = value;
+  }
+  return out;
 }

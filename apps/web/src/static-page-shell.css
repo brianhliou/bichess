@@ -1,0 +1,156 @@
+/* Shared shell for the /about family of static pages: the two-column rail +
+   boxed content panel, lichess-style. Page-specific prose (about, source, faq,
+   terms, privacy) still lives in pages-static.css; this file owns the chrome and
+   a generic .static-prose style the newer pages (contribute / thanks / lag)
+   reuse. */
+
+.static-page-layout {
+  display: grid;
+  grid-template-columns: 194px minmax(0, 940px);
+  align-items: start;
+  justify-content: start;
+  gap: 12px;
+  width: 100%;
+  max-width: 1510px;
+  margin: 0 auto;
+  padding: 18px 18px 64px;
+  box-sizing: border-box;
+  font-family:
+    "Noto Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* The white content card (lichess's .box). Fills the right grid column; the
+   inner .site-section supplies the interior padding. */
+.static-page-panel {
+  min-width: 0;
+  background: var(--site-panel);
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.static-page-layout .site-section {
+  max-width: none;
+  margin: 0;
+  padding: 30px 36px 52px;
+}
+
+.static-page-layout .site-section-heading {
+  /* Roboto 300 comes from the base .site-section-heading rule. */
+  font-size: 34px;
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+
+.static-page-rail {
+  align-self: start;
+  position: static;
+  overflow: visible;
+}
+
+.static-page-rail-nav {
+  display: grid;
+  gap: 26px;
+}
+
+.static-page-rail-group {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Roboto, to match the Roboto page headings (and lichess's rail). Body prose in
+   the panel stays Noto Sans via the layout default above. */
+.static-page-rail-link {
+  display: block;
+  border-radius: var(--site-radius-sm);
+  padding: 8px 14px;
+  color: var(--site-muted);
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.static-page-rail-link:hover,
+.static-page-rail-link:focus-visible,
+.static-page-rail-link.active {
+  background: color-mix(in srgb, var(--site-panel-soft) 78%, transparent);
+  color: var(--site-text);
+}
+
+.static-page-rail-link.active {
+  font-weight: 400;
+}
+
+/* Generic prose for the newer static pages that do not carry a bespoke section
+   stylesheet. about/source/faq/terms/privacy keep their own rules in
+   pages-static.css. */
+.static-prose p {
+  margin: 0 0 14px;
+  color: var(--site-text);
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+.static-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.static-prose h2 {
+  margin: 28px 0 10px;
+  color: var(--site-heading);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.static-prose a {
+  color: var(--site-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.static-prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (max-width: 720px) {
+  .static-page-layout {
+    display: block;
+    padding: 10px 14px 48px;
+  }
+
+  .static-page-layout .site-section {
+    padding: 24px 18px 40px;
+  }
+
+  .static-page-rail {
+    position: static;
+    margin: 0 0 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .static-page-rail-nav {
+    display: flex;
+    gap: 14px;
+    width: max-content;
+    min-width: 100%;
+    padding-bottom: 4px;
+  }
+
+  .static-page-rail-group {
+    display: flex;
+    gap: 4px;
+  }
+
+  .static-page-rail-link {
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+}

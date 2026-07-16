@@ -19,12 +19,29 @@
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serverFlagsForProfile } from './product-profile.mjs';
+import { currentWorktreeRole } from './worktree-role.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const concurrentlyBin = resolve(repoRoot, 'node_modules', '.bin', 'concurrently');
 
 const memory = process.argv.includes('--memory');
+const profile = process.argv.includes('--lab') ? 'lab' : 'product';
 const serverScript = memory ? 'dev' : 'dev:persistent';
+
+const childEnv = { ...process.env };
+for (const flag of serverFlagsForProfile(profile)) {
+  if (childEnv[flag] === undefined) childEnv[flag] = 'true';
+}
+if (profile === 'lab' && childEnv.VITE_MISTBOARD_LAB_ENABLED === undefined) {
+  childEnv.VITE_MISTBOARD_LAB_ENABLED = 'true';
+}
+
+if (currentWorktreeRole(repoRoot) === 'control') {
+  console.warn(
+    'dev: shared control worktree detected. For concurrent write work, create an isolated task worktree with npm run worktree:new -- <slug> --prepare.',
+  );
+}
 
 const base = parsePortBase(process.env.MISTBOARD_DEV_PORT_BASE);
 const webPort = base;
@@ -35,7 +52,7 @@ const serverCommand = `env PORT=${serverPort} npm run ${serverScript} --workspac
 const webCommand = `env PORT=${webPort} MISTBOARD_DEV_API_URL=${devApiUrl} npm run dev --workspace @mistboard/web`;
 
 console.log(
-  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}); ` +
+  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}, ${profile}); ` +
     `set MISTBOARD_DEV_PORT_BASE to run a second session on other ports.`,
 );
 
@@ -50,7 +67,7 @@ const child = spawn(
     serverCommand,
     webCommand,
   ],
-  { stdio: 'inherit', env: process.env },
+  { stdio: 'inherit', env: childEnv },
 );
 
 child.on('exit', (code, signal) => {

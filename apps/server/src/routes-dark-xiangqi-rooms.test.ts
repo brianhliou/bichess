@@ -122,7 +122,7 @@ test('Dark Xiangqi PvE route seats the default engine opposite the human', async
 
     assert.equal(reservedColor, 'black');
     assert.deepEqual(requestedEngine, {
-      engineId: 'python-fdx-v1.0',
+      engineId: 'python-fdx-v1.1',
       seat: 'black',
       reservationId: 'reservation-dxq',
     });

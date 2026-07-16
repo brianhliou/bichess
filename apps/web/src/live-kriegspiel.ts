@@ -186,7 +186,6 @@ const client = createTenantLiveClient<Color, KriegspielPlayerView, KriegspielWir
     rowClass: 'ksg-move-row',
     cellPrefix: 'ksg-move-row',
     masked: true,
-    emptyText: 'No moves yet',
     notate: notateUmpireMove,
     isMoveEvent,
   },

@@ -166,6 +166,43 @@
   font-size: 11px;
 }
 
+.review-spectator-chat__quick {
+  flex: 1 0 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--review-chat-border);
+}
+
+.review-spectator-chat__quick-button {
+  min-width: 0;
+  padding: 7px 2px;
+  border: 0;
+  border-right: 1px solid var(--review-chat-border);
+  border-radius: 0;
+  background: var(--review-chat-bg);
+  color: var(--review-chat-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.review-spectator-chat__quick-button:last-child {
+  border-right: 0;
+}
+
+.review-spectator-chat__quick-button:hover,
+.review-spectator-chat__quick-button:focus-visible {
+  background: var(--site-accent-soft);
+  color: var(--review-chat-text);
+  outline: none;
+}
+
+.review-spectator-chat__quick-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .review-spectator-chat__empty {
   margin: 0;
   padding: 8px 10px;
@@ -189,14 +226,12 @@
 }
 
 @media (min-width: 1260px) {
+  /* The left rail group ends at the board bottom (review-shell.css); the chat
+     fills the remaining rail height — empty included — so its bottom edge sits
+     exactly on the board line with the composer pinned at the bottom,
+     lichess-style. */
   .review-spectator-chat {
     flex: 1 1 0;
     min-height: 0;
-  }
-
-  /* Empty: do not stretch to fill the rail column; collapse to content so the
-     composer is not floated to the bottom of a tall empty box. */
-  .review-spectator-chat:not(:has(.review-spectator-chat__line)) {
-    flex: 0 0 auto;
   }
 }

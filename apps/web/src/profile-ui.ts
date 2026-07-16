@@ -3,7 +3,12 @@
 // shell and the game-row are identical across both subjects; only the middle
 // block (rating buckets vs engine records) differs and stays per-page.
 import { maybeGameSpecForId } from '@mistboard/game';
-import { displayParticipantName, type FeaturedGame } from './game-display.js';
+import {
+  displayParticipantName,
+  type FeaturedGame,
+  matchupLabel,
+  matchupSeats,
+} from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
@@ -79,19 +84,20 @@ export function buildProfileHeaderShell(opts: {
 // subject's seat). Works for a human or an engine seat alike.
 export function buildProfileGameRow(
   game: FeaturedGame,
-  opts: { locale?: Locale; timeOnly?: boolean } = {},
+  opts: { locale?: Locale; neutral?: boolean; timeOnly?: boolean } = {},
 ): HTMLElement {
   const locale = opts.locale ?? currentLocale();
+  const neutral = opts.neutral === true;
   const item = document.createElement('li');
   const link = document.createElement('a');
   link.href = profileGameHref(game);
   link.className = 'profile-game-row';
-  const tone = profileResultTone(game);
+  const tone = neutral ? 'neutral' : profileResultTone(game);
   link.classList.add(`profile-game-row-${tone}`);
 
   const outcome = document.createElement('span');
   outcome.className = `profile-game-outcome profile-game-outcome-${tone}`;
-  outcome.textContent = profileResultLabel(game, locale);
+  outcome.textContent = neutral ? '★' : profileResultLabel(game, locale);
 
   const body = document.createElement('span');
   body.className = 'profile-game-body';
@@ -101,11 +107,9 @@ export function buildProfileGameRow(
 
   const opponent = document.createElement('span');
   opponent.className = 'profile-game-opponent';
-  opponent.textContent = t(
-    'profile.vsOpponent',
-    { opponent: profileOpponentName(game, locale) },
-    locale,
-  );
+  opponent.textContent = neutral
+    ? matchupLabel(game)
+    : t('profile.vsOpponent', { opponent: profileOpponentName(game, locale) }, locale);
 
   // Date rides its own right-aligned column (lichess game-row style) instead of
   // sharing the top line with the opponent name.
@@ -135,7 +139,9 @@ export function buildProfileGameRow(
     thumb.innerHTML = renderVariantMarker(variantMiniId, { size: 18 });
     variantPill.prepend(thumb);
   }
-  details.append(variantPill, buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
+  details.append(variantPill);
+  if (!neutral)
+    details.append(buildGameDetail(profileSideLabel(game, locale), 'profile-game-side'));
   // Only rated games get a badge; casual (the default, and every game while
   // rated is gated off) stays untagged so the feed isn't littered with "Casual".
   if (!isCasual) details.append(buildGameDetail(t('play.rated', {}, locale), 'profile-game-rated'));
@@ -237,14 +243,8 @@ function opponentColor(
   game: FeaturedGame,
   color: FeaturedGame['playerColor'],
 ): 'white' | 'black' | 'red' {
-  switch (seatModelForGame(game)) {
-    case 'red-black':
-      return color === 'red' ? 'black' : 'red';
-    case 'white-red':
-      return color === 'white' ? 'red' : 'white';
-    default:
-      return color === 'black' ? 'white' : 'black';
-  }
+  const [first, second] = matchupSeats(game);
+  return color === first ? second : first;
 }
 
 // Every variant tenant owns its own postgame surface (<gameRouteBase>/:roomId)
@@ -261,17 +261,4 @@ function profileGameHref(game: FeaturedGame): string {
     return `${tenant.gameRouteBase}/${encodeURIComponent(game.roomId)}`;
   }
   return `/game/${encodeURIComponent(game.roomId)}`;
-}
-
-// How a variant names its two seats, derived from the canonical spec family so a
-// new variant resolves without editing here: the xiangqi and jungle families
-// play red vs black, the crossroads-chess family (open + dark) plays white vs
-// red, and everything else is orthodox white vs black.
-type SeatModel = 'white-black' | 'red-black' | 'white-red';
-
-function seatModelForGame(game: FeaturedGame): SeatModel {
-  const family = maybeGameSpecForId(game.variant)?.family;
-  if (family === 'xiangqi' || family === 'jungle') return 'red-black';
-  if (family === 'crossroads-chess') return 'white-red';
-  return 'white-black';
 }

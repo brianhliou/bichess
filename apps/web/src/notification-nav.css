@@ -24,7 +24,7 @@
 .notif-nav-trigger:hover,
 .notif-nav.notif-nav-open .notif-nav-trigger {
   color: var(--site-heading);
-  background: var(--site-surface);
+  background: var(--site-panel-soft);
 }
 
 .notif-nav-badge {
@@ -53,7 +53,7 @@
   padding: 6px;
   border: 1px solid var(--site-border-soft);
   border-radius: var(--site-radius);
-  background: var(--site-surface);
+  background: var(--site-panel);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   display: none;
   flex-direction: column;

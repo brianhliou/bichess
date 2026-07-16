@@ -1,5 +1,6 @@
 import type { PlayerView } from '@mistboard/game';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { writeAccountPreference } from './account-preferences.js';
 import { renderGameControls } from './live-game-controls.js';
 import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
@@ -22,6 +23,27 @@ function makeRefs(): Pick<LiveRefs, 'gameControlsSection' | 'gameControls'> {
   return {
     gameControlsSection: document.createElement('section'),
     gameControls: document.createElement('div'),
+  };
+}
+
+beforeEach(() => {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: memoryStorage(),
+  });
+});
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
   };
 }
 
@@ -136,5 +158,33 @@ describe('renderGameControls', () => {
       '請走第一步',
     );
     expect(refs.gameControls.querySelector('button')?.textContent).toBe('中止');
+  });
+
+  it('sends resign immediately when game-action confirmation is disabled', () => {
+    const refs = makeRefs();
+    const sendSocket = vi.fn(() => true);
+    liveState.roomMode = 'pvp';
+    liveState.seat = 'white';
+    writeAccountPreference('confirmGameActions', false);
+
+    renderGameControls(refs, makeView(), sendSocket);
+    refs.gameControls.querySelector<HTMLButtonElement>('button')?.click();
+
+    expect(sendSocket).toHaveBeenCalledWith({ type: 'resign' });
+    expect(document.querySelector('dialog')).toBeNull();
+  });
+
+  it('sends abort immediately when game-action confirmation is disabled', () => {
+    const refs = makeRefs();
+    const sendSocket = vi.fn(() => true);
+    liveState.roomMode = 'pvp';
+    liveState.seat = 'white';
+    writeAccountPreference('confirmGameActions', false);
+
+    renderGameControls(refs, makeView({ moveNumber: 0 }), sendSocket);
+    refs.gameControls.querySelector<HTMLButtonElement>('button')?.click();
+
+    expect(sendSocket).toHaveBeenCalledWith({ type: 'abort' });
+    expect(document.querySelector('dialog')).toBeNull();
   });
 });

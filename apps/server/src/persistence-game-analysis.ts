@@ -47,3 +47,37 @@ export async function saveGameAnalysis(
     [roomId, engineId, depth, JSON.stringify(plies)],
   );
 }
+
+// Generic blob variants of the pair above. The game_analysis table is a plain
+// (room, engine, depth) -> JSONB store; the `plies` column is variant-agnostic, so
+// a SECOND kind of per-game engine output (e.g. the jieqi decision-vs-luck
+// decomposition) reuses the same table under its OWN engine_id, no migration. The
+// stored shape is whatever the caller passes; keeping it out of the typed pair
+// above avoids pretending an arbitrary blob is a PlyEval[].
+export async function getGameAnalysisBlob<T>(
+  roomId: string,
+  engineId: string,
+  depth: number,
+): Promise<T | null> {
+  if (!isInitialized()) return null;
+  const { rows } = await getPool().query<{ plies: T }>(
+    `SELECT plies FROM game_analysis WHERE room_id = $1 AND engine_id = $2 AND depth = $3`,
+    [roomId, engineId, depth],
+  );
+  return rows[0]?.plies ?? null;
+}
+
+export async function saveGameAnalysisBlob<T>(
+  roomId: string,
+  engineId: string,
+  depth: number,
+  blob: T,
+): Promise<void> {
+  if (!isInitialized()) return;
+  await getPool().query(
+    `INSERT INTO game_analysis (room_id, engine_id, depth, plies)
+       VALUES ($1, $2, $3, $4::jsonb)
+     ON CONFLICT (room_id, engine_id, depth) DO NOTHING`,
+    [roomId, engineId, depth, JSON.stringify(blob)],
+  );
+}

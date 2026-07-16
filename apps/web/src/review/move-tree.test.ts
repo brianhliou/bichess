@@ -37,6 +37,31 @@ describe('createMoveTree', () => {
     expect(text).toContain(`${altFirst.from}-${altFirst.to}`);
   });
 
+  it('interleaves a root variation right after move 1, splitting the two-ply row', () => {
+    // seededTree: mainline [m1 (white 1), m2 (black 1)] + altFirst as an
+    // alternative to move 1 (a root variation). The variation must render BETWEEN
+    // move 1 and black's reply — not dumped after the whole mainline — and move 1's
+    // row splits so black's reply resumes on its own "1…" row.
+    const { tree, m2, altFirst } = seededTree();
+    const moveTree = createMoveTree(tree, { onJump: () => {} });
+    const rows = [...(moveTree.el.querySelector('.review-move-list__rows')?.children ?? [])];
+
+    // [0] mainline row for move 1, [1] the variation breakout, [2] black's "1…" row.
+    expect(rows[0]?.classList.contains('review-move-list__row')).toBe(true);
+    expect(rows[1]?.classList.contains('move-tree__variation')).toBe(true);
+    expect(rows[1]?.textContent).toContain(`${altFirst.from}-${altFirst.to}`);
+    // The variation is NOT the last element (it is not dumped at the bottom).
+    expect(rows.indexOf(rows[1]!)).toBeLessThan(rows.length - 1);
+    // Black's reply resumes on a later row, marked as a continuation ("…").
+    const blackRow = rows.find(
+      (r) =>
+        r.classList.contains('review-move-list__row') &&
+        r.textContent?.includes(`${m2.from}-${m2.to}`),
+    );
+    expect(blackRow).toBeTruthy();
+    expect(blackRow?.querySelector('.review-move-list__number')?.textContent).toContain('…');
+  });
+
   it('highlights the current node and fires onJump with its path', () => {
     const { tree, m1 } = seededTree();
     let jumped: TreePath | null = null;

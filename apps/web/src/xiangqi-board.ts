@@ -16,10 +16,19 @@ import type {
   XiangqiPiece,
   XiangqiSquare,
 } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { tokenPieceSize } from './board-metrics.js';
-import { installBoardDrag } from './variant-tenant/board-drag.js';
+import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
+import {
+  readStoredXiangqiBoardLayout,
+  type XiangqiBoardLayout,
+} from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 const FILES = 'abcdefghi';
@@ -29,11 +38,18 @@ const CELL = 60;
 const MARGIN = 36;
 const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
-// Corner rounding (viewBox units). Kept in sync with the `.xiangqi-live-board`
-// container border-radius so the SVG background and the clipped container agree.
-const BOARD_RADIUS = 16;
 const RIVER_TOP = MARGIN + 4 * CELL;
 const RIVER_BOTTOM = MARGIN + 5 * CELL;
+const CELL_RIVER_GAP = 12;
+// The live board's config for the shared geometry core; the article diagrams use
+// their own (smaller) config against the same transform.
+const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
+  fileCount: FILE_COUNT,
+  rankCount: RANK_COUNT,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: CELL_RIVER_GAP,
+};
 const PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
@@ -46,11 +62,13 @@ const NON_SELECTABLE_RIVER_ATTRS =
 export function renderXiangqiBoardSvg(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor = view.perspective,
+  options: Pick<XiangqiBoardSvgState, 'layout'> = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
     interactive: false,
     selectedSquare: null,
     draggingFrom: null,
+    ...options,
   });
 }
 
@@ -58,8 +76,21 @@ export interface XiangqiBoardSvgState {
   interactive: boolean;
   selectedSquare: XiangqiSquare | null;
   draggingFrom: XiangqiSquare | null;
+  /** Explicit preview/layout override; normal interactive boards read the preference. */
+  layout?: XiangqiBoardLayout;
   /** Engine/annotation arrows, drawn in array order (last = on top). */
   arrows?: readonly XiangqiBoardArrow[];
+  /** Point markers (learn-mode collectible stars / annotation rings). */
+  markers?: readonly XiangqiBoardMarker[];
+}
+
+/** A decoration pinned to one intersection: 'star' = a collectible item
+ *  (xiangqi learn apples), 'circle' = an annotation ring. Styling hooks via
+ *  className; geometry flips with the board perspective like everything else. */
+export interface XiangqiBoardMarker {
+  square: XiangqiSquare;
+  kind: 'star' | 'circle';
+  className?: string;
 }
 
 /** One board arrow (engine PV hint / best-move advice). Geometry is derived from
@@ -86,24 +117,29 @@ export function xiangqiBoardSvg(
   perspective: XiangqiColor,
   state: XiangqiBoardSvgState,
 ): string {
+  const layout = state.layout ?? readStoredXiangqiBoardLayout();
+  const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_GEO);
+  const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   return `
-    <svg class="xq-live-svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${BOARD_RADIUS}"/>
-      <g class="xq-live-palace-bands">${palaceBands(perspective)}</g>
-      <g class="xq-live-grid">${gridLayer()}</g>
-      <g class="xq-live-palace">${palaceLayer(perspective)}</g>
-      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${riverLayer(perspective)}</g>
-      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
-      <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective)}</g>
-      <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare)}</g>
-      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom)}</g>
-      <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(state.arrows ?? [], perspective)}</g>
-      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare) : ''}</g>
+    <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
+      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
+      <g class="xq-live-grid">${gridLayer(layout)}</g>
+      <g class="xq-live-palace-bands">${palaceBands(perspective, layout)}</g>
+      <g class="xq-live-palace">${palaceLayer(perspective, layout)}</g>
+      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${riverLayer(perspective, layout)}</g>
+      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
+      <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
+      <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
+      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout)}</g>
+      <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout)}</g>
+      <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(state.arrows ?? [], perspective, layout)}</g>
+      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout) : ''}</g>
     </svg>
   `;
 }
 
-function gridLayer(): string {
+function gridLayer(layout: XiangqiBoardLayout): string {
+  if (layout === 'cell') return cellGridLayer();
   const parts: string[] = [];
   const left = MARGIN;
   const right = MARGIN + (FILE_COUNT - 1) * CELL;
@@ -127,8 +163,46 @@ function gridLayer(): string {
   return parts.join('');
 }
 
-function palaceBands(perspective: XiangqiColor): string {
-  return [palaceBand(3, 1, 5, 3, perspective), palaceBand(3, 8, 5, 10, perspective)].join('');
+function cellGridLayer(): string {
+  const parts: string[] = [];
+  const left = MARGIN - CELL / 2;
+  const top = MARGIN - CELL / 2;
+  const right = left + FILE_COUNT * CELL;
+  const riverTop = top + (RANK_COUNT / 2) * CELL;
+  const riverBottom = riverTop + CELL_RIVER_GAP;
+  const bottom = top + RANK_COUNT * CELL + CELL_RIVER_GAP;
+  for (let row = 0; row < RANK_COUNT; row++) {
+    const y = top + row * CELL + (row >= RANK_COUNT / 2 ? CELL_RIVER_GAP : 0);
+    for (let file = 0; file < FILE_COUNT; file++) {
+      parts.push(
+        `<rect class="xq-live-cell xq-live-cell--${(file + row) % 2 === 0 ? 'light' : 'dark'}" x="${left + file * CELL}" y="${y}" width="${CELL}" height="${CELL}"/>`,
+      );
+    }
+  }
+  // Only internal boundaries are stroked. The first/last cells meet the SVG
+  // viewBox edge directly, so the square layout has no enclosing hairline.
+  for (let boundary = 1; boundary < RANK_COUNT; boundary++) {
+    if (boundary === RANK_COUNT / 2) continue;
+    const y = top + boundary * CELL + (boundary > RANK_COUNT / 2 ? CELL_RIVER_GAP : 0);
+    parts.push(`<line class="xq-live-cell-line" x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`);
+  }
+  for (let boundary = 1; boundary < FILE_COUNT; boundary++) {
+    const x = left + boundary * CELL;
+    parts.push(
+      `<line class="xq-live-cell-line" x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}"/>`,
+    );
+    parts.push(
+      `<line class="xq-live-cell-line" x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}"/>`,
+    );
+  }
+  return parts.join('');
+}
+
+function palaceBands(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
+  return [
+    palaceBand(3, 1, 5, 3, perspective, layout),
+    palaceBand(3, 8, 5, 10, perspective, layout),
+  ].join('');
 }
 
 function palaceBand(
@@ -137,42 +211,66 @@ function palaceBand(
   fileMax: number,
   rankMax: number,
   perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
 ): string {
-  const a = intersection(fileMin, rankMin, perspective);
-  const b = intersection(fileMax, rankMax, perspective);
-  return `<rect class="xq-live-palace-band" x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}"/>`;
+  const a = intersection(fileMin, rankMin, perspective, layout);
+  const b = intersection(fileMax, rankMax, perspective, layout);
+  const inset = layout === 'cell' ? CELL / 2 : 0;
+  return `<rect class="xq-live-palace-band" x="${Math.min(a.x, b.x) - inset}" y="${Math.min(a.y, b.y) - inset}" width="${Math.abs(b.x - a.x) + inset * 2}" height="${Math.abs(b.y - a.y) + inset * 2}"/>`;
 }
 
-function palaceLayer(perspective: XiangqiColor): string {
+function palaceLayer(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
+  // The square grid uses its tinted 3x3 palace cells as the visual cue. The
+  // traditional diagonals are retained only for the intersection layouts,
+  // where they remain part of the board geometry.
+  if (layout === 'cell') return '';
+
   const parts: string[] = [];
   for (const palace of [
     { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
     { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
   ]) {
-    const a = intersection(palace.fileMin, palace.rankMax, perspective);
-    const b = intersection(palace.fileMax, palace.rankMin, perspective);
-    const c = intersection(palace.fileMax, palace.rankMax, perspective);
-    const d = intersection(palace.fileMin, palace.rankMin, perspective);
+    const a = intersection(palace.fileMin, palace.rankMax, perspective, layout);
+    const b = intersection(palace.fileMax, palace.rankMin, perspective, layout);
+    const c = intersection(palace.fileMax, palace.rankMax, perspective, layout);
+    const d = intersection(palace.fileMin, palace.rankMin, perspective, layout);
     parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`);
     parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`);
   }
   return parts.join('');
 }
 
-function riverLayer(perspective: XiangqiColor): string {
+function riverLayer(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
   const y = (RIVER_TOP + RIVER_BOTTOM) / 2;
   void perspective;
+  if (layout === 'cell') {
+    return `<rect class="xq-live-cell-river" x="${MARGIN - CELL / 2}" y="${MARGIN - CELL / 2 + (RANK_COUNT / 2) * CELL}" width="${FILE_COUNT * CELL}" height="${CELL_RIVER_GAP}"/>`;
+  }
   return `
     <text class="xq-live-river-label" x="${MARGIN + 4 * CELL}" y="${y + 1}">楚 河   漢 界</text>
   `;
 }
 
-function lastMoveLayer(view: StandardXiangqiPlayerView, perspective: XiangqiColor): string {
+function lastMoveLayer(
+  view: StandardXiangqiPlayerView,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
   if (!view.lastMove) return '';
   const from = coordOf(view.lastMove.from);
   const to = coordOf(view.lastMove.to);
-  const fromCenter = intersection(from.file, from.rank, perspective);
-  const toCenter = intersection(to.file, to.rank, perspective);
+  const fromCenter = intersection(from.file, from.rank, perspective, layout);
+  const toCenter = intersection(to.file, to.rank, perspective, layout);
+  if (layout === 'cell') {
+    const fromX = fromCenter.x - CELL / 2;
+    const fromY = fromCenter.y - CELL / 2;
+    const toX = toCenter.x - CELL / 2;
+    const toY = toCenter.y - CELL / 2;
+    return (
+      `<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="${fromX}" y="${fromY}" width="${CELL}" height="${CELL}"/>` +
+      `<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="${toX}" y="${toY}" width="${CELL}" height="${CELL}"/>`
+    );
+  }
   // Origin: a darkened "the piece came from here" shadow disc. Destination: a
   // gold ring around the moved piece (this layer sits under the pieces, so only
   // the halo outside the r=27 piece radius shows). Styling lives in
@@ -181,7 +279,7 @@ function lastMoveLayer(view: StandardXiangqiPlayerView, perspective: XiangqiColo
   // endpoints and keeps its lighter wash.
   return (
     `<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="${fromCenter.x}" cy="${fromCenter.y}" r="27"/>` +
-    `<circle class="xq-live-lastmove-ring" cx="${toCenter.x}" cy="${toCenter.y}" r="29"/>`
+    `<circle class="xq-live-lastmove-ring" cx="${toCenter.x}" cy="${toCenter.y}" r="26"/>`
   );
 }
 
@@ -199,11 +297,15 @@ const fmt = (value: number): number => Math.round(value * 10) / 10;
 /** One arrow between two intersection centers: a round-capped shaft plus a
  *  triangular head, shortened at the destination so the head never covers the
  *  piece center. Pure string renderer — exported for tests. */
-export function xiangqiArrowSvg(arrow: XiangqiBoardArrow, perspective: XiangqiColor): string {
+export function xiangqiArrowSvg(
+  arrow: XiangqiBoardArrow,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout = 'intersection',
+): string {
   const from = coordOf(arrow.from);
   const to = coordOf(arrow.to);
-  const a = intersection(from.file, from.rank, perspective);
-  const b = intersection(to.file, to.rank, perspective);
+  const a = intersection(from.file, from.rank, perspective, layout);
+  const b = intersection(to.file, to.rank, perspective, layout);
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dist = Math.hypot(dx, dy);
@@ -235,14 +337,61 @@ export function xiangqiArrowSvg(arrow: XiangqiBoardArrow, perspective: XiangqiCo
   );
 }
 
-function arrowLayer(arrows: readonly XiangqiBoardArrow[], perspective: XiangqiColor): string {
-  return arrows.map((arrow) => xiangqiArrowSvg(arrow, perspective)).join('');
+function arrowLayer(
+  arrows: readonly XiangqiBoardArrow[],
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
+  return arrows.map((arrow) => xiangqiArrowSvg(arrow, perspective, layout)).join('');
 }
 
-function selectionLayer(square: XiangqiSquare | null, perspective: XiangqiColor): string {
+// ── Point markers (learn stars / annotation rings) ───────────────────────────
+
+const STAR_OUTER_RADIUS = 22;
+const STAR_INNER_RADIUS = 9;
+const MARKER_RING_RADIUS = 29;
+
+function starPoints(cx: number, cy: number): string {
+  const points: string[] = [];
+  for (let k = 0; k < 10; k += 1) {
+    const radius = k % 2 === 0 ? STAR_OUTER_RADIUS : STAR_INNER_RADIUS;
+    const angle = -Math.PI / 2 + (k * Math.PI) / 5;
+    points.push(`${fmt(cx + radius * Math.cos(angle))},${fmt(cy + radius * Math.sin(angle))}`);
+  }
+  return points.join(' ');
+}
+
+/** One marker at an intersection. Pure string renderer — exported for tests. */
+export function xiangqiMarkerSvg(
+  marker: XiangqiBoardMarker,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout = 'intersection',
+): string {
+  const coord = coordOf(marker.square);
+  const center = intersection(coord.file, coord.rank, perspective, layout);
+  const className = marker.className ? `xq-marker ${marker.className}` : 'xq-marker';
+  if (marker.kind === 'circle') {
+    return `<circle class="${className} xq-marker--circle" cx="${center.x}" cy="${center.y}" r="${MARKER_RING_RADIUS}" fill="none" stroke-width="5"/>`;
+  }
+  return `<polygon class="${className} xq-marker--star" points="${starPoints(center.x, center.y)}"/>`;
+}
+
+function markerLayer(
+  markers: readonly XiangqiBoardMarker[],
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
+  return markers.map((marker) => xiangqiMarkerSvg(marker, perspective, layout)).join('');
+}
+
+function selectionLayer(
+  square: XiangqiSquare | null,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
   if (!square) return '';
   const coord = coordOf(square);
-  const center = intersection(coord.file, coord.rank, perspective);
+  const center = intersection(coord.file, coord.rank, perspective, layout);
   return `<circle class="xq-live-selection-cell" cx="${center.x}" cy="${center.y}" r="30"/>`;
 }
 
@@ -250,13 +399,14 @@ function hintLayer(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor,
   selectedSquare: XiangqiSquare | null,
+  layout: XiangqiBoardLayout,
 ): string {
   if (!selectedSquare) return '';
   return view.legalMoves
     .filter((move) => move.from === selectedSquare)
     .map((move) => {
       const coord = coordOf(move.to);
-      const center = intersection(coord.file, coord.rank, perspective);
+      const center = intersection(coord.file, coord.rank, perspective, layout);
       const occupied = view.board[move.to] !== undefined;
       return occupied
         ? `<circle class="xq-live-hint-capture" cx="${center.x}" cy="${center.y}" r="28"/>`
@@ -269,18 +419,25 @@ function pieceLayer(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor,
   draggingFromSquare: XiangqiSquare | null,
+  layout: XiangqiBoardLayout,
 ): string {
   const parts: string[] = [];
   for (const [square, piece] of Object.entries(view.board)) {
     if (!piece) continue;
     const dragSource = square === draggingFromSquare;
     const coord = coordOf(square as XiangqiSquare);
-    const center = intersection(coord.file, coord.rank, perspective);
+    const center = intersection(coord.file, coord.rank, perspective, layout);
+    // A soldier past the river renders with the promoted-soldier art. Mirrors
+    // hasCrossedRiver()/inOwnHalf() in packages/game (red owns ranks 1-5, black
+    // 6-10); coordOf().rank is the same 1-10 rank those use.
+    const crossed =
+      piece.role === 'soldier' && (piece.color === 'red' ? coord.rank >= 6 : coord.rank <= 5);
     const pieceSvg = renderXiangqiPiece(piece, {
       x: center.x - PIECE_SIZE / 2,
       y: center.y - PIECE_SIZE / 2,
       size: PIECE_SIZE,
       className: dragSource ? 'xq-piece xq-piece--drag-source' : 'xq-piece',
+      crossed,
     });
     // Keyed slot: a <g> wrapper per occupied square so a post-render glide can
     // find and transform the piece (transforms on the inner <svg x= y=> element
@@ -313,15 +470,27 @@ export function animateXiangqiBoardMove(
   if (!slot) return;
   const origin = coordOf(originSquare);
   const settle = coordOf(settleSquare);
-  const from = intersection(origin.file, origin.rank, perspective);
-  const to = intersection(settle.file, settle.rank, perspective);
+  const layout = mountedXiangqiBoardLayout(host);
+  const from = intersection(origin.file, origin.rank, perspective, layout);
+  const to = intersection(settle.file, settle.rank, perspective, layout);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Draw the destination marker on as the piece lands (forward moves only). On
+  // intersection boards this is the gold ring; on square grids it is the
+  // destination-cell wash. A reverse step renders the prior move's marker at a
+  // different square, so fading it would not track the reverse glide.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(
+      host.querySelector('.xq-live-lastmove-to, .xq-live-lastmove-ring'),
+      duration,
+    );
+  }
 }
 
 function clickLayer(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor,
   selectedSquare: XiangqiSquare | null,
+  layout: XiangqiBoardLayout,
 ): string {
   const targets = new Map<XiangqiSquare, { capture: boolean }>();
   if (selectedSquare) {
@@ -335,7 +504,7 @@ function clickLayer(
   for (let file = 0; file < FILE_COUNT; file++) {
     for (let rank = 1; rank <= RANK_COUNT; rank++) {
       const square = `${FILES[file]}${rank}` as XiangqiSquare;
-      const center = intersection(file, rank, perspective);
+      const center = intersection(file, rank, perspective, layout);
       const target = targets.get(square);
       const marker = target
         ? target.capture
@@ -425,6 +594,12 @@ export interface XiangqiInteractiveBoardOptions {
   /** A legal move was chosen (click or drop). Caller applies it — live sends to
    *  the server (and may play a sound); analysis appends to the move tree. */
   onMove: (move: XiangqiMove, view: StandardXiangqiPlayerView) => void;
+  /** Optional: a right-button draw gesture completed (study annotation). `orig` is
+   *  the pressed square; `dest` is where it released (null off-board, or === orig
+   *  for a tap → circle; else an arrow). `alt` = modifier held (secondary brush).
+   *  Absent = no draw affordance (live boards). The caller owns shape state and
+   *  repaints via setArrows / setMarkers. */
+  onDrawShape?: (orig: XiangqiSquare, dest: XiangqiSquare | null, opts: { alt: boolean }) => void;
 }
 
 export interface XiangqiInteractiveBoard {
@@ -436,6 +611,9 @@ export interface XiangqiInteractiveBoard {
    *  place when present; the arrows persist across full re-renders until the
    *  next setArrows call. Pass [] to clear. */
   setArrows(arrows: readonly XiangqiBoardArrow[]): void;
+  /** Replace the point-marker overlay (learn stars / annotation rings). Same
+   *  persistence contract as setArrows. Pass [] to clear. */
+  setMarkers(markers: readonly XiangqiBoardMarker[]): void;
 }
 
 export function createXiangqiInteractiveBoard(
@@ -444,6 +622,7 @@ export function createXiangqiInteractiveBoard(
   let selectedSquare: XiangqiSquare | null = null;
   let draggingFrom: XiangqiSquare | null = null;
   let arrows: readonly XiangqiBoardArrow[] = [];
+  let markers: readonly XiangqiBoardMarker[] = [];
 
   function render(view: StandardXiangqiPlayerView | null, perspective: XiangqiColor): void {
     if (!view) {
@@ -455,6 +634,7 @@ export function createXiangqiInteractiveBoard(
       selectedSquare,
       draggingFrom,
       arrows,
+      markers,
     });
   }
 
@@ -463,8 +643,23 @@ export function createXiangqiInteractiveBoard(
     // Engine updates stream ~12/s: patch just the arrows group instead of
     // rebuilding the whole board SVG (which would also be wasted work mid-drag).
     const layer = opts.board.querySelector('.xq-live-arrows');
-    if (layer)
-      layer.innerHTML = arrows.map((a) => xiangqiArrowSvg(a, opts.getPerspective())).join('');
+    if (layer) {
+      const layout = mountedXiangqiBoardLayout(opts.board);
+      layer.innerHTML = arrows
+        .map((a) => xiangqiArrowSvg(a, opts.getPerspective(), layout))
+        .join('');
+    }
+  }
+
+  function setMarkers(next: readonly XiangqiBoardMarker[]): void {
+    markers = next;
+    const layer = opts.board.querySelector('.xq-live-markers');
+    if (layer) {
+      const layout = mountedXiangqiBoardLayout(opts.board);
+      layer.innerHTML = markers
+        .map((m) => xiangqiMarkerSvg(m, opts.getPerspective(), layout))
+        .join('');
+    }
   }
 
   // Re-render from the live interaction view after a click/drag mutation.
@@ -534,6 +729,15 @@ export function createXiangqiInteractiveBoard(
     onDrop: (from, to) => handleDrop(from as XiangqiSquare, to as XiangqiSquare | null),
   });
 
+  if (opts.onDrawShape) {
+    const onDrawShape = opts.onDrawShape;
+    installBoardDraw({
+      board: opts.board,
+      onDraw: (orig, dest, drawOpts) =>
+        onDrawShape(orig as XiangqiSquare, dest as XiangqiSquare | null, drawOpts),
+    });
+  }
+
   installSelectionClickAway({
     roots: () => [opts.board],
     hasSelection: () => selectedSquare !== null,
@@ -543,7 +747,7 @@ export function createXiangqiInteractiveBoard(
     },
   });
 
-  return { render, clearSelection, setArrows };
+  return { render, clearSelection, setArrows, setMarkers };
 }
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
@@ -552,15 +756,9 @@ function intersection(
   file: number,
   rank: number,
   perspective: XiangqiColor,
+  layout: XiangqiBoardLayout = 'intersection',
 ): { x: number; y: number } {
-  return {
-    x: MARGIN + file * CELL,
-    y: MARGIN + displayRankFor(rank, perspective) * CELL,
-  };
-}
-
-function displayRankFor(rank: number, perspective: XiangqiColor): number {
-  return perspective === 'red' ? RANK_COUNT - rank : rank - 1;
+  return xiangqiBoardPoint(file, rank, perspective, layout, LIVE_BOARD_GEO);
 }
 
 function coordOf(square: XiangqiSquare): { file: number; rank: number } {
@@ -568,6 +766,11 @@ function coordOf(square: XiangqiSquare): { file: number; rank: number } {
     file: Math.max(0, FILES.indexOf(square[0] ?? '')),
     rank: Number(square.slice(1)),
   };
+}
+
+function mountedXiangqiBoardLayout(host: ParentNode): XiangqiBoardLayout {
+  const layout = host.querySelector('.xq-live-svg')?.getAttribute('data-xiangqi-layout');
+  return layout === 'cell' || layout === 'intersection' ? layout : readStoredXiangqiBoardLayout();
 }
 
 export function isXiangqiColor(value: unknown): value is XiangqiColor {

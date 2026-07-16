@@ -961,13 +961,38 @@ a.forum-post-author-name:focus-visible {
   font-weight: 800;
 }
 
+/* Admin-only moderation panel: a distinct amber "caution" treatment so these
+   controls read as privileged tools, never as normal topic/post UI. */
 .forum-moderation-box {
   display: grid;
   gap: 10px;
+  border: 1px solid var(--site-warning-border);
+  border-radius: var(--site-radius);
+  background: var(--site-warning-bg);
+  color: var(--site-warning-text);
+  padding: 14px;
+  font-size: 14px;
+}
+
+.forum-moderation-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .forum-moderation-box strong {
-  color: var(--site-heading);
+  color: var(--site-warning-text);
+}
+
+.forum-moderation-badge {
+  border: 1px solid var(--site-warning-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-warning-text);
 }
 
 .forum-moderation-actions {
@@ -984,10 +1009,10 @@ a.forum-post-author-name:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--site-border);
+  border: 1px solid var(--site-warning-border);
   border-radius: var(--site-radius-sm);
-  background: var(--site-panel-soft);
-  color: var(--site-text);
+  background: transparent;
+  color: var(--site-warning-text);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -998,8 +1023,9 @@ a.forum-post-author-name:focus-visible {
 
 .forum-moderation-button:hover:not(:disabled),
 .forum-moderation-button:focus-visible {
-  border-color: var(--site-accent);
-  color: var(--site-accent-strong);
+  border-color: var(--site-warning-text);
+  background: var(--site-warning-border);
+  color: var(--site-warning-text);
 }
 
 .forum-moderation-button:disabled {

@@ -1,25 +1,18 @@
 /* Per-player accuracy summary. See review/analysis-summary.ts. */
+/* Sits transparently on the page background (lichess analyse ACC block), not in a
+   card — the counts read as plain text below the controls. */
 .analysis-summary {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius, 10px);
-  background: var(--site-panel, var(--site-surface));
-}
-.analysis-summary__title {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--site-muted);
+  gap: 12px;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
 }
 .analysis-summary__player {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 .analysis-summary__head {
   display: flex;
@@ -43,14 +36,40 @@
   font-weight: 700;
   color: var(--site-text);
 }
-.analysis-summary__accuracy {
-  margin-left: auto;
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-  color: var(--site-text);
+/* lichess ACC block anatomy: right-aligned count column, then the label. */
+.analysis-summary__stats {
+  display: grid;
+  grid-template-columns: 2.4em 1fr;
+  column-gap: 8px;
+  row-gap: 1px;
+  margin-left: 15px;
 }
-.analysis-summary__detail {
+.analysis-summary__stat {
+  display: contents;
+}
+.analysis-summary__stat-value {
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+}
+.analysis-summary__stat-label {
   font-size: 12px;
   color: var(--site-muted);
-  margin-left: 15px;
+}
+/* Non-zero judgment counts pick up the move-glyph palette (move-list.css). */
+.analysis-summary__stat--inaccuracy .analysis-summary__stat-value,
+.analysis-summary__stat--inaccuracy .analysis-summary__stat-label {
+  color: #b7950b;
+  font-weight: 700;
+}
+.analysis-summary__stat--mistake .analysis-summary__stat-value,
+.analysis-summary__stat--mistake .analysis-summary__stat-label {
+  color: #d68910;
+  font-weight: 700;
+}
+.analysis-summary__stat--blunder .analysis-summary__stat-value,
+.analysis-summary__stat--blunder .analysis-summary__stat-label {
+  color: #c0392b;
+  font-weight: 700;
 }

@@ -2,7 +2,9 @@ import {
   createUser,
   deleteRoomDeadline,
   listCorrespondenceGamesForUser,
+  listDeadlineWarningCandidates,
   listDueRoomDeadlines,
+  updateUserAccountPreference,
   upsertRoomDeadline,
   upsertRoomSeatToken,
 } from './persistence.js';
@@ -101,6 +103,61 @@ definePersistenceTests('room deadlines', () => {
     } finally {
       await client.end();
     }
+  });
+
+  test('deadline warning candidates honor the recipient email preference', async () => {
+    const now = new Date('2026-07-13T12:00:00Z');
+    const user = await createUser({
+      id: 'user-deadline-email-pref',
+      email: 'deadline-email-pref@example.com',
+      emailVerifiedAt: now,
+      handle: 'deadline-email-pref',
+      displayName: 'Deadline Email Pref',
+      now,
+    });
+    const dueAt = new Date(now.getTime() + 60 * 60 * 1000);
+    await upsertRoomDeadline({
+      roomId: 'dchx_deadline_email_pref',
+      gameSpecId: 'dark-chess',
+      seat: 'white',
+      seatUserId: user.id,
+      dueAt,
+    });
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO events (room_id, seq, type, payload)
+         VALUES ($1, 0, 'room-created', $2)`,
+        [
+          'dchx_deadline_email_pref',
+          {
+            type: 'room-created',
+            roomId: 'dchx_deadline_email_pref',
+            at: now.getTime(),
+            variant: 'dark-chess',
+            timeControl: { initialMs: 86_400_000, incrementMs: 0, daysPerMove: 1 },
+          },
+        ],
+      );
+    } finally {
+      await client.end();
+    }
+
+    assert.deepEqual(
+      (await listDeadlineWarningCandidates(now, 2 * 60 * 60 * 1000)).map(
+        (candidate) => candidate.roomId,
+      ),
+      ['dchx_deadline_email_pref'],
+    );
+
+    await updateUserAccountPreference(
+      user.id,
+      'correspondenceDeadlineEmail',
+      false,
+      new Date(now.getTime() + 1),
+    );
+    assert.deepEqual(await listDeadlineWarningCandidates(now, 2 * 60 * 60 * 1000), []);
   });
 
   test('your correspondence games: enriched, your-move-first, inactive rooms excluded', async () => {

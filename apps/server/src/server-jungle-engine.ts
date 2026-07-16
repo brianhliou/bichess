@@ -23,6 +23,7 @@ import {
   jungleTrapOwner,
   oppositeJungleColor,
 } from '@mistboard/game';
+import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   buildEngineDecisionRecord,
   reportEngineFallback,
@@ -185,16 +186,24 @@ export async function playJungleEngineMoveIfReady(
   const incrementMs = clock?.incrementMs ?? 0;
   if (remainingMs !== null && remainingMs <= 0) return;
 
-  // Strong path: the Rust `jungle-engine` binary (UCI subprocess), routed through the
-  // shared fail-closed/observability boundary. Gated behind a flag with the in-process
-  // TS engine as fallback when the binary isn't shipped. The Rust engine fixes the TS
-  // dawdle (it takes the fastest win) and gets counters + fail-closed for free.
-  // (The TS fallback below is fixed-depth/synchronous — no wall-clock budget applies.)
-  if (jungleRustEngineEnabled() && jungleRustTierFor(engineId) && jungleEngineBinaryAvailable()) {
+  // Rust `jungle-engine` binary is the intended engine when MISTBOARD_JUNGLE_RUST_ENGINE
+  // is on. If it is intended but the binary is missing — a broken deploy the boot check
+  // (engine-boot-check.ts) should already have alerted on — FAIL CLOSED (alert + resign
+  // the engine seat) rather than SILENTLY substituting the weaker in-process TS search.
+  // The silent downgrade was a fail-open that hid a missing binary; surfacing it is the
+  // point. Routed through the shared fail-closed/observability boundary.
+  if (jungleRustEngineEnabled() && jungleRustTierFor(engineId)) {
+    if (!jungleEngineBinaryAvailable()) {
+      await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
+      return;
+    }
     await playJungleRustEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs);
     return;
   }
 
+  // Flag off → the in-process TS engine is the DELIBERATE engine for jungle PvE (a config
+  // choice, not a failure fallback). This path retires once jungle is Rust-mandatory in
+  // every environment (flag on + binary provisioned).
   const chosen = chooseJungleEngineMove(room.projection.state, tier);
   if (!chosen) {
     logger.error(
@@ -214,6 +223,38 @@ export async function playJungleEngineMoveIfReady(
   };
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
+}
+
+// Fail closed when the intended Rust engine's binary is missing: alert loudly (log +
+// critical email) and resign the engine seat, instead of silently substituting the TS
+// search. No engine decision record here — we never got far enough to produce a move; the
+// alert_kind matches the boot check so both surface under one bucket.
+async function failClosedJungleBinaryMissing(
+  ctx: JungleEngineContext,
+  room: JungleEngineRoom,
+  seat: JungleColor,
+  engineId: string,
+): Promise<void> {
+  logger.error(
+    { kind: 'jungle_engine_binary_missing', room_id: room.id, engine_id: engineId },
+    'Jungle Rust engine intended but its binary is missing; failing closed and resigning the engine seat',
+  );
+  void sendEngineAlertNotification({
+    severity: 'critical',
+    alert_kind: 'engine_binary_missing',
+    variant: 'jungle',
+    engine_id: engineId,
+    room_id: room.id,
+  });
+  if (!engineToMove(room, seat)) return;
+  const resign: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
+    type: 'seat-resigned',
+    at: Date.now(),
+    roomId: room.id,
+    color: seat,
+  };
+  const seq = await ctx.appendEvent(room, resign);
+  ctx.broadcastEventAppended(room, resign, seq);
 }
 
 // Rust-engine move with the engine-move-guard contract: bounded retries, validate

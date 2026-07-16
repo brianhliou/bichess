@@ -31,6 +31,7 @@ export type EngineId =
   | 'python-v2-v1.5'
   | 'python-dmx-v1.0'
   | 'python-fdx-v1.0'
+  | 'python-fdx-v1.1'
   | 'python-tier1-v0.9.1'
   | 'python-tier1-v0.8.9'
   | 'python-tier1-v0.7.22'
@@ -40,10 +41,19 @@ export type EngineId =
   | 'fairy-stockfish-crossroads-amateur'
   | 'fairy-stockfish-crossroads-strong'
   | 'fairy-stockfish-crossroads-very-strong'
+  // Fairy-Stockfish (standard Xiangqi human-strength profiles)
+  | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
+  | 'random-legal-xiangqi'
   // Pikafish (Jieqi)
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'
   | 'pikafish-jieqi-strongest'
+  // Pikafish (standard Xiangqi)
+  | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'pikafish-xiangqi-amateur'
+  | 'pikafish-xiangqi-strong'
+  | 'pikafish-xiangqi-strongest'
   // MistyBanqi (Banqi)
   | 'misty-banqi'
   | 'misty-banqi-amateur'
@@ -112,6 +122,7 @@ export type EngineConfigKind =
   | 'python-subprocess'
   | 'fairy-stockfish'
   | 'pikafish'
+  | 'pikafish-xiangqi'
   | 'banqi-uci'
   | 'jungle-flip-uci';
 
@@ -141,6 +152,7 @@ export type FairyStockfishEngineConfig = {
   kind: 'fairy-stockfish';
   skill: number;
   movetime_ms: number;
+  depth?: number;
   nodes?: number;
 };
 
@@ -149,6 +161,14 @@ export type PikafishEngineConfig = {
   kind: 'pikafish';
   movetime_ms: number;
   depth?: number;
+};
+
+/** Mainline Pikafish standard-Xiangqi tiers, reproducibly limited by nodes. */
+export type PikafishXiangqiEngineConfig = {
+  kind: 'pikafish-xiangqi';
+  nodes: number;
+  movetime_ms: number;
+  version: string;
 };
 
 /** MistyBanqi standalone Rust αβ+TT UCI engine tiers. */
@@ -169,6 +189,7 @@ export type EngineConfig =
   | PythonSubprocessEngineConfig
   | FairyStockfishEngineConfig
   | PikafishEngineConfig
+  | PikafishXiangqiEngineConfig
   | BanqiUciEngineConfig
   | JungleFlipUciEngineConfig;
 

@@ -1,6 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EngineCounters, engineAlertFields, infraAlertFields } from './obs.js';
+import { AuthCounters, EngineCounters, engineAlertFields, infraAlertFields } from './obs.js';
+
+test('auth counters expose aggregate deltas without identity fields', () => {
+  const counters = new AuthCounters();
+  counters.recordStart('sent');
+  counters.recordStart('rate_limited');
+  counters.recordStart('delivery_failed');
+  counters.recordConfirm('success');
+  counters.recordConfirm('rejected');
+  counters.recordConfirm('rate_limited');
+
+  assert.deepEqual(counters.snapshot(), {
+    codesSent: 1,
+    codesSentDelta: 1,
+    confirmRateLimited: 1,
+    confirmRateLimitedDelta: 1,
+    confirmRequests: 3,
+    confirmRequestsDelta: 3,
+    confirmSuccesses: 1,
+    confirmSuccessesDelta: 1,
+    deliveryFailures: 1,
+    deliveryFailuresDelta: 1,
+    startRateLimited: 1,
+    startRateLimitedDelta: 1,
+    startRequests: 3,
+    startRequestsDelta: 3,
+  });
+  const second = counters.snapshot();
+  assert.equal(second.startRequestsDelta, 0);
+  assert.equal(second.confirmRequestsDelta, 0);
+});
 
 test('engine counters emit deltas and drain latency samples', () => {
   const counters = new EngineCounters();

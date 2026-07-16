@@ -172,7 +172,6 @@ const client = createTenantLiveClient<Color, CrazyhousePlayerView, CrazyhouseMov
     rowClass: 'dczh-move-row',
     cellPrefix: 'dczh-move-row',
     masked: true,
-    emptyText: 'No visible moves yet',
     notate: notateCrazyhouseMove,
     isMoveEvent,
     banner: () =>

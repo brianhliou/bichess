@@ -1,7 +1,7 @@
 // Shared game meta card (lichess/playstrategy-style), used by the live room's
 // left rail AND the review pages' left rail so both surfaces read identically:
 //
-//   [glyph]  5+0 • Casual • Elephant Chess
+//   [glyph]  5+0 • Casual • Xiangqi
 //            3 days ago
 //   ● red player (2203)
 //   ○ black player (2166)
@@ -53,6 +53,14 @@ export type GameMetaCard = {
 // Colors whose player disc renders dark; everything else renders light. Chess
 // white/black and xiangqi red/black both map correctly.
 const DARK_COLORS = new Set(['black', 'blue']);
+
+// Seat-disc tint. 'red' gets a filled RED disc (so red-vs-black variants — xiangqi,
+// jungle, fortress, banqi, jieqi, … — read as red/black, not hollow/black); dark
+// inks fill dark; everything else (white) is the hollow light disc.
+function discToneClass(color: string): string {
+  if (color === 'red') return 'game-meta-card__disc--red';
+  return DARK_COLORS.has(color) ? 'game-meta-card__disc--dark' : 'game-meta-card__disc--light';
+}
 
 export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   const el = document.createElement('section');
@@ -111,9 +119,7 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
       const row = document.createElement('div');
       row.className = 'game-meta-card__player';
       const disc = document.createElement('span');
-      disc.className = `game-meta-card__disc ${
-        DARK_COLORS.has(player.color) ? 'game-meta-card__disc--dark' : 'game-meta-card__disc--light'
-      }`;
+      disc.className = `game-meta-card__disc ${discToneClass(player.color)}`;
       disc.setAttribute('aria-hidden', 'true');
       row.append(disc);
       if (player.isEngine) {

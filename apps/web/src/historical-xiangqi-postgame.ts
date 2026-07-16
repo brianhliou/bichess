@@ -6,9 +6,10 @@ import './xiangqi-postgame.css';
 import {
   type HistoricalXiangqiResult,
   historicalXiangqiOutcomeLabel,
-  historicalXiangqiReviewUrl,
 } from './historical-xiangqi-search.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
+import { buildSpectatorChat } from './review/spectator-chat.js';
+import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves, type XiangqiReplay } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
@@ -85,7 +86,7 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     markerId: 'xiangqi',
     glyph: '象',
     headline: ['Historical game'],
-    variantName: 'Elephant Chess',
+    variantName: 'Xiangqi',
     subline: [formatDate(game.playedOn), game.eventName].filter(Boolean).join(' · '),
     players: [
       { color: 'red', name: game.redNameRaw ?? 'Red' },
@@ -101,54 +102,57 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     title: 'Xiangqi game',
     summary: `${resultStatus(game)} · ${replay.maxPly} plies`,
     boardAriaLabel: 'Xiangqi board',
-    actions: historicalActions(game),
     metaCard: metaCard.el,
-    details: historicalDetails(game, replay),
+    // Persistent per-game comments (same panel/store as the room review, keyed by
+    // the archive game id). Historical games are roomless, so this is HTTP-poll
+    // chat, not a live socket — viewers can still discuss the game.
+    details: buildSpectatorChat(game.id),
+    provenance: historicalProvenance(game, replay),
     moves: replay.moves,
-    analysis: null,
+    players: {
+      red: game.redNameRaw ?? undefined,
+      black: game.blackNameRaw ?? undefined,
+    },
+    showCrosstable: true,
+    // Roomless archive game: whole-game analysis is the shared client ceval sweep
+    // (same as /analysis/xiangqi), computed on request. No server Pikafish cache.
+    analysis: buildXiangqiClientAnalysisSource(replay),
   });
 }
 
-function historicalActions(game: HistoricalXiangqiGameDetail): HTMLElement {
-  const actions = document.createElement('nav');
-  actions.className = 'dxq-postgame__actions';
-  actions.setAttribute('aria-label', 'Historical game links');
-
-  const search = document.createElement('a');
-  search.className = 'dxq-postgame__link dxq-postgame__link--primary';
-  search.href = '/historical-xiangqi/games';
-  search.textContent = 'Search games';
-  actions.append(search);
-
-  const permalink = document.createElement('a');
-  permalink.className = 'dxq-postgame__link';
-  permalink.href = historicalXiangqiReviewUrl(game.id);
-  permalink.textContent = 'Permalink';
-  actions.append(permalink);
-
-  if (game.sourceUrl) {
-    const source = document.createElement('a');
-    source.className = 'dxq-postgame__link';
-    source.href = game.sourceUrl;
-    source.rel = 'noreferrer';
-    source.textContent = 'Source';
-    actions.append(source);
-  }
-  return actions;
-}
-
-function historicalDetails(game: HistoricalXiangqiGameDetail, replay: XiangqiReplay): HTMLElement {
-  const panel = document.createElement('section');
-  panel.className = 'dxq-postgame__panel';
-  const heading = document.createElement('h2');
-  heading.textContent = 'Archive';
+// Provenance panel for the "Game info" underboard tab. Surfaces the facts a viewer
+// wants (event/date/ratings/time control) and hides rows that are absent for
+// anonymized platform games (Site/Round). Deliberately omits the raw acquisition
+// move-encoding (moveFormat, e.g. "uci-0indexed"), which is internal jargon.
+function historicalProvenance(
+  game: HistoricalXiangqiGameDetail,
+  replay: XiangqiReplay,
+): HTMLElement {
   const details = document.createElement('dl');
-  details.className = 'dxq-postgame__details';
+  details.className = 'review-provenance';
+  const tags = (game.tags ?? {}) as Record<string, unknown>;
+  const tagStr = (key: string): string | null =>
+    typeof tags[key] === 'string' && (tags[key] as string).trim() ? (tags[key] as string) : null;
+  const tagNum = (key: string): number | null =>
+    typeof tags[key] === 'number' && Number.isFinite(tags[key]) ? (tags[key] as number) : null;
+
   addDetail(details, 'Date', formatDate(game.playedOn));
-  addDetail(details, 'Event', game.eventName ?? 'Unknown');
-  addDetail(details, 'Site', game.site ?? 'Unknown');
-  addDetail(details, 'Round', game.round ?? 'Unknown');
-  addDetail(details, 'Format', game.moveFormat);
+  if (game.eventName) addDetail(details, 'Event', game.eventName);
+  if (game.site) addDetail(details, 'Site', game.site);
+  if (game.round) addDetail(details, 'Round', game.round);
+
+  const timeControl = humanizeTimeControl(tagStr('timeControlCategory'), tagStr('timeControl'));
+  if (timeControl) addDetail(details, 'Time control', timeControl);
+  const mode = tagStr('ratingMode');
+  if (mode) addDetail(details, 'Mode', capitalizeWord(mode));
+
+  const redRating = formatRating(tagNum('redEloBefore'), tagNum('redEloAfter'));
+  if (redRating) addDetail(details, 'Red rating', redRating);
+  const blackRating = formatRating(tagNum('blackEloBefore'), tagNum('blackEloAfter'));
+  if (blackRating) addDetail(details, 'Black rating', blackRating);
+
+  if (game.termination) addDetail(details, 'Termination', capitalizeWord(game.termination));
+  if (game.sourceUrl) addDetailLink(details, 'Source', game.sourceUrl);
   if (replay.illegalAt) {
     addDetail(
       details,
@@ -157,8 +161,36 @@ function historicalDetails(game: HistoricalXiangqiGameDetail, replay: XiangqiRep
     );
   }
   if (game.qualityFlags.length > 0) addDetail(details, 'Flags', game.qualityFlags.join(', '));
-  panel.append(heading, details);
-  return panel;
+  return details;
+}
+
+function humanizeTimeControl(category: string | null, raw: string | null): string | null {
+  if (category) {
+    return category.toLowerCase().split('_').map(capitalizeWord).join(' ');
+  }
+  return raw;
+}
+
+function capitalizeWord(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatRating(before: number | null, after: number | null): string | null {
+  if (before === null && after === null) return null;
+  if (before !== null && after !== null && before !== after) return `${before} → ${after}`;
+  return String(after ?? before);
+}
+
+function addDetailLink(details: HTMLElement, label: string, href: string): void {
+  const dt = document.createElement('dt');
+  dt.textContent = label;
+  const dd = document.createElement('dd');
+  const link = document.createElement('a');
+  link.href = href;
+  link.rel = 'noreferrer';
+  link.textContent = href;
+  dd.append(link);
+  details.append(dt, dd);
 }
 
 function addDetail(details: HTMLElement, label: string, value: string): void {

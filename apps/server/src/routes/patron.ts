@@ -13,6 +13,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type Stripe from 'stripe';
 import { currentAccountUser } from './../account-session.js';
+import { createAuthRateLimiter } from './../auth-rate-limit.js';
 import {
   findPatronTier,
   isPatronConfigured,
@@ -24,6 +25,8 @@ import { getStripeClient } from './../stripe-client.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 const MAX_WEBHOOK_BODY_BYTES = 1_048_576; // 1 MiB; Stripe events are well under this.
+const patronCheckoutLimiter = createAuthRateLimiter(10, 60 * 60 * 1000);
+const patronPortalLimiter = createAuthRateLimiter(30, 60 * 60 * 1000);
 
 export async function tryHandle(
   _ctx: unknown,
@@ -78,6 +81,10 @@ async function handleCheckout(request: IncomingMessage, response: ServerResponse
   const user = await currentAccountUser(request);
   if (!user) {
     writeJson(response, 401, { error: 'not_signed_in' });
+    return;
+  }
+  if (!patronCheckoutLimiter.check(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
     return;
   }
 
@@ -146,6 +153,10 @@ async function handlePortal(request: IncomingMessage, response: ServerResponse):
     writeJson(response, 401, { error: 'not_signed_in' });
     return;
   }
+  if (!patronPortalLimiter.check(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
+    return;
+  }
   const customerId = user.stripeCustomerId ?? (await persistence.getStripeCustomerId(user.id));
   if (!customerId) {
     writeJson(response, 400, { error: 'no_subscription' });
@@ -195,22 +206,44 @@ async function handleWebhook(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
-  // Idempotency: Stripe re-delivers; a replayed event.id must not double-apply.
-  const fresh = await persistence.claimStripeEvent(event.id, event.type);
+  // Idempotency and state application are one transaction. A processing error
+  // rolls back the event claim so Stripe can retry it safely.
+  const fresh = await processWebhookEvent(event);
   if (!fresh) {
     writeJson(response, 200, { received: true, duplicate: true });
     return;
   }
 
-  await applyEvent(event);
   writeJson(response, 200, { received: true });
+}
+
+type ProcessStripeEvent = (
+  eventId: string,
+  eventType: string,
+  apply: (transaction: persistence.PatronTransaction) => Promise<void>,
+) => Promise<boolean>;
+
+// Claim and apply exactly once, in the same transaction. The injected seams
+// keep the route contract unit-testable without Stripe or Postgres.
+export async function processWebhookEvent(
+  event: Stripe.Event,
+  processEvent: ProcessStripeEvent = persistence.processStripeEvent,
+  apply: (
+    event: Stripe.Event,
+    transaction?: persistence.PatronTransaction,
+  ) => Promise<void> = applyEvent,
+): Promise<boolean> {
+  return processEvent(event.id, event.type, (transaction) => apply(event, transaction));
 }
 
 // Route a Stripe event to persistence. Account resolution + the customer-map
 // side effect live here (DB-bound); the input-building below is kept pure so the
 // state machine is unit-testable without a database. Unknown event types are
 // acked and ignored (fail-closed: no state change).
-export async function applyEvent(event: Stripe.Event): Promise<void> {
+export async function applyEvent(
+  event: Stripe.Event,
+  transaction?: persistence.PatronTransaction,
+): Promise<void> {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -219,6 +252,7 @@ export async function applyEvent(event: Stripe.Event): Promise<void> {
         customerId,
         session.client_reference_id,
         session.metadata,
+        transaction,
       );
       if (!accountId) {
         logUnresolved('checkout.session.completed', customerId);
@@ -227,9 +261,11 @@ export async function applyEvent(event: Stripe.Event): Promise<void> {
       // Persist the account -> customer map for both modes so the portal + future
       // checkouts find it, even when the recurring row is written by a later
       // customer.subscription.* event.
-      if (customerId) await persistence.setStripeCustomerId(accountId, customerId);
+      if (customerId) {
+        await persistence.setStripeCustomerId(accountId, customerId, transaction);
+      }
       const input = lifetimeInputFromSession(session, accountId, customerId);
-      if (input) await persistence.applyPatronSubscription(input);
+      if (input) await persistence.applyPatronSubscription(input, transaction);
       return;
     }
     case 'customer.subscription.created':
@@ -237,13 +273,14 @@ export async function applyEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = idOf(sub.customer);
-      const accountId = await resolveAccount(customerId, null, sub.metadata);
+      const accountId = await resolveAccount(customerId, null, sub.metadata, transaction);
       if (!accountId) {
         logUnresolved('customer.subscription.*', customerId);
         return;
       }
       await persistence.applyPatronSubscription(
         subscriptionInputFromStripe(sub, accountId, customerId),
+        transaction,
       );
       return;
     }
@@ -309,10 +346,13 @@ async function resolveAccount(
   customerId: string | null,
   clientReferenceId: string | null | undefined,
   metadata: Stripe.Metadata | null | undefined,
+  transaction?: persistence.PatronTransaction,
 ): Promise<string | null> {
   const direct = resolveAccountIdFromMetadata(clientReferenceId, metadata);
   if (direct) return direct;
-  if (customerId) return persistence.findAccountIdByStripeCustomerId(customerId);
+  if (customerId) {
+    return persistence.findAccountIdByStripeCustomerId(customerId, transaction);
+  }
   return null;
 }
 

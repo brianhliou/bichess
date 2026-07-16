@@ -7,15 +7,11 @@ import './drop-mini-xiangqi.css';
 import './landing.css';
 import './game-route.css';
 import { fortressXiangqiEnabled } from './feature-flags.js';
-import {
-  installFortressXiangqiBoardStyles,
-  renderFortressXiangqiBoardSvg,
-} from './fortress-xiangqi-render.js';
-import { fillFortressXiangqiReserve, fortressXiangqiMoveLabel } from './fortress-xiangqi-view.js';
-import { createPane } from './replay-board.js';
-import { createShareButton } from './replay-meta.js';
-import { createMoveList } from './review/move-list.js';
-import { mountReviewLayout } from './review/review-layout.js';
+import { installFortressXiangqiBoardStyles } from './fortress-xiangqi-render.js';
+import { mountFortressXiangqiReview } from './review/fortress-xiangqi-review.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { buildReviewMeta, labelize, reviewResultLabel } from './review/game-review-meta.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 
@@ -43,6 +39,12 @@ export type FortressXiangqiPostgameResponse = {
     initialMs: number | null;
     incrementMs: number | null;
     pveEngineId?: string | null;
+    players?: Array<{
+      color: string;
+      name: string;
+      rating: number | null;
+      kind: 'account' | 'guest' | 'engine';
+    }>;
   };
   state: {
     status: { type: string; winner?: FortressXiangqiColor | null; reason?: string };
@@ -65,8 +67,6 @@ export type FortressXiangqiPostgameResponse = {
     Record<FortressXiangqiViewKey, Array<{ ply: number; view: FortressXiangqiPlayerView }>>
   >;
 };
-
-type FortressMoveEntry = { move: FortressXiangqiMove; ply: number; color: FortressXiangqiColor };
 
 type LoadResult =
   | { ok: true; postgame: FortressXiangqiPostgameResponse }
@@ -116,113 +116,68 @@ export function fortressXiangqiPostgameApiUrl(roomId: string): string {
 }
 
 function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResponse): void {
-  const pane = createPane('', 'truth', true, 'split');
-  pane.boardEl.classList.add('fortress-xiangqi-live-board');
-
-  const moves: FortressMoveEntry[] = postgame.timeline
-    .filter(
-      (
-        entry,
-      ): entry is typeof entry & {
-        move: FortressXiangqiMove;
-        ply: number;
-        color: FortressXiangqiColor;
-      } =>
-        entry.type === 'move-played' &&
-        !!entry.move &&
-        typeof entry.ply === 'number' &&
-        !!entry.color,
-    )
-    .map((entry) => ({ move: entry.move, ply: entry.ply, color: entry.color }));
-
-  const moveList = createMoveList(
-    moves.map((entry) => ({ ply: entry.ply, label: fortressXiangqiMoveLabel(entry.move) })),
-    { title: 'Moves' },
+  // Perfect-information: the tree reconstructs every position (including drops) from
+  // the move list client-side. The server per-ply snapshots are used only by the
+  // watch adapter (postgameViewAtPly below).
+  const moveEvents = postgame.timeline.filter(
+    (entry) => entry.type === 'move-played' && entry.move,
   );
+  const moves = moveEvents.map((entry) => entry.move as FortressXiangqiMove);
+
+  // Per-ply elapsed time from consecutive event timestamps (the server persists no
+  // per-move clock, so the first ply's delta is measured from the earliest event).
+  let prevAt = postgame.timeline[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const moveTimes = moveEvents.map((entry) => {
+    const delta = Math.max(0, entry.at - prevAt);
+    prevAt = entry.at;
+    return delta;
+  });
+  const hasMoveTimes = moveTimes.some((ms) => ms > 0);
+
+  const gamePlayers = postgame.game.players ?? [];
+  const playerNames = {
+    red: gamePlayers.find((p) => p.color === 'red')?.name,
+    black: gamePlayers.find((p) => p.color === 'black')?.name,
+  };
+
+  const status = `${reviewResultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
+    markerId: 'fortress-xiangqi',
+    variantName: 'Fortress Xiangqi',
+    game: postgame.game,
+    status,
+  });
 
   root.replaceChildren(buildNav());
-  mountReviewLayout(root, {
+  mountFortressXiangqiReview(root, {
     pageClassName: 'fortress-xiangqi-review',
     ariaLabel: 'Fortress postgame',
-    title: 'Fortress',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    actions: fortressXiangqiActions(postgame),
-    moves: moveList.el,
-    boards: [{ key: 'truth', el: pane.el, tier: 'primary' }],
-    boardAspect: 516 / 588,
-    maxPly: postgameReplayMaxPly(postgame),
-    renderBoards({ ply, flipped }) {
-      const orientation: FortressXiangqiColor = flipped ? 'black' : 'red';
-      const view =
-        postgameViewAtPly(postgame, 'truth', ply) ?? postgame.views?.truth ?? postgame.view;
-      pane.boardEl.innerHTML = renderFortressXiangqiBoardSvg(view, orientation);
-      const top = orientation === 'red' ? 'black' : 'red';
-      fillFortressXiangqiReserve(pane.topCapturesEl, view, top);
-      fillFortressXiangqiReserve(pane.capturesEl, view, orientation);
-    },
-    renderMoves({ ply }, jump) {
-      moveList.update(ply, jump);
+    title: 'Fortress Xiangqi',
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
+    moves,
+    moveTimes: hasMoveTimes ? moveTimes : undefined,
+    players: playerNames,
+    showCrosstable: true,
+    // Server whole-game FSF analysis, DB-cached: an already-analysed game loads from
+    // cache on open (a GET that never computes). Requesting a fresh compute is
+    // account-gated (the server rejects anon POSTs), so a signed-out visitor gets a
+    // sign-in CTA instead of a request that would 401. (The drop reserves are still
+    // not shown; drops replay in the mainline.)
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? 'Request computer analysis'
+        : 'Sign in to request analysis',
+      fetchCached: () => fetchCachedGameAnalysis('fortress-xiangqi', postgame.game.roomId),
+      run: isLikelySignedIn()
+        ? () => requestGameAnalysis('fortress-xiangqi', postgame.game.roomId)
+        : () => {
+            window.location.assign('/account');
+            return new Promise<never>(() => {});
+          },
     },
   });
-}
-
-function fortressXiangqiActions(postgame: FortressXiangqiPostgameResponse): HTMLElement {
-  const actions = document.createElement('div');
-  actions.className = 'review-actions';
-  const playAgain = document.createElement('button');
-  playAgain.type = 'button';
-  playAgain.className = 'review-action-link';
-  playAgain.textContent = 'Play again';
-  let busy = false;
-  playAgain.onclick = () => {
-    if (busy) return;
-    busy = true;
-    playAgain.disabled = true;
-    playAgain.textContent = 'Creating';
-    void createFortressXiangqiPlayAgainRoom(postgame)
-      .then((url) => window.location.assign(url))
-      .catch((err) => {
-        console.warn(err);
-        busy = false;
-        playAgain.disabled = false;
-        playAgain.textContent = 'Try play again';
-      });
-  };
-  const share = createShareButton();
-  const home = reviewActionLink('Home', '/');
-  const room = reviewActionLink('Room', `/room/${encodeURIComponent(postgame.game.roomId)}`);
-  actions.append(playAgain, share, home, room);
-  return actions;
-}
-
-function reviewActionLink(label: string, href: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'review-action-link';
-  link.href = href;
-  link.textContent = label;
-  return link;
-}
-
-export async function createFortressXiangqiPlayAgainRoom(
-  postgame: FortressXiangqiPostgameResponse,
-): Promise<string> {
-  const mode =
-    postgame.game.mode === 'pve' && typeof postgame.game.pveEngineId === 'string' ? 'pve' : 'pvp';
-  const response = await fetch('/api/rooms', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      mode,
-      gameSpecId: 'fortress-xiangqi',
-      preferredColor: 'random',
-      ...(mode === 'pve' ? { engineId: postgame.game.pveEngineId } : { rated: false }),
-      ...(postgameTimeControl(postgame) ? { timeControl: postgameTimeControl(postgame) } : {}),
-    }),
-  });
-  if (!response.ok) throw new Error('fortress_xiangqi_play_again_failed');
-  const body = (await response.json()) as { url?: unknown };
-  if (typeof body.url !== 'string') throw new Error('fortress_xiangqi_play_again_missing_url');
-  return body.url;
 }
 
 export function postgameReplayMaxPly(postgame: FortressXiangqiPostgameResponse): number {
@@ -243,12 +198,6 @@ export function postgameViewAtPly(
     selected = snapshot;
   }
   return selected?.view ?? null;
-}
-
-function resultLabel(result: string): string {
-  if (result === 'red-wins') return 'Red wins';
-  if (result === 'black-wins') return 'Black wins';
-  return 'Draw';
 }
 
 function loadingView(): HTMLElement {
@@ -288,22 +237,4 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
   } catch {
     return null;
   }
-}
-
-function postgameTimeControl(
-  postgame: FortressXiangqiPostgameResponse,
-): { initialMs: number; incrementMs: number } | null {
-  const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
-  const incrementMs = postgame.game.incrementMs ?? postgame.state.timeControl?.incrementMs ?? null;
-  if (initialMs === null || incrementMs === null) return null;
-  return { initialMs, incrementMs };
-}
-
-function labelize(value: string): string {
-  return value.split('-').filter(Boolean).map(capitalize).join(' ');
-}
-
-function capitalize(value: string): string {
-  if (!value) return value;
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

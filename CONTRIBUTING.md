@@ -67,9 +67,13 @@ Before a pull request, run checks that match the blast radius:
 ```bash
 npm run verify -- --changed
 npm run check:drift       # public-doc links, SQL enum drift, fog payload guards
+npm run i18n:check        # app catalog structure, critical coverage, and gap report
 npm run ci:quick
 npm test                 # unit and integration tests, in-memory
 ```
+
+For interface copy, English is the source contract and noncritical locale gaps fall back safely.
+See [`docs/translations.md`](docs/translations.md) for domain ownership and the critical-key policy.
 
 For replay, reconnect, and persistence work, use local Postgres:
 

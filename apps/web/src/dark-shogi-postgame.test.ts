@@ -44,12 +44,17 @@ describe('Dark Shogi postgame page', () => {
     expect(root.textContent).toContain('Black view');
     expect(root.textContent).toContain('Server truth');
     expect(root.textContent).toContain('White view');
-    expect(root.textContent).toContain('Home');
-    expect(root.textContent).toContain('Room');
     expect(root.textContent).not.toContain('Play again');
     expect(root.textContent).not.toContain('Opponent reserve: hidden');
     expect(root.querySelectorAll('.dxq-postgame__board-wrap')).toHaveLength(3);
-    expect(root.textContent).toContain('Ply 2 of 2');
+    expect(root.querySelector('.review-stage')?.classList).toContain('review-stage--board-only');
+    expect(root.querySelector('.review-stage .dsg-postgame__reserve')).not.toBeNull();
+    // Current ply is read off the highlighted move (data-ply); ply 0 = the start
+    // position, which has no move to highlight. (The scrubber's "Ply X of Y" status
+    // was removed with the lichess control bar.)
+    const currentPly = () =>
+      root.querySelector('.review-move-list__move--current')?.getAttribute('data-ply') ?? '0';
+    expect(currentPly()).toBe('2');
 
     // Moves render in the shared clickable list with the shogi notation, each a
     // jump-to-ply button that drives the same ply state the scrubber uses.
@@ -58,18 +63,18 @@ describe('Dark Shogi postgame page', () => {
     expect(moveButtons[0]?.textContent).toContain('7g7f');
     expect(moveButtons[1]?.textContent).toContain('3c3d');
     moveButtons[0]?.click();
-    expect(root.textContent).toContain('Ply 1 of 2');
+    expect(currentPly()).toBe('1');
     moveButtons[1]?.click();
-    expect(root.textContent).toContain('Ply 2 of 2');
+    expect(currentPly()).toBe('2');
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(root.textContent).toContain('Ply 1 of 2');
+    expect(currentPly()).toBe('1');
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-    expect(root.textContent).toContain('Ply 0 of 2');
+    expect(currentPly()).toBe('0');
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
-    expect(root.textContent).toContain('Ply 2 of 2');
+    expect(currentPly()).toBe('2');
   });
 });
 

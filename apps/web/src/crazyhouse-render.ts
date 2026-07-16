@@ -46,9 +46,6 @@ const CRAZYHOUSE_DESCRIPTOR: GridBoardDescriptor = {
   palette: {
     lightCell: 'var(--board-light)',
     darkCell: 'var(--board-dark)',
-    frameBg: 'var(--board-frame)',
-    frameInner: 'transparent',
-    boardEdge: 'var(--board-frame)',
     coord: 'transparent',
     lastMove: 'var(--board-last-move)',
     selected: GRID_INTERACTION_COLORS.selected,
@@ -57,13 +54,8 @@ const CRAZYHOUSE_DESCRIPTOR: GridBoardDescriptor = {
     targetHover: GRID_INTERACTION_COLORS.targetHover,
     fog: 'transparent',
   },
-  framePad: 1,
   pad: 0,
-  frameRadius: 0,
-  frameInnerRadius: 0,
-  frameInnerWidth: 0,
   boardRadius: 0,
-  boardEdgeWidth: 0,
   // chess polarity: a1 is a dark square.
   darkWhenEven: false,
   svgClass: 'crazyhouse-live-svg',

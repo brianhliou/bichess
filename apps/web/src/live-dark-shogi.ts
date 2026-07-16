@@ -168,7 +168,6 @@ const client = createTenantLiveClient<ShogiColor, ShogiPlayerView, ShogiMove>({
     rowClass: 'dsg-move-row',
     cellPrefix: 'dsg-move-row',
     masked: true,
-    emptyText: 'No visible moves yet',
     notate: notateShogiMove,
     isMoveEvent,
     banner: () =>

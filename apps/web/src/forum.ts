@@ -433,7 +433,7 @@ export async function mountForumEtiquette(root: HTMLElement): Promise<void> {
       etiquettePara(
         'A clear title says what the thread is about, so people can find and answer it.',
       ),
-      etiquetteExample('do', '"Scouting lines in Fog Elephant Chess: how deep to commit?"'),
+      etiquetteExample('do', '"Scouting lines in Fog Xiangqi: how deep to commit?"'),
       etiquetteExample('dont', '"Help", "Bug", "play", or a single word'),
     ]),
     etiquetteSection('Post in the right category', [
@@ -1715,9 +1715,15 @@ function forumCheckIcon(): SVGSVGElement {
 
 function topicModerationBox(topic: ForumTopicDetail, categories: ForumCategory[]): HTMLElement {
   const box = document.createElement('section');
-  box.className = 'forum-auth-box forum-moderation-box';
+  box.className = 'forum-moderation-box';
+  const head = document.createElement('div');
+  head.className = 'forum-moderation-head';
   const heading = document.createElement('strong');
   heading.textContent = 'Moderation';
+  const badge = document.createElement('span');
+  badge.className = 'forum-moderation-badge';
+  badge.textContent = 'Admin only';
+  head.append(heading, badge);
   const actions = document.createElement('div');
   actions.className = 'forum-moderation-actions';
   actions.append(
@@ -1731,7 +1737,7 @@ function topicModerationBox(topic: ForumTopicDetail, categories: ForumCategory[]
       reasonPrompt: 'Reason for hiding this topic (optional)',
     }),
   );
-  box.append(heading, actions);
+  box.append(head, actions);
   const move = topicMoveForm(topic, categories);
   if (move) box.append(move);
   return box;

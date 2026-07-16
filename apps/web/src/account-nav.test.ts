@@ -10,7 +10,7 @@ type TestUser = {
   displayNameChangedAt: string | null;
   profileVisibility: 'private' | 'unlisted' | 'public';
   accountRole: 'player' | 'admin';
-  locale: 'en' | 'zh-Hans' | 'zh-Hant' | 'ja' | null;
+  locale: 'en' | 'zh-Hans' | 'zh-Hant' | null;
 };
 
 describe('account nav', () => {
@@ -140,7 +140,7 @@ describe('account nav', () => {
       Array.from(
         document.querySelectorAll<HTMLElement>('.account-nav-panel .appearance-language-option'),
       ).map((item) => item.textContent),
-    ).toEqual(['English', '简体中文', '繁體中文', '日本語']);
+    ).toEqual(['English', '简体中文', '繁體中文']);
     expect(
       document
         .querySelector<HTMLElement>('.account-nav-panel .appearance-language-option.selected')
@@ -148,7 +148,7 @@ describe('account nav', () => {
     ).toBe('zh-Hant');
   });
 
-  it('shows the admin tool group only for admins', async () => {
+  it('shows the consolidated admin nav menu only for admins', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ user: null })),
@@ -158,17 +158,30 @@ describe('account nav', () => {
     const { setAccountNavUser } = await import('./account-nav.js');
     document.body.append(buildNav());
 
+    const adminMenu = () => document.querySelector<HTMLElement>('[data-admin-only]');
+    const adminLinks = () =>
+      Array.from(adminMenu()?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? []);
+
+    // The bar always carries the menu; visibility reconciles off the account
+    // role. The old dropdown admin group is gone for everyone.
+    expect(adminMenu()).not.toBeNull();
+    expect(adminLinks()).toHaveLength(2);
+
     setAccountNavUser(testUser('misty'));
+    expect(adminMenu()?.hidden).toBe(true);
     expect(document.querySelector('.account-nav-admin')).toBeNull();
 
     setAccountNavUser({ ...testUser('boss'), accountRole: 'admin' });
-    const admin = document.querySelector('.account-nav-admin');
-    expect(admin).not.toBeNull();
-    expect(admin?.querySelector('.account-nav-heading')?.textContent).toBe('Admin');
-    const hrefs = Array.from(admin?.querySelectorAll<HTMLAnchorElement>('a') ?? []).map((link) =>
-      link.getAttribute('href'),
-    );
-    expect(hrefs).toEqual(['/database', '/engines']);
+    expect(adminMenu()?.hidden).toBe(false);
+    expect(adminLinks().map((link) => link.getAttribute('href'))).toEqual([
+      '/database',
+      '/engines',
+    ]);
+    expect(document.querySelector('.account-nav-admin')).toBeNull();
+
+    // Signing out hides them again.
+    setAccountNavUser(null);
+    expect(adminMenu()?.hidden).toBe(true);
   });
 
   it('switches the signed-in dropdown into a full-panel appearance submenu', async () => {

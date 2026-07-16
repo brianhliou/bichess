@@ -36,13 +36,17 @@ export type DisplayPreferenceKind = DisplayPreferenceDefinition['kind'];
 type BooleanPreferenceDefinition = Extract<DisplayPreferenceDefinition, { kind: 'boolean' }>;
 type SelectPreferenceDefinition = Extract<DisplayPreferenceDefinition, { kind: 'select' }>;
 
-export type DisplayPreferenceValue<Id extends DisplayPreferenceId = DisplayPreferenceId> = Extract<
-  DisplayPreferenceDefinition,
-  { id: Id }
->['defaultValue'];
+type PreferenceValueForDefinition<Definition> = Definition extends { kind: 'boolean' }
+  ? boolean
+  : Definition extends { options: readonly (infer Value)[] }
+    ? Value
+    : never;
+
+export type DisplayPreferenceValue<Id extends DisplayPreferenceId = DisplayPreferenceId> =
+  PreferenceValueForDefinition<Extract<DisplayPreferenceDefinition, { id: Id }>>;
 
 export type DisplayPreferences = {
-  [Definition in DisplayPreferenceDefinition as Definition['id']]: Definition['defaultValue'];
+  [Definition in DisplayPreferenceDefinition as Definition['id']]: PreferenceValueForDefinition<Definition>;
 };
 
 export function readDisplayPreferences(storage: Storage = window.localStorage): DisplayPreferences {

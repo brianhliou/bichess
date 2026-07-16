@@ -149,9 +149,19 @@ export function squareFromCgBoardClick(
   return `${fileChar}${rankNum}`;
 }
 
-export function setBoardFromView(api: Api, view: PlayerView, orientation: Color): void {
+export function setBoardFromView(
+  api: Api,
+  view: PlayerView,
+  orientation: Color,
+  animate = true,
+): void {
   const lastMove = view.lastMove ? ([view.lastMove.from, view.lastMove.to] as cg.Key[]) : undefined;
   api.set({
+    // Passed explicitly on every set so a suppressed (fogged-side) move can't
+    // leave animation disabled for the next allowed one. See the caller in
+    // replay.ts: a POV pane animates only its OWN side's moves, because gliding
+    // the fogged opponent implies a redacted origin square (board-anim.ts #158).
+    animation: { enabled: animate },
     fen: boardFen(view.board),
     lastMove,
     highlight: {
@@ -161,11 +171,12 @@ export function setBoardFromView(api: Api, view: PlayerView, orientation: Color)
   });
 }
 
-export function setBoardFromState(api: Api, state: GameState): void {
+export function setBoardFromState(api: Api, state: GameState, animate = true): void {
   const lastMove = state.lastMove
     ? ([state.lastMove.from, state.lastMove.to] as cg.Key[])
     : undefined;
   api.set({
+    animation: { enabled: animate },
     fen: boardFen(state.board),
     lastMove,
     highlight: { custom: new Map(), lastMove: true },

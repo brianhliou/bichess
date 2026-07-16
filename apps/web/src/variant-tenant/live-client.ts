@@ -119,9 +119,6 @@ export type TenantMoveListConfig<C extends string, M> = {
    * 'visible' when masked, else 'all'. Dark Xiangqi is masked-but-'all'.
    */
   plyWindow?: 'visible' | 'all';
-  /** Override the zero-moves placeholder row (default: masked single-span or plain text). */
-  emptyRow?(): HTMLLIElement;
-  emptyText: string;
   notate(move: M): string;
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
@@ -375,7 +372,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       );
     }
 
-    refs = createLiveLayout(app, { debugRequested: false });
+    refs = createLiveLayout(app, { debugRequested: false, roomId: room });
     setLiveLayoutGameSpec(app, config.gameSpecId);
     chrome.setRenderTarget(refs, {
       sendSocket: send,
@@ -479,24 +476,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       item.textContent = banner.text;
       liveRefs.moveList.append(item);
     }
-    if (plyCount === 0) {
-      if (moveList.emptyRow) {
-        liveRefs.moveList.append(moveList.emptyRow());
-        return;
-      }
-      const item = document.createElement('li');
-      item.className = moveList.rowClass;
-      if (moveList.masked) {
-        const empty = document.createElement('span');
-        empty.className = `${moveList.cellPrefix}__move masked`;
-        empty.textContent = moveList.emptyText;
-        item.append(empty);
-      } else {
-        item.textContent = moveList.emptyText;
-      }
-      liveRefs.moveList.append(item);
-      return;
-    }
+    // Zero moves renders an empty list (lichess parity): no placeholder row.
+    if (plyCount === 0) return;
     const activePly = replay.activePly();
     for (const row of visibleMoveRows(moves, plyCount)) {
       const item = document.createElement('li');

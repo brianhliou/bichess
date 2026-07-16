@@ -37,11 +37,13 @@ import {
   PAWN_CAPTURE_EXAMPLES,
   PAWN_CAPTURE_EXAMPLES_FOG,
   WHITE_BISHOP_WIN_POSITIONS,
+  playClosing,
 } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const darkChessArticle: Article = {
-    slug: 'dark-chess',
+    slug: 'fog-chess',
+    gameSpecId: 'dark-chess',
     kind: 'rules',
     playableOnMistboard: true,
     title: 'Fog Chess Rules',
@@ -49,7 +51,7 @@ export const darkChessArticle: Article = {
       'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.',
     status: 'published',
     publishedAt: '2026-05-22',
-    updatedAt: '2026-06-04',
+    updatedAt: '2026-07-12',
     audience:
       'Any chess player who has heard of fog chess, dark chess, or Fog of War and wants to understand it from scratch.',
     thumbnail: ARTICLE_OG_POSITIONS['dark-chess'],
@@ -265,36 +267,18 @@ export const darkChessArticle: Article = {
           } as ArticleBlock,
         ],
       },
-      {
-        heading: 'Names',
-        blocks: [
+      playClosing({
+        heading: 'Play on Mistboard',
+        lead: 'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        playLabel: 'Play vs computer',
+        playHref: '/?play=computer&gameSpecId=dark-chess',
+        secondary: [
           {
-            kind: 'paragraph',
-            text:
-              'Fog Chess, dark chess, and Fog of War chess refer to this same chess variant: hidden-information chess where you see only the squares your pieces reach. It is sometimes confused with [Half-Flip Chess](/rules/banqi), the Chinese game also nicknamed "dark chess," which plays with xiangqi pieces turned face-down. That is a different game.',
+            label: 'Challenge a friend',
+            href: '/?play=friend&gameSpecId=dark-chess',
+            emphasis: 'secondary',
           },
         ],
-      },
-      {
-        heading: 'Try it',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              "Open a board, share the link, play. No account required.",
-          },
-          {
-            kind: 'cta',
-            buttons: [
-              { label: 'Play Misty', href: '/?play=computer', emphasis: 'primary' },
-            ],
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              "The full source is AGPL-3.0. The visibility logic that powers every position in this article is the same code path Mistboard's servers run in production.",
-          },
-        ],
-      },
+      }),
     ],
 };

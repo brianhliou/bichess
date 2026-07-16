@@ -45,9 +45,20 @@ async function smokeLearnInterface() {
     await assertVisible(page, '.site-nav-brand img.site-nav-logo[src="/logo.svg"]');
     assert.equal(await page.locator('.site-nav-brand-name').textContent(), 'mistboard.com');
 
+    assert.equal(await page.locator('.learn-home .learn-heading').textContent(), 'Learn to play');
+
+    // The xiangqi course leads the hub; its CTA deep-links into /learn/xiangqi.
+    const xiangqiCard = page.locator('.learn-course-card');
+    assert.equal(await xiangqiCard.count(), 1, 'xiangqi course card should appear once');
     assert.equal(
-      await page.locator('.learn-home .learn-heading').textContent(),
-      'Learn dark chess',
+      await xiangqiCard.locator('.learn-course-card-cta').textContent(),
+      'Start learning',
+    );
+
+    // Dark chess modules sit below the course card, under their own heading.
+    assert.equal(
+      await page.locator('.learn-home-section-title').first().textContent(),
+      'Dark chess modules',
     );
     assert.ok((await page.locator('.learn-module-card').count()) >= 24);
 

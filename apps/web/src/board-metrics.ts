@@ -13,3 +13,14 @@ export const TOKEN_PIECE_RATIO = 0.9;
 export function tokenPieceSize(cell: number): number {
   return Math.round(cell * TOKEN_PIECE_RATIO);
 }
+
+export type RectangularGridMetrics = {
+  cell: number;
+  files: number;
+  ranks: number;
+};
+
+/** Width / height for a plain rectangular grid with no inter-rank strips. */
+export function rectangularGridAspect(metrics: RectangularGridMetrics): number {
+  return (metrics.files * metrics.cell) / (metrics.ranks * metrics.cell);
+}

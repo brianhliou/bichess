@@ -15,9 +15,10 @@ import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece
 // Bespoke SVG renderer for the banqi board, drawn as the bottom HALF of a xiangqi
 // board in its natural HORIZONTAL orientation: 8 files run left-to-right, 4 ranks
 // bottom-to-top. The 8x4 banqi cells are the 32 cells bounded by a 9x5 line grid
-// (half a xiangqi board), so the xiangqi furniture (the palace + the soldier/
-// cannon starting-point marks) is drawn on the line intersections while the 32
-// pieces sit in the CELL centres.
+// (half a xiangqi board); the 32 pieces sit in the CELL centres. The board is a
+// plain grid — the parent board's palace and soldier/cannon starting-point marks
+// are deliberately NOT drawn: banqi keeps none of those rules (no palace
+// confinement, no fixed start array), so they would be purely decorative noise.
 //
 // Banqi is symmetric-information: BOTH seats see the IDENTICAL board (no per-seat
 // flip), and a face-down tile carries NO colour or identity to anyone (the deal
@@ -33,6 +34,9 @@ const PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
+const LAST_MOVE_FROM_RADIUS = CELL * 0.45;
+const LAST_MOVE_RING_RADIUS = CELL * (26 / 60);
+const LAST_MOVE_REVEAL_RADIUS = CELL * 0.475;
 
 export const BANQI_PIECE_PX = PIECE_SIZE;
 
@@ -95,47 +99,6 @@ function gridLines(): string {
   return parts.join('');
 }
 
-// The bottom palace (xiangqi files d..f, ranks 1..3): two diagonals across the
-// 2x2 cell box at the back rank. Decorative — banqi has no palace confinement.
-function palaceDiagonals(): string {
-  const a = point(3, 2);
-  const b = point(5, 4);
-  const c = point(5, 2);
-  const d = point(3, 4);
-  return [
-    `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`,
-    `<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`,
-  ].join('');
-}
-
-// The xiangqi position bracket at a starting point: short L-marks in each
-// on-board quadrant. Soldiers start on rank 4 (files a,c,e,g,i); cannons on
-// rank 3 (files b,h) — the standard markings of a board's near half.
-function positionMark(fileLine: number, rankLine: number): string {
-  const { x, y } = point(fileLine, rankLine);
-  const gap = 4;
-  const len = 7;
-  const parts: string[] = [];
-  for (const sx of [-1, 1]) {
-    if (fileLine + sx < 0 || fileLine + sx > FILES) continue;
-    for (const sy of [-1, 1]) {
-      if (rankLine + sy < 0 || rankLine + sy > RANKS) continue;
-      const px = x + sx * gap;
-      const py = y + sy * gap;
-      parts.push(`<line x1="${px}" y1="${py}" x2="${px + sx * len}" y2="${py}"/>`);
-      parts.push(`<line x1="${px}" y1="${py}" x2="${px}" y2="${py + sy * len}"/>`);
-    }
-  }
-  return parts.join('');
-}
-
-function startMarks(): string {
-  const parts: string[] = [];
-  for (const fileLine of [0, 2, 4, 6, 8]) parts.push(positionMark(fileLine, 1)); // soldiers, rank 4
-  for (const fileLine of [1, 7]) parts.push(positionMark(fileLine, 2)); // cannons, rank 3
-  return `<g class="banqi-mark">${parts.join('')}</g>`;
-}
-
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
 // hidden from both). A flat disc with no inner ring keeps the back clean.
 function faceDownDisc(cx: number, cy: number, className = 'banqi-back'): string {
@@ -189,16 +152,22 @@ function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
 
 function lastMoveMarkers(view: BanqiPlayerView): string {
   if (!view.lastMove) return '';
-  const squares =
-    view.lastMove.from === view.lastMove.to
-      ? [view.lastMove.from]
-      : [view.lastMove.from, view.lastMove.to];
-  return squares
-    .map((sq) => {
-      const { x, y } = cellCenter(sq);
-      return `<rect class="banqi-last" x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/>`;
-    })
-    .join('');
+  const to = cellCenter(view.lastMove.to);
+  const destination = `<circle class="banqi-last-ring" cx="${to.x}" cy="${to.y}" r="${LAST_MOVE_RING_RADIUS}"/>`;
+  // Flips are self-moves. A single destination halo marks the revealed piece
+  // without inventing an origin. Board moves retain xiangqi's origin-shadow plus
+  // destination-halo grammar.
+  if (view.lastMove.from === view.lastMove.to) {
+    return (
+      destination +
+      `<circle class="banqi-last-reveal" cx="${to.x}" cy="${to.y}" r="${LAST_MOVE_REVEAL_RADIUS}"/>`
+    );
+  }
+  const from = cellCenter(view.lastMove.from);
+  return (
+    `<circle class="banqi-last-from" cx="${from.x}" cy="${from.y}" r="${LAST_MOVE_FROM_RADIUS}"/>` +
+    destination
+  );
 }
 
 function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView): string {
@@ -236,10 +205,9 @@ export function renderBanqiBoardSvg(
     ? (options.legalMoves ?? []).filter((m) => m.from === options.selectedSquare)
     : [];
   return `
-    <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Half-Flip Chess board">
+    <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flip Xiangqi board">
       <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="6"/>
-      <g class="banqi-grid">${gridLines()}${palaceDiagonals()}</g>
-      ${startMarks()}
+      <g class="banqi-grid">${gridLines()}</g>
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
       ${options.interactive ? '' : moveHints(view, moves)}
@@ -272,7 +240,6 @@ export function installBanqiBoardStyles(): void {
       stroke-width: 1.5;
       stroke-linecap: round;
     }
-    .banqi-mark line { stroke: var(--mini-xq-grid, #5b4a32); stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
     .banqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
     .banqi-hint { fill: rgba(31, 111, 91, 0.72); opacity: 0.7; pointer-events: none; }
     .banqi-hint-capture {
@@ -290,7 +257,24 @@ export function installBanqiBoardStyles(): void {
     .banqi-hit--target:hover .banqi-hint-capture {
       opacity: 0;
     }
-    .banqi-last { fill: rgba(250, 204, 21, 0.22); pointer-events: none; }
+    .banqi-last-from {
+      fill: rgba(161, 98, 7, 0.34);
+      pointer-events: none;
+    }
+    .banqi-last-ring {
+      fill: none;
+      stroke: var(--board-highlight, #d6af4e);
+      stroke-width: ${CELL * (4 / 60)};
+      filter: drop-shadow(0 0 1px rgba(70, 45, 8, 0.5));
+      pointer-events: none;
+    }
+    .banqi-last-reveal {
+      fill: none;
+      stroke: var(--board-highlight, #d6af4e);
+      stroke-width: ${CELL * 0.045};
+      opacity: 0.9;
+      pointer-events: none;
+    }
     .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
     .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
     .banqi-drag-source { opacity: 0.34; }

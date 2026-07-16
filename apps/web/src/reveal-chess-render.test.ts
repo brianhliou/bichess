@@ -12,6 +12,8 @@ describe('Reveal Chess board renderer', () => {
     const svg = renderRevealChessBoardSvg(view);
 
     expect(svg).toContain('<svg');
+    expect(svg).not.toContain('var(--crossroads-frame)');
+    expect(svg).not.toMatch(/<rect[^>]*fill="none"[^>]*stroke=/);
     // 64 board cells (8x8), each 50x50.
     expect((svg.match(/width="50" height="50"/g) ?? []).length).toBe(64);
     // The two kings are face-up cburnett glyphs (no recolor).

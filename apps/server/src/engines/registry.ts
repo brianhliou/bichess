@@ -1,4 +1,10 @@
 import type pg from 'pg';
+import { XIANGQI_FSF_ENGINE_VERSION, XIANGQI_FSF_PLAYABLE_ENGINES } from '../xiangqi-fsf-engine.js';
+import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
+import {
+  XIANGQI_RANDOM_ENGINE_ID,
+  XIANGQI_RANDOM_ENGINE_VERSION,
+} from '../xiangqi-random-engine.js';
 import { BUILTIN_ENGINES } from './builtin/index.js';
 import type { EngineClientId, EngineDefinition, EngineId } from './types.js';
 
@@ -105,7 +111,7 @@ export function isDarkXiangqiEngineClientId(clientId: string | undefined): clien
 // The default Dark Mini Xiangqi PvE engine (the single player-facing DMX engine,
 // mirroring Misty for chess).
 export const DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-dmx-v1.0';
-export const DARK_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-fdx-v1.0';
+export const DARK_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-fdx-v1.1';
 
 const PYTHON_ENGINES: Record<string, EngineDefinition> = {
   'python-tier1-v0.9.5': {
@@ -489,6 +495,31 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
       'Misty DXQ 1.0 — Full Dark Xiangqi local/dev engine served through the ' +
       'variant-aware worker adapter (64x12, 20M cap, Pikafish depth 1).',
   },
+  'python-fdx-v1.1': {
+    id: 'python-fdx-v1.1',
+    engineId: 'v2',
+    engineName: 'Misty DXQ',
+    name: 'Misty DXQ 1.1',
+    kind: 'container',
+    gameSpecId: 'dark-xiangqi',
+    configHash: 'fdx-v1.1-guarded-64x32-20m',
+    playSignature: 'fdx-v1.1-guarded-64x32-20m',
+    config: {
+      kind: 'python-subprocess',
+      strategy: 'v2-xiangqi',
+      version: '1.1',
+      config: 'fdx-guarded-64x32-20m-pikafish-d1',
+      config_hash: 'guarded-64x32-20m',
+      engine_pin: 'fdx-v1.1-local',
+    },
+    livePolicy: { timeoutMs: 60_000 },
+    notes:
+      'Misty DXQ 1.1 — Full Dark Xiangqi, guarded-64x32-20m profile: faithful ' +
+      'coverage (|I|=32, KLUSS=2, Resolve gadget + alpha) plus the material- ' +
+      'catastrophe stack (adaptive material prune tau=0.15 + general veto), all ' +
+      'baked in the engine profile (no FOW_XIANGQI_* env needed). Human-validated ' +
+      '(beat author 3/3 live PvE; opening cannon-hang class did not recur).',
+  },
   'python-tier1-v0.9.1': {
     id: 'python-tier1-v0.9.1',
     engineId: 'tier1',
@@ -618,6 +649,49 @@ const CROSSROADS_CHESS_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// Uniformly-random legal-move xiangqi bot: the calibration floor / 0-Elo anchor.
+// EvE-only (the xiangqi runner's move provider plays it in-process), so it is NOT
+// in any *_PLAYABLE list and never appears in the live PvE picker.
+const XIANGQI_RANDOM_ENGINES: Record<string, EngineDefinition> = {
+  [XIANGQI_RANDOM_ENGINE_ID]: {
+    id: XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'xiangqi',
+    configHash: `random-legal-xiangqi-${XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-xiangqi-${XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move standard-Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+};
+
+const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  XIANGQI_FSF_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id,
+      engineId: 'fairy-stockfish-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'xiangqi',
+      configHash: `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-depth-${tier.depth}`,
+      playSignature: `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-depth-${tier.depth}`,
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        depth: tier.depth,
+        movetime_ms: tier.movetimeMs,
+      },
+      notes:
+        'Fairy-Stockfish standard-Xiangqi human-strength profile using the Lichess/PlayStrategy stochastic weakening policy.',
+    } satisfies EngineDefinition,
+  ]),
+);
+
 // Jieqi (揭棋) PvE engines — the Pikafish jieqi branch driven as a UCI subprocess
 // (Tier-B, server-jieqi-engine.ts). LAUNCH uses the no-net `jieqi_old` classical
 // build (clean GPL-3, no net-licensing problem). Unlike crossroads/FSF, jieqi_old
@@ -665,6 +739,33 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
     notes: 'Top Jieqi PikaJieQi tier — full strength, time-bounded (no depth cap).',
   },
 };
+
+// Standard Xiangqi profiles share the exact tier source used by live PvE. This
+// prevents the EvE catalog from drifting from the executable node budgets.
+const XIANGQI_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  XIANGQI_ALL_ENGINE_TIERS.map((tier) => [
+    tier.id,
+    {
+      id: tier.id,
+      engineId: 'pikafish-xiangqi',
+      engineName: 'Pikafish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'xiangqi',
+      configHash: `pikafish-xiangqi-${XIANGQI_ENGINE_VERSION}-nodes-${tier.nodes}`,
+      playSignature: `pikafish-xiangqi-${XIANGQI_ENGINE_VERSION}-nodes-${tier.nodes}`,
+      config: {
+        kind: 'pikafish-xiangqi',
+        nodes: tier.nodes,
+        movetime_ms: tier.movetimeMs,
+        version: XIANGQI_ENGINE_VERSION,
+      },
+      notes:
+        `Mainline Pikafish ${XIANGQI_ENGINE_VERSION} standard-Xiangqi profile; ` +
+        `${tier.nodes.toLocaleString('en-US')} node budget.`,
+    } satisfies EngineDefinition,
+  ]),
+);
 
 // MistyBanqi (our own Rust αβ+TT engine, Tier-B UCI subprocess — banqi-engine.ts).
 // ONE versioned bot since 2026-06-18 (was 3 difficulty tiers). configHash carries the
@@ -797,7 +898,10 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
   ...CROSSROADS_CHESS_ENGINES,
+  ...XIANGQI_FSF_ENGINES,
+  ...XIANGQI_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
+  ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,
   ...MINI_XIANGQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
@@ -873,7 +977,9 @@ export async function upsertBuiltinEngineVersions(
           runtime:
             engine.config.kind === 'python-subprocess'
               ? 'python-subprocess'
-              : 'in-process-typescript',
+              : engine.config.kind === 'builtin'
+                ? 'in-process-typescript'
+                : 'uci-subprocess',
         },
         engine.notes ?? 'Built-in TypeScript worker engine for EvE data collection MVP.',
       ],

@@ -27,7 +27,11 @@ describe('historical xiangqi review page', () => {
   });
 
   it('renders a historical game through the shared xiangqi review shell', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse({ game: historicalGameFixture() }));
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.startsWith('/api/chat/game/')) return jsonResponse(chatFixture());
+      return jsonResponse({ game: historicalGameFixture() });
+    });
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
 
@@ -36,14 +40,32 @@ describe('historical xiangqi review page', () => {
 
     expect(root.querySelector('.xiangqi-live-board')).not.toBeNull();
     expect(root.querySelector('.engine-panel')).not.toBeNull();
+    // Persistent per-game comments (same panel as the room review), keyed by game id.
+    expect(root.querySelector('.review-spectator-chat__input')).not.toBeNull();
+    expect(fetchSpy).toHaveBeenCalledWith('/api/chat/game/hxq_1');
     expect(root.textContent).toContain('Historical game');
     expect(root.textContent).toContain('Hu Ronghua');
     expect(root.textContent).toContain('Liu Dahua');
     expect(root.textContent).toContain('Draw');
     expect(root.textContent).not.toContain('Draw wins');
     expect(root.textContent).toContain('h3-e3');
-    expect(root.textContent).toContain('Search games');
+    // Consolidation: no bespoke left-rail nav buttons (clean shared column).
+    expect(root.textContent).not.toContain('Search games');
+    // Whole-game analysis rides the shared client ceval sweep (parity with the
+    // analysis board), not the server "Request computer analysis" path.
+    expect(root.textContent).toContain('Computer analysis');
+    expect(root.textContent).toContain('Analyse the whole game');
     expect(root.textContent).not.toContain('Request computer analysis');
+
+    // Provenance rides a "Game info" underboard tab on the shared shell (not a
+    // bespoke left-rail panel), with players wired for the crosstable.
+    expect(root.querySelector('.review-provenance')).not.toBeNull();
+    expect(root.textContent).toContain('Game info');
+    expect(root.textContent).toContain('Wuyang Cup');
+    expect(root.textContent).toContain('Guangzhou');
+    expect(root.textContent).toContain('Crosstable');
+    // The raw acquisition move-encoding ("wxf") is internal jargon, not surfaced.
+    expect(root.textContent).not.toContain('wxf');
   });
 });
 
@@ -72,6 +94,22 @@ function historicalGameFixture() {
     tags: {},
     qualityFlags: [],
     visibility: 'public',
+  };
+}
+
+function chatFixture() {
+  return {
+    lines: [
+      {
+        id: 'chln_hist_1',
+        handle: 'viewer',
+        text: 'great game',
+        createdAt: '2026-07-01T12:06:00.000Z',
+      },
+    ],
+    canPost: true,
+    canReport: false,
+    viewerHandle: 'viewer',
   };
 }
 

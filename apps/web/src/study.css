@@ -1,0 +1,156 @@
+/* Owner controls for a study: visibility toggle, save status, copy link. Lives in
+ * the review left-rail `actions` slot. */
+
+.study-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.study-actions__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.study-actions__chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.study-actions__chapter {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 5px;
+  overflow: hidden;
+}
+.study-actions__chapter--active {
+  border-color: var(--c-accent, #3893e8);
+  background: color-mix(in srgb, var(--c-accent, #3893e8) 14%, transparent);
+}
+
+.study-actions__chapter-label {
+  padding: 0.22rem 0.55rem;
+  font-size: 0.82rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-actions__chapter--active .study-actions__chapter-label {
+  font-weight: 600;
+}
+
+.study-actions__chapter-del {
+  padding: 0 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  border: none;
+  border-left: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.study-actions__chapter-del:hover {
+  opacity: 1;
+  color: #b91c1c;
+}
+
+.study-actions__chapter-add {
+  padding: 0.22rem 0.55rem;
+  font-size: 0.82rem;
+  border: 1px dashed var(--c-border, rgba(128, 128, 128, 0.5));
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.study-actions__label {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.study-actions__visibility {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.study-actions__vis {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.study-actions__vis--active {
+  background: var(--c-accent, #3893e8);
+  border-color: var(--c-accent, #3893e8);
+  color: #fff;
+}
+
+.study-actions__copy {
+  align-self: flex-start;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.study-actions__like {
+  padding: 7px 10px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm, 6px);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.study-actions__like.is-liked {
+  border-color: color-mix(in srgb, var(--site-accent) 60%, var(--site-border-soft));
+  color: var(--site-accent-strong);
+}
+
+.study-actions__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.2rem 0.45rem;
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: var(--c-bg-elevated, rgba(128, 128, 128, 0.08));
+  color: inherit;
+}
+.study-actions__name:focus {
+  outline: none;
+  border-color: var(--c-accent, #3893e8);
+}
+
+.study-actions__status {
+  font-size: 0.8rem;
+  min-height: 1.1em;
+  opacity: 0.85;
+}
+.study-actions__status[data-state="saved"] {
+  color: #15803d;
+}
+.study-actions__status[data-state="error"],
+.study-actions__status[data-state="conflict"] {
+  color: #b91c1c;
+}

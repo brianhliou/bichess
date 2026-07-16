@@ -48,6 +48,19 @@
   margin-inline: auto;
   padding: clamp(10px, 1.4vw, 18px) clamp(10px, 2vw, 24px) 24px;
   box-sizing: border-box;
+  /* Review pages (NOT the live room, which shares the cluster classes but sits
+     outside .review-shell): equal fixed-width rails, lichess analyse style. The
+     board takes whatever the fixed rails leave. */
+  --uni-side-min: 320px;
+  --uni-side-max: 320px;
+  --uni-table-min: 320px;
+  --uni-table-max: 320px;
+}
+
+/* Review pages top-align all three columns (lichess analyse): the board tops
+   out level with the rails instead of centering in a viewport-tall row. */
+.review-shell .review-shell__center {
+  align-items: flex-start;
 }
 
 /* col1: one stacked column, board first. */
@@ -138,7 +151,12 @@
 
 @media (min-width: 800px) {
   .review-shell__cluster--gauge {
-    --uni-gauge-w: 22px;
+    --uni-gauge-w: 20px;
+    /* The eval gauge sits FLUSH in the gutter between the board and the right rail
+       (lichess): no gap on either side of it. Row gap (side rail below on col2)
+       stays. The outer side↔board gap is re-added as a margin in col3 below so the
+       board reads centered between the two rails. */
+    column-gap: 0;
     grid-template-columns:
       var(--uni-board-width)
       var(--uni-gauge-w)
@@ -149,13 +167,33 @@
   }
   .review-shell__cluster--gauge .review-shell__gauge {
     display: block;
-    align-self: center;
-    /* Match the board's height: column width projected through the aspect. */
+    /* Flush with the top-aligned board; match its height (column width projected
+       through the aspect). */
+    align-self: start;
     height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
-    /* The center column centers board+underboard as one block, so the board
-       tops out half the underboard height above center; counter-shift to keep
-       the gauge flush with the board (token published by fitPrimaryToViewport). */
-    transform: translateY(calc(var(--uni-underboard-h, 0px) / -2));
+  }
+  /* Square the board's RIGHT corners on the gauge layout so its edge sits flush
+     against the (sharp-cornered) eval bar; the left corners keep the shared
+     rounding. The board's tan surface is a rounded SVG <rect>, so also paint the
+     container with the board color — otherwise the squared corner reveals the page
+     behind the rect's rounded corner (a white notch under a curved tan edge). */
+  .review-shell__cluster--gauge .xiangqi-live-board {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    background: var(--xq-live-board-bg, #f5dca8);
+  }
+  .review-shell__cluster--gauge .xiangqi-live-board .xq-live-svg {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .review-shell__cluster--gauge .xiangqi-live-board:has(.xq-live-svg--cell) {
+    /* Match the two right-corner cells behind the SVG so antialiasing can never
+       expose the light board surface around the dark bottom-right tile. */
+    background: linear-gradient(
+      to bottom,
+      var(--xq-live-board-bg, #f5dca8) 0 50%,
+      color-mix(in srgb, var(--xq-live-board-bg, #f5dca8) 84%, var(--xq-live-ink, #5a3a14)) 50% 100%
+    );
   }
 }
 
@@ -167,6 +205,12 @@
       var(--uni-gauge-w)
       minmax(var(--uni-table-min), var(--uni-table-max));
     grid-template-areas: "side board gauge table";
+  }
+  /* column-gap is 0 (the gauge is flush), so re-add the side↔board gutter here as
+     a margin — this is the "distance between the board and the left column" that
+     mirrors the flush gauge on the right. */
+  .review-shell__cluster--gauge .review-shell__left {
+    margin-right: var(--uni-gap);
   }
 }
 
@@ -200,6 +244,107 @@
 }
 .review-underboard-panel__body {
   padding: 10px;
+}
+.review-underboard-panel__body[hidden] {
+  display: none;
+}
+.review-underboard-empty {
+  margin: 0;
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* Game info: a provenance definition list (source / event / date / flags). */
+.review-provenance {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px 8px;
+  font-size: 13px;
+}
+.review-provenance dt {
+  color: var(--site-muted);
+}
+.review-provenance dd {
+  margin: 0;
+  color: var(--site-fg, inherit);
+}
+
+/* Move times: per-ply bars, colored by side, growing from a shared baseline. */
+.review-move-times {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 140px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--site-border);
+}
+.review-move-times__bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px 1px 0 0;
+}
+.review-move-times__bar--red {
+  background: #c0563f;
+}
+.review-move-times__bar--black {
+  background: #34302e;
+}
+.review-move-times__caption {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--site-muted);
+  text-align: right;
+}
+
+/* Share & export rows: label · read-only field · copy button. */
+.review-share {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-share__row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.review-share__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-muted);
+}
+.review-share__field {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 12px;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+.review-share__field--moves {
+  resize: vertical;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+.review-share__copy {
+  padding: 7px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.review-share__copy:hover {
+  background: var(--site-surface);
 }
 
 /* Right-rail captured-material rows (lichess round: mat-top / mat-bot). Fixed
@@ -324,6 +469,70 @@
   min-height: 0;
 }
 
+/* Controls pinned to the bottom of the right rail (e.g. a Reveal toggle). Kept
+   simple for now; the left column stays button-free. */
+.review-rail-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* The analyse table (lichess round/analyse tools box): engine head · move list ·
+   advice · nav controls fused into ONE box. The children drop their own card
+   chrome; hairline separators divide the sections. */
+.review-rail-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 10px);
+  background: var(--site-panel, var(--site-surface));
+  overflow: hidden;
+}
+.review-rail-main > * {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.review-rail-main > .engine-panel {
+  border-bottom: 1px solid var(--site-border);
+}
+.review-rail-main > .review-scrubber {
+  border-top: 1px solid var(--site-border);
+}
+
+/* On board-beside-table layouts the analyse table's bottom tracks the board's
+   bottom (lichess): fixed to the board height, the move list flex-fills and
+   scrolls inside, and anything after the table (analysis summary) starts below
+   the board line. */
+@media (min-width: 800px) {
+  .review-shell__right .review-rail-main {
+    flex: 0 0 auto;
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+  .review-rail-main > .review-move-list,
+  .review-rail-main > .review-moves-card {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .review-rail-main .review-move-list__rows {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* col3: the left rail's group also ends at the board bottom, so its last panel
+   (spectator room / details) fills down to exactly the board line. */
+@media (min-width: 1260px) {
+  .review-shell .review-shell__left > .review-rail-group {
+    flex: 0 0 auto;
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+}
+
 /* Left-rail info card: eyebrow / title / summary / actions. */
 .review-info-card {
   display: flex;
@@ -376,6 +585,19 @@
   background: var(--site-surface);
 }
 
+.game-favorite-action {
+  cursor: pointer;
+}
+
+.game-favorite-action--saved {
+  color: #d29a35;
+}
+
+.game-favorite-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 /* Right-rail move list card (interactive move rows). */
 .review-moves-card {
   display: flex;
@@ -401,18 +623,18 @@
   overflow-y: auto;
 }
 
-/* Playback scrubber: lichess-style, under the move list in the right rail — a
-   small position label on its own line above a single row of evenly sized nav
-   buttons, all contained within the rail width. */
+/* Playback controls: lichess-style compact bar under the move list — a single
+   row of unboxed, evenly sized nav buttons (an optional status line above them
+   collapses when unused). */
 .review-scrubber {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
   box-sizing: border-box;
-  padding: 8px;
+  padding: 4px 6px;
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius, 10px);
   background: var(--site-panel, var(--site-surface));
@@ -425,22 +647,27 @@
   font-weight: 700;
   color: var(--site-text);
 }
+.review-scrubber__status:empty {
+  display: none;
+}
 .review-scrubber__button {
   flex: 1 1 0;
   min-width: 0;
-  padding: 8px 0;
-  border: 1px solid var(--site-border);
+  padding: 6px 0;
+  border: none;
   border-radius: var(--site-radius-sm, 8px);
-  background: var(--site-bg);
-  color: var(--site-text);
+  background: transparent;
+  color: var(--site-muted);
   font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
 }
 .review-scrubber__button:hover:not(:disabled) {
   background: var(--site-surface);
+  color: var(--site-text);
 }
 .review-scrubber__button:disabled {
-  color: var(--site-muted);
+  color: color-mix(in srgb, var(--site-muted) 45%, transparent);
   cursor: default;
 }
 
@@ -455,28 +682,35 @@
    --uni-board-scale; the grid re-centers the columns around it. */
 .board-resize-grip {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
+  right: 3px;
+  bottom: 3px;
   z-index: 3;
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: nwse-resize;
-  opacity: 0.45;
+  opacity: 0.55;
   touch-action: none;
 }
+/* Two short diagonal lines in the board's bottom-right corner (lichess handle),
+   drawn as `/` stripes clipped by the square box so the outer one reads shorter. */
 .board-resize-grip::before {
   content: "";
   position: absolute;
-  inset: 4px;
-  border-right: 3px solid var(--site-muted, #8a8578);
-  border-bottom: 3px solid var(--site-muted, #8a8578);
-  border-radius: 0 0 4px 0;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0 54%,
+    var(--board-resize-ink, #3a322a) 54% 63%,
+    transparent 63% 74%,
+    var(--board-resize-ink, #3a322a) 74% 83%,
+    transparent 83%
+  );
 }
 .board-resize-grip:hover {
-  opacity: 0.95;
+  opacity: 0.9;
 }
 .board-resizing,
 .board-resizing * {

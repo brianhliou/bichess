@@ -1,4 +1,5 @@
 import {
+  consumeAuthRateLimitBucket,
   consumeEmailLoginChallenge,
   createAccountSession,
   createEmailLoginChallenge,
@@ -8,6 +9,7 @@ import {
   getUserByAccountSession,
   markUserEmailVerified,
   revokeAccountSession,
+  supersedeEmailLoginChallenges,
   updateUserLocale,
   updateUserProfile,
 } from './persistence.js';
@@ -95,6 +97,59 @@ definePersistenceTests('accounts', () => {
     await deleteEmailLoginChallenge('login-undelivered');
 
     assert.equal(await consumeEmailLoginChallenge('login-undelivered', codeHash, now), null);
+  });
+
+  test('a newly delivered login code supersedes older live codes for the email', async () => {
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    const firstHash = sha256('11112222');
+    const secondHash = sha256('33334444');
+    for (const challenge of [
+      { id: 'login-first', codeHash: firstHash },
+      { id: 'login-second', codeHash: secondHash },
+    ]) {
+      await createEmailLoginChallenge({
+        ...challenge,
+        email: 'resend@example.com',
+        expiresAt: new Date(now.getTime() + 60_000),
+      });
+    }
+
+    await supersedeEmailLoginChallenges('RESEND@example.com', 'login-second', now);
+
+    assert.equal(await consumeEmailLoginChallenge('login-first', firstHash, now), null);
+    assert.deepEqual(await consumeEmailLoginChallenge('login-second', secondHash, now), {
+      email: 'resend@example.com',
+    });
+  });
+
+  test('durable auth buckets enforce limits, cooldowns, and window renewal', async () => {
+    const start = new Date('2026-07-15T12:00:00.000Z');
+    const input = {
+      cooldownMs: 30_000,
+      limit: 2,
+      now: start,
+      scope: 'email-start-email' as const,
+      subjectHash: sha256('auth-rate:email:player@example.com'),
+      windowMs: 600_000,
+    };
+
+    assert.equal(await consumeAuthRateLimitBucket(input), true);
+    assert.equal(
+      await consumeAuthRateLimitBucket({ ...input, now: new Date(start.getTime() + 29_999) }),
+      false,
+    );
+    assert.equal(
+      await consumeAuthRateLimitBucket({ ...input, now: new Date(start.getTime() + 30_000) }),
+      true,
+    );
+    assert.equal(
+      await consumeAuthRateLimitBucket({ ...input, now: new Date(start.getTime() + 60_000) }),
+      false,
+    );
+    assert.equal(
+      await consumeAuthRateLimitBucket({ ...input, now: new Date(start.getTime() + 600_001) }),
+      true,
+    );
   });
 
   test('users are findable by email case-insensitively', async () => {

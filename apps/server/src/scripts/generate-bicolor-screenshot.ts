@@ -39,7 +39,6 @@ const outPath = resolve(here, '..', '..', '..', 'web', 'public', 'screenshot-bic
 // :root[data-fog-theme="solid"].
 const LIGHT_SQUARE = '#eeeed2';
 const DARK_SQUARE = '#769656';
-const BOARD_FRAME = '#2a3a2a';
 const FOG_LIGHT_FILL = '#17261a';
 const FOG_DARK_FILL = '#17261a';
 const FOG_SHADOW = '#3a523f';
@@ -140,9 +139,6 @@ function renderBoard(
       `<rect x="${fx + 0.5}" y="${fy + 0.5}" width="${sq - 1}" height="${sq - 1}" fill="none" stroke="${FOG_SHADOW}" stroke-width="1"/>`,
     );
   }
-  out.push(
-    `<rect x="${x}" y="${y}" width="${size}" height="${size}" fill="none" stroke="${BOARD_FRAME}" stroke-width="2"/>`,
-  );
   out.push(`</g>`);
   return out.join('');
 }

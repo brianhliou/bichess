@@ -55,6 +55,22 @@ test('summarizes tournament runtime by runner', () => {
   ]);
 });
 
+test('scores a Xiangqi red win for the first-mover Eve slot', () => {
+  const report = buildTournamentReport([
+    row({
+      gameIndex: 0,
+      whiteEngineId: 'red-engine',
+      blackEngineId: 'black-engine',
+      result: 'red-wins',
+    }),
+  ]);
+  assert.equal(report.standings.find((standing) => standing.engineId === 'red-engine')?.wins, 1);
+  assert.equal(
+    report.standings.find((standing) => standing.engineId === 'black-engine')?.losses,
+    1,
+  );
+});
+
 test('renders compact markdown status', () => {
   const report = buildTournamentReport([
     row({ gameIndex: 0, whiteEngineId: 'a', blackEngineId: 'b', result: 'white-wins' }),

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Color, GameEvent, TimeClass } from '@mistboard/game';
+import { currentAccountUser } from './../account-session.js';
 import { attachBanqiFirstColors } from './../banqi-first-color.js';
 import {
   decisionLogAvailable,
@@ -9,12 +10,14 @@ import {
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { buildGamePgn, buildGamePublicationJson } from './../game-export.js';
 import * as persistence from './../persistence.js';
+import type { RecentEveGameRecord } from './../persistence-games.js';
 import { eventReplayResponse, parsePositiveInteger } from './../server-policy.js';
 import { listWatchChannels, watchChannelForId } from './../watch-channels.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
   isHttpAdminSession,
+  postgamePlayers,
   requireAdminSession,
   requireMethod,
   requirePersistence,
@@ -26,6 +29,38 @@ type ReviewArtifactType = 'belief-snapshot' | 'trace-row' | 'engine-move-choice'
 const WATCH_REPLAY_LIMIT = 64;
 const WATCH_SEALED_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+type WatchChannelTopPlayer = { name: string; rating: number | null };
+
+// The headline seat for a channel's rail row (lichess shows the featured game's
+// top player under the channel name): the highest-rated participant across the
+// channel's currently-unlocked games. Falls back to the freshest named seat when
+// no seat carries a rating (all-guest or unrated-engine channels). null for an
+// empty channel, so the rail row renders name-only.
+function channelTopPlayer(games: RecentEveGameRecord[]): WatchChannelTopPlayer | null {
+  let best: WatchChannelTopPlayer | null = null;
+  let fallback: WatchChannelTopPlayer | null = null;
+  for (const game of games) {
+    const seats =
+      game.participants.length > 0
+        ? game.participants.map((participant) => ({
+            name: participant.displayName?.trim() || null,
+            rating: participant.ratingAfter ?? participant.ratingBefore ?? null,
+          }))
+        : [
+            { name: game.whiteName?.trim() || null, rating: null },
+            { name: game.blackName?.trim() || null, rating: null },
+          ];
+    for (const seat of seats) {
+      if (!seat.name) continue;
+      fallback ??= { name: seat.name, rating: seat.rating };
+      if (seat.rating != null && (best === null || seat.rating > best.rating!)) {
+        best = { name: seat.name, rating: seat.rating };
+      }
+    }
+  }
+  return best ?? fallback;
+}
+
 export async function tryHandle(
   ctx: HttpApiContext,
   request: IncomingMessage,
@@ -34,6 +69,60 @@ export async function tryHandle(
   parsedUrl: URL,
 ): Promise<boolean> {
   const url = request.url ?? '/';
+
+  if (pathname === '/api/games/favorites') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'authentication_required' });
+      return true;
+    }
+    const offset = boundedInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+    const limit = boundedInt(parsedUrl.searchParams.get('limit'), 15, 1, 50);
+    const page = await persistence.listFavoriteGames(user.id, offset, limit);
+    writeJson(response, 200, page);
+    return true;
+  }
+
+  const favoriteMatch = pathname.match(/^\/api\/games\/([^/]+)\/favorite$/);
+  if (favoriteMatch) {
+    const roomId = decodeURIComponent(favoriteMatch[1]!);
+    const user = await currentAccountUser(request);
+    if (request.method === 'GET' && !user) {
+      writeJson(response, 200, { authenticated: false, favorited: false });
+      return true;
+    }
+    if (!requirePersistence(response)) return true;
+    if (!user) {
+      writeJson(response, 401, { error: 'authentication_required' });
+      return true;
+    }
+
+    if (request.method === 'GET') {
+      const state = await persistence.getGameFavoriteState(roomId, user.id);
+      if (!state.accessible) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      writeJson(response, 200, { authenticated: true, favorited: state.favorited });
+      return true;
+    }
+
+    if (request.method === 'PUT' || request.method === 'DELETE') {
+      const state = await persistence.setGameFavorite(roomId, user.id, request.method === 'PUT');
+      if (!state.accessible) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      writeJson(response, 200, { authenticated: true, favorited: state.favorited });
+      return true;
+    }
+
+    response.setHeader('allow', 'GET, PUT, DELETE');
+    writeJson(response, 405, { error: 'method_not_allowed' });
+    return true;
+  }
 
   if (pathname === '/api/watch') {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -49,16 +138,18 @@ export async function tryHandle(
         const [sealedCount, unlocked] = await Promise.all([
           persistence.countWatchSealedGames({
             activeWindowMs: WATCH_SEALED_ACTIVITY_WINDOW_MS,
+            modes: candidate.modes,
             now,
             variants: candidate.legacyVariants,
           }),
           persistence.listWatchUnlockedGames({
             limit: WATCH_REPLAY_LIMIT,
+            modes: candidate.modes,
             now,
             variants: candidate.legacyVariants,
           }),
         ]);
-        return { channel: candidate, sealedCount, unlocked };
+        return { channel: candidate, sealedCount, topPlayer: channelTopPlayer(unlocked), unlocked };
       }),
     );
     const active = channelResults.find((result) => result.channel.id === channel.id)!;
@@ -79,6 +170,7 @@ export async function tryHandle(
         label: result.channel.label,
         sealedCount: result.sealedCount,
         unlockedCount: result.unlocked.length,
+        topPlayer: result.topPlayer,
       })),
       now: now.toISOString(),
       sealedActivityWindowMs: WATCH_SEALED_ACTIVITY_WINDOW_MS,
@@ -255,8 +347,17 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'not_found' }));
       return true;
     }
+    // Additively expose the shaped seat roster (name/rating/kind, with private-seat
+    // redaction + corpus-name override) that every per-variant postgame endpoint
+    // already returns, so the flagship /game/:id review left rail reads identical
+    // player rows. Existing consumers ignore the extra key; the raw record fields
+    // (whiteName/blackName/timeControl) stay in place.
+    const players = postgamePlayers(game.participants ?? [], {
+      whiteName: game.whiteName,
+      blackName: game.blackName,
+    });
     response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ game }));
+    response.end(JSON.stringify({ game: { ...game, players } }));
     return true;
   }
 
@@ -324,6 +425,11 @@ export async function tryHandle(
   }
 
   return false;
+}
+
+function boundedInt(raw: string | null, fallback: number, min: number, max: number): number {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  return Number.isNaN(parsed) ? fallback : Math.max(min, Math.min(parsed, max));
 }
 
 async function gameSummaryForApi(

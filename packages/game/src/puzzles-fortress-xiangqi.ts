@@ -80,6 +80,7 @@ export type FortressXiangqiSourceGame = {
 
 export type FortressXiangqiPuzzleValidationIssueCode =
   | 'ambiguous-immediate-general-capture'
+  | 'dominated-by-mate-in-one'
   | 'empty-solution'
   | 'illegal-move'
   | 'not-playing'
@@ -248,6 +249,22 @@ export function validateFortressXiangqiPuzzle(
   const expectedWinner = puzzle.goal.winner ?? solver;
 
   if (puzzle.goal.type === 'winning-advantage') {
+    // A winning-advantage puzzle must not sit on a checkmate-in-one: that mate ends the
+    // game and dominates the material/positional payoff, making the puzzle degenerate.
+    // The immediate-general-capture guard above catches wins-by-capture; this catches
+    // wins-by-mate (checkmate without taking the general). Exact and cheap — a full
+    // one-ply mate scan. Deeper forced mates that FSF scored as a big cp value rather
+    // than `#` are not caught here (no cheap exact fortress mate search beyond one ply).
+    const matesInOne = findFortressXiangqiMateInOneCandidates(puzzle.initial);
+    if (matesInOne.length > 0) {
+      return validationError(
+        puzzle,
+        'dominated-by-mate-in-one',
+        0,
+        'Winning-advantage puzzle sits on a checkmate-in-one that dominates the payoff.',
+        matesInOne[0]?.move,
+      );
+    }
     // No checkmate to verify. The line must end on the solver's own move (the
     // payoff): solver plies are the even indices, so the final index
     // (length - 1) must be even, i.e. the length must be odd.

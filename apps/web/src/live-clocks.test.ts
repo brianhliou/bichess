@@ -3,13 +3,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderClocks } from './live-clocks.js';
 import { liveState } from './live-state.js';
 
-type Refs = { clockTop: HTMLDivElement; clockBottom: HTMLDivElement; clockNote: HTMLDivElement };
+type Refs = {
+  clockTop: HTMLDivElement;
+  clockBottom: HTMLDivElement;
+  clockNote: HTMLDivElement;
+  playerTop: HTMLDivElement;
+  playerBottom: HTMLDivElement;
+};
 
 function makeRefs(): Refs {
   return {
     clockTop: document.createElement('div'),
     clockBottom: document.createElement('div'),
     clockNote: document.createElement('div'),
+    playerTop: document.createElement('div'),
+    playerBottom: document.createElement('div'),
   };
 }
 
@@ -27,7 +35,8 @@ function playingView(): PlayerView {
   };
 }
 
-// perspective 'white' → clockTop renders black's row, clockBottom renders white's.
+// perspective 'white' → the top slots render black's row, the bottom slots white's.
+// Player lines (and their presence dots) render into playerTop/playerBottom.
 function dot(slot: HTMLElement): HTMLElement | null {
   return slot.querySelector('.presence-dot');
 }
@@ -52,8 +61,8 @@ describe('presence dots — PvP', () => {
     liveState.seat = 'white';
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    expect(dot(refs.clockBottom)?.classList.contains('is-online')).toBe(true); // you
-    expect(dot(refs.clockTop)?.classList.contains('is-online')).toBe(true); // opponent
+    expect(dot(refs.playerBottom)?.classList.contains('is-online')).toBe(true); // you
+    expect(dot(refs.playerTop)?.classList.contains('is-online')).toBe(true); // opponent
   });
 
   it('greys the opponent from server presence, your own from local socket', () => {
@@ -62,8 +71,8 @@ describe('presence dots — PvP', () => {
     liveState.connectedSeats = { white: true, black: false }; // opponent dropped server-side
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    expect(dot(refs.clockTop)?.classList.contains('is-offline')).toBe(true); // opponent grey
-    expect(dot(refs.clockBottom)?.classList.contains('is-online')).toBe(true); // you still green
+    expect(dot(refs.playerTop)?.classList.contains('is-offline')).toBe(true); // opponent grey
+    expect(dot(refs.playerBottom)?.classList.contains('is-online')).toBe(true); // you still green
   });
 
   it('greys your own dot while reconnecting, independent of stale connectedSeats', () => {
@@ -74,7 +83,7 @@ describe('presence dots — PvP', () => {
     liveState.connectionNoticeTier = 'dot';
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    const own = dot(refs.clockBottom);
+    const own = dot(refs.playerBottom);
     expect(own?.classList.contains('is-offline')).toBe(true);
     expect(own?.title).toBe('Reconnecting');
   });
@@ -86,8 +95,8 @@ describe('presence dots — PvE', () => {
     liveState.seat = 'white';
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    expect(dot(refs.clockBottom)?.classList.contains('is-online')).toBe(true); // you
-    expect(dot(refs.clockTop)).toBeNull(); // engine: no socket, no dot
+    expect(dot(refs.playerBottom)?.classList.contains('is-online')).toBe(true); // you
+    expect(dot(refs.playerTop)).toBeNull(); // engine: no socket, no dot
   });
 
   it('greys your own dot on reconnect; engine stays dot-less', () => {
@@ -97,8 +106,8 @@ describe('presence dots — PvE', () => {
     liveState.connectionNoticeTier = 'banner';
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    expect(dot(refs.clockBottom)?.classList.contains('is-offline')).toBe(true); // you
-    expect(dot(refs.clockTop)).toBeNull(); // engine still dot-less
+    expect(dot(refs.playerBottom)?.classList.contains('is-offline')).toBe(true); // you
+    expect(dot(refs.playerTop)).toBeNull(); // engine still dot-less
   });
 });
 
@@ -108,8 +117,8 @@ describe('presence dots — EvE (spectating)', () => {
     liveState.seat = 'spectator';
     const refs = makeRefs();
     renderClocks(refs, playingView());
-    expect(dot(refs.clockTop)).toBeNull();
-    expect(dot(refs.clockBottom)).toBeNull();
+    expect(dot(refs.playerTop)).toBeNull();
+    expect(dot(refs.playerBottom)).toBeNull();
   });
 });
 

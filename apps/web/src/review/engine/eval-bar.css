@@ -8,7 +8,9 @@
 .review-eval-bar {
   position: absolute;
   width: 20px;
-  border-radius: 4px;
+  /* Sharp corners so the bar sits flush against the (also-squared) board on its
+     left and the move rail on its right. */
+  border-radius: 0;
   overflow: hidden;
   /* Dark track = Black's share of the bar. */
   background: #34302e;
@@ -29,15 +31,34 @@
   opacity: 0.25;
 }
 
-/* Equality midline. */
+/* Per-pawn gradations (±1..±6), faint so they read as a ruler behind the fill. */
+.review-eval-bar__ticks {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.review-eval-bar__tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  /* Readable over both the dark track and the light/red fill. */
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* Equality (zero) line at dead center — red, marking an even position. */
 .review-eval-bar::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.35);
+  transform: translateY(-50%);
+  height: 2px;
+  background: #e5342a;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
   z-index: 2;
 }
 /* Light fill = Red's share, growing from the bottom (Red's default end). */
@@ -91,4 +112,19 @@
 }
 .review-eval-bar--loading .review-eval-bar__fill {
   opacity: 0.6;
+}
+
+/* Xiangqi: Red vs Black. Match the computer-analysis chart's leading-side colors
+   exactly — its areas are #c0563f @72% (red) and #34302e @85% (black) composited
+   over the white panel, so mixing the same ratios over --site-panel gives an eval
+   bar whose two shades read identically to the graph (clear, not muddy). The
+   red-ahead label then reads dark on the lighter fill (the default), so no
+   per-variant label override is needed. */
+.xiangqi-review .review-eval-bar,
+.fortress-xiangqi-review .review-eval-bar {
+  background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
+}
+.xiangqi-review .review-eval-bar__fill,
+.fortress-xiangqi-review .review-eval-bar__fill {
+  background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
 }

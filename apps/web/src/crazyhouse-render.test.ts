@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { renderCrazyhouseBoardSvg } from './crazyhouse-render.js';
 
 describe('Dark Crazyhouse board renderer', () => {
-  it('uses the dark-chess board frame and square tokens', () => {
+  it('uses the dark-chess square tokens without an outer frame', () => {
     const view = getCrazyhousePlayerView(createInitialCrazyhouseState('dczh-style'), 'white');
     const svg = renderCrazyhouseBoardSvg(view, { showFog: false });
 
     expect(svg).toContain('class="crazyhouse-live-svg"');
-    expect(svg).toContain('var(--board-frame)');
+    expect(svg).not.toContain('var(--board-frame)');
     expect(svg).toContain('var(--board-light)');
     expect(svg).toContain('var(--board-dark)');
     expect(svg).not.toContain('var(--crossroads-');

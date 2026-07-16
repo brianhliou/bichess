@@ -39,7 +39,11 @@ import {
 import {
   correspondenceEnabled,
   crossroadsChessEnabled,
+  darkCrazyhouseEnabled,
   darkCrossroadsChessEnabled,
+  darkMiniXiangqiEnabled,
+  darkShogiEnabled,
+  dropMiniXiangqiEnabled,
   fortressXiangqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -127,6 +131,9 @@ export type WebVariantTenant = {
         // Player names for the compact seats (first = red/first-mover, second =
         // black), keyed by room id — the tenant postgames carry no names.
         namesByRoomId?: Record<string, { first: string; second: string }>;
+        // Fires on every ply change (autoplay tick / manual jump / loop reset).
+        // The /watch right rail uses it to sync its move list + scrubber.
+        onPlyChange?: (ply: number, maxPly: number) => void;
       },
     ): Promise<ReplayHandle>;
   };
@@ -144,7 +151,6 @@ const XIANGQI_CAPABILITIES_BASE = {
 } as const;
 
 const alwaysEnabled = () => true;
-const darkCrazyhouseLandingEnabled = () => import.meta.env.VITE_DARK_CRAZYHOUSE_ENABLED === 'true';
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -174,7 +180,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: XIANGQI_SPEC_ID,
     roomIdPrefix: 'xq_',
     enabled: xiangqiEnabled,
-    pageTitle: 'Elephant Chess',
+    pageTitle: 'Xiangqi',
     gameRouteBase: '/xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../xiangqi-postgame.js').then(({ mountXiangqiPostgame }) =>
@@ -206,70 +212,76 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: xiangqiEnabled,
       acceptsDeepLink: xiangqiEnabled,
-      // Mainline Pikafish PvE, calibrated 8-level ladder. Ordered strongest-first
-      // so the toughest opponent sits at the top of the picker. Hand-maintained
-      // mirror of XIANGQI_PLAYABLE_ENGINES (apps/server/src/
-      // xiangqi-pikafish-engine.ts); parity is asserted by
+      // Standard-Xiangqi public profiles, ordered strongest-first. FSF supplies
+      // the human difficulty ladder; Pikafish is a separate elite challenge.
+      // Hand-maintained mirror of XIANGQI_PUBLIC_ENGINES (apps/server/src/
+      // xiangqi-engine-catalog.ts); parity is asserted by
       // variant-registry-sync.test.ts. The retired amateur/strong/strongest ids
-      // stay server-resolvable for old games but are never offered here.
+      // and hidden Pikafish rungs stay server-resolvable for history and EvE.
       engineOptions: [
         {
           id: 'pikafish-xiangqi-level-8',
-          name: 'Pikafish - Level 8',
+          name: 'Pikafish',
           familyName: 'Pikafish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-7',
-          name: 'Pikafish - Level 7',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-8',
+          name: 'Fairy-Stockfish - Level 8',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-6',
-          name: 'Pikafish - Level 6',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-7',
+          name: 'Fairy-Stockfish - Level 7',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-5',
-          name: 'Pikafish - Level 5',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-6',
+          name: 'Fairy-Stockfish - Level 6',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-4',
-          name: 'Pikafish - Level 4',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-5',
+          name: 'Fairy-Stockfish - Level 5',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-3',
-          name: 'Pikafish - Level 3',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-4',
+          name: 'Fairy-Stockfish - Level 4',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-2',
-          name: 'Pikafish - Level 2',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-3',
+          name: 'Fairy-Stockfish - Level 3',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
         {
-          id: 'pikafish-xiangqi-level-1',
-          name: 'Pikafish - Level 1',
-          familyName: 'Pikafish',
+          id: 'fairy-stockfish-xiangqi-level-2',
+          name: 'Fairy-Stockfish - Level 2',
+          familyName: 'Fairy-Stockfish',
+          kind: 'container',
+        },
+        {
+          id: 'fairy-stockfish-xiangqi-level-1',
+          name: 'Fairy-Stockfish - Level 1',
+          familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
       ],
-      defaultEngineId: 'pikafish-xiangqi-level-5',
+      defaultEngineId: 'fairy-stockfish-xiangqi-level-4',
     },
   },
   {
     gameSpecId: DARK_XIANGQI_SPEC_ID,
     roomIdPrefix: 'dxq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Fog Elephant Chess',
+    pageTitle: 'Fog Xiangqi',
     gameRouteBase: '/dark-xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../dark-xiangqi-postgame.js').then(({ mountDarkXiangqiPostgame }) =>
@@ -305,16 +317,16 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       engineOptions: [
         {
-          id: 'python-fdx-v1.0',
-          name: 'Misty DXQ 1.0',
+          id: 'python-fdx-v1.1',
+          name: 'Misty DXQ 1.1',
           familyName: 'Misty DXQ',
           kind: 'fog-xiangqi',
         },
       ],
-      defaultEngineId: 'python-fdx-v1.0',
+      defaultEngineId: 'python-fdx-v1.1',
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: darkMiniXiangqiEnabled,
     },
   },
   {
@@ -324,7 +336,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: JIEQI_SPEC_ID,
     roomIdPrefix: 'jq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Flip Elephant Chess',
+    pageTitle: 'Reveal Xiangqi',
     gameRouteBase: '/jieqi/game',
     mountPostgame: (root, roomId) =>
       import('../live-jieqi-postgame.js').then(({ mountJieqiPostgame }) =>
@@ -356,7 +368,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: dropMiniXiangqiEnabled,
       // Ordered strongest-first so the toughest opponent sits at the top of the picker.
       engineOptions: [
         {
@@ -389,7 +401,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: BANQI_SPEC_ID,
     roomIdPrefix: 'bq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Half-Flip Chess',
+    pageTitle: 'Flip Xiangqi',
     gameRouteBase: '/banqi/game',
     mountPostgame: (root, roomId) =>
       import('../live-banqi-postgame.js').then(({ mountBanqiPostgame }) =>
@@ -669,7 +681,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: darkMiniXiangqiEnabled,
       engineOptions: [
         {
           id: 'python-dmx-v1.0',
@@ -718,7 +730,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: alwaysEnabled,
+      acceptsDeepLink: dropMiniXiangqiEnabled,
       engineOptions: [
         {
           id: 'fairy-stockfish-drop-mini-xiangqi-very-strong',
@@ -750,7 +762,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: FORTRESS_XIANGQI_SPEC_ID,
     roomIdPrefix: 'fxq_',
     enabled: fortressXiangqiEnabled,
-    pageTitle: 'Fortress',
+    pageTitle: 'Fortress Xiangqi',
     gameRouteBase: '/fortress-xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../fortress-xiangqi-postgame.js').then(({ mountFortressXiangqiPostgame }) =>
@@ -985,7 +997,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // reuse the same picker model.
     gameSpecId: DARK_SHOGI_SPEC_ID,
     roomIdPrefix: 'dsg_',
-    enabled: alwaysEnabled,
+    enabled: darkShogiEnabled,
     pageTitle: 'Fog Shogi',
     gameRouteBase: '/dark-shogi/game',
     mountPostgame: (root, roomId) =>
@@ -1020,8 +1032,8 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
-      offerInMenu: alwaysEnabled,
-      acceptsDeepLink: alwaysEnabled,
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: darkShogiEnabled,
     },
   },
   {
@@ -1068,7 +1080,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkCrazyhouseLandingEnabled,
+      acceptsDeepLink: darkCrazyhouseEnabled,
     },
   },
   {

@@ -18,7 +18,7 @@ import { currentAccountUser } from './../account-session.js';
 import {
   createTitleVerificationRequest,
   decideTitleVerificationRequest,
-  isPlayerTitle,
+  isRequestableTitle,
   latestTitleVerificationRequestForUser,
   listTitleVerificationRequests,
   type PlayerTitle,
@@ -64,7 +64,8 @@ export async function submitTitleVerificationForApi(
   now: Date = new Date(),
 ): Promise<ApiResult> {
   const title = body.title;
-  if (!isPlayerTitle(title)) return { status: 400, payload: { error: 'invalid_title' } };
+  // Scoped to xiangqi titles for now; chess-title requests reject fail-closed.
+  if (!isRequestableTitle(title)) return { status: 400, payload: { error: 'invalid_title' } };
   const evidence = typeof body.evidence === 'string' ? body.evidence.trim() : '';
   if (evidence.length === 0) return { status: 400, payload: { error: 'evidence_required' } };
   if (evidence.length > TITLE_EVIDENCE_MAX) {

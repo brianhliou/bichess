@@ -3,9 +3,9 @@ import {
   JUNGLE_LION_JUMP,
   JUNGLE_RANK_LADDER,
   JUNGLE_RAT_BLOCKS,
-  JUNGLE_RAT_ELEPHANT,
   JUNGLE_RAT_SWIMS,
   JUNGLE_START_BOARD,
+  JUNGLE_TIGER_JUMP,
   JUNGLE_TRAP,
   playClosing,
 } from '../diagrams.js';
@@ -20,6 +20,7 @@ export const jungleArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
+  updatedAt: '2026-07-12',
   playableOnMistboard: true,
   audience:
     'Anyone who knows Jungle Chess, Dou Shou Qi, or Animal Chess and wants the rules clearly, plus chess and xiangqi players meeting it for the first time.',
@@ -35,11 +36,11 @@ export const jungleArticle: Article = {
   ],
   sections: [
     {
-      heading: 'The board',
+      heading: 'Board and setup',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Seven files wide, nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board, with land lanes down both edges and the center. Every piece moves one square up, down, left, or right. No diagonals.',
+          text: 'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.',
         },
         {
           kind: 'raw-svg',
@@ -48,20 +49,57 @@ export const jungleArticle: Article = {
       ],
     },
     {
-      heading: 'The animals',
+      heading: 'Ranks and captures',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures any adjacent enemy of equal or lower rank. The exception runs the other way: the rat captures the elephant, and the elephant can never capture the rat.',
+          text: 'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank. The exception runs the other way: a rat on land can capture an elephant, and an elephant cannot capture a rat.',
         },
         {
           kind: 'raw-svg',
           svg: JUNGLE_RANK_LADDER,
           caption: 'Strongest at the left, weakest at the right.',
         },
+      ],
+    },
+    {
+      heading: 'How the animals move',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Every animal moves one square up, down, left, or right. Animals never move diagonally. Most animals stay on land, so they cannot enter a river. The rat, lion, and tiger are the three movement exceptions.',
+        },
+        { kind: 'sub-heading', text: 'Rat' },
+        {
+          kind: 'paragraph',
+          text: 'The rat moves one square at a time like every other animal, but it is the only animal that can enter the water. A rat in a river can move and capture another rat there. It cannot capture an elephant directly from the water, so it must return to land first.',
+        },
         {
           kind: 'raw-svg',
-          svg: JUNGLE_RAT_ELEPHANT,
+          svg: JUNGLE_RAT_SWIMS,
+        },
+        { kind: 'sub-heading', text: 'Lion' },
+        {
+          kind: 'paragraph',
+          text: 'The lion can move one land square normally, or leap straight across a river horizontally or vertically. It lands on the first square beyond the water and may capture an animal there if rank allows.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: JUNGLE_LION_JUMP,
+        },
+        { kind: 'sub-heading', text: 'Tiger' },
+        {
+          kind: 'paragraph',
+          text: 'The tiger has the same river leap as the lion: horizontal or vertical, from one bank to the other. A rat of either color on any water square in the path blocks a lion or tiger from jumping.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: JUNGLE_TIGER_JUMP,
+        },
+        {
+          kind: 'raw-svg',
+          svg: JUNGLE_RAT_BLOCKS,
+          caption: 'A rat in the river blocks the leap.',
         },
       ],
     },
@@ -75,31 +113,6 @@ export const jungleArticle: Article = {
         {
           kind: 'raw-svg',
           svg: JUNGLE_TRAP,
-        },
-      ],
-    },
-    {
-      heading: 'The rivers',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: "Only the rat enters the water. A rat in the river is safe from every land piece and can be taken only by another rat in the water. It also can't capture from the water onto land, so the rat needs dry ground to take the elephant.",
-        },
-        {
-          kind: 'raw-svg',
-          svg: JUNGLE_RAT_SWIMS,
-        },
-        {
-          kind: 'paragraph',
-          text: 'The lion and tiger jump a river in a straight line and land on the far bank, capturing anything they outrank there. The tiger jumps vertically; the lion jumps vertically or horizontally. A rat anywhere in the water, either color, blocks the jump.',
-        },
-        {
-          kind: 'raw-svg',
-          svg: JUNGLE_LION_JUMP,
-        },
-        {
-          kind: 'raw-svg',
-          svg: JUNGLE_RAT_BLOCKS,
         },
       ],
     },
@@ -142,14 +155,12 @@ export const jungleArticle: Article = {
       ],
     },
     playClosing({
-      heading: 'Where to next',
-      lead: 'Jungle Chess is playable on Mistboard: take on Misty Jungle at the strength you pick, or challenge a friend. Flip Jungle is the small face-down cousin on a four-by-four grid.',
-      playLabel: 'Play Misty Jungle',
+      heading: 'Play on Mistboard',
+      lead: 'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle',
       secondary: [
         { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jungle', emphasis: 'secondary' },
-        { label: 'Flip Jungle', href: '/rules/jungle-flip', emphasis: 'secondary' },
-        { label: 'All rules', href: '/rules', emphasis: 'secondary' },
       ],
     }),
   ],

@@ -5,10 +5,12 @@ import { renderJieqiBoardSvg } from './live-jieqi-render.js';
 describe('renderJieqiBoardSvg', () => {
   const view = getJieqiPlayerView(createInitialJieqiState('render'), 'red');
 
-  it('renders a 9x10 board with the river and no fog', () => {
+  it('renders a 9x10 board with no river tint and no fog', () => {
     const svg = renderJieqiBoardSvg(view);
     expect(svg).toContain('viewBox="0 0 660 732"');
-    expect(svg).toContain('jieqi-river');
+    // The river is the plain board background, matching the xiangqi board: no
+    // tinted river overlay (the old `.jieqi-river` rect made the river darker).
+    expect(svg).not.toContain('jieqi-river');
     // Jieqi positions are public: there is no fog mask of any kind.
     expect(svg).not.toContain('mask');
     expect(svg.toLowerCase()).not.toContain('fog');

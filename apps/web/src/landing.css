@@ -27,7 +27,8 @@
   grid-template-areas:
     "news   panel play"
     "viewer feed  puzzle"
-    "lower  lower  lower";
+    "lower  lower  lower"
+    "community community community";
   column-gap: clamp(10px, 0.9vw, 15px);
   row-gap: clamp(14px, 1.8vw, 24px);
   align-items: start;
@@ -106,9 +107,9 @@
   position: relative;
 }
 
-/* Board fills the box HEIGHT (width follows aspect, hugged to the inner edge via
-   preserveAspectRatio set in JS). Absolute fill so height:100% resolves reliably
-   through the flex chain; the SVG carries its own board background. */
+/* Board fills the box HEIGHT (width follows aspect). Absolute fill so height:100%
+   resolves reliably through the flex chain; the SVG carries its own board
+   background. */
 .home-puzzle-widget-board {
   flex: 1 1 auto;
   min-width: 0;
@@ -117,6 +118,22 @@
      container just needs to clip anything riding to the edge. */
   border-radius: var(--board-corner-radius);
   overflow: hidden;
+}
+
+/* The square-grid Xiangqi SVG is taller than the classic board because its river
+   is a real gutter between rows. Size this surface from the shared box HEIGHT and
+   let the 540:612 width follow, otherwise flex gives it the full square width and
+   its intrinsic ratio paints past the box bottom. */
+.home-puzzle-widget-board:has(.xq-live-svg--cell) {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  aspect-ratio: 540 / 612;
+}
+
+.home-puzzle-box:has(.xq-live-svg--cell) {
+  justify-content: center;
 }
 
 .home-puzzle-widget-board svg {
@@ -870,7 +887,9 @@
   color: var(--site-text, #1d2522);
 }
 
-/* Prev/next nav, overlaid at the edges; hidden when nothing overflows. */
+/* Prev/next nav: bare chevrons (lichess-style, no enclosure), overlaid at the
+   edges. Revealed only while the strip is hovered/focused; hidden when nothing
+   overflows. Black in light mode / white in dark mode, green on hover. */
 .landing-carousel-nav {
   position: absolute;
   top: 50%;
@@ -879,32 +898,38 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 60px;
   padding: 0;
-  border: 1px solid rgba(29, 37, 34, 0.12);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--site-panel) 94%, transparent);
-  box-shadow: 0 4px 12px rgba(29, 37, 34, 0.14);
-  color: var(--site-text, #1d2522);
-  font-size: 18px;
+  border: 0;
+  background: none;
+  color: var(--site-heading, #1d2522);
+  font-size: 44px;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
+  opacity: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   transition:
     opacity 120ms ease,
-    background 120ms ease;
+    color 120ms ease;
 }
 
 .landing-carousel-nav-prev {
-  left: 6px;
+  left: 2px;
 }
 
 .landing-carousel-nav-next {
-  right: 6px;
+  right: 2px;
+}
+
+.landing-carousel:hover .landing-carousel-nav:not(:disabled),
+.landing-carousel-nav:focus-visible:not(:disabled) {
+  opacity: 1;
 }
 
 .landing-carousel-nav:hover:not(:disabled) {
-  background: var(--site-panel);
+  color: var(--site-accent);
 }
 
 .landing-carousel-nav:disabled {
@@ -1177,6 +1202,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Match the daily-puzzle treatment above: the homepage viewer keeps its shared
+   square slot, while the square-grid Xiangqi board itself is height-driven inside
+   that slot. This accounts for the river gutter without changing widget height. */
+.showcase-widget .replay-layout-solo .replay-board:has(.xq-live-svg--cell) {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+  height: var(--showcase-widget-size);
+  aspect-ratio: 540 / 612;
+  margin-inline: auto;
 }
 
 /* Fill the box; the SVG's default preserveAspectRatio (xMidYMid meet) scales the
@@ -1548,6 +1585,9 @@
     left: 0;
     right: 0;
     top: 0;
+    /* Paint above the relative-positioned play-stack (later in DOM) so the
+       tagline stays selectable and the About link stays clickable. */
+    z-index: 1;
   }
 
   .landing-play-stack {
@@ -1774,6 +1814,7 @@
       "feed"
       "puzzle"
       "lower"
+      "community"
       "news";
     max-width: 640px;
   }

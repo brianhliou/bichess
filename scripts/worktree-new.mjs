@@ -4,6 +4,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { installWorktreeInstructionLinks } from './worktree-local-files.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 if (!options.slug) {
@@ -23,12 +24,24 @@ if (branchExists(branch)) throw new Error(`branch already exists: ${branch}`);
 if (existsSync(worktreePath)) throw new Error(`worktree path already exists: ${worktreePath}`);
 
 run(['git', 'worktree', 'add', '-b', branch, worktreePath, base], repoRoot);
+const instructionSourceRoot = primaryWorktreeRoot();
+const instructionLinks = installWorktreeInstructionLinks({
+  sourceRoot: instructionSourceRoot,
+  targetRoot: worktreePath,
+});
 
 console.log('\ncreated worktree');
 console.log(`branch:   ${branch}`);
 console.log(`worktree: ${worktreePath}`);
 console.log(`base:     ${base}`);
 console.log(`commit:   ${git(['-C', worktreePath, 'rev-parse', '--short', 'HEAD'])}`);
+if (instructionLinks.installed) {
+  console.log(`guidance: linked CLAUDE.md + AGENTS.md from ${instructionSourceRoot}`);
+} else {
+  console.warn(
+    'guidance: canonical CLAUDE.md was not found; local agent instructions were not linked',
+  );
+}
 
 console.log('\ninitial scan');
 const scan = spawnSync('npm', ['run', 'agent:scan'], {
@@ -106,6 +119,14 @@ function branchExists(branch) {
 function defaultBase() {
   const result = spawnSync('git', ['rev-parse', '--verify', '--quiet', 'origin/main']);
   return result.status === 0 ? 'origin/main' : 'HEAD';
+}
+
+function primaryWorktreeRoot() {
+  const line = git(['worktree', 'list', '--porcelain'])
+    .split('\n')
+    .find((entry) => entry.startsWith('worktree '));
+  if (!line) return repoRoot;
+  return line.slice('worktree '.length);
 }
 
 function git(args) {

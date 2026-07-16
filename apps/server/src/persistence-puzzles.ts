@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
 import {
-  FORTRESS_XIANGQI_PUZZLES,
-  FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
   fortressXiangqiPuzzleById,
   type MiniXiangqiPuzzle,
@@ -58,14 +56,13 @@ type Queryable = {
   ): Promise<pg.QueryResult<T>>;
 };
 
-// The daily rotation draws from Fortress and standard xiangqi. Add more
-// providers here to broaden it; a provider whose registry is empty simply
-// contributes nothing.
+// The daily rotation draws from standard xiangqi. Fortress is hidden while the
+// variant is demoted and its puzzles await a re-mine with the per-ply
+// uniqueness gate (they ship the engine's top PV verbatim, so some "solutions"
+// are unforced). Restore the Fortress provider when the re-mined corpus lands.
+// Add more providers here to broaden it; a provider whose registry is empty
+// simply contributes nothing.
 const DAILY_PUZZLE_PROVIDERS: readonly DailyPuzzleProvider[] = [
-  {
-    variant: FORTRESS_XIANGQI_SPEC_ID,
-    candidates: () => FORTRESS_XIANGQI_PUZZLES,
-  },
   {
     variant: XIANGQI_SPEC_ID,
     candidates: () => XIANGQI_PUZZLES,

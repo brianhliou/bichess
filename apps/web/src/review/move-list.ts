@@ -100,6 +100,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'review-move-list__move';
+    button.dataset.ply = String(entry.ply);
     // san holds the move text (+ any glyph); eval sits right-aligned (tree-view style).
     const san = document.createElement('span');
     san.className = 'review-move-list__san';

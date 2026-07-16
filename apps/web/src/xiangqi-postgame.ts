@@ -11,9 +11,9 @@ import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { xiangqiEnabled } from './feature-flags.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
-import { createGameMetaCard, timeAgoLabel } from './review/game-meta-card.js';
-import { buildSpectatorChat } from './review/spectator-chat.js';
+import { buildReviewMeta, labelize, reviewResultLabel } from './review/game-review-meta.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
 // Open information: the only meaningful board is the shared truth board.
@@ -109,42 +109,62 @@ export function xiangqiPostgameApiUrl(roomId: string): string {
 }
 
 function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): void {
-  const moves = postgame.timeline
-    .filter((item) => item.type === 'move-played' && item.move)
-    .map((item) => item.move as XiangqiMove);
+  const moveEvents = postgame.timeline.filter((item) => item.type === 'move-played' && item.move);
+  const moves = moveEvents.map((item) => item.move as XiangqiMove);
 
-  const metaCard = createGameMetaCard({
+  // Per-ply elapsed time from consecutive event timestamps (the server persists no
+  // per-move clock, so the first ply's delta is measured from the earliest event).
+  let prevAt = postgame.timeline[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const moveTimes = moveEvents.map((item) => {
+    const delta = Math.max(0, item.at - prevAt);
+    prevAt = item.at;
+    return delta;
+  });
+  const hasMoveTimes = moveTimes.some((ms) => ms > 0);
+
+  const gamePlayers = postgame.game.players ?? [];
+  const playerNames = {
+    red: gamePlayers.find((p) => p.color === 'red')?.name,
+    black: gamePlayers.find((p) => p.color === 'black')?.name,
+  };
+
+  const status = `${reviewResultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
     markerId: 'xiangqi',
-    glyph: '象',
-    headline: [timeControlLabel(postgame), postgame.game.rated ? 'Rated' : 'Casual'],
-    variantName: 'Elephant Chess',
-    subline: timeAgoLabel(postgame.game.endedAt),
-    players: (postgame.game.players ?? []).map((player) => ({
-      color: player.color,
-      name: player.name,
-      rating: player.rating,
-      isEngine: player.kind === 'engine',
-    })),
-    status: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`,
+    variantName: 'Xiangqi',
+    game: postgame.game,
+    status,
   });
 
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Xiangqi postgame',
-    title: 'Elephant Chess',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    metaCard: metaCard.el,
-    details: buildSpectatorChat(postgame.game.roomId),
+    title: 'Xiangqi',
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
     // The tree reconstructs positions from the move list client-side (open info,
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
+    moveTimes: hasMoveTimes ? moveTimes : undefined,
+    players: playerNames,
+    showCrosstable: true,
     // Server Pikafish whole-game analysis, DB-cached: an already-analysed game
-    // loads straight from cache on open (a GET that never computes).
+    // loads straight from cache on open (a GET that never computes). Requesting a
+    // fresh compute is account-gated (the server rejects anon POSTs), so a
+    // signed-out visitor gets a sign-in CTA instead of a request that would 401.
     analysis: {
-      requestLabel: 'Request computer analysis',
-      fetchCached: () => fetchCachedGameAnalysis(postgame.game.roomId),
-      run: () => requestGameAnalysis(postgame.game.roomId),
+      requestLabel: isLikelySignedIn()
+        ? 'Request computer analysis'
+        : 'Sign in to request analysis',
+      fetchCached: () => fetchCachedGameAnalysis('xiangqi', postgame.game.roomId),
+      run: isLikelySignedIn()
+        ? () => requestGameAnalysis('xiangqi', postgame.game.roomId)
+        : () => {
+            window.location.assign('/account');
+            return new Promise<never>(() => {});
+          },
     },
   });
 }
@@ -214,44 +234,4 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
   } catch {
     return null;
   }
-}
-
-function resultLabel(result: string): string {
-  if (result === 'red-wins') return 'Red wins';
-  if (result === 'black-wins') return 'Black wins';
-  if (result === 'draw') return 'Draw';
-  return labelize(result);
-}
-
-function timeControlLabel(postgame: XiangqiPostgameResponse): string {
-  const timeControl = postgameTimeControl(postgame);
-  const initialMs = timeControl?.initialMs ?? null;
-  const incrementMs = timeControl?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return 'Untimed';
-  return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
-}
-
-function postgameTimeControl(
-  postgame: XiangqiPostgameResponse,
-): { initialMs: number; incrementMs: number } | null {
-  const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
-  const incrementMs = postgame.game.incrementMs ?? postgame.state.timeControl?.incrementMs ?? null;
-  if (initialMs === null || incrementMs === null) return null;
-  return { initialMs, incrementMs };
-}
-
-function clockLabel(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function labelize(value: string): string {
-  return value.split('-').filter(Boolean).map(capitalize).join(' ');
-}
-
-function capitalize(value: string): string {
-  if (!value) return value;
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

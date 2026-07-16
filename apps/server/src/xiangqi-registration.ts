@@ -1,13 +1,13 @@
 /**
  * Standard Xiangqi (9x10, open information) registry entry. Owns the tenant's
- * live-room map, the room-factory binding, and hydration. PvP-only for now (no
- * engine, no lobby surface); the lobby route answers xiangqi_not_integrated
- * while the flag is on. Imported for side effects by
- * variant-tenant/register-tenants.ts.
+ * live-room map, the room-factory binding, and hydration. Matchmaking is casual
+ * random-seat (unrated); the room factory has no rated options yet. Imported for
+ * side effects by variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
 import * as persistence from './persistence.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { handleXiangqiCreate, requestsXiangqi } from './routes/xiangqi-rooms.js';
 import {
   clearXiangqiRuntimeTimers,
@@ -70,7 +70,7 @@ registerVariantTenant({
   watch: {
     channelId: 'xiangqi',
     family: 'xiangqi',
-    label: 'Elephant Chess',
+    label: 'Xiangqi',
     legacyVariants: ['xiangqi'],
   },
   ownsSpecRouting: true,
@@ -97,6 +97,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleXiangqiCreate({ ...ctx, createXiangqiRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createXiangqiRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`xiangqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

@@ -240,13 +240,21 @@
 }
 
 /* The SVG grid boards (jungle, flip jungle, dark chess / crazyhouse / crossroads /
-   kriegspiel / shogi static renders) carry square corners at the renderer base
-   (frameRadius/boardRadius 0), so round them here on the same token as chessground
-   and the cards. overflow:hidden clips the tiled cells to the rounded box. Cropped
+   kriegspiel / shogi static renders) carry square corners at the renderer base,
+   so round them here on the same token as chessground and the cards.
+   overflow:hidden clips the tiled cells to the rounded box. Cropped
    variant markers strip this outer <svg>, so they stay square (correct on a crop). */
 [data-board="grid"] {
   border-radius: var(--board-corner-radius);
   overflow: hidden;
+}
+
+/* Shogi4 article art is generated in its source repo. Override its baked board
+   perimeter here so generated diagrams follow the same no-outline board policy
+   without hand-editing generated files. Internal grid lines and hand trays keep
+   their own strokes. */
+.shogi4-diagram rect[fill="#f4ead2"][stroke="#c9b07f"] {
+  stroke: none;
 }
 
 :root[data-fog-theme="invisible"] .board.cg-wrap,

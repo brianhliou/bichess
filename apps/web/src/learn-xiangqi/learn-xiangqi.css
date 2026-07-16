@@ -1,0 +1,847 @@
+/* Xiangqi Learn — map screen, run layout, overlays, board markers.
+   Lichess-learn visual anatomy mapped onto mistboard theme tokens. */
+
+.learn-xq {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  color: var(--site-text);
+}
+
+/* ── Map screen ─────────────────────────────────────────────────────────── */
+
+.learn-xq--map {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.learn-xq-side-card {
+  position: sticky;
+  top: 16px;
+  background: var(--site-panel);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 10px;
+  box-shadow: var(--site-shadow);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.learn-xq-side-card h1 {
+  margin: 12px 0 0;
+  font-size: 1.35rem;
+  color: var(--site-heading);
+}
+
+.learn-xq-side-card p {
+  margin: 2px 0 14px;
+  color: var(--site-muted);
+}
+
+.learn-xq-mascot :is(svg) {
+  width: 96px;
+  height: 96px;
+}
+
+/* Filled bar with a darker fill overlay, lichess-style: the whole track is the
+   accent color so the centered white label stays legible at any percentage. */
+.learn-xq-progress-bar {
+  position: relative;
+  height: 30px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--site-accent) 42%, white);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.learn-xq-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--site-accent);
+  transition: width 400ms ease;
+}
+
+.learn-xq-progress-bar span {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.learn-xq-reset {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--site-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.learn-xq-categ h2 {
+  text-align: center;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--site-muted);
+  margin: 34px 0 18px;
+}
+
+.learn-xq-categ:first-child h2 {
+  margin-top: 0;
+}
+
+.learn-xq-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+}
+
+/* Neutral base; the state modifiers below paint the lichess-style tint gradient
+   (green = done, blue = ongoing, violet = locked). */
+.learn-xq-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 48px 10px 0;
+  min-height: 90px;
+  border-radius: var(--site-radius);
+  border: 1px solid var(--site-border-soft);
+  background: var(--site-panel);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.07);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+  isolation: isolate;
+}
+
+.learn-xq-tile > :not(.learn-xq-ribbon-wrap) {
+  position: relative;
+  z-index: 1;
+}
+
+.learn-xq-tile:hover {
+  transform: scale(1.02);
+}
+
+.learn-xq-tile-text h3 {
+  margin: 0;
+  font-family: "Roboto", "Noto Sans", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--site-heading);
+}
+
+.learn-xq-tile-text p {
+  margin: 4px 0 0;
+  color: var(--site-muted);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.learn-xq-tile-illus {
+  display: grid;
+  flex: 0 0 102px;
+  place-items: center;
+  opacity: 0.68;
+}
+
+.learn-xq-tile-illus :is(svg) {
+  width: 70px;
+  height: 70px;
+}
+
+.learn-xq-tile-glyph {
+  font-size: 40px;
+  line-height: 1;
+}
+
+/* Done: green (pine accent) tint rising from the bottom edge. The what-next
+   funnel tiles share this treatment (lichess renders them as completed). */
+.learn-xq-tile--done,
+.learn-xq-tile--link {
+  border-color: color-mix(in srgb, var(--site-accent) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--site-accent) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--site-accent) 20%, var(--site-panel)) 100px
+  );
+}
+
+.learn-xq-tile--done .learn-xq-tile-illus {
+  color: var(--site-accent);
+  opacity: 0.82;
+}
+
+/* Ongoing: blue tint + Lichess's traveling perimeter highlight. */
+.learn-xq-tile--ongoing {
+  border-color: color-mix(in srgb, var(--site-link) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--site-link) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--site-link) 20%, var(--site-panel)) 100px
+  );
+}
+
+.learn-xq-tile--ongoing::after {
+  --learn-xq-border-angle: 0turn;
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border: 3px solid transparent;
+  border-radius: var(--site-radius);
+  background: conic-gradient(
+      from var(--learn-xq-border-angle),
+      transparent 25%,
+      color-mix(in srgb, var(--site-link) 72%, #12283c),
+      color-mix(in srgb, var(--site-link) 20%, transparent)
+    )
+    border-box;
+  content: "";
+  pointer-events: none;
+  animation: learn-xq-border-spin 3.5s linear infinite;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* Future: locked, violet and visually quieter than the actionable stage. */
+.learn-xq-tile--future {
+  --learn-xq-future: hsl(274, 65%, 70%);
+  border-color: color-mix(in srgb, var(--learn-xq-future) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--learn-xq-future) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--learn-xq-future) 20%, var(--site-panel)) 100px
+  );
+}
+
+@property --learn-xq-border-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0turn;
+}
+
+@keyframes learn-xq-border-spin {
+  to {
+    --learn-xq-border-angle: 1turn;
+  }
+}
+
+/* Folded corner ribbon (lichess anatomy): a 45deg band clipped to a triangle in
+   the top-right corner, carrying stars (done) or progress text (ongoing). */
+.learn-xq-ribbon-wrap {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.learn-xq-ribbon {
+  --learn-xq-ribbon-fade: rgba(17, 17, 17, 0.24);
+  position: relative;
+  z-index: 1;
+  top: 15px;
+  left: -4px;
+  width: 120px;
+  padding: 7px 0;
+  transform: rotate(45deg);
+  text-align: center;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #4a4636;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.learn-xq-ribbon::before,
+.learn-xq-ribbon::after {
+  position: absolute;
+  top: 0;
+  width: 32px;
+  height: 100%;
+  content: "";
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.learn-xq-ribbon::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--learn-xq-ribbon-fade), transparent);
+}
+
+.learn-xq-ribbon::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--learn-xq-ribbon-fade), transparent);
+}
+
+.learn-xq-ribbon--done {
+  background: #c5e791;
+}
+
+.learn-xq-ribbon--ongoing {
+  background: #bddffa;
+}
+
+.learn-xq-ribbon .learn-xq-star {
+  font-size: 0.92rem;
+}
+
+.learn-xq-what-next-copy {
+  text-align: center;
+  color: var(--site-muted);
+  margin: -6px 0 16px;
+}
+
+/* ── Run screen ─────────────────────────────────────────────────────────── */
+
+.learn-xq--run {
+  display: grid;
+  grid-template-columns: 200px minmax(320px, 560px) 260px;
+  gap: 20px;
+  justify-content: center;
+  align-items: start;
+}
+
+.learn-xq-run-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.92rem;
+}
+
+.learn-xq-back {
+  color: var(--site-link);
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.learn-xq-side-category {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.learn-xq-side-category:last-child {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.learn-xq-side-category h3 {
+  margin: 0;
+}
+
+.learn-xq-side-category-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.learn-xq-side-category-toggle:hover {
+  background: color-mix(in srgb, var(--site-link) 12%, transparent);
+  color: var(--site-heading);
+}
+
+.learn-xq-side-category.expanded .learn-xq-side-category-toggle {
+  background: var(--site-link);
+  color: #fff;
+}
+
+.learn-xq-side-category-chevron {
+  font-size: 1.7rem;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.learn-xq-side-category.expanded .learn-xq-side-category-chevron {
+  transform: rotate(90deg);
+}
+
+.learn-xq-side-category-stages[hidden] {
+  display: none;
+}
+
+.learn-xq-side-stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 8px 0 0;
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.learn-xq-side-stage.active {
+  background: color-mix(in srgb, var(--site-link) 20%, transparent);
+  color: var(--site-heading);
+  font-weight: 600;
+}
+
+.learn-xq-side-stage.done {
+  color: var(--site-muted);
+}
+
+.learn-xq-side-stage:hover {
+  background: color-mix(in srgb, var(--site-link) 12%, transparent);
+}
+
+.learn-xq-side-stage.done:hover {
+  background: color-mix(in srgb, var(--site-accent) 13%, transparent);
+}
+
+.learn-xq-side-stage.done .learn-xq-side-illus {
+  background: var(--site-accent);
+}
+
+.learn-xq-side-illus {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  background: color-mix(in srgb, var(--site-link) 70%, white);
+  color: #fff;
+}
+
+.learn-xq-side-stage.active .learn-xq-side-illus {
+  background: var(--site-link);
+}
+
+.learn-xq-side-illus :is(svg) {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.learn-xq-board-host :is(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.learn-xq-table {
+  background: var(--site-panel);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 10px;
+  box-shadow: var(--site-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-xq-table-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--site-accent) 16%, var(--site-panel));
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.learn-xq-table-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--site-heading);
+}
+
+.learn-xq-table-header p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--site-muted);
+}
+
+.learn-xq-table-illus :is(svg) {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.learn-xq-table-body {
+  flex: 1;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.learn-xq-goal {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.learn-xq-result--failed {
+  background: color-mix(in srgb, #b04a3a 14%, transparent);
+  cursor: pointer;
+}
+
+.learn-xq-result--completed {
+  background: color-mix(in srgb, #4d8a3d 14%, transparent);
+}
+
+.learn-xq-congrats {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--site-heading);
+  margin: 0 0 6px;
+}
+
+.learn-xq-retry,
+.learn-xq-next,
+.learn-xq-overlay-go {
+  margin-top: 10px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: var(--site-accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.learn-xq-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.learn-xq-pill {
+  min-width: 34px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--site-panel-soft);
+  text-align: center;
+  text-decoration: none;
+  color: var(--site-text);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.learn-xq-pill.active {
+  outline: 2px solid var(--site-accent);
+}
+
+.learn-xq-pill.done {
+  background: color-mix(in srgb, #4d8a3d 20%, var(--site-panel-soft));
+}
+
+/* ── Stars ──────────────────────────────────────────────────────────────── */
+
+.learn-xq-star {
+  color: color-mix(in srgb, var(--site-muted) 45%, transparent);
+  font-size: 1.25rem;
+}
+
+.learn-xq-pill .learn-xq-star {
+  font-size: 0.78rem;
+}
+
+.learn-xq-star.filled {
+  color: #e8b53a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.learn-xq-stars--animated .learn-xq-star.filled {
+  display: inline-block;
+  animation: learn-xq-star-pop 700ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.learn-xq-stars--animated .learn-xq-star.filled:nth-child(2) {
+  animation-delay: 500ms;
+}
+
+.learn-xq-stars--animated .learn-xq-star.filled:nth-child(3) {
+  animation-delay: 1000ms;
+}
+
+@keyframes learn-xq-star-pop {
+  from {
+    transform: scale(0) rotate(-90deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.learn-xq-overlay-card--complete .learn-xq-star {
+  font-size: 3.45rem;
+}
+
+.learn-xq-score {
+  color: #d88916;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0 0 17px;
+  text-transform: uppercase;
+}
+
+.learn-xq-score span {
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 400;
+}
+
+.learn-xq-score-value {
+  font-style: normal;
+}
+
+/* The run-panel star pop is quicker than the stage overlay's: it has to land
+   inside the auto-advance window. */
+.learn-xq-table .learn-xq-stars--animated .learn-xq-star.filled {
+  animation-duration: 450ms;
+}
+
+.learn-xq-table .learn-xq-stars--animated .learn-xq-star.filled:nth-child(2) {
+  animation-delay: 220ms;
+}
+
+.learn-xq-table .learn-xq-stars--animated .learn-xq-star.filled:nth-child(3) {
+  animation-delay: 440ms;
+}
+
+/* ── Overlays ───────────────────────────────────────────────────────────── */
+
+.learn-xq-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.learn-xq-overlay-card {
+  width: min(350px, calc(100vw - 32px));
+  background: var(--site-panel);
+  border-radius: var(--site-radius);
+  box-shadow: var(--site-shadow);
+  padding: 36px 0 24px;
+  text-align: center;
+  animation: learn-xq-card-in 350ms ease both;
+}
+
+@keyframes learn-xq-card-in {
+  from {
+    transform: translateY(14px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.learn-xq-overlay-illus :is(svg) {
+  width: 96px;
+  height: 96px;
+}
+
+.learn-xq-overlay-card h2 {
+  color: var(--site-heading);
+  font-size: 1.5rem;
+  margin: 0 0 22px;
+}
+
+.learn-xq-overlay-card > p:not(.learn-xq-score) {
+  margin: 0 15% 17px;
+  line-height: 1.5;
+}
+
+.learn-xq-overlay-card--complete h2 {
+  margin-top: 20px;
+}
+
+.learn-xq-overlay-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  margin: 8px 10% 0;
+}
+
+.learn-xq-overlay-buttons .learn-xq-overlay-go {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.learn-xq-overlay-menu {
+  background: none;
+  border: 0;
+  min-height: 48px;
+  padding: 8px 14px;
+  color: var(--site-link);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ── Board markers + learn arrows ───────────────────────────────────────── */
+
+.xq-marker--apple {
+  fill: #e8b53a;
+  stroke: #9a6f14;
+  stroke-width: 2.5;
+  animation: learn-xq-apple-pulse 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes learn-xq-apple-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* Transient pickup flash: a gold star that blooms and fades on the point the
+   player just collected. Lives for SPARKLE_MS (learn-xiangqi-page.ts). */
+.xq-marker--sparkle {
+  fill: #ffd23e;
+  stroke: none;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: learn-xq-sparkle 500ms ease-out both;
+}
+
+@keyframes learn-xq-sparkle {
+  0% {
+    transform: scale(0.7) rotate(0);
+    opacity: 0.95;
+  }
+  60% {
+    transform: scale(1.6) rotate(24deg);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(2.2) rotate(40deg);
+    opacity: 0;
+  }
+}
+
+.xq-marker--circle.xq-marker--red {
+  stroke: #c0392b;
+}
+
+.xq-marker--circle.xq-marker--green {
+  stroke: #4d8a3d;
+}
+
+.xq-marker--circle.xq-marker--yellow {
+  stroke: #d8a01d;
+}
+
+.xq-marker--circle.xq-marker--blue {
+  stroke: #2b6cb8;
+}
+
+.xq-arrow--learn-green {
+  fill: #6f9a54;
+  stroke: #6f9a54;
+}
+
+.xq-arrow--learn-red {
+  fill: #c0392b;
+  stroke: #c0392b;
+}
+
+.xq-arrow--learn-yellow {
+  fill: #d8a01d;
+  stroke: #d8a01d;
+}
+
+.xq-arrow--learn-blue {
+  fill: #2b6cb8;
+  stroke: #2b6cb8;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 980px) {
+  .learn-xq--run {
+    grid-template-columns: minmax(300px, 560px);
+  }
+
+  .learn-xq-run-side {
+    display: none;
+  }
+
+  .learn-xq--map {
+    grid-template-columns: 1fr;
+  }
+
+  .learn-xq-side-card {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .learn-xq-tile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learn-xq-tile {
+    min-height: 72px;
+  }
+
+  .learn-xq-tile-illus {
+    flex-basis: 74px;
+  }
+
+  .learn-xq-tile-illus :is(svg) {
+    width: 50px;
+    height: 64px;
+  }
+
+  .learn-xq-tile-text h3 {
+    font-size: 1.3rem;
+  }
+
+  .learn-xq-tile-text p {
+    font-size: 0.88rem;
+  }
+
+  .learn-xq-ribbon-wrap {
+    top: -14px;
+    right: -13px;
+    scale: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-xq-tile--ongoing::after {
+    animation: none;
+  }
+}

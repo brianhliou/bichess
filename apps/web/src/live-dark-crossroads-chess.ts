@@ -228,7 +228,7 @@ export function bootstrapDarkCrossroadsChessLiveRoom(): void {
     );
   }
 
-  refs = createLiveLayout(app, { debugRequested: false });
+  refs = createLiveLayout(app, { debugRequested: false, roomId: room });
   // Reuse the crossroads board layout class — the fog variant renders the same
   // 6x8 board.
   setLiveLayoutGameSpec(app, 'crossroads-chess');

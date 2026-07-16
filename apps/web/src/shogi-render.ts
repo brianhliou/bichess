@@ -90,9 +90,6 @@ function paletteFor(theme: ShogiBoardTheme, fogFill = SHOGI_FOG_FALLBACK): GridP
     darkCell: c.darkCell,
     // Borderless: the wood checker carries Shogi's identity, so the frame goes
     // transparent and the cells run edge-to-edge (see frame-zeroing below).
-    frameBg: 'transparent',
-    frameInner: 'transparent',
-    boardEdge: 'transparent',
     coord: c.coord,
     lastMove: 'rgba(230,201,95,0.62)',
     selected: GRID_INTERACTION_COLORS.selected,
@@ -111,11 +108,8 @@ function shogiDescriptor(theme: ShogiBoardTheme, fogFill?: string) {
     ranks: RANKS,
     cell: CELL,
     palette: paletteFor(theme, fogFill),
-    framePad: 0,
     pad: 0,
-    frameRadius: 0,
     boardRadius: 0,
-    boardEdgeWidth: 0,
     // Shogi files run 9..1 left-to-right from Black's side; ranks fall back to the
     // core's numeric labels (the core has no rank-letter hook — cosmetic only,
     // every interaction is click-driven by data-square).

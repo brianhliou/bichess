@@ -42,7 +42,6 @@ export {
 } from './positions.js';
 export type { BoardPalette, FogStyle } from './tokens.js';
 export {
-  BOARD_BORDER,
   BROWN_PALETTE,
   DARK_SQUARE,
   FOG_FILL,

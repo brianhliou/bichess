@@ -3,6 +3,7 @@ import {
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
+  matchupSeats,
   participantForColor,
   sourceLabel,
 } from './game-display.js';
@@ -11,14 +12,17 @@ import { timeControlLabelFromMeta } from './replay-meta.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 export function gameMetaForGame(game: FeaturedGame): GameMeta {
+  // GameMeta's whiteName/blackName are first/second-seat keys, not literal
+  // colors: xiangqi/jungle games seat red/black, crossroads white/red.
+  const [firstSeat, secondSeat] = matchupSeats(game);
   return {
     whiteName: withRatingDelta(
-      displayParticipantName(game, 'white'),
-      participantForColor(game, 'white'),
+      displayParticipantName(game, firstSeat),
+      participantForColor(game, firstSeat),
     ),
     blackName: withRatingDelta(
-      displayParticipantName(game, 'black'),
-      participantForColor(game, 'black'),
+      displayParticipantName(game, secondSeat),
+      participantForColor(game, secondSeat),
     ),
     gameUrl: reviewUrlForGame(game),
     modeLabel: sourceLabel(game.mode),

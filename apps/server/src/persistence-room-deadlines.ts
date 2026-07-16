@@ -159,6 +159,10 @@ export async function listDeadlineWarningCandidates(
      LEFT JOIN events rc ON rc.room_id = rd.room_id AND rc.payload->>'type' = 'room-created'
      WHERE rd.warned_at IS NULL
        AND rd.seat_user_id IS NOT NULL
+       AND COALESCE(
+         (u.account_preferences->>'correspondenceDeadlineEmail')::boolean,
+         true
+       )
        AND rd.due_at > $1
        AND rd.due_at <= $2
      ORDER BY rd.due_at`,

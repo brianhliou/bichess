@@ -30,6 +30,7 @@ import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   animalTreasureMarks,
   cjkGlyphMark,
+  internationalFlatTreasureMarks,
   internationalTreasureMarks,
   renderXiangqiPieceGlyphed,
   treasureSymbolMark,
@@ -81,8 +82,7 @@ export interface VariantMiniDef {
   shortLabel: string;
   accent: string;
   blurb: string;
-  // Which board family the tile belongs to. Drives the frame colour class
-  // (chess frame tracks --board-frame; xiangqi frame is a fixed wood brown).
+  // Which board family the tile belongs to, retained as marker metadata.
   family: VariantMiniFamily;
 }
 
@@ -490,6 +490,9 @@ function fortressTreasureDisc(
   }
   if (set === 'international') {
     return place(internationalTreasureMarks(color));
+  }
+  if (set === 'international-flat') {
+    return place(internationalFlatTreasureMarks(color));
   }
   const ring = color === 'red' ? '#c2261e' : '#283a47';
   const ink = color === 'red' ? '#8a1a14' : '#283a47';
@@ -919,7 +922,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'xiangqi',
-    label: 'Elephant Chess',
+    label: 'Xiangqi',
     shortLabel: 'XQ',
     accent: '#8b5a24',
     blurb: "Red's court and cannon across the river board, nothing hidden.",
@@ -927,7 +930,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'dark-xiangqi',
-    label: 'Fog Elephant Chess',
+    label: 'Fog Xiangqi',
     shortLabel: 'DX',
     accent: '#9f342d',
     blurb: "Red's court and cannon; fog marks the squares no red piece can reach.",
@@ -959,7 +962,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'fortress-xiangqi',
-    label: 'Fortress',
+    label: 'Fortress Xiangqi',
     shortLabel: 'STF',
     accent: '#b45309',
     blurb: 'Xiangqi with a pocket: opposite-corner palaces, crazyhouse drops, and the Treasure.',
@@ -967,7 +970,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'jieqi',
-    label: 'Flip Elephant Chess',
+    label: 'Flip Xiangqi',
     shortLabel: 'JQ',
     accent: '#6d4aa0',
     blurb: 'The xiangqi opening with every piece flipped face-down but the general.',
@@ -975,7 +978,7 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
   },
   {
     id: 'banqi',
-    label: 'Half-Flip Chess',
+    label: 'Reveal Xiangqi',
     shortLabel: 'BQ',
     accent: '#2563a6',
     blurb: 'Face-down pieces in cells; both generals flipped up.',
@@ -1094,21 +1097,12 @@ export function renderVariantMiniBoard(
   clipSeq += 1;
   const clipId = `mini-clip-${clipSeq}`;
   const body = BODIES[id](ctx);
-  const frameClass =
-    def.family === 'xiangqi'
-      ? 'vm-frame-xq'
-      : def.family === 'shogi'
-        ? 'vm-frame-shogi'
-        : def.family === 'jungle'
-          ? 'vm-frame-jungle'
-          : 'vm-frame-chess';
   const className = opts.className ? `variant-mini ${opts.className}` : 'variant-mini';
   const dataClass = opts.className ? ` data-mini-class="${escapeAttr(opts.className)}"` : '';
   return [
     `<svg class="${escapeAttr(className)}" width="${size}" height="${size}" viewBox="0 0 100 100" role="img" aria-label="${escapeAttr(label)}" data-mini-id="${id}" data-mini-size="${size}" data-mini-label="${escapeAttr(label)}"${dataClass} xmlns="http://www.w3.org/2000/svg">`,
     `<defs><clipPath id="${clipId}"><rect x="${OX}" y="${OY}" width="${SIZE}" height="${SIZE}" rx="11"/></clipPath></defs>`,
     `<g clip-path="url(#${clipId})">${body}</g>`,
-    `<rect class="${frameClass}" x="${OX}" y="${OY}" width="${SIZE}" height="${SIZE}" rx="11" fill="none" stroke-width="2.5"/>`,
     `</svg>`,
   ].join('');
 }

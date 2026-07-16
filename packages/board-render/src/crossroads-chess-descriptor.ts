@@ -14,9 +14,7 @@ export const CROSSROADS_INK_RED = '#1a1a1a';
 export const CROSSROADS_IVORY_STOPS: [string, string] = ['#fdf6e4', '#f3e6c4'];
 export const CROSSROADS_RED_STOPS: [string, string] = ['#c1453b', '#a4291f'];
 
-// The 6x8 river board, expressed as data for the shared core. Its layout knobs
-// (framePad 9, pad 6, frame radius 14/12.5, board radius 5, edge 1.5) are the
-// core defaults, so they need not be restated.
+// The 6x8 river board, expressed as data for the shared core.
 export const CROSSROADS_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   files: 6,
   ranks: 8,
@@ -25,9 +23,6 @@ export const CROSSROADS_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   palette: {
     lightCell: '#f0d9b5',
     darkCell: '#b58863',
-    frameBg: '#5b4636',
-    frameInner: '#6e5743',
-    boardEdge: '#3a2c20',
     coord: 'rgba(60,45,30,0.55)',
     lastMove: 'rgba(255,205,80,0.45)',
     selected: GRID_INTERACTION_COLORS.selected,

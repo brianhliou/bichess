@@ -10,6 +10,7 @@
 import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
+  fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
   isStandardXiangqiLegalMove,
   type StandardXiangqiPlayerView,
@@ -50,4 +51,9 @@ export const xiangqiTreeAdapter: VariantTreeAdapter<
   // sibling-dedup NodeId are the same canonical string.
   moveKey: (move) => xiangqiMoveToFsfUci(move),
   toEngineUci: (move) => xiangqiMoveToFsfUci(move),
+  // Inverse of moveKey/toEngineUci: our square notation IS FSF xiangqi UCI, so a
+  // token splits straight back into { from, to }. parentTruth is unused (coordinate
+  // moves need no disambiguation); an off-position token is rejected by addMove on
+  // rebuild, not here. Returns null for a token that isn't two valid squares.
+  fromUci: (uci) => fsfUciToXiangqiSquares(uci),
 };

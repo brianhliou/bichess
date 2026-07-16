@@ -18,7 +18,7 @@ export const darkMiniXiangqiArticle: Article = {
     status: 'published',
     publishedAt: '2026-05-30',
     audience:
-      'Fog Elephant Chess readers who want the smaller experimental ruleset Mistboard is testing first.',
+      'Fog Xiangqi readers who want the smaller experimental ruleset Mistboard is testing first.',
     thumbnail: { kind: 'svg', svg: MINI_XIANGQI_DARK_THUMBNAIL },
     intro: [
       {

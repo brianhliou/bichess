@@ -90,19 +90,34 @@
 /* Request-computer-analysis button (fills the underboard slot until analysis runs). */
 .xiangqi-review__analyse {
   appearance: none;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius, 10px);
-  background: var(--site-panel, var(--site-surface));
-  color: var(--site-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 16px auto;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  background: var(--site-accent, #3893e8);
+  color: #fff;
   font: inherit;
   font-weight: 700;
   font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s ease;
+}
+.xiangqi-review__analyse-icon {
+  display: inline-flex;
+  /* Optically center the bar glyph with the uppercase text baseline. */
+  margin-top: -1px;
 }
 .xiangqi-review__analyse:hover:not(:disabled) {
-  background: var(--site-surface);
+  background: var(--site-accent-strong, #2b7fd0);
 }
 .xiangqi-review__analyse:disabled {
   cursor: default;

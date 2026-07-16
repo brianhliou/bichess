@@ -8,7 +8,9 @@ import {
   injectPageMeta,
   serveArticlePage,
   serveArticlesIndexPage,
+  serveNotFoundShell,
   serveRulesIndexPage,
+  serveSitemap,
 } from './server-static-pages.js';
 
 type ResponseCapture = {
@@ -70,15 +72,30 @@ test('injectPageMeta replaces share tags and escapes injected values', () => {
   );
 });
 
+test('serveNotFoundShell serves the SPA shell with a 404 status and noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+
+  await serveNotFoundShell({ response, staticDir });
+
+  assert.equal(response.status, 404);
+  assert.equal(response.headers['content-type'], 'text/html; charset=utf-8');
+  assert.match(response.body, /<title>Page not found · Mistboard<\/title>/);
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+  // The SPA mount point survives so the client can render the branded 404.
+  assert.match(response.body, /<div id="app"><\/div>/);
+});
+
 test('serveArticlePage returns prerendered rules files from the rules base', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await mkdir(join(staticDir, 'rules'), { recursive: true });
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
-  await writeFile(join(staticDir, 'rules', 'dark-chess.html'), '<h1>prerendered</h1>');
+  await writeFile(join(staticDir, 'rules', 'fog-chess.html'), '<h1>prerendered</h1>');
   const response = captureResponse();
 
   await serveArticlePage({
-    slug: 'dark-chess',
+    slug: 'fog-chess',
     base: 'rules',
     response,
     publicHost: 'https://mistboard.test',
@@ -96,7 +113,7 @@ test('serveArticlePage falls back to index shell with rules metadata', async () 
   const response = captureResponse();
 
   await serveArticlePage({
-    slug: 'dark-chess',
+    slug: 'fog-chess',
     base: 'rules',
     response,
     publicHost: 'https://mistboard.test',
@@ -107,12 +124,72 @@ test('serveArticlePage falls back to index shell with rules metadata', async () 
   assert.match(response.body, /<title>Fog Chess Rules \| Mistboard<\/title>/);
   assert.match(
     response.body,
-    /<meta property="og:url" content="https:\/\/mistboard.test\/rules\/dark-chess">/,
+    /<meta property="og:url" content="https:\/\/mistboard.test\/rules\/fog-chess">/,
   );
   assert.match(
     response.body,
-    /<meta property="og:image" content="https:\/\/mistboard.test\/og\/article\/dark-chess.png">/,
+    /<meta property="og:image" content="https:\/\/mistboard.test\/og\/article\/fog-chess.png">/,
   );
+});
+
+test('serveArticlePage redirects an unpublished localized article to its English prerender', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'blog'), { recursive: true });
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'blog', 'misty.html'), '<h1>English article</h1>');
+  const response = captureResponse();
+
+  await serveArticlePage({
+    slug: 'misty',
+    base: 'blog',
+    langPrefix: 'zh-hans',
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/blog/misty');
+  assert.equal(response.body, '');
+});
+
+test('serveArticlePage marks parked Shogi rules as non-indexable', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+
+  await serveArticlePage({
+    slug: 'dark-shogi',
+    base: 'rules',
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+});
+
+test('serveSitemap omits parked Shogi rules while retaining public articles', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'rules'), { recursive: true });
+  await mkdir(join(staticDir, 'blog'), { recursive: true });
+  for (const slug of ['xiangqi', 'shogi', 'shogi4', 'dark-shogi']) {
+    await writeFile(join(staticDir, 'rules', `${slug}.html`), '<h1>rules</h1>');
+  }
+  await writeFile(join(staticDir, 'blog', 'misty.html'), '<h1>article</h1>');
+  const response = captureResponse();
+
+  await serveSitemap({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
+  assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
+  assert.doesNotMatch(response.body, /shogi/);
 });
 
 test('serveArticlePage 301s legacy /articles/<rules-slug> to /rules/<clean>', async () => {
@@ -129,7 +206,30 @@ test('serveArticlePage 301s legacy /articles/<rules-slug> to /rules/<clean>', as
   });
 
   assert.equal(response.status, 301);
-  assert.equal(response.headers.location, '/rules/dark-chess');
+  assert.equal(response.headers.location, '/rules/fog-chess');
+});
+
+test('serveArticlePage 301s stable game ids to reader-facing rules slugs', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+
+  for (const [slug, canonical] of [
+    ['banqi', 'flip-xiangqi'],
+    ['dark-chess', 'fog-chess'],
+    ['dark-xiangqi', 'fog-xiangqi'],
+    ['jieqi', 'reveal-xiangqi'],
+  ] as const) {
+    const response = captureResponse();
+    await serveArticlePage({
+      slug,
+      base: 'rules',
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+    });
+    assert.equal(response.status, 301);
+    assert.equal(response.headers.location, `/rules/${canonical}`);
+  }
 });
 
 test('serveArticlePage 301s a rules slug requested under /articles to /rules, preserving lang', async () => {
@@ -138,7 +238,7 @@ test('serveArticlePage 301s a rules slug requested under /articles to /rules, pr
   const response = captureResponse();
 
   await serveArticlePage({
-    slug: 'dark-chess',
+    slug: 'fog-chess',
     base: 'articles',
     langPrefix: 'zh-hans',
     response,
@@ -147,7 +247,7 @@ test('serveArticlePage 301s a rules slug requested under /articles to /rules, pr
   });
 
   assert.equal(response.status, 301);
-  assert.equal(response.headers.location, '/zh-hans/rules/dark-chess');
+  assert.equal(response.headers.location, '/zh-hans/rules/fog-chess');
 });
 
 test('serveArticlePage 301s legacy /articles/<article-slug> to /blog/<slug>', async () => {
@@ -189,6 +289,25 @@ test('serveArticlesIndexPage injects localized metadata', async () => {
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hans\/blog">/,
+  );
+});
+
+test('serveArticlesIndexPage keeps the community-posts view canonical', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+
+  await serveArticlesIndexPage({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    view: 'community',
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(
+    response.body,
+    /<meta property="og:url" content="https:\/\/mistboard\.test\/blog\/community">/,
   );
 });
 

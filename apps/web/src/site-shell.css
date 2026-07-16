@@ -1,4 +1,10 @@
 .site-nav {
+  /* Shared navigation is a brand-token boundary. Route palettes can safely
+     redefine generic action colors without recoloring nav dropdowns. */
+  --site-accent: var(--site-brand-accent);
+  --site-accent-strong: var(--site-brand-accent-strong);
+  --site-accent-soft: var(--site-brand-accent-soft);
+  --site-on-accent: var(--site-brand-on-accent);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -137,6 +143,15 @@
     color 140ms ease;
 }
 
+/* The display rules on nav links (including the panel-item override below)
+   outrank the UA [hidden] rule, so restore it explicitly: auth-gated links
+   ([data-signed-in-only], [data-admin-only]) rely on the hidden attribute.
+   The `a` tag lifts specificity over `.site-nav-menu-panel .site-nav-link`. */
+a.site-nav-link[hidden],
+.site-nav-menu[hidden] {
+  display: none;
+}
+
 :root:not([data-effective-theme="dark"]) .site-nav-links > .site-nav-link,
 :root:not([data-effective-theme="dark"]) .site-nav-menu-toggle {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -163,6 +178,54 @@
 .site-nav-link:focus-visible {
   color: var(--site-text);
   background: transparent;
+}
+
+/* The admin-only menu title is amber to distinguish internal tools from the
+   everyday nav. Only visible to admins. */
+.site-nav-menu-admin > .site-nav-menu-toggle {
+  color: #b06000;
+}
+
+.site-nav-menu-admin > .site-nav-menu-toggle:hover,
+.site-nav-menu-admin > .site-nav-menu-toggle:focus-visible {
+  color: #8a4b00;
+}
+
+:root[data-effective-theme="dark"] .site-nav-menu-admin > .site-nav-menu-toggle {
+  color: #e0a458;
+}
+
+:root[data-effective-theme="dark"] .site-nav-menu-admin > .site-nav-menu-toggle:hover,
+:root[data-effective-theme="dark"] .site-nav-menu-admin > .site-nav-menu-toggle:focus-visible {
+  color: #f0be7e;
+}
+
+/* Donate = warm rose text with a crisp heart-and-fog mark, distinct from the
+   green accent and the amber admin menu so support reads as its own gesture. */
+.site-nav-links > .site-nav-link-donate {
+  gap: 5px;
+  color: #c04f6a;
+}
+
+.site-nav-donate-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  background: url("/icons/mist-heart.png") center / contain no-repeat;
+}
+
+.site-nav-links > .site-nav-link-donate:hover,
+.site-nav-links > .site-nav-link-donate:focus-visible {
+  color: #a23c55;
+}
+
+:root[data-effective-theme="dark"] .site-nav-link-donate {
+  color: #e88aa0;
+}
+
+:root[data-effective-theme="dark"] .site-nav-links > .site-nav-link-donate:hover,
+:root[data-effective-theme="dark"] .site-nav-links > .site-nav-link-donate:focus-visible {
+  color: #f3a6b8;
 }
 
 /* Register = filled accent (green) button, like lichess's filled blue Register. */

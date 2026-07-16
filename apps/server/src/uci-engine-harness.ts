@@ -43,6 +43,29 @@ export type UciEnginePoolConfig = {
   defaultQueueTimeoutMs?: number;
   /** Error message when a waiter times out waiting for a slot. */
   queueTimeoutMessage: string;
+  /** Stable label for the per-engine breakdown in /api/server-status. Pools without
+   *  a name report as 'unnamed'. */
+  name?: string;
+};
+
+/** Point-in-time saturation snapshot for one pool (see #203). Cumulative counters
+ *  are monotonic over the process lifetime; `active`/`queueDepth` are instantaneous. */
+export type UciEnginePoolStats = {
+  name: string;
+  /** Subprocesses running right now. */
+  active: number;
+  /** Requests waiting for a slot right now. */
+  queueDepth: number;
+  /** Current concurrency cap (re-read from the env each acquire). */
+  maxProcesses: number;
+  /** Cumulative slots taken (immediate + after waiting). */
+  acquired: number;
+  /** Cumulative requests that had to queue (a leading saturation signal). */
+  waited: number;
+  /** Cumulative queue-wait timeouts (saturation that actually shed load). */
+  timedOut: number;
+  /** High-water mark of `queueDepth`. */
+  peakQueueDepth: number;
 };
 
 type QueueEntry = {
@@ -50,6 +73,33 @@ type QueueEntry = {
   resolve(release: () => void): void;
   timer: ReturnType<typeof setTimeout>;
 };
+
+// Every constructed pool registers here so /api/server-status can report web-side
+// engine-pool saturation — the least-instrumented signal we have, and the leading
+// indicator for the non-fog engine-service split (#203, memory:
+// architecture_engine_service_split). Pools are process-lifetime singletons, so
+// they never unregister.
+const poolRegistry = new Set<UciEnginePool>();
+
+/** Per-pool + summed saturation stats across every in-process UCI pool. */
+export function aggregateEnginePoolStats(): {
+  pools: UciEnginePoolStats[];
+  totals: { active: number; queueDepth: number; waited: number; timedOut: number };
+} {
+  const pools = [...poolRegistry]
+    .map((pool) => pool.stats())
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const totals = pools.reduce(
+    (sum, p) => ({
+      active: sum.active + p.active,
+      queueDepth: sum.queueDepth + p.queueDepth,
+      waited: sum.waited + p.waited,
+      timedOut: sum.timedOut + p.timedOut,
+    }),
+    { active: 0, queueDepth: 0, waited: 0, timedOut: 0 },
+  );
+  return { pools, totals };
+}
 
 /**
  * A tiny per-process concurrency gate: at most N `spawn`ed engine subprocesses run
@@ -61,23 +111,34 @@ type QueueEntry = {
 export class UciEnginePool {
   private active = 0;
   private readonly queue: QueueEntry[] = [];
+  // Cumulative saturation counters (monotonic over the process lifetime).
+  private acquired = 0;
+  private waited = 0;
+  private timedOut = 0;
+  private peakQueueDepth = 0;
 
-  constructor(private readonly config: UciEnginePoolConfig) {}
+  constructor(private readonly config: UciEnginePoolConfig) {
+    poolRegistry.add(this);
+  }
 
   /** Take a slot, returning a release function. Call it exactly once when done. */
   acquire(): Promise<() => void> {
     if (this.active < this.maxProcesses()) {
       this.active += 1;
+      this.acquired += 1;
       return Promise.resolve(this.release);
     }
+    this.waited += 1;
     return new Promise<() => void>((resolveSlot, reject) => {
       const timer = setTimeout(() => {
         const idx = this.queue.findIndex((entry) => entry.reject === reject);
         if (idx >= 0) this.queue.splice(idx, 1);
+        this.timedOut += 1;
         reject(new Error(this.config.queueTimeoutMessage));
       }, this.queueTimeoutMs());
       timer.unref();
       this.queue.push({ reject, resolve: resolveSlot, timer });
+      if (this.queue.length > this.peakQueueDepth) this.peakQueueDepth = this.queue.length;
     });
   }
 
@@ -87,9 +148,24 @@ export class UciEnginePool {
     if (next) {
       clearTimeout(next.timer);
       this.active += 1;
+      this.acquired += 1;
       next.resolve(this.release);
     }
   };
+
+  /** Point-in-time saturation snapshot (aggregated in /api/server-status). */
+  stats(): UciEnginePoolStats {
+    return {
+      name: this.config.name ?? 'unnamed',
+      active: this.active,
+      queueDepth: this.queue.length,
+      maxProcesses: this.maxProcesses(),
+      acquired: this.acquired,
+      waited: this.waited,
+      timedOut: this.timedOut,
+      peakQueueDepth: this.peakQueueDepth,
+    };
+  }
 
   private maxProcesses(): number {
     return boundedEnvInt(
@@ -122,6 +198,38 @@ export function parseBestmoveLine(line: string): string | null | undefined {
   return move && move !== '(none)' ? move : null;
 }
 
+/** Parse an advertised UCI option name from `option name ... type ...`. */
+export function parseUciOptionLine(line: string): string | undefined {
+  const match = line.match(/^option name (.+?) type /);
+  return match?.[1]?.trim() || undefined;
+}
+
+/** Return the option names configured by a UCI command block. */
+export function configuredUciOptionNames(commands: readonly string[]): string[] {
+  return commands.flatMap((command) => {
+    const match = command.match(/^setoption name (.+?)(?: value .*)?$/);
+    return match?.[1]?.trim() ? [match[1].trim()] : [];
+  });
+}
+
+function validateConfiguredUciOptions(
+  commands: readonly string[],
+  advertisedOptions: ReadonlySet<string>,
+): void {
+  const unsupported = configuredUciOptionNames(commands).filter(
+    (option) => !advertisedOptions.has(option),
+  );
+  if (unsupported.length > 0) {
+    throw new Error(
+      `UCI engine does not advertise configured option(s): ${unsupported.join(', ')}`,
+    );
+  }
+}
+
+function uciProtocolError(line: string): string | null {
+  return /^(?:No such option|Unknown option|Unknown command)\b/i.test(line) ? line : null;
+}
+
 export type RunUciBestmoveArgs = {
   /** Absolute path to the engine binary. */
   bin: string;
@@ -131,6 +239,8 @@ export type RunUciBestmoveArgs = {
   timeoutMs: number;
   /** Error message used when the move times out. */
   timeoutMessage: string;
+  /** Extra env vars merged over the parent env for the spawned process (e.g. a seed). */
+  env?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -141,11 +251,15 @@ export type RunUciBestmoveArgs = {
  * through a `UciEnginePool`.
  */
 export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null> {
-  const { bin, commands, timeoutMs, timeoutMessage } = args;
+  const { bin, commands, timeoutMs, timeoutMessage, env } = args;
   return new Promise<string | null>((resolveMove, reject) => {
-    const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(bin, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    });
     let buf = '';
     let settled = false;
+    const advertisedOptions = new Set<string>();
 
     const finish = (run: () => void): void => {
       if (settled) return;
@@ -168,9 +282,23 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
         buf = buf.slice(newline + 1);
+        const option = parseUciOptionLine(line);
+        if (option) advertisedOptions.add(option);
+        const protocolError = uciProtocolError(line);
+        if (protocolError) {
+          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+          return;
+        }
         const parsed = parseBestmoveLine(line);
         if (parsed !== undefined) {
-          finish(() => resolveMove(parsed));
+          finish(() => {
+            try {
+              validateConfiguredUciOptions(commands, advertisedOptions);
+              resolveMove(parsed);
+            } catch (err) {
+              reject(err);
+            }
+          });
           return;
         }
         newline = buf.indexOf('\n');
@@ -227,6 +355,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
     let buf = '';
     let settled = false;
     let latest: { depth: number; cp: number | null; mate: number | null } | null = null;
+    const advertisedOptions = new Set<string>();
 
     const finish = (run: () => void): void => {
       if (settled) return;
@@ -249,18 +378,143 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
         buf = buf.slice(newline + 1);
+        const option = parseUciOptionLine(line);
+        if (option) advertisedOptions.add(option);
+        const protocolError = uciProtocolError(line);
+        if (protocolError) {
+          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+          return;
+        }
         const score = parseInfoScore(line);
         if (score) latest = score;
         const move = parseBestmoveLine(line);
         if (move !== undefined) {
-          finish(() =>
-            resolveEval({
-              best: move,
-              cp: latest?.cp ?? null,
-              mate: latest?.mate ?? null,
-              depth: latest?.depth ?? 0,
-            }),
-          );
+          finish(() => {
+            try {
+              validateConfiguredUciOptions(commands, advertisedOptions);
+              resolveEval({
+                best: move,
+                cp: latest?.cp ?? null,
+                mate: latest?.mate ?? null,
+                depth: latest?.depth ?? 0,
+              });
+            } catch (err) {
+              reject(err);
+            }
+          });
+          return;
+        }
+        newline = buf.indexOf('\n');
+      }
+    });
+
+    child.stdin.write(`${commands.join('\n')}\n`);
+  });
+}
+
+/**
+ * Parse a UCI `info … multipv K … score … pv <move> …` line into a ranked table row.
+ * Returns undefined for non-info, score-less, or pv-less lines. The score is from the
+ * side-to-move POV, exactly as the engine reports it. `index` is the 1-based MultiPV rank.
+ */
+export function parseInfoMultiPv(
+  line: string,
+):
+  | { index: number; depth: number; cp: number | null; mate: number | null; move: string }
+  | undefined {
+  if (!line.startsWith('info ') || !line.includes(' multipv ') || !line.includes(' score ')) {
+    return undefined;
+  }
+  const tokens = line.split(/\s+/);
+  let index = 0;
+  let depth = 0;
+  let cp: number | null = null;
+  let mate: number | null = null;
+  let move: string | null = null;
+  for (let i = 1; i < tokens.length; i += 1) {
+    if (tokens[i] === 'multipv') index = Number(tokens[i + 1]);
+    else if (tokens[i] === 'depth') depth = Number(tokens[i + 1]);
+    else if (tokens[i] === 'score') {
+      if (tokens[i + 1] === 'cp') cp = Number(tokens[i + 2]);
+      else if (tokens[i + 1] === 'mate') mate = Number(tokens[i + 2]);
+    } else if (tokens[i] === 'pv') {
+      move = tokens[i + 1] ?? null;
+      break; // the pv is the rest of the line; we only want its first move
+    }
+  }
+  if (!index || !move) return undefined;
+  return { index, depth, cp, mate, move };
+}
+
+export type UciMultiPvLine = {
+  /** 1-based MultiPV rank (1 = engine's best). */
+  index: number;
+  /** Root move (first token of the pv), in engine UCI. */
+  move: string;
+  /** Centipawns (side-to-move POV); null when a mate score is present. */
+  cp: number | null;
+  /** Signed moves-to-mate (side-to-move POV); null otherwise. */
+  mate: number | null;
+  /** Depth this row was last reported at. */
+  depth: number;
+};
+
+/**
+ * Like runUciEval, but collects the full MultiPV table: the final-depth `info … multipv …`
+ * rows, one per rank, sorted by rank (index 1 = best). Requires the caller to have set
+ * `setoption name MultiPV value N` in `commands`. Same spawn / hard-timeout / SIGKILL-cleanup
+ * contract as runUciEval. A later (deeper) row for a given index overwrites an earlier one, so
+ * the returned table reflects the deepest scores the search reached before `bestmove`.
+ */
+export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[]> {
+  const { bin, commands, timeoutMs, timeoutMessage } = args;
+  return new Promise<UciMultiPvLine[]>((resolveTable, reject) => {
+    const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let buf = '';
+    let settled = false;
+    const table = new Map<number, UciMultiPvLine>();
+    const advertisedOptions = new Set<string>();
+
+    const finish = (run: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* already gone */
+      }
+      run();
+    };
+
+    const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
+
+    child.on('error', (err) => finish(() => reject(err)));
+    child.stdout.on('data', (chunk: Buffer) => {
+      buf += chunk.toString('utf8');
+      let newline = buf.indexOf('\n');
+      while (newline >= 0) {
+        const line = buf.slice(0, newline).trim();
+        buf = buf.slice(newline + 1);
+        const option = parseUciOptionLine(line);
+        if (option) advertisedOptions.add(option);
+        const protocolError = uciProtocolError(line);
+        if (protocolError) {
+          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+          return;
+        }
+        const row = parseInfoMultiPv(line);
+        if (row) table.set(row.index, row);
+        const move = parseBestmoveLine(line);
+        if (move !== undefined) {
+          finish(() => {
+            try {
+              validateConfiguredUciOptions(commands, advertisedOptions);
+              resolveTable([...table.values()].sort((a, b) => a.index - b.index));
+            } catch (err) {
+              reject(err);
+            }
+          });
           return;
         }
         newline = buf.indexOf('\n');
@@ -321,8 +575,10 @@ export type FairyStockfishMoveRequest = {
   variant: string;
   /** Custom variants.ini path (VariantPath); omit for built-in variants. */
   iniPath?: string;
-  /** Skill Level 0..20 (clamped); omit for full strength. */
+  /** Skill Level -20..20 (clamped); omit for full strength. */
   skill?: number;
+  /** Search depth cap for `go`; used with Skill Level by Lichess/PlayStrategy. */
+  depth?: number;
   /** Node budget for `go`; omit to bound by movetime only. */
   nodes?: number;
   /** Movetime cap in ms for `go`; also sets the hard timeout (movetime + 4000). */
@@ -335,14 +591,16 @@ export type FairyStockfishMoveRequest = {
  * exactly as the per-variant providers did before extraction.
  */
 export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): string[] {
-  const skill = req.skill === undefined ? null : Math.max(0, Math.min(20, Math.floor(req.skill)));
+  const skill = req.skill === undefined ? null : Math.max(-20, Math.min(20, Math.floor(req.skill)));
   const nodes = req.nodes === undefined ? null : Math.max(1, Math.floor(req.nodes));
+  const depth = req.depth === undefined ? null : Math.max(1, Math.floor(req.depth));
   const position =
     req.moves.length > 0 ? `position startpos moves ${req.moves.join(' ')}` : 'position startpos';
   // `go [nodes N] movetime M` stops at whichever limit is reached first: nodes pin
   // strength CPU-independently, movetime guards wall-clock on a slow vCPU.
   const goLimits = [
     ...(nodes === null ? [] : [`nodes ${nodes}`]),
+    ...(depth === null ? [] : [`depth ${depth}`]),
     `movetime ${req.movetimeMs}`,
   ].join(' ');
   return [

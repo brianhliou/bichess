@@ -143,6 +143,45 @@ describe('profile ratings rail', () => {
           { headers: { 'content-type': 'application/json' }, status: 200 },
         );
       }
+      if (url.includes('/api/games/favorites')) {
+        return new Response(
+          JSON.stringify({
+            games: [
+              {
+                roomId: 'saved-xiangqi-1',
+                variant: 'xiangqi',
+                mode: 'pvp',
+                rated: false,
+                result: 'red-wins',
+                termination: 'resignation',
+                plyCount: 48,
+                whiteName: null,
+                blackName: null,
+                corpusId: null,
+                endedAt: '2026-07-01T12:00:00.000Z',
+                participants: [
+                  {
+                    color: 'red',
+                    displayName: 'Red Player',
+                    subjectType: 'user',
+                    subjectId: 'u_red',
+                    visibility: 'public',
+                  },
+                  {
+                    color: 'black',
+                    displayName: 'Black Player',
+                    subjectType: 'user',
+                    subjectId: 'u_black',
+                    visibility: 'public',
+                  },
+                ],
+              },
+            ],
+            total: 1,
+          }),
+          { headers: { 'content-type': 'application/json' }, status: 200 },
+        );
+      }
       return new Response(
         JSON.stringify({
           profile: {
@@ -151,9 +190,12 @@ describe('profile ratings rail', () => {
             user: {
               handle: 'dev-testing',
               displayName: 'dev-testing',
+              bio: 'Learning hidden-information xiangqi.',
+              location: 'Taipei',
+              profileLinks: ['https://example.com/xiangqi'],
               profileVisibility: 'public',
               accountRole: 'player',
-              patronSince: null,
+              patronSince: '2026-06-15T00:00:00.000Z',
               createdAt: '2026-05-01T00:00:00.000Z',
             },
             ratings: [
@@ -248,7 +290,12 @@ describe('profile ratings rail', () => {
     });
     expect(root.querySelector('.profile-rating-chart-empty')).toBeNull();
     expect(root.querySelector('.profile-rating-spotlight')?.textContent).toContain('1662');
-    expect(root.querySelector('.profile-header')?.textContent).toContain('@dev-testing');
+    expect(root.querySelector('.profile-overview')?.textContent).toContain('@dev-testing');
+    const patronBadge = root.querySelector<HTMLAnchorElement>('.profile-role-patron');
+    expect(patronBadge?.getAttribute('href')).toBe('/patron');
+    expect(patronBadge?.querySelector('.profile-patron-icon')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(root.querySelector('.profile-info-card')).toBeNull();
     expect(root.querySelector('.profile-rating-row-selected')?.textContent).toContain(
       'Flip Jungle',
@@ -259,10 +306,17 @@ describe('profile ratings rail', () => {
     expect(root.querySelector('.profile-activity-summary-row')?.textContent).toContain('1 draw');
     expect(root.querySelector('.profile-activity-summary-row')?.textContent).toContain('1 loss');
 
-    // Lichess-style identity block: join date on the meta line, presence dot
-    // ahead of the handle (filled once /api/players/online confirms), and an
-    // Edit profile action on your own profile.
-    expect(root.querySelector('.profile-header-meta')?.textContent).toContain('Member since');
+    // Lichess-style identity block: presence dot ahead of the handle (filled
+    // once /api/players/online confirms), the join date in the side column, and
+    // an Edit profile action on your own profile.
+    expect(root.querySelector('.profile-overview-side')?.textContent).toContain('Member since');
+    expect(root.querySelector('.profile-side-bio')?.textContent).toBe(
+      'Learning hidden-information xiangqi.',
+    );
+    expect(root.querySelector('.profile-overview-side')?.textContent).toContain('Taipei');
+    expect(root.querySelector<HTMLAnchorElement>('.profile-side-links a')?.href).toBe(
+      'https://example.com/xiangqi',
+    );
     expect(root.querySelector('h1 .profile-presence')).not.toBeNull();
     await vi.waitFor(() => {
       expect(root.querySelector('.profile-presence-online')).not.toBeNull();
@@ -271,39 +325,74 @@ describe('profile ratings rail', () => {
       'Online',
     );
     const edit = root.querySelector<HTMLAnchorElement>('.profile-owner-actions a');
-    expect(edit?.getAttribute('href')).toBe('/account');
+    expect(edit?.getAttribute('href')).toBe('/account/settings');
     expect(edit?.textContent).toBe('Edit profile');
 
-    // Counts strip: total games + rated games (sum across buckets); the join
-    // date moved up to the meta line.
-    const stats = root.querySelector('.profile-stats');
-    expect(stats?.textContent).toContain('Rated games');
-    expect(stats?.textContent).toContain('4');
+    // Counts strip under the name: total games + rated games (sum across buckets).
+    const counts = root.querySelector('.profile-counts');
+    expect(counts?.textContent).toContain('Rated games');
+    expect(counts?.textContent).toContain('4');
 
-    // Activity ordering: the played variant leads the rail; unplayed rows trail
-    // dimmed.
+    // Canonical ordering: the rail reads in the shared registry order (xiangqi
+    // first) regardless of activity; played rows stand out by not dimming.
     const railRows = [...root.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    expect(railRows[0]?.dataset.variant).toBe('jungle_flip');
-    expect(railRows[0]?.classList.contains('profile-rating-row-empty')).toBe(false);
+    const { profileRatingVariants } = await import('./variants.js');
+    expect(railRows.map((row) => row.dataset.variant)).toEqual(
+      profileRatingVariants.map((variant) => variant.id),
+    );
+    const flipRow = railRows.find((row) => row.dataset.variant === 'jungle_flip');
+    expect(flipRow?.classList.contains('profile-rating-row-empty')).toBe(false);
     expect(railRows[railRows.length - 1]?.classList.contains('profile-rating-row-empty')).toBe(
       true,
     );
 
+    // Activity / Games are the primary tabs. Saved is private to the profile
+    // owner and lives as a second-level choice inside Games.
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('.profile-tab')];
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Activity', 'Games 2']);
     expect(tabs[1]?.querySelector('.profile-tab-count')?.textContent).toBe('2');
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(root.querySelector('.profile-activity-panel h2')).toBeNull();
+    expect(root.querySelector('.profile-games h2')).toBeNull();
+    expect(root.querySelector<HTMLElement>('.profile-activity-panel')?.hidden).toBe(false);
+    expect(root.querySelector<HTMLElement>('.profile-games-group')?.hidden).toBe(true);
     tabs[1]?.click();
     expect(tabs[1]?.getAttribute('aria-selected')).toBe('true');
     expect(root.querySelector<HTMLElement>('.profile-activity-panel')?.hidden).toBe(true);
+    expect(root.querySelector<HTMLElement>('.profile-games-group')?.hidden).toBe(false);
     expect(root.querySelector<HTMLElement>('.profile-games')?.hidden).toBe(false);
+
+    await vi.waitFor(() => {
+      expect(root.querySelector('.profile-games-subtab-count')?.textContent).toBe('2');
+    });
+    const gameSubtabs = [...root.querySelectorAll<HTMLButtonElement>('.profile-games-subtab')];
+    expect(
+      gameSubtabs.map((tab) => tab.querySelector('.profile-games-subtab-label')?.textContent),
+    ).toEqual(['Games', 'Saved']);
+    expect(gameSubtabs[0]?.querySelector('.profile-games-subtab-count')?.textContent).toBe('2');
+    await vi.waitFor(() => {
+      expect(gameSubtabs[1]?.querySelector('.profile-games-subtab-count')?.textContent).toBe('1');
+    });
+    expect(gameSubtabs[0]?.getAttribute('aria-selected')).toBe('true');
+
+    gameSubtabs[1]?.click();
+    expect(gameSubtabs[1]?.getAttribute('aria-selected')).toBe('true');
+    expect(
+      root.querySelector<HTMLElement>('.profile-games:not(.profile-saved-games)')?.hidden,
+    ).toBe(true);
+    expect(root.querySelector<HTMLElement>('.profile-saved-games')?.hidden).toBe(false);
+    expect(root.querySelector('.profile-saved-games')?.textContent).toContain(
+      'Red Player vs Black Player',
+    );
+    expect(root.querySelector('.profile-saved-games .profile-game-outcome')?.textContent).toBe('★');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/games/favorites?offset=0&limit=15');
 
     // Compact game rows: the date is its own trailing column on the row link.
     const gameRow = root.querySelector('.profile-game-row');
     expect(gameRow?.lastElementChild?.classList.contains('profile-game-date')).toBe(true);
   });
 
-  it('orders the ratings rail by activity with never-played variants trailing', async () => {
+  it('keeps the ratings rail in canonical order with never-played variants dimmed', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const { buildProfileRatings } = await import('./profile.js');
@@ -328,17 +417,22 @@ describe('profile ratings rail', () => {
     ]);
 
     const rows = [...section.querySelectorAll<HTMLElement>('.profile-rating-row')];
-    // Most active first (5 casual fog games beat 2 fortress games), then the
-    // never-played rows in canonical registry order, dimmed.
-    expect(rows.map((row) => row.dataset.variant).slice(0, 2)).toEqual(['fog', 'fortress_xiangqi']);
-    expect(rows[0]?.classList.contains('profile-rating-row-empty')).toBe(false);
-    expect(rows[1]?.classList.contains('profile-rating-row-empty')).toBe(false);
-    expect(rows.slice(2).every((row) => row.classList.contains('profile-rating-row-empty'))).toBe(
-      true,
+    // Canonical registry order throughout (fortress before fog), with played
+    // rows undimmed and every never-played row dimmed.
+    const { profileRatingVariants } = await import('./variants.js');
+    expect(rows.map((row) => row.dataset.variant)).toEqual(
+      profileRatingVariants.map((variant) => variant.id),
     );
+    const played = new Set(['fog', 'fortress_xiangqi']);
+    for (const row of rows) {
+      expect(row.classList.contains('profile-rating-row-empty')).toBe(
+        !played.has(row.dataset.variant ?? ''),
+      );
+    }
     // A played-but-unrated row shows its casual games count.
-    expect(rows[0]?.textContent).toContain('Unrated');
-    expect(rows[0]?.textContent).toContain('5 games');
+    const fogRow = rows.find((row) => row.dataset.variant === 'fog');
+    expect(fogRow?.textContent).toContain('Unrated');
+    expect(fogRow?.textContent).toContain('5 games');
   });
 
   it('distinguishes unavailable profile data from a missing profile', async () => {
@@ -410,7 +504,7 @@ describe('profile ratings rail', () => {
     expect(root.textContent).not.toContain('Crossroads Chess');
     // Xiangqi pivot: Drop Mini is off the grids; Fortress is an always-on ladder.
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
-    expect(root.textContent).toContain('Fortress');
+    expect(root.textContent).toContain('Fortress Xiangqi');
     expect(root.textContent).toContain('Human blitz ladders');
     // 4 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress).
     expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(4);
@@ -508,13 +602,13 @@ describe('profile ratings rail', () => {
     // Ladders absent from the summary render the no-rated-games state.
     expect(root.textContent).toContain('No rated games yet.');
 
-    // Canonical order: Fortress (first enabled ladder) leads even with no data,
+    // Canonical order: Jungle (first enabled ladder) leads even with no data,
     // and the populated Dark Chess ladder stays LAST at its canonical index —
     // no populated-first reordering.
     const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
       (el) => el.textContent,
     );
-    expect(titles[0]).toBe('Fortress');
+    expect(titles[0]).toBe('Jungle Chess');
     const panels = [...root.querySelectorAll('.leaderboard-panel')];
     expect(panels[0]?.textContent).toContain('No rated games yet.');
     expect(panels[panels.length - 1]?.textContent).toContain('1520');

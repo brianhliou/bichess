@@ -1,6 +1,7 @@
 # Font credits
 
-- `noto-sans-latin-*.woff2` — Noto Sans, Google. Licensed under the
+- `noto-sans-latin.woff2` — Noto Sans variable font, reused from lila's
+  self-hosted font bundle. Licensed under the
   [SIL Open Font License 1.1](https://openfontlicense.org/).
 - `roboto-latin.20b535fa.woff2` — Roboto, Google. Licensed under the
   [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).

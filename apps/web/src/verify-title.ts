@@ -10,12 +10,13 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
   isPlayerTitle,
-  PLAYER_TITLES,
   type PlayerTitle,
+  REQUESTABLE_PLAYER_TITLES,
   titleAbbr,
   titleFullName,
 } from './player-titles.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
 
 // Mirrors TITLE_EVIDENCE_MAX in apps/server/src/routes/titles.ts.
 const EVIDENCE_MAX = 4000;
@@ -37,9 +38,12 @@ export async function mountVerifyTitle(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'verify-title-route');
 
+  // Rendered inside the shared /about rail + panel (lichess's title page lives
+  // in the same site menu). The shell is still mutated async below; wrapping the
+  // element reference keeps those updates intact.
   const shell = document.createElement('main');
   shell.className = 'site-section verify-title-shell';
-  root.append(buildNav(locale), shell);
+  root.append(buildNav(locale), buildStaticPageLayout('title', shell, locale));
 
   let payload: MyRequestPayload;
   try {
@@ -165,7 +169,7 @@ function buildForm(
   placeholder.value = '';
   placeholder.textContent = t('verifyTitle.titleChoose', {}, locale);
   select.append(placeholder);
-  for (const title of PLAYER_TITLES) {
+  for (const title of REQUESTABLE_PLAYER_TITLES) {
     const option = document.createElement('option');
     option.value = title;
     option.textContent = titleLabel(title, locale);

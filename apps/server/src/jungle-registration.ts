@@ -1,8 +1,8 @@
 /**
  * Jungle registry entry. Owns the tenant's live-room map, the room-factory binding,
  * and hydration. PvP, live-clock only at this checkpoint (PvE bot + correspondence
- * come later). No lobby surface yet — the lobby route answers jungle_not_integrated
- * while the flag is on. Imported for side effects by variant-tenant/register-tenants.ts.
+ * come later). Matchmaking is casual random-seat (unrated). Imported for side
+ * effects by variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
@@ -10,6 +10,7 @@ import type { JungleCreatorPreference, JungleRuntimeRoom } from './jungle-runtim
 import { jungleTenant } from './jungle-tenant.js';
 import * as persistence from './persistence.js';
 import { handleJungleCreate, requestsJungle } from './routes/jungle-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   createJungleLiveRoom,
   type JungleLiveRoomCreation,
@@ -94,6 +95,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleJungleCreate({ ...ctx, createJungleRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createJungleRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`jungle_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

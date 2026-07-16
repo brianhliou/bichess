@@ -1,6 +1,6 @@
-export type Locale = 'en' | 'zh-Hans' | 'zh-Hant' | 'ja';
+export type Locale = 'en' | 'zh-Hans' | 'zh-Hant';
 
-export const APP_LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant', 'ja'];
+export const SUPPORTED_LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant'];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_STORAGE_KEY = 'mistboard.locale';
@@ -31,16 +31,10 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
     htmlLang: 'zh-Hant',
     pathPrefix: '/zh-hant',
   },
-  ja: {
-    dateLocale: 'ja-JP',
-    displayName: '日本語',
-    htmlLang: 'ja',
-    pathPrefix: '/ja',
-  },
 };
 
 export function isLocale(value: string | null | undefined): value is Locale {
-  return APP_LOCALES.includes(value as Locale);
+  return SUPPORTED_LOCALES.includes(value as Locale);
 }
 
 export function isArticleLocale(
@@ -53,7 +47,6 @@ export function localeFromPath(pathname = currentPathname()): Locale | null {
   const lower = pathname.toLowerCase();
   if (lower === '/zh-hans' || lower.startsWith('/zh-hans/')) return 'zh-Hans';
   if (lower === '/zh-hant' || lower.startsWith('/zh-hant/')) return 'zh-Hant';
-  if (lower === '/ja' || lower.startsWith('/ja/')) return 'ja';
   return null;
 }
 
@@ -87,7 +80,6 @@ export function browserLocale(): Locale | null {
 export function localeFromLanguageTag(language: string | null | undefined): Locale | null {
   if (!language) return null;
   const tag = language.toLowerCase();
-  if (tag === 'ja' || tag.startsWith('ja-')) return 'ja';
   if (tag === 'zh-hans' || tag === 'zh-cn' || tag === 'zh-sg') return 'zh-Hans';
   if (
     tag === 'zh-hant' ||
@@ -106,12 +98,13 @@ export function currentLocale(): Locale {
   return localeFromPath() ?? storedLocale() ?? browserLocale() ?? DEFAULT_LOCALE;
 }
 
-export function applyAccountLocalePreference(locale: Locale | null | undefined): boolean {
+export function applyAccountLocalePreference(locale: string | null | undefined): boolean {
   if (!locale || localeFromPath()) return false;
   const previous = currentLocale();
-  setStoredLocale(locale);
-  applyDocumentLocale(locale);
-  return previous !== locale;
+  const supportedLocale = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  setStoredLocale(supportedLocale);
+  applyDocumentLocale(supportedLocale);
+  return previous !== supportedLocale;
 }
 
 export function initializeLocaleFromCurrentUrl(): Locale {
@@ -143,7 +136,7 @@ export function contentLocalePrefix(locale: Locale): string {
 export function stripLocalePrefix(path: string): string {
   const { pathname, suffix } = splitPathSuffix(path);
   const lower = pathname.toLowerCase();
-  for (const locale of APP_LOCALES) {
+  for (const locale of SUPPORTED_LOCALES) {
     const prefix = LOCALE_META[locale].pathPrefix;
     if (!prefix) continue;
     if (lower === prefix || lower.startsWith(`${prefix}/`)) {

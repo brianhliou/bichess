@@ -274,7 +274,8 @@
 }
 
 .appearance-menu-row:hover,
-.appearance-menu-row:focus-visible {
+.appearance-menu-row:focus-visible,
+.appearance-menu-row:active {
   background: var(--site-accent);
   color: var(--site-on-accent);
 }
@@ -668,27 +669,31 @@
 }
 
 /* Crossroads is a hybrid surface: chess board themes color the cells; xiangqi
-   board styles color the frame, edge, coordinates, and river accent. */
+   board styles color the coordinates and river accent. */
 :root,
 :root[data-xiangqi-board-theme="international"] {
-  --crossroads-frame: #5b4636;
-  --crossroads-frame-inner: #6e5743;
-  --crossroads-board-edge: #3a2c20;
   --crossroads-coord: rgba(60, 45, 30, 0.55);
   --crossroads-river: #5aa0d6;
   --crossroads-river-highlight: rgba(255, 255, 255, 0.4);
 }
 
 :root[data-xiangqi-board-theme="traditional"] {
-  --crossroads-frame: #5b4636;
-  --crossroads-frame-inner: #6e5743;
-  --crossroads-board-edge: #3a2c20;
   --crossroads-coord: rgba(60, 45, 30, 0.55);
   --crossroads-river: #5aa0d6;
   --crossroads-river-highlight: rgba(255, 255, 255, 0.4);
 }
 
 /* Xiangqi board swatches (presentation style, not an open-ended colour picker). */
+.theme-tile-preview-xqboard[data-id="cell"] {
+  background-color: #f5dca8;
+  background-image: conic-gradient(
+    rgba(90, 58, 20, 0.12) 25%,
+    transparent 0 50%,
+    rgba(90, 58, 20, 0.12) 0 75%,
+    transparent 0
+  );
+  background-size: 16px 16px;
+}
 .theme-tile-preview-xqboard[data-id="international"] {
   background: #f5dca8;
 }
@@ -1251,7 +1256,7 @@
   color: var(--site-heading);
 }
 
-:root[data-effective-theme="dark"] .clocks .clock-to-move {
+:root[data-effective-theme="dark"] .clock-to-move {
   background: var(--site-accent-soft);
   color: var(--site-accent-strong);
 }

@@ -25,14 +25,20 @@ export function buildLearnHome(options: LearnHomeOptions): HTMLElement {
   const title = document.createElement('h1');
   title.id = 'learn-home-title';
   title.className = 'learn-heading';
-  title.textContent = 'Learn dark chess';
+  title.textContent = 'Learn to play';
 
   const copy = document.createElement('p');
   copy.className = 'learn-copy';
   copy.textContent =
-    'Short interactive modules for the parts of dark chess that normal chess does not teach: vision, hidden moves, king capture, and information mistakes.';
+    'Interactive courses that teach by playing: guided levels on a live board, from your first piece move to full games.';
 
   intro.append(eyebrow, title, copy);
+
+  page.append(intro, buildXiangqiCourseCard());
+
+  const darkChessHeading = document.createElement('h2');
+  darkChessHeading.className = 'learn-home-section-title';
+  darkChessHeading.textContent = 'Dark chess modules';
 
   const grid = document.createElement('div');
   grid.className = 'learn-module-grid';
@@ -40,8 +46,29 @@ export function buildLearnHome(options: LearnHomeOptions): HTMLElement {
     grid.append(buildLearnModuleSection(group, options));
   }
 
-  page.append(intro, grid);
+  page.append(darkChessHeading, grid);
   return page;
+}
+
+// The interactive xiangqi course (lichess /learn parity) leads the hub; the
+// dark-chess modules stay below, untouched (fog surfaces live but not the bet).
+function buildXiangqiCourseCard(): HTMLElement {
+  const card = document.createElement('a');
+  card.className = 'learn-course-card';
+  card.href = '/learn/xiangqi';
+  const text = document.createElement('div');
+  text.className = 'learn-course-card-text';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Learn xiangqi, by playing!';
+  const sub = document.createElement('p');
+  sub.textContent =
+    'The interactive beginner course for Chinese chess: move the pieces, grab the stars, deliver your first checkmate.';
+  text.append(heading, sub);
+  const cta = document.createElement('span');
+  cta.className = 'learn-course-card-cta';
+  cta.textContent = 'Start learning';
+  card.append(text, cta);
+  return card;
 }
 
 function buildLearnModuleSection(group: LearnModuleGroup, options: LearnHomeOptions): HTMLElement {

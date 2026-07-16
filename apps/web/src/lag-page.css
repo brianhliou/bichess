@@ -1,0 +1,62 @@
+/* /lag: "Is Mistboard lagging?" live meters. */
+
+.lag-answer {
+  margin: 6px 0 22px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--site-muted);
+}
+
+.lag-answer.good {
+  color: var(--site-accent);
+}
+
+.lag-answer.bad {
+  color: #d4645d;
+}
+
+.lag-meter-block {
+  margin: 22px 0;
+}
+
+.lag-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 8px;
+}
+
+.lag-meter {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--site-panel-soft);
+  border: 1px solid var(--site-border-soft);
+  overflow: hidden;
+}
+
+.lag-meter-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--site-accent);
+  transition:
+    width 0.4s ease,
+    background 0.4s ease;
+}
+
+.lag-meter-fill.ok {
+  background: #e0a94b;
+}
+
+.lag-meter-fill.bad {
+  background: #d4645d;
+}
+
+.lag-value {
+  min-width: 70px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--site-heading);
+}

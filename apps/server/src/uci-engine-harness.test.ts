@@ -4,14 +4,39 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after } from 'node:test';
 import {
+  aggregateEnginePoolStats,
   boundedEnvInt,
   buildFairyStockfishCommands,
+  configuredUciOptionNames,
   parseBestmoveLine,
+  parseInfoMultiPv,
+  parseUciOptionLine,
   runUciBestmove,
   UciEnginePool,
 } from './uci-engine-harness.js';
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ── parseInfoMultiPv ──────────────────────────────────────────────────────────
+
+test('parseInfoMultiPv extracts rank, score, and the pv first move', () => {
+  const row = parseInfoMultiPv(
+    'info depth 10 seldepth 14 multipv 2 score cp -340 nodes 12345 pv c6c5 e3e4 g0e2',
+  );
+  assert.deepEqual(row, { index: 2, depth: 10, cp: -340, mate: null, move: 'c6c5' });
+});
+
+test('parseInfoMultiPv reads a mate score', () => {
+  const row = parseInfoMultiPv('info depth 20 multipv 1 score mate 3 pv e7e8');
+  assert.deepEqual(row, { index: 1, depth: 20, cp: null, mate: 3, move: 'e7e8' });
+});
+
+test('parseInfoMultiPv returns undefined without multipv, score, or pv', () => {
+  assert.equal(parseInfoMultiPv('info depth 10 score cp 20 pv e2e4'), undefined); // no multipv
+  assert.equal(parseInfoMultiPv('info depth 10 multipv 1 pv e2e4'), undefined); // no score
+  assert.equal(parseInfoMultiPv('info string hashfull 0'), undefined);
+  assert.equal(parseInfoMultiPv('bestmove e2e4'), undefined);
+});
 
 // ── boundedEnvInt ─────────────────────────────────────────────────────────────
 
@@ -50,6 +75,23 @@ test('parseBestmoveLine extracts the move token', () => {
 test('parseBestmoveLine maps no-move outputs to null', () => {
   assert.equal(parseBestmoveLine('bestmove (none)'), null);
   assert.equal(parseBestmoveLine('bestmove'), null);
+});
+
+test('UCI option parsing handles multi-word names and configured values', () => {
+  assert.equal(
+    parseUciOptionLine('option name Skill Level type spin default 20 min 0 max 20'),
+    'Skill Level',
+  );
+  assert.equal(parseUciOptionLine('option name EvalFile type string default net.nnue'), 'EvalFile');
+  assert.equal(parseUciOptionLine('uciok'), undefined);
+  assert.deepEqual(
+    configuredUciOptionNames([
+      'uci',
+      'setoption name EvalFile value /tmp/net.nnue',
+      'setoption name Clear Hash',
+    ]),
+    ['EvalFile', 'Clear Hash'],
+  );
 });
 
 // ── buildFairyStockfishCommands ───────────────────────────────────────────────
@@ -114,7 +156,7 @@ test('buildFairyStockfishCommands: drop-mini shape (ini + node budget)', () => {
   ]);
 });
 
-test('buildFairyStockfishCommands: omits Skill Level when undefined and clamps to 0..20', () => {
+test('buildFairyStockfishCommands: supports Lichess negative skill and a depth cap', () => {
   const noSkill = buildFairyStockfishCommands({ moves: [], variant: 'x', movetimeMs: 100 });
   assert.ok(!noSkill.some((c) => c.includes('Skill Level')));
   const overMax = buildFairyStockfishCommands({
@@ -127,10 +169,12 @@ test('buildFairyStockfishCommands: omits Skill Level when undefined and clamps t
   const underMin = buildFairyStockfishCommands({
     moves: [],
     variant: 'x',
-    skill: -5,
+    skill: -99,
+    depth: 5,
     movetimeMs: 100,
   });
-  assert.ok(underMin.includes('setoption name Skill Level value 0'));
+  assert.ok(underMin.includes('setoption name Skill Level value -20'));
+  assert.ok(underMin.includes('go depth 5 movetime 100'));
 });
 
 // ── UciEnginePool ─────────────────────────────────────────────────────────────
@@ -188,6 +232,53 @@ test('UciEnginePool rejects a queued waiter after the queue timeout', async () =
   delete process.env.TEST_POOL_TIMEOUT;
 });
 
+test('UciEnginePool stats track active, queue depth, waits, and timeouts (#203)', async () => {
+  process.env.TEST_POOL_MAX = '1';
+  process.env.TEST_POOL_TIMEOUT = '80';
+  const pool = new UciEnginePool({
+    name: 'test-instrumented',
+    maxProcessesEnvVar: 'TEST_POOL_MAX',
+    queueTimeoutEnvVar: 'TEST_POOL_TIMEOUT',
+    queueTimeoutMessage: 'instrumented queue timed out',
+  });
+
+  const release1 = await pool.acquire();
+  let stats = pool.stats();
+  assert.equal(stats.name, 'test-instrumented');
+  assert.equal(stats.active, 1);
+  assert.equal(stats.acquired, 1);
+  assert.equal(stats.queueDepth, 0);
+
+  // A second acquire queues (over the cap): queue depth + wait counter rise.
+  const keepAlive = setInterval(() => {}, 20);
+  try {
+    const queued = assert.rejects(pool.acquire(), /instrumented queue timed out/);
+    await delay(10);
+    stats = pool.stats();
+    assert.equal(stats.queueDepth, 1);
+    assert.equal(stats.waited, 1);
+    assert.equal(stats.peakQueueDepth, 1);
+    assert.equal(stats.timedOut, 0);
+    await queued; // let the queued waiter hit the timeout
+  } finally {
+    clearInterval(keepAlive);
+  }
+  stats = pool.stats();
+  assert.equal(stats.queueDepth, 0);
+  assert.equal(stats.timedOut, 1);
+
+  // The pool is registered, so the aggregate reflects it (per-pool + totals).
+  const agg = aggregateEnginePoolStats();
+  const mine = agg.pools.find((p) => p.name === 'test-instrumented');
+  assert.ok(mine, 'registered pool appears in aggregate');
+  assert.equal(mine?.timedOut, 1);
+  assert.ok(agg.totals.timedOut >= 1);
+
+  release1();
+  delete process.env.TEST_POOL_MAX;
+  delete process.env.TEST_POOL_TIMEOUT;
+});
+
 // ── runUciBestmove (fake UCI binary; no real engine needed) ──────────────────
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'uci-harness-'));
@@ -215,6 +306,23 @@ process.stdin.on('data', (chunk) => {
 });`,
 );
 
+const optionResponderBin = writeFakeEngine(
+  'option-responder.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') {
+      process.stdout.write('option name EvalFile type string default net.nnue\\nuciok\\n');
+    }
+    if (line.startsWith('go')) process.stdout.write('bestmove d2d3\\n');
+  }
+});`,
+);
+
 test('runUciBestmove spawns, sends commands, and resolves the bestmove', async () => {
   const move = await runUciBestmove({
     bin: responderBin,
@@ -223,6 +331,26 @@ test('runUciBestmove spawns, sends commands, and resolves the bestmove', async (
     timeoutMessage: 'should not time out',
   });
   assert.equal(move, 'd2d3');
+});
+
+test('runUciBestmove accepts advertised setoptions and rejects unsupported ones', async () => {
+  const move = await runUciBestmove({
+    bin: optionResponderBin,
+    commands: ['uci', 'setoption name EvalFile value /tmp/net.nnue', 'go movetime 50'],
+    timeoutMs: 4_000,
+    timeoutMessage: 'should not time out',
+  });
+  assert.equal(move, 'd2d3');
+
+  await assert.rejects(
+    runUciBestmove({
+      bin: optionResponderBin,
+      commands: ['uci', 'setoption name Skill Level value 6', 'go movetime 50'],
+      timeoutMs: 4_000,
+      timeoutMessage: 'should not time out',
+    }),
+    /does not advertise configured option.*Skill Level/,
+  );
 });
 
 test('runUciBestmove rejects with the timeout message when no bestmove arrives', async () => {

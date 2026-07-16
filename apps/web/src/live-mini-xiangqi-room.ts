@@ -27,7 +27,7 @@ import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { rematchControls } from './rematch-controls.js';
-import { setBoardFamily } from './theme.js';
+import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import { createTenantReplayController } from './variant-tenant/replay-controller.js';
@@ -63,6 +63,10 @@ let dragFrom: MiniXiangqiSquare | null = null;
 // once per distinct board element and re-used across innerHTML re-renders.
 let dragBoardEl: HTMLElement | null = null;
 let uninstallClickAway: (() => void) | null = null;
+// Installed once: repaint when the viewer changes their xiangqi piece set in
+// settings, so a live DMX board hot-reloads the set instead of keeping the one
+// it mounted with (mirrors the chess family's boardAppearanceChangedEvent hook).
+let appearanceListenerInstalled = false;
 let lastCapturedView: MiniXiangqiPlayerView | null = null;
 let lastCapturedPositionKey: string | null = null;
 let renderCallbacks: { reconnectNow: () => void; sendSocket: (payload: unknown) => boolean } = {
@@ -174,6 +178,12 @@ export function renderDarkMiniXiangqiRoom(
   installMiniXiangqiBoardStyles();
   renderCallbacks = callbacks;
   lastRefs = refs;
+  if (!appearanceListenerInstalled) {
+    window.addEventListener(xiangqiAppearanceChangedEvent, () => {
+      if (lastRefs) renderDarkMiniXiangqiRoom(lastRefs, renderCallbacks);
+    });
+    appearanceListenerInstalled = true;
+  }
   if (dragBoardEl !== refs.board) {
     uninstallClickAway?.();
     installMiniXiangqiBoardDrag(refs);
@@ -450,15 +460,8 @@ function renderVisibleMoveList(refs: LiveRefs): void {
   // is the full game length, not the scrubbed ply.
   const totalPly = replay.latestPly();
   refs.moveList.replaceChildren();
-  if (totalPly === 0) {
-    const item = document.createElement('li');
-    item.className = ['move-row', isOpenMiniXiangqiLiveRoom() ? '' : 'masked']
-      .filter(Boolean)
-      .join(' ');
-    item.textContent = isOpenMiniXiangqiLiveRoom() ? 'No moves yet' : 'No visible moves yet';
-    refs.moveList.append(item);
-    return;
-  }
+  // Zero moves renders an empty list (lichess parity): no placeholder row.
+  if (totalPly === 0) return;
   const activePly = replay.activePly();
   for (const row of visibleMoveRows(moves, totalPly)) {
     const item = document.createElement('li');

@@ -23,9 +23,11 @@ describe('Crossroads Chess watch replay', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
+    const onPlyChange = vi.fn();
 
     const handle = await mountCrossroadsChessWatchReplay(root, 'dchess_watch', {
       autoplay: false,
+      onPlyChange,
     });
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/crossroads-chess/games/dchess_watch');
@@ -41,9 +43,11 @@ describe('Crossroads Chess watch replay', () => {
     expect(root.textContent).toContain('Ply 0 / 1');
     expect(root.querySelectorAll('.crossroads-live-svg')).toHaveLength(1);
     expect(root.querySelector('.watch-crossroads-layout .crossroads-watch-board')).not.toBeNull();
+    expect(onPlyChange).toHaveBeenLastCalledWith(0, 1);
 
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
     expect(root.textContent).toContain('Ply 1 / 1 - White wins');
+    expect(onPlyChange).toHaveBeenLastCalledWith(1, 1);
     root.querySelector<HTMLButtonElement>('[aria-label="Flip board"]')?.click();
     expect(root.querySelectorAll('.crossroads-live-svg')).toHaveLength(1);
 

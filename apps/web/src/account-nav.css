@@ -127,6 +127,15 @@
   display: flex;
 }
 
+/* Keep pointer/touch feedback inside the authored menu states. Mobile WebKit
+   otherwise paints its own blue tap highlight before :hover/:active settles,
+   and a small pointer drag can briefly select an anchor label. */
+.account-nav-panel a,
+.account-nav-panel button {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
 .account-nav-links {
   padding: 5px 0;
 }
@@ -158,13 +167,15 @@
 }
 
 .account-nav-item:hover,
-.account-nav-item:focus-visible {
+.account-nav-item:focus-visible,
+.account-nav-item:active {
   background: var(--site-accent);
   color: var(--site-on-accent);
 }
 
 .account-nav-item-danger:hover,
-.account-nav-item-danger:focus-visible {
+.account-nav-item-danger:focus-visible,
+.account-nav-item-danger:active {
   background: #d32f2f;
   color: #fff;
 }
@@ -209,22 +220,6 @@
   height: 1px;
   background: var(--site-border);
   margin: 0;
-}
-
-/* Admin-only tool group (issue #134): a labeled, faintly tinted block that sets
-   the internal /database + /engines surfaces apart from everyday account rows. */
-.account-nav-admin {
-  background: color-mix(in srgb, var(--site-accent) 7%, transparent);
-}
-
-.account-nav-heading {
-  margin: 0;
-  padding: 8px 16px 4px;
-  color: var(--site-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 /* Connection footer (PING / SERVER + signal bars), lichess profile-menu style. */

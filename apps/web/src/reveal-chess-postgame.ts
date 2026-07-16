@@ -12,6 +12,7 @@ import './dark-xiangqi-postgame.css';
 import { revealChessEnabled } from './feature-flags.js';
 import { fillCapturedPool } from './live-reveal-chess.js';
 import { renderRevealChessBoardSvg } from './reveal-chess-render.js';
+import { buildReviewMeta } from './review/game-review-meta.js';
 import { mountReviewLayout } from './review/review-layout.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -32,6 +33,12 @@ export type RevealChessPostgameResponse = {
     visibility: string;
     initialMs: number | null;
     incrementMs: number | null;
+    players?: Array<{
+      color: string;
+      name: string;
+      rating: number | null;
+      kind: 'account' | 'guest' | 'engine';
+    }>;
   };
   state: {
     status: RevealChessGameStatus;
@@ -126,14 +133,22 @@ function renderPostgame(root: HTMLElement, postgame: RevealChessPostgameResponse
     return { entry, el, board, capturesTop, capturesBottom };
   });
 
+  const status = `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
+    markerId: 'reveal-chess',
+    variantName: 'Reveal Chess',
+    game: postgame.game,
+    status,
+  });
+
   root.replaceChildren(buildNav());
   mountReviewLayout(root, {
     pageClassName: 'reveal-chess-review',
     ariaLabel: 'Reveal Chess postgame',
     title: 'Reveal Chess',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    actions: postgameActions(postgame),
-    details: detailsPanel(postgame),
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
     moves: timelinePanel(postgame),
     boards: targets.map((target) => ({
       key: target.entry.key,
@@ -213,41 +228,6 @@ export function postgameViewAtPly(
   return selected?.view ?? null;
 }
 
-// No Reveal Chess play-again room action exists yet (PvP-only, no engine), so the
-// review offers only the Back home + Room links — no fabricated server action.
-function postgameActions(postgame: RevealChessPostgameResponse): HTMLElement {
-  const actions = document.createElement('nav');
-  actions.className = 'dxq-postgame__actions';
-  actions.setAttribute('aria-label', 'Game links');
-  const home = document.createElement('a');
-  home.className = 'dxq-postgame__link';
-  home.href = '/';
-  home.textContent = 'Back home';
-  const room = document.createElement('a');
-  room.className = 'dxq-postgame__link';
-  room.href = `/room/${encodeURIComponent(postgame.game.roomId)}`;
-  room.textContent = 'Room';
-  actions.append(home, room);
-  return actions;
-}
-
-function detailsPanel(postgame: RevealChessPostgameResponse): HTMLElement {
-  const panel = document.createElement('section');
-  panel.className = 'dxq-postgame__panel';
-  const heading = document.createElement('h2');
-  heading.textContent = 'Game';
-  const details = document.createElement('dl');
-  details.className = 'dxq-postgame__details';
-  details.append(
-    detailRow('Result', resultLabel(postgame.game.result)),
-    detailRow('Ending', labelize(postgame.game.termination)),
-    detailRow('Clock', timeControlLabel(postgame)),
-    detailRow('Ended', dateLabel(postgame.game.endedAt)),
-  );
-  panel.append(heading, details);
-  return panel;
-}
-
 function timelinePanel(postgame: RevealChessPostgameResponse): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'dxq-postgame__panel';
@@ -277,16 +257,6 @@ function timelinePanel(postgame: RevealChessPostgameResponse): HTMLElement {
   }
   panel.append(heading, list);
   return panel;
-}
-
-function detailRow(label: string, value: string): HTMLElement {
-  const row = document.createElement('div');
-  const dt = document.createElement('dt');
-  dt.textContent = label;
-  const dd = document.createElement('dd');
-  dd.textContent = value;
-  row.append(dt, dd);
-  return row;
 }
 
 function loadingView(): HTMLElement {
@@ -333,32 +303,6 @@ function resultLabel(result: string): string {
   if (result === 'black-wins') return 'Black wins';
   if (result === 'draw') return 'Draw';
   return labelize(result);
-}
-
-function timeControlLabel(postgame: RevealChessPostgameResponse): string {
-  const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
-  const incrementMs = postgame.game.incrementMs ?? postgame.state.timeControl?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return 'Untimed';
-  return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
-}
-
-function clockLabel(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function dateLabel(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function labelize(value: string): string {

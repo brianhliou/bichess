@@ -1,8 +1,10 @@
 import { JUNGLE_FLIP_SAMPLE_GAME } from '../../jungle-flip-sample-game.js';
 import {
+  JUNGLE_FLIP_CAPTURE,
+  JUNGLE_FLIP_MOVE,
   JUNGLE_FLIP_MUTUAL,
+  JUNGLE_FLIP_REVEAL,
   JUNGLE_FLIP_SETUP,
-  JUNGLE_FLIP_TURN,
   JUNGLE_RANK_LADDER,
   playClosing,
 } from '../diagrams.js';
@@ -17,13 +19,18 @@ export const jungleFlipArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
+  updatedAt: '2026-07-12',
   playableOnMistboard: true,
   audience:
     'Jungle players who want the flip variant, and anyone who grew up playing 翻翻棋 on a chalk grid.',
   intro: [
     {
       kind: 'paragraph',
-      text: 'Flip Jungle is Mistboard\'s public name for the small, fast cousin of [Jungle Chess](/rules/jungle), commonly called 翻翻棋 or 兽棋. The same eight animals per side are shuffled face-down on a four-by-four grid, identities hidden until you turn them over. It is a casual favorite played on chalk grids and phone screens across China. No rivers, no dens, no traps, just the animals, the rank ladder, and a gamble on what sits under each tile.',
+      text: 'Flip Jungle is a small, fast relative of [Jungle Chess](/rules/jungle), built around the same eight ranked animals. Chinese names include 翻翻棋, roughly “flip-flip chess,” and 兽棋, “animal chess.” English speakers may also encounter Flip Animal Chess. All sixteen animals begin face-down on a four-by-four grid. There are no rivers, dens, or traps.',
+    },
+    {
+      kind: 'paragraph',
+      text: 'Its turn structure is especially close to [Flip Xiangqi](/rules/flip-xiangqi): reveal one unknown tile or move one of your revealed pieces. The board and pieces are different, but both games turn each flip into a choice between gaining information and improving position.',
     },
   ],
   sections: [
@@ -37,6 +44,15 @@ export const jungleFlipArticle: Article = {
         {
           kind: 'raw-svg',
           svg: JUNGLE_FLIP_SETUP,
+        },
+      ],
+    },
+    {
+      heading: 'Animal ranks',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Both colors use the same ladder. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. The rat still has one exception: it can capture the elephant, while the elephant cannot capture the rat.',
         },
         {
           kind: 'raw-svg',
@@ -52,9 +68,15 @@ export const jungleFlipArticle: Article = {
           kind: 'paragraph',
           text: 'On your turn you either flip one face-down tile to reveal it, or move one of your own revealed animals one square up, down, left, or right. Early on, before pieces come up, flipping is all you can do.',
         },
+        { kind: 'sub-heading', text: 'Flip a tile' },
         {
           kind: 'raw-svg',
-          svg: JUNGLE_FLIP_TURN,
+          svg: JUNGLE_FLIP_REVEAL,
+        },
+        { kind: 'sub-heading', text: 'Move an animal' },
+        {
+          kind: 'raw-svg',
+          svg: JUNGLE_FLIP_MOVE,
         },
       ],
     },
@@ -63,11 +85,21 @@ export const jungleFlipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Capture an adjacent enemy you outrank, with the same rat-beats-elephant exception as the full game. Equal ranks work differently here. When an animal meets an enemy of its own rank, both leave the board (同归于尽, “they perish together”), and neither side keeps the square. Because identities stay hidden until contact, every attack is a bet, and the mutual-destruction rule raises the price of guessing wrong.',
+          text: 'Move onto an adjacent enemy to capture it when your animal outranks it. The rat-beats-elephant exception from Jungle Chess still applies.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: JUNGLE_FLIP_CAPTURE,
+          caption: 'A lion captures a lower-ranked wolf.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Equal ranks work differently. When an animal captures an enemy of its own rank, both pieces leave the board (同归于尽, “they perish together”), and neither side keeps the square.',
         },
         {
           kind: 'raw-svg',
           svg: JUNGLE_FLIP_MUTUAL,
+          caption: 'Equal animals remove each other.',
         },
       ],
     },
@@ -115,14 +147,12 @@ export const jungleFlipArticle: Article = {
       ],
     },
     playClosing({
-      heading: 'Where to next',
-      lead: 'Flip Jungle is playable on Mistboard: take on MistyJungleFlip, or challenge a friend. Jungle Chess is the full 7×9 game these animals come from.',
-      playLabel: 'Play MistyJungleFlip',
+      heading: 'Play on Mistboard',
+      lead: 'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle-flip',
       secondary: [
         { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jungle-flip', emphasis: 'secondary' },
-        { label: 'Jungle Chess', href: '/rules/jungle', emphasis: 'secondary' },
-        { label: 'All rules', href: '/rules', emphasis: 'secondary' },
       ],
     }),
   ],

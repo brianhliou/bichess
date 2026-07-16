@@ -7,12 +7,20 @@ import type { JungleFlipColor } from '@mistboard/game';
 // label, falling back to move order before the flip binds. Import-light on purpose so
 // result-only surfaces can reuse it without pulling in board renderers.
 
+export function jungleFlipSeatInk(
+  seat: JungleFlipColor,
+  firstColor: JungleFlipColor | null,
+): JungleFlipColor | null {
+  if (firstColor === null) return null;
+  return seat === 'red' ? firstColor : firstColor === 'red' ? 'black' : 'red';
+}
+
 export function jungleFlipSeatInkLabel(
   seat: JungleFlipColor,
   firstColor: JungleFlipColor | null,
 ): string {
   if (firstColor === null) return seat === 'red' ? 'First' : 'Second';
-  const ink = seat === 'red' ? firstColor : firstColor === 'red' ? 'black' : 'red';
+  const ink = jungleFlipSeatInk(seat, firstColor);
   return ink === 'red' ? 'Red' : 'Black';
 }
 

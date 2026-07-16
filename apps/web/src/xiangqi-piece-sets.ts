@@ -3,8 +3,9 @@
 // Covers all seven xiangqi roles (general/advisor/elephant/horse/chariot/cannon/
 // soldier) so the same sets serve both Dark Mini Xiangqi (which uses five of them)
 // and full Dark Xiangqi. Image sets are the international default and the
-// Dobutsu animal set; glyph sets cover traditional/simplified Hanzi, Western
-// Latin initials, and stroked line-art symbols.
+// Dobutsu animal set. The Chess-style prototype reuses the international art
+// without its surrounding disc; glyph sets cover traditional/simplified Hanzi,
+// Western Latin initials, and stroked line-art symbols.
 // Chinese characters render from baked Noto Sans CJK SC Bold outlines (see
 // cjkGlyphMark) so the live board matches the OG cards and variant mini-boards.
 
@@ -13,6 +14,7 @@ import type { XiangqiColor, XiangqiPiece, XiangqiPieceRole } from '@mistboard/ga
 
 export type XiangqiPieceSet =
   | 'international'
+  | 'international-flat'
   | 'animal-dobutsu'
   | 'traditional'
   | 'simplified'
@@ -22,6 +24,7 @@ export type XiangqiShroudedStyle = 'question' | 'back';
 
 export const XIANGQI_PIECE_SETS: ReadonlyArray<{ id: XiangqiPieceSet; label: string }> = [
   { id: 'international', label: 'International' },
+  { id: 'international-flat', label: 'Chess-style' },
   { id: 'animal-dobutsu', label: 'Animal Dobutsu' },
   { id: 'traditional', label: 'Traditional' },
   { id: 'simplified', label: 'Simplified' },
@@ -87,7 +90,10 @@ const WESTERN: Record<XiangqiPieceRole, string> = {
   soldier: 'S',
 };
 
-type ImageXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu' | 'international'>;
+type ImageXiangqiPieceSet = Extract<
+  XiangqiPieceSet,
+  'animal-dobutsu' | 'international' | 'international-flat'
+>;
 type AnimalXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu'>;
 
 export type XiangqiPieceTilePreview =
@@ -102,6 +108,10 @@ export type XiangqiPieceRenderOptions = {
   x?: number;
   y?: number;
   size?: number;
+  // A soldier that has crossed the river draws with the promoted-soldier art.
+  // International set only (that is where the asset ships); other sets fall back
+  // to the plain soldier glyph/art.
+  crossed?: boolean;
 };
 
 export function xiangqiGlyph(
@@ -144,28 +154,58 @@ export function renderXiangqiPieceGlyphed(
     opts.ariaLabel ??
     (opts.shrouded ? `${piece.color} hidden piece` : `${piece.color} ${piece.role}`);
   const classAttr = opts.className ? ` class="${escapeAttr(opts.className)}"` : '';
+  const styleAttr = set === 'international-flat' && !opts.shrouded ? ' style="filter:none"' : '';
   const posAttrs =
     opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
       : '';
   if (opts.shrouded && opts.shroudedStyle === 'back') {
     return [
-      `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
       pieceBackMark(piece.color),
+      `</svg>`,
+    ].join('');
+  }
+  // A shrouded "?" token on an image set (international / animal) draws over that
+  // set's single-ring disc so the hidden token sits flush with its revealed
+  // neighbours. Without these branches it falls through to the generic
+  // double-ring disc below and shows an extra inner ring the image-set pieces
+  // never have.
+  if (opts.shrouded && (set === 'international' || set === 'international-flat')) {
+    return [
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      internationalDiscMark(piece.color),
+      glyphMark('?', colorHex),
+      `</svg>`,
+    ].join('');
+  }
+  if (opts.shrouded && isAnimalPieceSet(set)) {
+    return [
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      animalDiscMark(),
+      glyphMark('?', colorHex),
+      animalRingMark(piece.color),
       `</svg>`,
     ].join('');
   }
   if (!opts.shrouded && set === 'international') {
     return [
-      `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
       internationalDiscMark(piece.color),
-      internationalImageMark(internationalPieceHref(piece), piece.role),
+      internationalImageMark(internationalPieceHref(piece, opts.crossed), piece.role),
+      `</svg>`,
+    ].join('');
+  }
+  if (!opts.shrouded && set === 'international-flat') {
+    return [
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      internationalFlatImageMark(internationalFlatPieceHref(piece, opts.crossed), piece.role),
       `</svg>`,
     ].join('');
   }
   if (!opts.shrouded && isAnimalPieceSet(set)) {
     return [
-      `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
       animalDiscMark(),
       `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`,
       animalRingMark(piece.color),
@@ -178,7 +218,7 @@ export function renderXiangqiPieceGlyphed(
       ? symbolMark(piece.role, colorHex)
       : cjkGlyphMark(xiangqiGlyph(set, piece.color, piece.role), colorHex);
   return [
-    `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+    `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
     `<circle cx="50" cy="50" r="46" fill="${baseFill}" stroke="${colorHex}" stroke-width="${ringWidth}"/>`,
     `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,
     inner,
@@ -249,12 +289,35 @@ function internationalImageMark(href: string, role: InternationalArtRole): strin
   return `<image href="${escapeAttr(href)}" x="${frame.x}" y="${frame.y}" width="${frame.width}" height="${frame.height}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
+const INTERNATIONAL_FLAT_IMAGE_SCALE = 1.34;
+const INTERNATIONAL_FLAT_IMAGE_FITS: Partial<
+  Record<InternationalArtRole, { scale: number; yOffset?: number }>
+> = {
+  cannon: { scale: 1.4 },
+  elephant: { scale: INTERNATIONAL_FLAT_IMAGE_SCALE, yOffset: -3 },
+};
+
+function internationalFlatImageMark(href: string, role: InternationalArtRole): string {
+  const frame = INTERNATIONAL_IMAGE_FRAMES[role];
+  const fit = INTERNATIONAL_FLAT_IMAGE_FITS[role];
+  const scale = fit?.scale ?? INTERNATIONAL_FLAT_IMAGE_SCALE;
+  const x = frameValue(50 + (frame.x - 50) * scale);
+  const y = frameValue(50 + (frame.y - 50) * scale + (fit?.yOffset ?? 0));
+  const width = frameValue(frame.width * scale);
+  const height = frameValue(frame.height * scale);
+  return `<image href="${escapeAttr(href)}" x="${x}" y="${y}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"/>`;
+}
+
+function frameValue(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function isAnimalPieceSet(set: XiangqiPieceSet): set is AnimalXiangqiPieceSet {
   return set === 'animal-dobutsu';
 }
 
 function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
-  return set === 'international' || set === 'animal-dobutsu';
+  return set === 'international' || set === 'international-flat' || set === 'animal-dobutsu';
 }
 
 // ?v bump: the animal art files are swapped in place (stable URLs), so a version
@@ -262,13 +325,24 @@ function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
 // dobutsu-minimal swap). Bump on every animal-art change.
 const ANIMAL_ART_VERSION = 4;
 const INTERNATIONAL_ART_VERSION = 11;
+const INTERNATIONAL_FLAT_ART_VERSION = 1;
 
-function internationalPieceHref(piece: XiangqiPiece): string {
-  return `/piece-sets/xiangqi/international/${piece.color}-${piece.role}.png?v=${INTERNATIONAL_ART_VERSION}`;
+function internationalPieceHref(piece: XiangqiPiece, crossed = false): string {
+  const role = crossed && piece.role === 'soldier' ? 'crossed-soldier' : piece.role;
+  return `/piece-sets/xiangqi/international/${piece.color}-${role}.png?v=${INTERNATIONAL_ART_VERSION}`;
+}
+
+function internationalFlatPieceHref(piece: XiangqiPiece, crossed = false): string {
+  const role = crossed && piece.role === 'soldier' ? 'crossed-soldier' : piece.role;
+  return `/piece-sets/xiangqi/international-flat/${piece.color}-${role}.png?v=${INTERNATIONAL_FLAT_ART_VERSION}`;
 }
 
 export function internationalTreasureHref(color: XiangqiColor): string {
   return `/piece-sets/xiangqi/international/${color}-treasure.png?v=${INTERNATIONAL_ART_VERSION}`;
+}
+
+function internationalFlatTreasureHref(color: XiangqiColor): string {
+  return `/piece-sets/xiangqi/international-flat/${color}-treasure.png?v=${INTERNATIONAL_FLAT_ART_VERSION}`;
 }
 
 function animalPieceHref(piece: XiangqiPiece, set: AnimalXiangqiPieceSet): string {
@@ -299,6 +373,10 @@ export function internationalTreasureMarks(color: XiangqiColor): string {
     internationalDiscMark(color),
     internationalImageMark(internationalTreasureHref(color), 'treasure'),
   ].join('');
+}
+
+export function internationalFlatTreasureMarks(color: XiangqiColor): string {
+  return internationalFlatImageMark(internationalFlatTreasureHref(color), 'treasure');
 }
 
 // Stroked line-art icons (the "Symbols" diagram set). One consistent visual style:

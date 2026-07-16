@@ -137,6 +137,39 @@ test('the material finder spots an undefended winning capture', () => {
   assert.equal(tactic.line.length % 2, 1);
 });
 
+test('the material finder rejects a capture that is dominated by a forced win', () => {
+  // Regression for jungle-material-038: black tiger c2 can grab the red leopard on c3
+  // (+50, game continues), but c2-c1 then c1-d1 is a forced den-win in 2 solver plies.
+  // A den-entry changes zero material, so the pure-material search only sees it by
+  // reaching the terminal — the miner must not emit a "win material" puzzle here.
+  const base = createInitialJungleState('dominated-fixture');
+  const fixture = {
+    ...base,
+    board: {
+      f7: { color: 'black', role: 'dog' },
+      c7: { color: 'black', role: 'wolf' },
+      a8: { color: 'black', role: 'elephant' },
+      f8: { color: 'black', role: 'leopard' },
+      g5: { color: 'red', role: 'cat' },
+      e6: { color: 'black', role: 'rat' },
+      g8: { color: 'black', role: 'lion' },
+      f2: { color: 'red', role: 'tiger' },
+      c3: { color: 'red', role: 'leopard' },
+      c2: { color: 'black', role: 'tiger' },
+      e2: { color: 'red', role: 'elephant' },
+    },
+    status: { type: 'playing', turn: 'black' },
+    positionCounts: {},
+  } as const;
+  // The dominating forced win really exists (unique in its first move: c2-c1).
+  const win = findJungleForcedWinLine(fixture, 4, { requireUnique: false });
+  assert.ok(win, 'expected a forced den-win from the fixture');
+  assert.equal(win[0]?.from, 'c2');
+  assert.equal(win[0]?.to, 'c1');
+  // ...so the material finder must refuse the position, not emit the +50 capture.
+  assert.equal(findJungleMaterialTactic(fixture, { minGain: 40 }), null);
+});
+
 test('the win-in-one finder skips finished positions', () => {
   const state = createInitialJungleState('finished');
   const finished = {

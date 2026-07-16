@@ -161,7 +161,11 @@ const server = await createServer({
 try {
   const { buildArticlePage } = await server.ssrLoadModule('/src/articles.ts');
   const { articles } = await server.ssrLoadModule('/src/articles-data.ts');
-  const { translateArticle } = await server.ssrLoadModule('/src/article-i18n.ts');
+  const { isArticleTranslationPublished, translateArticle } =
+    await server.ssrLoadModule('/src/article-i18n.ts');
+  const { rulesSlugPublicSurfaceEnabled } = await server.ssrLoadModule(
+    '/src/variant-public-surfaces.ts',
+  );
 
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
   // sets <html lang> and JSON-LD inLanguage; langDir is the output-path segment.
@@ -193,17 +197,24 @@ try {
     // Rules docs are canonical under /rules/<slug>, everything else /blog/<slug>.
     const base = article.kind === 'rules' ? 'rules' : 'blog';
     // OG card stays English for all variants for now (the card renderer has no
-    // CJK font; baking zh titles would render tofu). hreflang is identical on
-    // every variant: all three point at each other + x-default → English.
+    // CJK font; baking zh titles would render tofu). Localized variants and
+    // hreflang alternates exist only after the article crosses the explicit
+    // translation publication boundary.
     const imageUrl = `${host}/og/article/${slug}.png`;
+    const translationPublished = isArticleTranslationPublished(article.slug);
     const hreflang = [
       `<link rel="alternate" hreflang="en" href="${host}/${base}/${slug}" />`,
-      `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
-      `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${base}/${slug}" />`,
+      ...(translationPublished
+        ? [
+            `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
+            `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${base}/${slug}" />`,
+          ]
+        : []),
       `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
     ].join('');
 
-    for (const v of variants) {
+    const articleVariants = translationPublished ? variants : variants.slice(0, 1);
+    for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
       const main = buildArticlePage(article.slug, v.lang ?? undefined);
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;
@@ -235,9 +246,13 @@ try {
       // language relationship; the canonical consolidates query-param, SPA-shell,
       // and trailing-slash variants of THIS url into a single indexed page.
       const canonical = `<link rel="canonical" href="${url}" />`;
+      const robots =
+        article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)
+          ? '<meta name="robots" content="noindex, follow" />'
+          : '';
       html = html.replace(
         '</head>',
-        `${canonical}${hreflang}${ldScript}${articleAssetLinks}</head>`,
+        `${robots}${canonical}${hreflang}${ldScript}${articleAssetLinks}</head>`,
       );
 
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));
@@ -248,7 +263,7 @@ try {
     }
   }
   console.log(
-    `done: ${count} page(s) across ${published.length} article(s) × ${variants.length} langs`,
+    `done: ${count} page(s) across ${published.length} article(s); localized variants require publication lock`,
   );
 
   // Homepage: bake the static landing shell so crawlers, no-JS clients, and

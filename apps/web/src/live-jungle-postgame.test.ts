@@ -41,14 +41,19 @@ describe('Jungle postgame page', () => {
     await flushPromises();
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/jungle/games/jgl_postgame');
-    expect(root.textContent).toContain('Game review');
+    expect(root.textContent).toContain('Spectator room');
     expect(root.textContent).toContain('Jungle');
-    expect(root.textContent).toContain('Red won');
-    expect(root.textContent).toContain('Home');
-    expect(root.textContent).toContain('Room');
+    expect(root.textContent).toContain('Red wins');
+    expect(root.textContent).not.toContain('Play again');
     // Perfect-info: one board, and no reveal toggle (nothing was ever hidden).
     expect(root.querySelectorAll('.jungle-postgame-board')).toHaveLength(1);
     expect(root.querySelector('.jungle-postgame-board')?.innerHTML).toContain('<svg');
+    expect(root.querySelector('.review-stage')?.classList).toContain('review-stage--board-only');
+    expect(
+      root
+        .querySelector<HTMLElement>('.review-shell__cluster')
+        ?.style.getPropertyValue('--uni-board-aspect'),
+    ).toBe((336 / 432).toFixed(4));
     expect(
       [...root.querySelectorAll('button')].some((el) => el.textContent === 'Reveal tiles'),
     ).toBe(false);
@@ -58,7 +63,13 @@ describe('Jungle postgame page', () => {
     expect(row?.querySelector<HTMLButtonElement>('.review-move-list__move')?.textContent).toBe(
       'a3-a4',
     );
-    expect(root.textContent).toContain('Ply 1 of 1');
+    // Shared lichess control bar (not the old ply-count scrubber).
+    expect(root.querySelector('.review-controls')).not.toBeNull();
+    // Server-side computer analysis underboard is wired: a signed-out visitor sees
+    // the sign-in CTA (the account-gated compute button) rather than nothing.
+    const analyseButton = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse');
+    expect(analyseButton).not.toBeNull();
+    expect(analyseButton?.textContent).toContain('Sign in to request analysis');
   });
 
   it('steps through plies with the arrow keys', async () => {
@@ -69,14 +80,23 @@ describe('Jungle postgame page', () => {
     mountJunglePostgame(root, 'jgl_postgame');
     await flushPromises();
 
-    const meta = () => root.querySelector('.review-scrubber__status')?.textContent ?? '';
-    expect(meta()).toContain('Ply 1 of 1');
+    // The control bar disables first/prev at the start and next/last at the end;
+    // arrow keys move the ply, so the bounds flip. (The old scrubber's "Ply X of
+    // Y" status was removed with the lichess control bar.)
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    // Opens at the final ply (1 of 1): next/last disabled.
+    expect(nav('Next move')?.disabled).toBe(true);
+    expect(nav('Previous move')?.disabled).toBe(false);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(meta()).toContain('Ply 0 of 1');
+    // Ply 0: at the start, first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
+    expect(nav('Next move')?.disabled).toBe(false);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(meta()).toContain('Ply 1 of 1');
+    // Back at the final ply.
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 });
 

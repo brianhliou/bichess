@@ -1,14 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import type { FeaturedGame } from './game-display.js';
+import { createGameTable } from './game-table.js';
 import {
+  buildWatchScrubber,
   formatWatchScope,
   renderWatchChannelList,
+  renderWatchQueue,
   renderWatchReplaySkeleton,
   resultLabel,
+  shouldPlayWatchMoveSound,
   watchFeedIsDark,
+  watchPovToggleApplies,
   watchQueueMatchupLabel,
   watchQueueResultLabel,
 } from './watch-route.js';
+
+describe('watch move sounds', () => {
+  it('sounds only a single forward ply, not initial paint, jumps, or loop resets', () => {
+    expect(shouldPlayWatchMoveSound(null, 0)).toBe(false);
+    expect(shouldPlayWatchMoveSound(0, 1)).toBe(true);
+    expect(shouldPlayWatchMoveSound(1, 2)).toBe(true);
+    expect(shouldPlayWatchMoveSound(2, 2)).toBe(false);
+    expect(shouldPlayWatchMoveSound(2, 8)).toBe(false);
+    expect(shouldPlayWatchMoveSound(8, 0)).toBe(false);
+  });
+});
 
 describe('watch route copy helpers', () => {
   it('scopes sealed watch copy to dark channels', () => {
@@ -137,6 +153,23 @@ describe('watch route copy helpers', () => {
   });
 });
 
+describe('watchPovToggleApplies', () => {
+  it('shows the fog-perspective toggle only for asymmetric fog (dark) variants', () => {
+    // Asymmetric fog: distinct per-side views, so the toggle is meaningful.
+    expect(watchPovToggleApplies('dark-chess')).toBe(true);
+    expect(watchPovToggleApplies('dark-xiangqi')).toBe(true);
+    expect(watchPovToggleApplies('dark-crossroads-chess')).toBe(true);
+    // Symmetric-mask hidden identity (one view) — no toggle.
+    expect(watchPovToggleApplies('jieqi')).toBe(false);
+    expect(watchPovToggleApplies('banqi')).toBe(false);
+    // Open information (one shared board) — no toggle.
+    expect(watchPovToggleApplies('xiangqi')).toBe(false);
+    expect(watchPovToggleApplies('crossroads-chess')).toBe(false);
+    // Unknown variant resolves to no spec — no toggle, never throws.
+    expect(watchPovToggleApplies('not-a-variant')).toBe(false);
+  });
+});
+
 describe('renderWatchReplaySkeleton', () => {
   it('fills the slot with the board placeholder the CSS targets', () => {
     const root = document.createElement('div');
@@ -149,23 +182,82 @@ describe('renderWatchReplaySkeleton', () => {
   });
 });
 
+describe('buildWatchScrubber', () => {
+  const button = (el: HTMLElement, label: string) =>
+    el.querySelector<HTMLButtonElement>(`.review-scrubber__button[aria-label="${label}"]`);
+
+  it('jumps to the right ply, reading the live ply at click time', () => {
+    const ply = 3;
+    const jumps: number[] = [];
+    const scrubber = buildWatchScrubber(
+      (p) => jumps.push(p),
+      () => ply,
+      () => 10,
+    );
+    button(scrubber.el, 'First move')?.click();
+    button(scrubber.el, 'Previous move')?.click();
+    button(scrubber.el, 'Next move')?.click();
+    button(scrubber.el, 'Last move')?.click();
+    // prev/next resolve against getPly() (3), not a stale captured value.
+    expect(jumps).toEqual([0, 2, 4, 10]);
+  });
+
+  it('disables the end buttons at the bounds', () => {
+    const scrubber = buildWatchScrubber(
+      () => {},
+      () => 0,
+      () => 8,
+    );
+    scrubber.setBounds(0, 8);
+    expect(button(scrubber.el, 'First move')?.disabled).toBe(true);
+    expect(button(scrubber.el, 'Previous move')?.disabled).toBe(true);
+    expect(button(scrubber.el, 'Next move')?.disabled).toBe(false);
+    expect(button(scrubber.el, 'Last move')?.disabled).toBe(false);
+
+    scrubber.setBounds(8, 8);
+    expect(button(scrubber.el, 'First move')?.disabled).toBe(false);
+    expect(button(scrubber.el, 'Next move')?.disabled).toBe(true);
+    expect(button(scrubber.el, 'Last move')?.disabled).toBe(true);
+  });
+
+  it('binds the same controls used by live room game tables', () => {
+    const table = createGameTable();
+    const jumps: number[] = [];
+    const scrubber = buildWatchScrubber(
+      (ply) => jumps.push(ply),
+      () => 4,
+      () => 12,
+      table.refs.replayControlsRoot,
+    );
+
+    table.refs.replayControlsRoot.querySelector<HTMLButtonElement>('[data-replay="prev"]')?.click();
+    table.refs.replayControlsRoot
+      .querySelector<HTMLButtonElement>('[data-replay="latest"]')
+      ?.click();
+
+    expect(scrubber.el).toBe(table.refs.replayControlsRoot);
+    expect(jumps).toEqual([3, 12]);
+  });
+});
+
 describe('renderWatchChannelList', () => {
   function channel(id: string, label: string) {
     return { family: 'xiangqi', gameSpecIds: [id], id, label, sealedCount: 0, unlockedCount: 1 };
   }
 
-  // Regression: every launchable channel needs a CHANNEL_MINI_BY_ID entry, or
-  // its rail marker renders as an empty slot. dark-xiangqi shipped without one.
-  it('renders a variant marker for every launched watch channel', () => {
+  // Regression: every launchable channel needs either a variant marker mapping
+  // or a dedicated cross-variant marker, or its rail slot renders empty.
+  it('renders a marker for every launched watch channel', () => {
     const feed = {
       activeChannel: 'dark-chess',
       channels: [
+        channel('engines', 'Engines'),
         channel('dark-chess', 'Fog Chess'),
         channel('mini-xiangqi', 'Mini Xiangqi'),
         channel('dark-mini-xiangqi', 'Dark Mini Xiangqi'),
-        channel('dark-xiangqi', 'Fog Elephant Chess'),
-        channel('jieqi', 'Flip Elephant Chess'),
-        channel('banqi', 'Half-Flip Chess'),
+        channel('dark-xiangqi', 'Fog Xiangqi'),
+        channel('jieqi', 'Reveal Xiangqi'),
+        channel('banqi', 'Flip Xiangqi'),
         channel('reveal-chess', 'Reveal Chess'),
         channel('crossroads-chess', 'Crossroads Chess'),
         channel('dark-crossroads-chess', 'Dark Crossroads Chess'),
@@ -182,7 +274,7 @@ describe('renderWatchChannelList', () => {
     renderWatchChannelList(root, feed);
 
     const links = root.querySelectorAll('a.watch-channel-link');
-    expect(links).toHaveLength(12);
+    expect(links).toHaveLength(13);
     for (const link of links) {
       const thumb = link.querySelector('.watch-channel-thumb');
       expect(
@@ -190,5 +282,50 @@ describe('renderWatchChannelList', () => {
         `${link.textContent} marker`,
       ).not.toBeNull();
     }
+  });
+});
+
+describe('renderWatchQueue', () => {
+  it('renders only two final-position board mount points', () => {
+    const game = (roomId: string): FeaturedGame => ({
+      blackName: 'Black',
+      corpusId: null,
+      mode: 'pvp',
+      plyCount: 24,
+      result: 'white-wins',
+      roomId,
+      termination: 'resignation',
+      variant: 'dark-chess',
+      whiteName: 'White',
+    });
+    const root = document.createElement('section');
+    const previews = renderWatchQueue(
+      root,
+      {
+        activeChannel: 'dark-chess',
+        channels: [
+          {
+            family: 'chess',
+            gameSpecIds: ['dark-chess'],
+            id: 'dark-chess',
+            label: 'Fog Chess',
+            sealedCount: 0,
+            unlockedCount: 3,
+          },
+        ],
+        now: '2026-07-13T00:00:00.000Z',
+        sealedCount: 0,
+        unlockLimit: 64,
+        unlocked: [game('newest'), game('previous'), game('older')],
+      },
+      'newest',
+    );
+
+    expect(previews.map(({ game: previewGame }) => previewGame.roomId)).toEqual([
+      'newest',
+      'previous',
+    ]);
+    expect(root.querySelectorAll('.watch-queue-preview')).toHaveLength(2);
+    expect(root.querySelector('[data-room-id="older"]')).toBeNull();
   });
 });

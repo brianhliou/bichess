@@ -1,9 +1,8 @@
 /**
  * Jieqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. No rematch flow and no lobby surface yet — the lobby
- * route answers jieqi_not_integrated while the flag is on. PvP, live-clock only
- * (PvE and correspondence come later). Imported for side effects by
- * variant-tenant/register-tenants.ts.
+ * binding, and hydration. No rematch flow yet. Matchmaking is casual random-seat
+ * (unrated); PvP, live-clock only (PvE and correspondence come later). Imported
+ * for side effects by variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
@@ -11,6 +10,7 @@ import type { JieqiCreatorPreference, JieqiRuntimeRoom } from './jieqi-runtime.j
 import { jieqiTenant } from './jieqi-tenant.js';
 import * as persistence from './persistence.js';
 import { handleJieqiCreate, requestsJieqi } from './routes/jieqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   createJieqiLiveRoom,
   type JieqiLiveRoomCreation,
@@ -68,7 +68,7 @@ registerVariantTenant({
   watch: {
     channelId: 'jieqi',
     family: 'xiangqi',
-    label: 'Flip Elephant Chess',
+    label: 'Reveal Xiangqi',
     legacyVariants: ['jieqi'],
   },
   ownsSpecRouting: true,
@@ -95,6 +95,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleJieqiCreate({ ...ctx, createJieqiRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createJieqiRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`jieqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

@@ -313,6 +313,7 @@ const PARKED_CLIENT_ROUTES = new Set<string>([
   '/luzhanqi-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-chess-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
+  '/learn', // legacy dark-chess hub; gated off in prod (learnEnabled) → branded 404
 ]);
 
 test('isClientRoute covers every literal route declared in main.ts', () => {
@@ -352,9 +353,11 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/account/settings/privacy'), true);
   assert.equal(isClientRoute('/@/brianhliou'), true);
   assert.equal(isClientRoute('/blog/dark-chess-concepts'), true);
+  assert.equal(isClientRoute('/blog/community'), true);
   assert.equal(isClientRoute('/zh-hans/blog'), true);
+  assert.equal(isClientRoute('/zh-hans/blog/community'), true);
   assert.equal(isClientRoute('/zh-hant/blog'), true);
-  assert.equal(isClientRoute('/rules/dark-chess'), true);
+  assert.equal(isClientRoute('/rules/fog-chess'), true);
   assert.equal(isClientRoute('/rules/dark-draft960'), true);
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
@@ -363,8 +366,8 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample/round/men-r1'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), true);
-  assert.equal(isClientRoute('/zh-hans/rules/dark-chess'), true);
-  assert.equal(isClientRoute('/zh-hant/rules/dark-chess'), true);
+  assert.equal(isClientRoute('/zh-hans/rules/fog-chess'), true);
+  assert.equal(isClientRoute('/zh-hant/rules/fog-chess'), true);
   assert.equal(isClientRoute('/engine/random-engine'), true); // admin engine-profile page
   assert.equal(isClientRoute('/analysis/xiangqi'), true); // standalone analysis board
   assert.equal(isClientRoute('/historical-xiangqi'), true);
@@ -396,6 +399,12 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   // The standalone analysis board mounts the same ceval engine, so it needs the
   // COOP/COEP isolation headers too (else SharedArrayBuffer is unavailable).
   assert.equal(isReviewShellRoute('/analysis/xiangqi'), true);
+  // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
+  // Both the list and a specific puzzle must be isolated, because the isolation
+  // is fixed at document load and pushState nav between puzzles never reloads.
+  assert.equal(isReviewShellRoute('/puzzles'), true);
+  assert.equal(isReviewShellRoute('/puzzles/xq-mined-hxq_abc123-60'), true);
+  assert.equal(isReviewShellRoute('/puzzles/bMpKA'), true);
 });
 
 test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)', () => {

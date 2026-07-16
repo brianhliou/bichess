@@ -352,8 +352,6 @@
   /* width + snap handled centrally by .cg-snap; this sets the cap */
   --cg-w: min(100%, 620px, calc(100vh - 180px));
   aspect-ratio: 1;
-  border: 2px solid var(--board-frame);
-  background: var(--board-frame);
   box-shadow: 0 14px 40px rgba(29, 37, 34, 0.14);
 }
 
@@ -610,4 +608,55 @@
   .learn-module-card {
     min-height: 0;
   }
+}
+
+/* ── Learn hub: xiangqi course card (leads the page) ─────────────────────── */
+
+.learn-course-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 26px;
+  padding: 20px 22px;
+  border-radius: 12px;
+  border: 1px solid var(--site-border-soft);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--site-accent) 22%, var(--site-panel)),
+    color-mix(in srgb, var(--site-accent) 8%, var(--site-panel))
+  );
+  box-shadow: var(--site-shadow);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+
+.learn-course-card:hover {
+  transform: translateY(-2px);
+}
+
+.learn-course-card-text h2 {
+  margin: 0 0 4px;
+  color: var(--site-heading);
+}
+
+.learn-course-card-text p {
+  margin: 0;
+  color: var(--site-muted);
+}
+
+.learn-course-card-cta {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--site-accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.learn-home-section-title {
+  margin: 8px 0 12px;
+  font-size: 1.1rem;
+  color: var(--site-heading);
 }

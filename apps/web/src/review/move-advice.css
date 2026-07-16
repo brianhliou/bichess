@@ -23,3 +23,19 @@
 .review-advice--blunder .review-advice__label {
   color: #c0392b;
 }
+
+/* Chance-variant (jieqi) accuracy-slot captions. Accuracy now grades every move luck-free (reveals
+   included), so there is no separate decision block; this is just a placeholder while it computes
+   and a one-line note pointing at where the luck lives (the 🎲 badges + chart band). */
+.review-decision-summary__pending {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--site-text-muted, #6b7280);
+  font-style: italic;
+}
+.review-decision-summary__caption {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--site-text-muted, #6b7280);
+}

@@ -43,10 +43,11 @@ export async function currentAccountUser(
 export async function ensureUserForEmail(
   email: string,
   now: Date,
-): Promise<{ user: persistence.UserAccount; isNew: boolean }> {
+): Promise<{ user: persistence.UserAccount; isNew: boolean } | { closed: true }> {
   const existing = await persistence.findUserByEmail(email);
   if (existing)
     return { user: await persistence.markUserEmailVerified(existing.id, now), isNew: false };
+  if (await persistence.closedAccountExistsForEmailHash(hashSecret(email))) return { closed: true };
 
   const baseHandle = handleBaseForEmail(email);
   // Candidate handle per attempt: the email-derived base first, then numeric
@@ -76,6 +77,9 @@ export async function ensureUserForEmail(
       const raced = await persistence.findUserByEmail(email);
       if (raced)
         return { user: await persistence.markUserEmailVerified(raced.id, now), isNew: false };
+      if (await persistence.closedAccountExistsForEmailHash(hashSecret(email))) {
+        return { closed: true };
+      }
     }
   }
   throw new Error('failed to allocate user handle');
@@ -98,6 +102,11 @@ export function publicUser(user: persistence.UserAccount): Record<string, unknow
     handleChangedAt: user.handleChangedAt?.toISOString() ?? null,
     displayName: user.displayName,
     displayNameChangedAt: user.displayNameChangedAt?.toISOString() ?? null,
+    bio: user.bio,
+    location: user.location,
+    profileLinks: user.profileLinks,
+    displayPreferences: user.displayPreferences,
+    accountPreferences: user.accountPreferences,
     profileVisibility: user.profileVisibility,
     accountRole: user.accountRole,
     locale: user.locale,
@@ -118,16 +127,49 @@ export async function sendEmailLoginCode(
   email: string,
   code: string,
 ): Promise<{ ok: true } | { ok: false }> {
+  return sendAccountEmailCode(email, code, 'login');
+}
+
+export async function sendEmailChangeCode(
+  email: string,
+  code: string,
+): Promise<{ ok: true } | { ok: false }> {
+  return sendAccountEmailCode(email, code, 'email-change');
+}
+
+export async function sendAccountClosureCode(
+  email: string,
+  code: string,
+): Promise<{ ok: true } | { ok: false }> {
+  return sendAccountEmailCode(email, code, 'account-closure');
+}
+
+async function sendAccountEmailCode(
+  email: string,
+  code: string,
+  purpose: 'account-closure' | 'email-change' | 'login',
+): Promise<{ ok: true } | { ok: false }> {
   if (!authEmailDeliveryEnabled || !authEmailFrom) return { ok: false };
-  const subject = 'Your Mistboard login code';
+  const isEmailChange = purpose === 'email-change';
+  const isAccountClosure = purpose === 'account-closure';
+  const subject = isAccountClosure
+    ? 'Confirm closing your Mistboard account'
+    : isEmailChange
+      ? 'Confirm your new Mistboard email'
+      : 'Your Mistboard login code';
+  const intro = isAccountClosure
+    ? 'Your Mistboard account-closure code is'
+    : isEmailChange
+      ? 'Your Mistboard email-change code is'
+      : 'Your Mistboard login code is';
   const text = [
-    `Your Mistboard login code is ${code}.`,
+    `${intro} ${code}.`,
     '',
     'This code expires in 10 minutes.',
     'If you did not request this code, you can ignore this email.',
   ].join('\n');
   const html = [
-    '<p>Your Mistboard login code is:</p>',
+    `<p>${intro}:</p>`,
     `<p style="font-size:24px;font-weight:700;letter-spacing:0.12em">${escapeHtml(code)}</p>`,
     '<p>This code expires in 10 minutes.</p>',
     '<p>If you did not request this code, you can ignore this email.</p>',

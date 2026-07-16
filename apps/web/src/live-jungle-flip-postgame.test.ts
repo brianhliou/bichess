@@ -1,5 +1,13 @@
+import {
+  applyJungleFlipMove,
+  createInitialJungleFlipState,
+  getJungleFlipPlayerView,
+  type JungleFlipMove,
+  jungleFlipTruthView,
+  STANDARD_JUNGLE_FLIP_DEAL,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { jungleFlipResultLabel } from './jungle-flip-result-label.js';
+import { jungleFlipResultLabel, jungleFlipSeatInk } from './jungle-flip-result-label.js';
 import {
   initialPlyFromSearch,
   jungleFlipPostgameApiUrl,
@@ -13,6 +21,8 @@ describe('jungleFlipResultLabel maps the winning seat to its flip-bound ink', ()
     expect(jungleFlipResultLabel('black-wins', 'black')).toBe('Red wins');
     expect(jungleFlipResultLabel('red-wins', 'red')).toBe('Red wins');
     expect(jungleFlipResultLabel('black-wins', 'red')).toBe('Black wins');
+    expect(jungleFlipSeatInk('red', 'black')).toBe('black');
+    expect(jungleFlipSeatInk('black', 'black')).toBe('red');
   });
 
   it('keeps draws ink-agnostic and falls back to move order before the flip binds', () => {
@@ -49,7 +59,11 @@ describe('Flip Jungle postgame page', () => {
   });
 
   it('renders a single review board, info rail, and move rows', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).endsWith('/analysis')
+        ? new Response(null, { status: 204 })
+        : jsonResponse(postgameFixture()),
+    );
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
 
@@ -57,46 +71,97 @@ describe('Flip Jungle postgame page', () => {
     await flushPromises();
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/jungle-flip/games/jgf_postgame');
-    expect(root.textContent).toContain('Game review');
+    expect(root.textContent).toContain('Spectator room');
     expect(root.textContent).toContain('Flip Jungle');
-    expect(root.textContent).toContain('Red wins');
+    expect(root.textContent).toContain('Black wins');
     expect(root.querySelectorAll('.jungle-flip-postgame-board')).toHaveLength(1);
+    expect(root.querySelector('.review-stage')?.classList).toContain('review-stage--board-only');
+    expect(root.querySelector('.review-shell__right .captures-strip')).toBeNull();
 
-    // The opening action was a flip (self-move): the move list reads it as "a1 flip"
-    // in the left cell (the first ply, `firstMover: 'a'`).
+    // The opening action was a flip (self-move): the move list reads it as the bare square
+    // "a1" (no dash = a flip; board moves are "a1-b2"), in the left cell (first ply, `firstMover: 'a'`).
     const firstMove = root.querySelector<HTMLButtonElement>(
       '.review-move-list__row .review-move-list__move',
     );
-    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1 flip');
-    expect(root.textContent).toContain('Ply 1 of 1');
+    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    // Opens at the final ply (the flip is the mainline tip): the highlighted current
+    // cell is that flip move. (The tree move list highlights via --current.)
+    const current = root.querySelector('.review-move-list__move--current');
+    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    // Server-side computer analysis underboard is wired: a signed-out visitor sees the
+    // sign-in CTA (the account-gated compute button) rather than nothing.
+    const analyseButton = root.querySelector<HTMLButtonElement>('.xiangqi-review__analyse');
+    expect(analyseButton).not.toBeNull();
+    expect(analyseButton?.textContent).toContain('Sign in to request analysis');
   });
 
-  it('hides unflipped tiles by default and reveals them on toggle', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
+  it('displays first-mover analysis in the black ink revealed by the opening flip', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/analysis')) {
+        return jsonResponse({
+          engineId: 'test',
+          depth: 1,
+          plies: [
+            { ply: 0, cp: 0, mate: null, best: null },
+            { ply: 1, cp: 100, mate: null, best: null },
+          ],
+          chancePlies: [1],
+        });
+      }
+      // The decision-vs-luck tier fetches alongside analysis; a chance variant shows a "pending"
+      // note until it resolves, then renders the merged summary. Empty decisions is a valid result
+      // (the opening flip stays unjudged) and still renders the player summary this test asserts on.
+      if (url.endsWith('/decisions')) {
+        return jsonResponse({ engineId: 'test', depth: 1, decisions: [] });
+      }
+      return jsonResponse(postgameFixture());
+    });
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
 
     mountJungleFlipPostgame(root, 'jgf_postgame');
     await flushPromises();
+    // The decisions fetch is chained after analysis; flush again so applyDecisions renders the
+    // merged summary (replacing the pending note) before we assert on it.
+    await flushPromises();
 
-    const board = () => root.querySelector('.jungle-flip-postgame-board') as HTMLElement;
-    // Step back to ply 0 (before the flip): the as-played mask paints face-down backs
-    // (the banqi-style jade back disc).
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
-    expect(board().innerHTML).toContain('fill="#2f8f6b"');
-
-    const reveal = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (el) => el.textContent === 'Reveal tiles',
+    const playerRows = root.querySelectorAll('.game-meta-card__player');
+    expect(playerRows[0]?.textContent).toContain('First player');
+    expect(playerRows[0]?.querySelector('.game-meta-card__disc')?.classList).toContain(
+      'game-meta-card__disc--dark',
     );
-    expect(reveal).not.toBeUndefined();
-    reveal!.click();
-    // Revealed overlay: no tile shows the back disc, even at ply 0.
-    expect(reveal!.textContent).toBe('Hide tiles');
-    expect(board().innerHTML).not.toContain('fill="#2f8f6b"');
+    expect(playerRows[1]?.querySelector('.game-meta-card__disc')?.classList).toContain(
+      'game-meta-card__disc--red',
+    );
+
+    const analysisPlayers = root.querySelectorAll('.analysis-summary__player');
+    expect(analysisPlayers[0]?.textContent).toContain('First player');
+    expect(analysisPlayers[0]?.querySelector('.analysis-summary__dot')?.classList).toContain(
+      'analysis-summary__dot--black',
+    );
+    expect(analysisPlayers[1]?.querySelector('.analysis-summary__dot')?.classList).toContain(
+      'analysis-summary__dot--red',
+    );
+    expect(root.querySelector('.advantage-chart__zone')?.classList).toContain(
+      'advantage-chart__zone--black',
+    );
+    expect(root.querySelector('.review-move-times__bar')?.classList).toContain(
+      'review-move-times__bar--black',
+    );
   });
 });
 
 function postgameFixture() {
+  // Build a REAL 1-ply flip-jungle game with the kernel so the tree can reconstruct
+  // the deal (from history.revealed's ply-0 truth board) and replay it: a valid
+  // fixed deal with black on a1, an opening a1 flip, then the second seat resigning.
+  // Generating from the kernel keeps the fixture legal.
+  const deal = [...STANDARD_JUNGLE_FLIP_DEAL];
+  [deal[0], deal[8]] = [deal[8]!, deal[0]!]; // a1 reveals black, binding first mover to black
+  const initial = createInitialJungleFlipState('jgf_postgame', deal);
+  const flip: JungleFlipMove = { from: 'a1', to: 'a1' };
+  const afterFlip = applyJungleFlipMove(initial, flip);
   return {
     game: {
       roomId: 'jgf_postgame',
@@ -111,64 +176,29 @@ function postgameFixture() {
       visibility: 'private',
       initialMs: 180000,
       incrementMs: 2000,
+      players: [
+        { color: 'red', name: 'First player', rating: 2100, kind: 'account' },
+        { color: 'black', name: 'Second player', rating: null, kind: 'engine' },
+      ],
     },
     state: {
       status: { type: 'finished', winner: 'red', reason: 'resignation' },
-      moveNumber: 1,
+      moveNumber: afterFlip.moveNumber,
       timeControl: { initialMs: 180000, incrementMs: 2000 },
     },
     timeline: [
-      { type: 'move-played', at: 4, color: 'red', move: { from: 'a1', to: 'a1' }, ply: 1 },
+      { type: 'room-created', at: 0 },
+      { type: 'move-played', at: 4, color: 'red', move: flip, ply: 1 },
       { type: 'seat-resigned', at: 5, color: 'black', winner: 'red' },
     ],
-    // Truth view: ink bound red to the first seat (so 'red-wins' → "Red wins").
-    view: revealedView(1),
+    view: getJungleFlipPlayerView(afterFlip, 'red'),
     history: {
-      truth: [
-        { ply: 0, view: maskedView(0) },
-        { ply: 1, view: revealedView(1) },
-      ],
+      // Spoiler overlay: the ply-0 board is the full deal the adapter reconstructs from.
       revealed: [
-        { ply: 0, view: revealedView(0) },
-        { ply: 1, view: revealedView(1) },
+        { ply: 0, view: jungleFlipTruthView(initial) },
+        { ply: 1, view: jungleFlipTruthView(afterFlip) },
       ],
     },
-  };
-}
-
-const finished = { type: 'finished', winner: 'red', reason: 'resignation' } as const;
-const playing = { type: 'playing', turn: 'black' } as const;
-
-function maskedView(ply: number) {
-  return {
-    id: `jgf_t${ply}`,
-    perspective: 'red',
-    board: { a1: { faceDown: true }, b2: { faceDown: true } },
-    legalMoves: [],
-    captured: [],
-    status: ply === 0 ? playing : finished,
-    ply,
-    firstColor: 'red',
-    moveNumber: 1,
-    lastMove: ply === 0 ? undefined : { from: 'a1', to: 'a1' },
-  };
-}
-
-function revealedView(ply: number) {
-  return {
-    id: `jgf_r${ply}`,
-    perspective: 'red',
-    board: {
-      a1: { color: 'red', role: 'rat', faceDown: false },
-      b2: { color: 'black', role: 'elephant', faceDown: false },
-    },
-    legalMoves: [],
-    captured: [],
-    status: ply === 0 ? playing : finished,
-    ply,
-    firstColor: 'red',
-    moveNumber: 1,
-    lastMove: ply === 0 ? undefined : { from: 'a1', to: 'a1' },
   };
 }
 

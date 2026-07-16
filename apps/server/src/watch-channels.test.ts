@@ -15,8 +15,9 @@ import { defaultWatchChannel, listWatchChannels, watchChannelForId } from './wat
 // The Mini Xiangqi sub-family (open, dark, drop) was retired from Mistboard TV
 // on 2026-07-05 (xiangqi pivot): their registrations carry `watch: null`, so no
 // channel derives for them and their `?channel=` ids resolve to null. Fog Chess
-// is the only baseline channel in a launched-flags-off environment.
-const BASELINE_WATCH_CHANNELS = ['dark-chess'] as const;
+// is the only baseline VARIANT channel in a launched-flags-off environment; the
+// composition-keyed Engines channel is always on and sorts to the end of the rail.
+const BASELINE_WATCH_CHANNELS = ['dark-chess', 'engines'] as const;
 
 // Retired sub-family ids that must NOT resolve to a watch channel.
 const RETIRED_WATCH_CHANNEL_IDS = [
@@ -55,6 +56,39 @@ test('watch channels expose every launched baseline variant in canonical order',
   );
   assert.equal(channels[0]?.id, 'dark-chess');
   assert.equal(defaultWatchChannel().id, 'dark-chess');
+});
+
+test('variant/family channels surface human play only (pvp + pve, never eve)', () => {
+  // Decision #6: engine-vs-engine games are segregated to the Engines channel so
+  // they never pollute a variant channel; PvE folds in because it is the
+  // liquidity floor. Every derived channel + Fog Chess must be human-only.
+  for (const channel of listWatchChannels()) {
+    if (channel.id === 'engines') continue;
+    assert.deepEqual(
+      [...channel.modes].sort(),
+      ['pve', 'pvp'],
+      `${channel.id} must surface pvp+pve and exclude eve`,
+    );
+  }
+});
+
+test('the Engines channel is EvE-only, bounded to watchable variants, deep-linkable', () => {
+  const engines = watchChannelForId('engines');
+  assert.ok(engines, 'engines channel must be enabled + reachable by deep link');
+  assert.deepEqual([...engines.modes], ['eve']);
+  assert.equal(engines.default, false);
+  // No per-channel renderer spec — the client dispatches a renderer per game.
+  assert.deepEqual([...engines.gameSpecIds], []);
+  // Bounded to the union of the enabled variant channels' variants so it never
+  // surfaces an EvE game the client can't render. In a flags-off env only Fog
+  // Chess is enabled, so Engines spans exactly its variants.
+  const watchableVariants = new Set(
+    listWatchChannels()
+      .filter((channel) => channel.id !== 'engines')
+      .flatMap((channel) => [...channel.legacyVariants]),
+  );
+  assert.deepEqual(new Set(engines.legacyVariants), watchableVariants);
+  assert.ok(engines.legacyVariants.includes('dark-chess'));
 });
 
 test('retired Mini Xiangqi sub-family has no watch channel', () => {

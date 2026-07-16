@@ -12,7 +12,12 @@
 // shows where every article stands so you can decide what is ready to lock.
 //
 // Read-only and always exits 0 (informational). Run: npm run i18n:coverage
+import { Window } from 'happy-dom';
 import { createServer } from 'vite';
+
+const window = new Window();
+globalThis.window = window;
+globalThis.document = window.document;
 
 const server = await createServer({
   server: { middlewareMode: true },
@@ -26,7 +31,8 @@ function truncate(text) {
 
 try {
   const { articles } = await server.ssrLoadModule('/src/articles-data.ts');
-  const { articleProse } = await server.ssrLoadModule('/src/article-prose.ts');
+  const { articleProse, articleTranslationSourceStrings } =
+    await server.ssrLoadModule('/src/article-prose.ts');
   const { ARTICLE_LANGS, hasTranslation, translationKeys } =
     await server.ssrLoadModule('/src/article-i18n.ts');
 
@@ -42,13 +48,7 @@ try {
   // (board labels, CTA labels, draft articles included), so a full deep walk is
   // the correct denominator -- articleProse alone would falsely orphan board
   // labels and any string only used by an unpublished article.
-  const liveStrings = new Set();
-  const collect = (value) => {
-    if (typeof value === 'string') liveStrings.add(value);
-    else if (Array.isArray(value)) for (const v of value) collect(v);
-    else if (value && typeof value === 'object') for (const v of Object.values(value)) collect(v);
-  };
-  for (const article of articles) collect(article);
+  const liveStrings = articleTranslationSourceStrings(articles);
 
   console.log(
     `translation coverage — ${published.length} published articles × ${ARTICLE_LANGS.length} zh scripts\n`,

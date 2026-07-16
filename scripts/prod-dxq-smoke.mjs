@@ -107,7 +107,12 @@ async function smokeRoom(baseUrl, created, timeoutMs) {
         state.status?.type === 'playing' &&
         state.status.turn === 'black' &&
         state.moveNumber === 1 &&
-        message.seats?.red === 'python-fdx-v1.0'
+        // version-agnostic: any Dark Xiangqi engine id (python-fdx-*). Pinning a
+        // specific version here silently breaks the smoke on every engine bump —
+        // the check never matches the new seat id and the smoke times out on a
+        // perfectly healthy engine (hit exactly this on the v1.0 -> v1.1 flip).
+        typeof message.seats?.red === 'string' &&
+        message.seats.red.startsWith('python-fdx-')
       ) {
         engineReplyState = {
           moveNumber: state.moveNumber,

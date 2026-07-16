@@ -30,8 +30,7 @@
   padding-top: 0;
 }
 
-.articles-community-rail a,
-.articles-community-rail span {
+.articles-community-rail a {
   display: block;
   padding: 10px 13px;
   border-left: 0;
@@ -48,10 +47,6 @@
   box-shadow: 0 1px 5px rgba(29, 37, 34, 0.07);
 }
 
-.articles-community-rail .community-rail-disabled {
-  cursor: default;
-}
-
 .articles-index .article-sheet {
   padding: 48px 52px 52px;
   box-shadow: 0 2px 12px rgba(29, 37, 34, 0.07);
@@ -62,88 +57,7 @@
 }
 
 .articles-index-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
   margin: 0 0 42px;
-}
-
-.articles-index-controls {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  color: var(--site-muted);
-  font-size: 16px;
-  white-space: nowrap;
-}
-
-.articles-index-toggle,
-.articles-index-language {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: color-mix(in srgb, var(--site-panel-soft) 76%, var(--site-panel));
-  box-shadow: 0 2px 5px rgba(29, 37, 34, 0.08);
-  overflow: hidden;
-}
-
-.articles-index-toggle-item {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  padding: 10px 16px;
-  color: var(--site-text);
-  font: inherit;
-  line-height: 1;
-}
-
-.articles-index-toggle-item.active {
-  background: #d65f00;
-  color: #fff;
-  font-weight: 700;
-}
-
-.articles-index-toggle-item:disabled,
-.articles-index-language:disabled {
-  cursor: default;
-  opacity: 1;
-}
-
-.articles-index-language {
-  appearance: none;
-  border: 1px solid var(--site-border-soft);
-  padding: 10px 48px 10px 18px;
-  position: relative;
-  color: var(--site-text);
-  font: inherit;
-}
-
-.articles-index-language::after {
-  content: "";
-  position: absolute;
-  right: 18px;
-  width: 0;
-  height: 0;
-  border-top: 5px solid #4f8edb;
-  border-right: 5px solid transparent;
-  border-left: 5px solid transparent;
-}
-
-.articles-index-feed {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  color: color-mix(in srgb, var(--site-muted) 76%, transparent);
-}
-
-.articles-index-feed svg {
-  width: 39px;
-  height: 39px;
 }
 
 .articles-index-list {
@@ -153,6 +67,13 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.articles-index-empty {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 17px;
+  line-height: 1.6;
 }
 
 .articles-index-item {
@@ -394,21 +315,7 @@
 
 @media (max-width: 900px) {
   .articles-index-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 18px;
     margin-bottom: 28px;
-  }
-
-  .articles-index-controls {
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 14px;
-    white-space: normal;
-  }
-
-  .articles-index-feed {
-    display: none;
   }
 }
 
@@ -510,9 +417,10 @@
   .article-shell {
     max-width: none;
     display: grid;
-    /* The variant rail has compact markers and enough text room for one-line
-       variant names; the TOC can stay narrower. */
-    grid-template-columns: 272px minmax(0, 800px) 180px;
+    /* The variant rail hugs its content (compact markers + one-line names) so it
+       sits close to the sheet; the old fixed 272px was sized for the retired wide
+       markers and left a dead gap. The TOC can stay narrower. */
+    grid-template-columns: max-content minmax(0, 800px) 180px;
     grid-template-areas: "variants sheet toc";
     justify-content: center;
     column-gap: 28px;
@@ -688,6 +596,9 @@
   align-items: center;
   gap: 8px;
   padding: 4px 0;
+  /* Brighter than the muted TOC default; the marker glyph tracks this via
+     currentColor, and the active entry still stands out (bold + accent). */
+  color: var(--site-text);
 }
 
 .article-variant-sidebar .articles-index-card-thumb {
@@ -712,11 +623,33 @@
   background: transparent;
   box-shadow: none;
   overflow: visible;
+  /* No dimming: the rail markers read at full strength like the labels. */
+  opacity: 1;
+}
+
+/* The dark-theme card-thumb rule (theme.css) paints a panel-soft square behind
+   every .articles-index-card-thumb; the rail markers want no tile, so restore
+   the transparent background at higher specificity in that theme too. */
+:root[data-effective-theme="dark"] .article-variant-sidebar .variant-marker-thumb {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Dark theme routes .article-toc-nav a through a broad :is() muted rule that
+   outranks the base .article-variant-link brightening above. Lift the resting
+   rail label to full text colour without touching the hover/active accent. */
+:root[data-effective-theme="dark"]
+  .article-toc-nav
+  a.article-variant-link:not(.active):not(:hover) {
+  color: var(--site-text);
 }
 
 .article-variant-sidebar .variant-marker-thumb .variant-marker {
   width: 30px;
   height: 30px;
+  /* Track the link colour so the glyph brightens with the label and tints on
+     the active/hover states instead of sitting at a fixed muted grey. */
+  --variant-marker-color: currentColor;
 }
 
 .article-variant-label {
@@ -800,6 +733,17 @@
   font-size: 14px;
   line-height: 1.35;
   color: var(--site-heading);
+}
+
+.rules-playable-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-success, #639b24) 14%, transparent);
+  color: color-mix(in srgb, var(--site-success, #639b24) 78%, var(--site-text));
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .rules-landing-tile:hover .rules-landing-tile-label {
@@ -896,11 +840,10 @@
   width: min(48.5%, 100%);
 }
 
-/* The starting-position board is the section hero: render it large so the
-   anatomy of the board reads at a glance. Shared by Xiangqi and Jieqi so their
-   start boards match. */
-[data-article-slug="xiangqi"] .article-figure-xq > .xq-article-svg.xq-article-svg--hero,
-[data-article-slug="jieqi"] .article-figure-xq > .xq-article-svg.xq-article-svg--hero {
+/* A starting-position board marked as the section hero should match the
+   interactive board width. Scope this to the semantic hero class rather than
+   an article slug so public route aliases cannot silently disable the sizing. */
+.article-figure-xq > .xq-article-svg.xq-article-svg--hero {
   width: min(480px, 100%);
 }
 

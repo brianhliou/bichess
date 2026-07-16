@@ -1,15 +1,18 @@
 // Patron program unit tests (078). Covers the pure webhook state-mapping (no
 // DB), the tier/config contract, and the Stripe signature-verification the
-// webhook route relies on. Full webhook wiring + idempotency (claimStripeEvent)
-// is DB-bound and covered by the persistent test suite.
+// webhook route relies on. Atomic event storage is DB-bound and covered by
+// persistence-patron.test.ts; the route-level exactly-once contract is covered
+// here with an injected transaction callback.
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import Stripe from 'stripe';
 import { findPatronTier, loadPatronConfig, PATRON_TIERS } from './patron-config.js';
+import type { PatronTransaction } from './persistence.js';
 import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
 import {
   lifetimeInputFromSession,
+  processWebhookEvent,
   resolveAccountIdFromMetadata,
   subscriptionInputFromStripe,
 } from './routes/patron.js';
@@ -155,4 +158,44 @@ test('constructEvent accepts a valid signature and rejects a tampered one', () =
   assert.throws(() => stripe.webhooks.constructEvent(payload, 'bad-signature', secret));
   // A payload that doesn't match the signed digest is also rejected.
   assert.throws(() => stripe.webhooks.constructEvent(`${payload} `, header, secret));
+});
+
+test('webhook processing applies a fresh event exactly once inside its transaction', async () => {
+  const event = { id: 'evt_once', type: 'customer.subscription.updated' } as Stripe.Event;
+  const transaction = {} as PatronTransaction;
+  let applications = 0;
+
+  const fresh = await processWebhookEvent(
+    event,
+    async (eventId, eventType, apply) => {
+      assert.equal(eventId, event.id);
+      assert.equal(eventType, event.type);
+      await apply(transaction);
+      return true;
+    },
+    async (receivedEvent, receivedTransaction) => {
+      applications += 1;
+      assert.equal(receivedEvent, event);
+      assert.equal(receivedTransaction, transaction);
+    },
+  );
+
+  assert.equal(fresh, true);
+  assert.equal(applications, 1);
+});
+
+test('duplicate webhook processing does not apply the event again', async () => {
+  const event = { id: 'evt_duplicate', type: 'customer.subscription.updated' } as Stripe.Event;
+  let applications = 0;
+
+  const fresh = await processWebhookEvent(
+    event,
+    async () => false,
+    async () => {
+      applications += 1;
+    },
+  );
+
+  assert.equal(fresh, false);
+  assert.equal(applications, 0);
 });

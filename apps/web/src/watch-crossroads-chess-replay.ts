@@ -24,6 +24,8 @@ const AUTO_PLAY_LOOP_HOLD_MS = 2600;
 export type CrossroadsChessWatchReplayOptions = {
   autoplay?: boolean;
   metadataByRoomId?: Record<string, GameMeta>;
+  /** Fires after a distinct autoplay or manual ply change. */
+  onPlyChange?: (ply: number, maxPly: number) => void;
 };
 
 type ControlRefs = {
@@ -112,6 +114,7 @@ export async function mountCrossroadsChessWatchReplay(
   options: CrossroadsChessWatchReplayOptions,
 ): Promise<ReplayHandle> {
   const autoplay = options.autoplay ?? true;
+  const onPlyChange = options.onPlyChange;
 
   let activeId = roomId;
   let destroyed = false;
@@ -132,6 +135,7 @@ export async function mountCrossroadsChessWatchReplay(
   let clockTickTimer: number | null = null;
   let maxPly = 0;
   let currentPly = 0;
+  let lastNotifiedPly: number | null = null;
   let boardOrientation: CrossroadsChessColor = 'white';
   let activePostgame: CrossroadsChessPostgameResponse | null = null;
 
@@ -181,6 +185,10 @@ export async function mountCrossroadsChessWatchReplay(
     } else {
       clockAnim = null;
     }
+    if (onPlyChange && lastNotifiedPly !== currentPly) {
+      lastNotifiedPly = currentPly;
+      onPlyChange(currentPly, maxPly);
+    }
   };
 
   const tickClock = (): void => {
@@ -225,6 +233,7 @@ export async function mountCrossroadsChessWatchReplay(
     activePostgame = postgame;
     maxPly = postgameReplayMaxPly(postgame);
     currentPly = 0;
+    lastNotifiedPly = null;
     paused = !autoplay;
     boardOrientation = 'white';
     incrementMs = (postgame.game.timeControl ?? postgame.state.timeControl)?.incrementMs ?? 0;
@@ -334,6 +343,8 @@ export async function mountCrossroadsChessWatchReplay(
     loadGame: async (sampleId: string) => {
       await load(sampleId);
     },
+    jumpToPly: (ply: number) => manualJump(ply),
+    plyCount: () => maxPly,
     updateLoopPool: () => {},
   };
 }

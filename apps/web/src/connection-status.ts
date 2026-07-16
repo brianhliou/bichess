@@ -4,6 +4,8 @@
 // lag for SERVER. Polled only while the dropdown is open (start/stop), so an
 // idle tab does no background work.
 
+import { t } from './i18n/catalog.js';
+
 export type ConnectionStatus = {
   element: HTMLElement;
   start(): void;
@@ -15,12 +17,12 @@ const POLL_INTERVAL_MS = 2500;
 export function createConnectionStatus(): ConnectionStatus {
   const element = document.createElement('div');
   element.className = 'account-nav-status';
-  element.setAttribute('aria-label', 'Connection status');
+  element.setAttribute('aria-label', t('connection.status'));
 
   const rows = document.createElement('div');
   rows.className = 'account-nav-status-rows';
-  const ping = createStatusRow('Ping');
-  const server = createStatusRow('Server');
+  const ping = createStatusRow(t('connection.ping'));
+  const server = createStatusRow(t('connection.server'));
   rows.append(ping.row, server.row);
 
   const bars = document.createElement('div');
@@ -99,7 +101,7 @@ function createStatusRow(label: string): { row: HTMLElement; value: HTMLElement 
   value.textContent = '–';
   const unit = document.createElement('span');
   unit.className = 'account-nav-status-unit';
-  unit.textContent = 'ms';
+  unit.textContent = t('connection.ms');
   row.append(name, value, unit);
   return { row, value };
 }

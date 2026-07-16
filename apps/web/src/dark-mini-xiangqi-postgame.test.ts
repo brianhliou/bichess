@@ -40,16 +40,16 @@ describe('Dark Mini Xiangqi postgame page', () => {
     expect(root.textContent).toContain('Red view');
     expect(root.textContent).toContain('Server truth');
     expect(root.textContent).toContain('Black view');
-    expect(root.textContent).toContain('Play again');
-    const download = root.querySelector<HTMLAnchorElement>(
-      'a[href="/api/dark-mini-xiangqi/games/dmxq_postgame/export.json"]',
-    );
-    expect(download?.textContent).toBe('Download JSON');
-    expect(download?.getAttribute('download')).toBe('mistboard-dmxq_postgame.json');
+    expect(root.textContent).not.toContain('Play again');
     expect(root.querySelectorAll('[aria-label="black general"]').length).toBeGreaterThan(0);
     // Moves are grouped two plies per row, dark-chess style: number + red + black.
     expect(root.querySelector('.move-row')?.textContent?.replace(/\s+/g, '')).toBe('1b1-b2b7-b6');
-    expect(root.textContent).toContain('Ply 2 of 2');
+    // The scrubber's "Ply X of Y" status was removed with the lichess control bar;
+    // the nav buttons disable at the bounds instead. In a 2-ply game the middle ply
+    // is the only one with both nav directions enabled. Opens at the final ply.
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    expect(nav('Next move')?.disabled).toBe(true);
     expect(root.querySelectorAll('.mini-xq-board')).toHaveLength(3);
 
     // Each board's fog <mask> needs a unique id: SVG url(#id) resolves the first
@@ -63,17 +63,24 @@ describe('Dark Mini Xiangqi postgame page', () => {
     expect(boardWrap(root, 'Server truth').querySelector('.mini-xq-fog-mask')).toBeNull();
     expect(boardWrap(root, 'Server truth').innerHTML).not.toContain('hidden piece');
 
-    // Flip re-renders all boards; scrubbing back steps the ply counter. The shared
-    // review layout owns the scrubber (aria-labelled "… ply") and binds the keyboard
-    // on the mount root (Home/End jump to the first/last ply).
-    root.querySelector<HTMLButtonElement>('[aria-label="Flip all boards (f)"]')?.click();
+    // Flip re-renders all boards; scrubbing back steps the ply counter. Flip now
+    // lives in the control bar's menu overlay (present even while closed); the shared
+    // review layout binds the keyboard on the mount root (Home/End jump to the
+    // first/last ply).
+    [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')]
+      .find((b) => b.textContent?.includes('Flip board'))
+      ?.click();
     expect(root.querySelectorAll('.mini-xq-board')).toHaveLength(3);
-    root.querySelector<HTMLButtonElement>('[aria-label="Previous ply"]')?.click();
-    expect(root.textContent).toContain('Ply 1 of 2');
+    nav('Previous move')?.click();
+    // Ply 1 (middle): both directions enabled.
+    expect(nav('Next move')?.disabled).toBe(false);
+    expect(nav('Previous move')?.disabled).toBe(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
-    expect(root.textContent).toContain('Ply 0 of 2');
+    // Ply 0 (start): first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
-    expect(root.textContent).toContain('Ply 2 of 2');
+    // Back at the final ply.
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 });
 

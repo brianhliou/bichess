@@ -11,10 +11,6 @@
   --site-panel-soft: hsl(0, 0%, 96%);
   --site-border: hsl(0, 0%, 82%);
   --site-border-soft: hsl(0, 0%, 88%);
-  --site-accent: hsl(209, 77%, 48%);
-  --site-accent-strong: hsl(209, 77%, 40%);
-  --site-accent-soft: hsl(209, 77%, 94%);
-  --site-link: hsl(209, 77%, 48%);
   --site-nav-bg: var(--site-bg);
   --site-nav-border: transparent;
   --site-shadow: rgba(0, 0, 0, 0.16);
@@ -23,6 +19,15 @@
      xiangqi board-theme setting, matching every other xiangqi surface. */
 
   background: var(--site-page-gradient);
+}
+
+:root:not([data-effective-theme="dark"]) .puzzles-shell {
+  /* Keep the lichess-style blue puzzle actions local to the puzzle surface.
+     Page-level overrides leak into the shared profile and settings menus. */
+  --site-accent: hsl(209, 77%, 48%);
+  --site-accent-strong: hsl(209, 77%, 40%);
+  --site-accent-soft: hsl(209, 77%, 94%);
+  --site-link: hsl(209, 77%, 48%);
 }
 
 .puzzles-shell {
@@ -119,6 +124,10 @@
   width: min(100%, calc(var(--puzzle-surface-size) * 552 / 612));
   min-width: 320px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-xiangqi-board-layout="cell"] .puzzle-board .puzzle-xiangqi-board {
+  width: min(100%, calc(var(--puzzle-surface-size) * 540 / 612));
 }
 
 .puzzle-board-shell {
@@ -236,10 +245,26 @@
   overflow: hidden;
 }
 
+/* Post-completion analysis adds a third child (the engine panel). Drop the fixed
+   two-row shape so trainer + actions + engine stack naturally, capped at the
+   board height with a scroll rather than clipping the engine off-screen. */
+.puzzle-side-panel--analysis {
+  grid-template-rows: none;
+  grid-auto-rows: min-content;
+  align-content: start;
+  height: auto;
+  max-height: var(--puzzle-surface-size);
+  overflow: auto;
+}
+
+.puzzle-analysis-panel {
+  min-height: 0;
+}
+
 .puzzle-trainer-panel,
 .puzzle-left-card {
   border: 1px solid var(--site-border-soft);
-  border-radius: 3px;
+  border-radius: 8px;
   background: var(--site-panel);
   box-shadow: 0 2px 5px var(--site-shadow);
 }
@@ -322,6 +347,56 @@
   color: var(--site-heading);
   font-size: 16px;
   font-weight: 500;
+}
+
+/* Stable puzzle code (e.g. "#bMpKA"), lichess-style: an accent link to the
+   puzzle's canonical URL, sitting inside the heading-styled first line. */
+.puzzle-code-link {
+  color: var(--site-link);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.puzzle-code-link:hover {
+  text-decoration: underline;
+}
+
+/* "From game" attribution: one row per player, a color disc + name, with a
+   result glyph pushed to the trailing edge on the side that won. */
+.puzzle-source-player {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.puzzle-source-disc {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 50%;
+}
+
+.puzzle-source-disc--red {
+  background: #c0392b;
+}
+
+.puzzle-source-disc--black {
+  background: #454545;
+}
+
+.puzzle-source-player-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.puzzle-source-result {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .puzzle-info-divider {
@@ -551,18 +626,21 @@
   font-weight: 400;
 }
 
-.puzzle-move-item--active {
+/* Single-ply highlight: mark the one active move cell, not the whole row. */
+.puzzle-move-cell--active {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin: 0 -6px;
+  padding: 0 6px;
   background: var(--site-accent-soft);
-}
-
-.puzzle-move-item--active .puzzle-move-red,
-.puzzle-move-item--active .puzzle-move-black {
+  color: var(--site-heading);
   font-weight: 600;
 }
 
 .puzzle-feedback {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 88px minmax(0, 1fr);
   align-items: center;
   min-height: 0;
   padding: 22px 28px;
@@ -574,8 +652,8 @@
 .puzzle-feedback-icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 66px;
+  height: 66px;
   color: var(--site-heading);
   line-height: 1;
 }
@@ -633,6 +711,25 @@
   outline-offset: 2px;
 }
 
+.puzzle-feedback-skip:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Persistent escape hatches (hint / view solution / next) under the feedback
+   copy. Wraps so the three buttons stack on a narrow trainer column. */
+.puzzle-assist-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.puzzle-assist-next {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+}
+
 .puzzle-feedback--good {
   background: color-mix(in srgb, #2b8a57 9%, var(--site-panel));
 }
@@ -658,10 +755,10 @@
 
 .puzzle-solved-panel h2 {
   margin: 0;
-  padding: 30px 24px 22px;
+  padding: 14px 24px 12px;
   color: var(--site-heading);
-  font-size: 28px;
-  font-weight: 400;
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.1;
 }
 
@@ -670,16 +767,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  min-height: 58px;
+  min-height: 76px;
   padding: 0 24px;
   border: 0;
   background: var(--site-accent);
   color: var(--site-on-accent, #fff);
   cursor: pointer;
   font: inherit;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -773,6 +870,15 @@
   color: hsl(359, 58%, 57%);
 }
 
+.puzzle-vote-button:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* The chosen vote reads as pressed: filled tint + full-strength icon. */
+.puzzle-vote-button--selected {
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
 .puzzle-vote-button:disabled {
   color: var(--site-border);
   cursor: default;
@@ -787,7 +893,7 @@
 
 .puzzle-actions {
   display: grid;
-  grid-template-columns: repeat(5, 48px);
+  grid-template-columns: repeat(4, 48px);
   justify-content: center;
   align-items: center;
   gap: clamp(10px, 1.8vw, 24px);
@@ -957,14 +1063,14 @@
   }
 
   .puzzle-feedback {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-columns: 60px minmax(0, 1fr);
     padding: 18px 20px;
   }
 
   .puzzle-feedback-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 36px;
+    width: 50px;
+    height: 50px;
+    font-size: 44px;
   }
 
   .puzzle-feedback-title {

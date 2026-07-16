@@ -23,6 +23,7 @@ import type { Article, ArticleBlock } from '../types.js';
 export const darkChessConceptsArticle: Article = {
     slug: 'dark-chess-concepts',
     kind: 'article',
+    publisher: 'mistboard',
     title: 'Dark Chess Concepts',
     summary:
       'Strategy concepts for dark chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
@@ -281,7 +282,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'cta',
             buttons: [
-              { label: 'Read the rules', href: '/rules/dark-chess', emphasis: 'secondary' },
+              { label: 'Read the rules', href: '/rules/fog-chess', emphasis: 'secondary' },
               { label: 'Play Misty', href: '/?play=computer', emphasis: 'primary' },
             ],
           } as ArticleBlock,

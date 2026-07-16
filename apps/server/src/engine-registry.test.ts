@@ -49,10 +49,43 @@ test('Dark Mini Xiangqi has a dedicated engine that stays out of the chess PvE p
 
 test('Dark Xiangqi has a dedicated local engine that stays out of the chess PvE picker', () => {
   const engine = loadEngine(DARK_XIANGQI_DEFAULT_ENGINE_ID);
-  assert.equal(engine.id, 'python-fdx-v1.0');
-  assert.equal(engine.name, 'Misty DXQ 1.0');
+  assert.equal(engine.id, 'python-fdx-v1.1');
+  assert.equal(engine.name, 'Misty DXQ 1.1');
   assert.equal(engine.gameSpecId, 'dark-xiangqi');
   assert.equal(isDarkXiangqiEngineClientId(engine.id), true);
   assert.equal(isDarkMiniXiangqiEngineClientId(engine.id), false);
   assert.equal(isPlayableLiveEngineClientId(engine.id), false);
+});
+
+test('standard Xiangqi Pikafish tiers are first-class reproducible engine versions', () => {
+  const engine = loadEngine('pikafish-xiangqi-level-3');
+  assert.equal(engine.engineId, 'pikafish-xiangqi');
+  assert.equal(engine.gameSpecId, 'xiangqi');
+  assert.equal(engine.config.kind, 'pikafish-xiangqi');
+  assert.deepEqual(engine.config, {
+    kind: 'pikafish-xiangqi',
+    nodes: 10_000,
+    movetime_ms: 500,
+    version: '0.3.0',
+  });
+  assert.match(engine.playSignature, /0\.3\.0-nodes-10000$/);
+  assert.equal(isPlayableLiveEngineClientId(engine.id), false);
+});
+
+test('standard Xiangqi FSF ladder preserves the PlayStrategy weakening parameters', () => {
+  const level1 = loadEngine('fairy-stockfish-xiangqi-level-1');
+  assert.equal(level1.engineId, 'fairy-stockfish-xiangqi');
+  assert.equal(level1.gameSpecId, 'xiangqi');
+  assert.deepEqual(level1.config, {
+    kind: 'fairy-stockfish',
+    skill: -9,
+    depth: 5,
+    movetime_ms: 50,
+  });
+  assert.deepEqual(loadEngine('fairy-stockfish-xiangqi-level-8').config, {
+    kind: 'fairy-stockfish',
+    skill: 20,
+    depth: 22,
+    movetime_ms: 1_000,
+  });
 });

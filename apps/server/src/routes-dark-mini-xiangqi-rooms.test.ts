@@ -3,7 +3,7 @@ import type { ServerResponse } from 'node:http';
 import test from 'node:test';
 import { DARK_MINI_XIANGQI_SPEC_ID } from '@mistboard/game';
 import type { DarkMiniXiangqiRuntimeRoom } from './dark-mini-xiangqi-runtime.js';
-import type { UserAccount } from './persistence.js';
+import { DEFAULT_ACCOUNT_PREFERENCES, type UserAccount } from './persistence.js';
 import {
   type DarkMiniXiangqiCreateContext,
   darkMiniXiangqiPveHumanColor,
@@ -545,6 +545,11 @@ function testUser(): UserAccount {
     handleChangedAt: null,
     displayName: 'Rated Player',
     displayNameChangedAt: null,
+    bio: '',
+    location: '',
+    profileLinks: [],
+    displayPreferences: {},
+    accountPreferences: DEFAULT_ACCOUNT_PREFERENCES,
     profileVisibility: 'public',
     accountRole: 'player',
     title: null,
@@ -555,6 +560,7 @@ function testUser(): UserAccount {
     stripeCustomerId: null,
     createdAt: now,
     updatedAt: now,
+    closedAt: null,
   };
 }
 

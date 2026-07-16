@@ -1,0 +1,110 @@
+/* Study annotation controls (glyph picker + comment box) in the rail box, and the
+ * brush colours for user-drawn board shapes (arrows + circles). */
+
+.annotation-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.1rem 0.2rem;
+}
+
+.annotation-editor__glyphs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.annotation-editor__glyph {
+  min-width: 2rem;
+  padding: 0.2rem 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.annotation-editor__glyph:hover {
+  background: rgba(128, 128, 128, 0.14);
+}
+.annotation-editor__glyph--active {
+  background: var(--c-accent, #3893e8);
+  border-color: var(--c-accent, #3893e8);
+  color: #fff;
+}
+
+.annotation-editor__clear-shapes {
+  margin-left: auto;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.annotation-editor__clear-shapes:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.annotation-editor__comment {
+  width: 100%;
+  resize: vertical;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: var(--c-bg-elevated, rgba(128, 128, 128, 0.08));
+  color: inherit;
+}
+.annotation-editor__comment:focus {
+  outline: none;
+  border-color: var(--c-accent, #3893e8);
+}
+
+.annotation-editor__gamebook {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--c-border, rgba(128, 128, 128, 0.3));
+}
+
+.annotation-editor__gamebook-field {
+  width: 100%;
+  resize: vertical;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.35));
+  border-radius: 4px;
+  background: var(--c-bg-elevated, rgba(128, 128, 128, 0.08));
+  color: inherit;
+}
+.annotation-editor__gamebook-field:focus {
+  outline: none;
+  border-color: var(--c-accent, #3893e8);
+}
+
+/* User-drawn board shapes: brush colours override the default engine-arrow ink.
+ * (CSS beats the SVG presentation attributes the arrow/marker renderers inline.) */
+.xq-arrow--draw.xq-shape--green,
+.xq-marker.xq-shape--green {
+  fill: #15803d;
+  stroke: #15803d;
+}
+.xq-arrow--draw.xq-shape--red,
+.xq-marker.xq-shape--red {
+  fill: #b91c1c;
+  stroke: #b91c1c;
+}
+.xq-marker.xq-shape--green,
+.xq-marker.xq-shape--red {
+  fill: none;
+}

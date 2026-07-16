@@ -41,4 +41,42 @@ describe('renderBanqiBoardSvg', () => {
     expect(revealed).toContain('banqi-piece banqi-drag-source');
     expect(hidden).toContain('banqi-back banqi-drag-source');
   });
+
+  it('uses a disc shadow and destination halo for a board move', () => {
+    const svg = renderBanqiBoardSvg(
+      { ...view, lastMove: { from: 'a1', to: 'c1' } } as never,
+      'red',
+    );
+
+    expect(svg.match(/<circle class="banqi-last-from"/g)).toHaveLength(1);
+    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    expect(svg).not.toContain('<rect class="banqi-last');
+    expect(svg).not.toContain('banqi-last-collision');
+  });
+
+  it('uses one destination halo and no origin shadow for a flip', () => {
+    const svg = renderBanqiBoardSvg(
+      { ...view, lastMove: { from: 'a1', to: 'a1' } } as never,
+      'red',
+    );
+
+    expect(svg).not.toContain('class="banqi-last-from"');
+    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    expect(svg.match(/<circle class="banqi-last-reveal"/g)).toHaveLength(1);
+  });
+
+  it('keeps only the circular endpoints after mutual elimination', () => {
+    const svg = renderBanqiBoardSvg(
+      {
+        ...view,
+        board: { b1: { faceDown: true } },
+        lastMove: { from: 'a1', to: 'c1' },
+      } as never,
+      'red',
+    );
+
+    expect(svg.match(/<circle class="banqi-last-from"/g)).toHaveLength(1);
+    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    expect(svg).not.toContain('banqi-last-collision');
+  });
 });

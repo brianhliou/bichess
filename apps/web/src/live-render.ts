@@ -12,6 +12,7 @@ import type {
 import type { Api } from 'chessground/api';
 import type { Config } from 'chessground/config';
 import type * as cg from 'chessground/types';
+import { readAccountPreferences } from './account-preferences.js';
 import {
   classifyTimeControl,
   createGameLifecycleTracker,
@@ -189,7 +190,10 @@ export function initRender(
   lifecycleTracker.reset();
   resetMoveListState();
   resetClockState();
-  refs = createLiveLayout(target, { debugRequested: liveState.debugRequested });
+  refs = createLiveLayout(target, {
+    debugRequested: liveState.debugRequested,
+    roomId: liveState.room,
+  });
   installSelectionClickAway({
     roots: () => [refs.board, refs.promotion],
     hasSelection: () => pendingPromotion === null && ground !== null,
@@ -713,13 +717,17 @@ function renderBoard(view: PlayerView | null): void {
     pendingPromotion === null;
   const boardIsLive = canInteractWithOwnPieces && moveColor !== null;
   const movableColor = boardIsLive ? moveColor : ownSeat;
+  const premovesEnabled = readAccountPreferences().premoves;
+  if (!premovesEnabled) ground?.cancelPremove();
   const dests = view ? legalDests(view) : new Map<cg.Key, cg.Key[]>();
   refs.board.classList.toggle('finished-board', view?.status.type === 'finished');
   refs.board.classList.toggle('paused-board', paused);
   renderPausedOverlay(paused);
   const config = {
     // Rebuilt on every render, so a pieceAnimation pref change applies live.
-    animation: chessgroundAnimation(),
+    // Fog chess (dark-chess) forces animation off: a glide would imply a
+    // hidden origin/destination the server redacted.
+    animation: chessgroundAnimation({ fog: view?.variant === 'dark-chess' }),
     autoCastle: true,
     coordinates: false,
     coordinatesOnSquares: false,
@@ -743,7 +751,12 @@ function renderBoard(view: PlayerView | null): void {
     premovable: {
       castle: true,
       customDests: dests,
-      enabled: canInteractWithOwnPieces && !boardIsLive && ownSeat !== null,
+      enabled: shouldEnablePremoves({
+        preferenceEnabled: premovesEnabled,
+        canInteractWithOwnPieces,
+        boardIsLive,
+        hasSeat: ownSeat !== null,
+      }),
       showDests: true,
     },
     selectable: { enabled: canInteractWithOwnPieces },
@@ -765,13 +778,31 @@ function renderBoard(view: PlayerView | null): void {
   maybePlayPremove();
 }
 
+export function shouldEnablePremoves(input: {
+  preferenceEnabled: boolean;
+  canInteractWithOwnPieces: boolean;
+  boardIsLive: boolean;
+  hasSeat: boolean;
+}): boolean {
+  return (
+    input.preferenceEnabled && input.canInteractWithOwnPieces && !input.boardIsLive && input.hasSeat
+  );
+}
+
 function ensureDragGhostElement(): void {
   if (!ground || refs.board.querySelector('piece.ghost')) return;
   ground.redrawAll();
 }
 
 function maybePlayPremove(): void {
-  if (!ground || activeMoveColor() === null || pendingPromotion !== null) return;
+  if (
+    !ground ||
+    !readAccountPreferences().premoves ||
+    activeMoveColor() === null ||
+    pendingPromotion !== null
+  ) {
+    return;
+  }
   ground.playPremove();
 }
 

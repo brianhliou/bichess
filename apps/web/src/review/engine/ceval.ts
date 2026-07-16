@@ -8,6 +8,20 @@
 // lazy — importing the module in a non-isolated page (or a test) does nothing until
 // evaluate()/preloadEngine() is called.
 
+// The ceval contract types live in ceval-types.ts (so the Misty backend can share them
+// without a circular import); imported for local use and re-exported below for existing
+// `from './ceval.js'` importers.
+import type {
+  CevalHandle,
+  CevalLine,
+  CevalRequest,
+  CevalUpdate,
+  CevalVariant,
+} from './ceval-types.js';
+import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
+
+export type { CevalHandle, CevalLine, CevalRequest, CevalUpdate, CevalVariant };
+
 const ENGINE_BASE = '/engine/fairy-stockfish/';
 // The vendored FSF assets live in public/ and are NOT content-hashed like the Vite
 // bundle, so the CDN caches them by bare path for hours (max-age=14400) and a copy
@@ -30,57 +44,22 @@ const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_
 /** Human label for the engine, shown in the analysis panel. */
 export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
 
-/** Variants the vendored engine can evaluate. Both run on one shared instance. */
-export type CevalVariant = 'xiangqi' | 'fortressxiangqi';
-
-export interface CevalLine {
-  /** 1-based rank within MultiPV (1 = best). */
-  multipv: number;
-  depth: number;
-  /** Centipawns, side-to-move POV; null when `mate` is set. */
-  scoreCp: number | null;
-  /** Signed moves-to-mate, side-to-move POV; null otherwise. */
-  mate: number | null;
-  /** Principal variation, engine UCI. */
-  pvUci: string[];
-}
-
-export interface CevalUpdate {
-  depth: number;
-  seldepth: number;
-  nodes: number;
-  nps: number;
-  /** Lines sorted ascending by multipv. Scores are from the side-to-move POV. */
-  lines: CevalLine[];
-}
-
-export interface CevalRequest {
-  /** Move history from the start position, in engine UCI. */
-  movesUci: string[];
-  /** Number of ranked lines to return (default 1). */
-  multiPv?: number;
-  /** Cap search depth; the engine streams shallower updates first (default 18). */
-  maxDepth?: number;
-  /** Progressive callback fired as depth increases (throttled). */
-  onUpdate?: (update: CevalUpdate) => void;
-}
-
-export interface CevalHandle {
-  readonly variant: CevalVariant;
-  /** Evaluate a position; resolves with the deepest update reached. */
-  evaluate(req: CevalRequest): Promise<CevalUpdate>;
-  /** Halt the current search (the pending evaluate never resolves). */
-  stop(): void;
-  dispose(): void;
-}
-
-/** True only when SharedArrayBuffer is usable — i.e. the page is cross-origin isolated. */
-export function cevalSupported(): boolean {
+/** Whether the client engine for `variant` can run in this page. The Fairy-Stockfish
+ *  variants need SharedArrayBuffer (cross-origin isolation); the single-threaded Misty
+ *  wasm variants (banqi) do not, so they are always supported. Called with no argument,
+ *  it reports the FSF requirement (back-compat). */
+export function cevalSupported(variant?: CevalVariant): boolean {
+  if (variant && isMistyCevalVariant(variant)) return true;
   return (
     typeof SharedArrayBuffer === 'function' &&
     typeof crossOriginIsolated === 'boolean' &&
     crossOriginIsolated === true
   );
+}
+
+/** Human label for the engine backing `variant`. */
+export function cevalEngineName(variant: CevalVariant): string {
+  return mistyEngineName(variant) ?? CEVAL_ENGINE_NAME;
 }
 
 // --- low-level engine (singleton) ---------------------------------------------
@@ -272,6 +251,10 @@ class Ceval implements CevalHandle {
 
   constructor(readonly variant: CevalVariant) {}
 
+  preload(): Promise<void> {
+    return preloadEngine();
+  }
+
   async evaluate(req: CevalRequest): Promise<CevalUpdate> {
     const core = await engine();
     this.stop(); // supersede any in-flight search
@@ -282,10 +265,9 @@ class Ceval implements CevalHandle {
     core.send('stop');
     core.send(`setoption name UCI_Variant value ${this.variant}`);
     core.send(`setoption name MultiPV value ${multiPv}`);
+    const base = req.initialFen ? `fen ${req.initialFen}` : 'startpos';
     core.send(
-      req.movesUci.length
-        ? `position startpos moves ${req.movesUci.join(' ')}`
-        : 'position startpos',
+      req.movesUci.length ? `position ${base} moves ${req.movesUci.join(' ')}` : `position ${base}`,
     );
 
     const byPv = new Map<number, CevalLine>();
@@ -365,5 +347,6 @@ class Ceval implements CevalHandle {
 }
 
 export function createCeval(variant: CevalVariant): CevalHandle {
+  if (isMistyCevalVariant(variant)) return new MistyCeval(variant);
   return new Ceval(variant);
 }

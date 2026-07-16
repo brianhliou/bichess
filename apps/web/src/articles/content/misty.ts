@@ -3,6 +3,7 @@ import type { Article } from '../types.js';
 export const mistyArticle: Article = {
     slug: 'misty',
     kind: 'article',
+    publisher: 'mistboard',
     title: 'How Misty Plays',
     summary:
       "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.",

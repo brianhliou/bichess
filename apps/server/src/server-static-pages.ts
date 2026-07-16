@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import type { Color } from '@mistboard/game';
-import { ARTICLE_META, canonicalArticleBase } from './article-meta.js';
+import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import { GAME_OG_IMAGE_VERSION } from './og-image.js';
 import * as persistence from './persistence.js';
 
@@ -65,12 +65,16 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'chess-rules-primer': 'chess',
   'xiangqi-rules-primer': 'xiangqi',
   'chess-rules': 'chess',
-  'dark-chess-rules': 'dark-chess',
+  'dark-chess-rules': 'fog-chess',
   'xiangqi-rules': 'xiangqi',
-  'dark-xiangqi-rules': 'dark-xiangqi',
+  'dark-xiangqi-rules': 'fog-xiangqi',
   'mini-xiangqi-rules': 'mini-xiangqi',
   'dark-mini-xiangqi-rules': 'dark-mini-xiangqi',
   draft960: 'dark-draft960',
+  banqi: 'flip-xiangqi',
+  'dark-chess': 'fog-chess',
+  'dark-xiangqi': 'fog-xiangqi',
+  jieqi: 'reveal-xiangqi',
 };
 
 export function injectPageMeta(html: string, meta: PageMeta): string {
@@ -129,6 +133,26 @@ export async function serveGamePage(params: {
   params.response.end(html);
 }
 
+// Serves the SPA shell with a 404 status for an unknown page navigation, so the
+// client boots and renders its branded not-found page (nav + panel) instead of
+// serve-handler's bare default 404. The status is a real 404 (crawlers must not
+// index junk paths as 200); noindex is belt-and-suspenders for the no-JS crawl.
+// Missing *assets* never reach here — server-http routes only extensionless page
+// navigations to this handler; extensioned paths fall through to serve-handler's
+// real asset 404.
+export async function serveNotFoundShell(params: {
+  response: ServerResponse;
+  staticDir: string;
+}): Promise<void> {
+  const indexPath = resolve(params.staticDir, 'index.html');
+  let html = await fs.readFile(indexPath, 'utf-8');
+  html = html
+    .replace(/<title>[^<]*<\/title>/, '<title>Page not found · Mistboard</title>')
+    .replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+  params.response.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.end(html);
+}
+
 function gamePageParticipantName(game: persistence.GameRecord, color: Color): string {
   return (
     game.participants.find((participant) => participant.color === color)?.displayName ??
@@ -170,6 +194,7 @@ export async function serveSitemap(params: {
     '/learn',
     '/puzzles',
     '/videos',
+    '/streamer',
     '/player',
     '/player/rating-stats',
     '/coach',
@@ -177,6 +202,7 @@ export async function serveSitemap(params: {
     '/source',
     '/faq',
     '/patron',
+    '/contribute',
   ];
   // Each article is listed once per pre-rendered language variant (dist/blog,
   // dist/zh-hans/blog, dist/zh-hant/blog), so the published+translated set
@@ -185,7 +211,10 @@ export async function serveSitemap(params: {
     fs
       .readdir(resolve(params.staticDir, dir))
       .then((files) =>
-        files.filter((f) => f.endsWith('.html')).map((f) => f.slice(0, -'.html'.length)),
+        files
+          .filter((f) => f.endsWith('.html'))
+          .map((f) => f.slice(0, -'.html'.length))
+          .filter(articleIsIndexable),
       )
       .catch(() => [] as string[]);
   const langDirs: Array<[string, string]> = [
@@ -254,11 +283,25 @@ export async function serveArticlePage(params: {
       params.response.end(prerendered);
       return;
     }
+
+    // A published English prerender with no matching localized file means the
+    // translation has not crossed its review gate. Redirect to the complete
+    // English article instead of booting the SPA into a mixed-language page.
+    // Keep this temporary so a future reviewed translation can claim the URL.
+    if (params.langPrefix) {
+      const englishPath = resolve(params.staticDir, canonicalBase, `${params.slug}.html`);
+      const englishPrerender = await fs.readFile(englishPath, 'utf-8').catch(() => null);
+      if (englishPrerender !== null) {
+        params.response.writeHead(302, { location: `/${canonicalBase}/${params.slug}` });
+        params.response.end();
+        return;
+      }
+    }
   }
 
   // Fallback for draft/outline articles (not pre-rendered): shell + meta only.
-  // Language-prefixed routes only ever serve pre-rendered files; a missing zh
-  // file falls through here to the English shell rather than 404, which is fine.
+  // Published language-prefixed routes without a reviewed translation redirect
+  // above; drafts can still use the shell in development.
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
   const article = ARTICLE_META[params.slug];
@@ -270,6 +313,9 @@ export async function serveArticlePage(params: {
       url,
       imageUrl: `${params.publicHost}/og/article/${encodeURIComponent(params.slug)}.png`,
     });
+    if (!articleIsIndexable(params.slug)) {
+      html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
+    }
   }
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
@@ -280,6 +326,7 @@ export async function serveArticlesIndexPage(params: {
   publicHost: string;
   staticDir: string;
   langPrefix?: string;
+  view?: 'community' | 'mistboard';
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
@@ -292,7 +339,9 @@ export async function serveArticlesIndexPage(params: {
   html = injectPageMeta(html, {
     title: meta.title,
     description: meta.description,
-    url: `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/blog`,
+    url: `${params.publicHost}${langKey === 'en' ? '' : `/${langKey}`}/blog${
+      params.view === 'community' ? '/community' : ''
+    }`,
   });
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);

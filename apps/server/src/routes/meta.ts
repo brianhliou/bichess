@@ -7,6 +7,7 @@ import { onlinePresence, refreshPresence } from '../presence.js';
 import { PUBLIC_RATING_TIME_CLASS } from '../rating-buckets.js';
 import { readEventLoopLagMs } from '../server-event-loop-lag.js';
 import { getProxyTrustWarning } from '../server-policy.js';
+import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
@@ -31,6 +32,9 @@ export async function tryHandle(
       darkXiangqiEnabled: darkXiangqiEnabled(),
       ratedEnabled: ratedEnabled(),
       proxyTrust: getProxyTrustWarning(),
+      // Web-side in-process UCI engine-pool saturation (#203): the leading signal for
+      // the non-fog engine-service split, visible before it sheds load as timeouts.
+      enginePools: aggregateEnginePoolStats(),
     });
     return true;
   }

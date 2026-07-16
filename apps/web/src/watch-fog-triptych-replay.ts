@@ -23,6 +23,8 @@ export type FogTriptychPostgameMeta = {
 export type FogTriptychWatchOptions = {
   autoplay?: boolean;
   metadataByRoomId?: Record<string, GameMeta>;
+  /** Fires after a distinct autoplay or manual ply change. */
+  onPlyChange?: (ply: number, maxPly: number) => void;
   /**
    * Homepage showcase mode: render a SINGLE fogged board (no header/control-bar/
    * ply-line) instead of the first|truth|second triptych. These are all fog
@@ -137,6 +139,7 @@ export async function mountFogTriptychWatchReplay<
   const autoplay = options.autoplay ?? true;
   const compact = options.compact === true;
   const onGameEnd = options.onGameEnd;
+  const onPlyChange = options.onPlyChange;
 
   let activeId = roomId;
   let destroyed = false;
@@ -155,6 +158,7 @@ export async function mountFogTriptychWatchReplay<
   let initialClock: number | null = null;
   let maxPly = 0;
   let currentPly = 0;
+  let lastNotifiedPly: number | null = null;
   let boardOrientation: Color = adapter.firstColor;
   let activePostgame: Postgame | null = null;
 
@@ -214,6 +218,10 @@ export async function mountFogTriptychWatchReplay<
       seatCells.first.row.classList.toggle('active', toMove === adapter.firstColor);
       seatCells.second.row.classList.toggle('active', toMove === adapter.secondColor);
     }
+    if (onPlyChange && lastNotifiedPly !== currentPly) {
+      lastNotifiedPly = currentPly;
+      onPlyChange(currentPly, maxPly);
+    }
   };
 
   const scheduleAuto = (): void => {
@@ -271,6 +279,7 @@ export async function mountFogTriptychWatchReplay<
     activePostgame = postgame;
     maxPly = adapter.maxPly(postgame);
     currentPly = 0;
+    lastNotifiedPly = null;
     paused = !autoplay;
     boardOrientation = adapter.firstColor;
     initialClock = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
@@ -392,6 +401,8 @@ export async function mountFogTriptychWatchReplay<
     loadGame: async (sampleId: string) => {
       await load(sampleId);
     },
+    jumpToPly: (ply: number) => manualJump(ply),
+    plyCount: () => maxPly,
     updateLoopPool: () => {},
   };
 }

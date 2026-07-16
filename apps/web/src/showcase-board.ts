@@ -26,6 +26,9 @@ export type ShowcaseBoardOptions = {
   autoplay?: boolean;
   // POV for the chess (chessground) path; tenants pick their own showcase side.
   pov: 'white' | 'black';
+  // Completed-game grids can reveal the final chess position. The homepage keeps
+  // the fogged POV throughout by default so its showcase still demonstrates fog.
+  revealOnFinish?: boolean;
   // Chess event loader (static bundled samples vs the games API). Tenants load
   // their own postgame payloads internally and ignore this.
   loaderForId: (roomId: string) => Promise<GameEvent[]>;
@@ -57,7 +60,7 @@ export async function mountShowcaseBoard(
     autoplay: options.autoplay ?? true,
     showControls: false,
     keyboardNav: false,
-    revealOnFinish: false,
+    revealOnFinish: options.revealOnFinish ?? false,
     clampPace: true,
     metadataMode: 'compact',
     metadataByRoomId: options.metadataByRoomId,

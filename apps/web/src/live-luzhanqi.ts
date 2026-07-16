@@ -139,7 +139,6 @@ const client = createTenantLiveClient<LuzhanqiColor, LuzhanqiWireView, LuzhanqiM
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: true,
-    emptyText: 'No moves yet',
     notate: (move) => `${move.from}-${move.to}`,
     isMoveEvent: isLuzhanqiMoveEvent,
   },

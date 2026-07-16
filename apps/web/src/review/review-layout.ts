@@ -15,6 +15,8 @@
 //     so both surfaces share one layout and size identically.
 
 import { attachBoardResizeGrip, currentBoardScale, restoreBoardScale } from '../board-resize.js';
+import { createGameFavoriteButton } from '../game-favorite.js';
+import { createReviewControls, REVIEW_MENU_ICONS } from './review-controls.js';
 import { type BoardStageHandle, type BoardStageSlot, createBoardStage } from './review-stage.js';
 import './review-shell.css';
 import { createReviewShell } from './review-shell.js';
@@ -49,6 +51,9 @@ export type ReviewLayoutAdapter = {
   metaCard?: HTMLElement;
   /** Right-rail move list container (the layout owns the scrubber below it). */
   moves: HTMLElement;
+  /** Controls pinned to the bottom of the right rail (e.g. a Reveal toggle).
+   *  Kept out of the left rail so it stays button-free and uniform. */
+  railFooter?: HTMLElement;
   enginePanel?: HTMLElement;
   analysisSummary?: HTMLElement;
   underboard?: HTMLElement;
@@ -61,6 +66,9 @@ export type ReviewLayoutAdapter = {
    *  the table, mat-bot below). The variant re-fills them per ply/flip. */
   materialTop?: HTMLElement;
   materialBottom?: HTMLElement;
+  /** Show captured material / reserves around the board or in the right rail.
+   *  Off by default so every review's center column is board-only. */
+  showBoardMaterial?: boolean;
   boards: ReviewBoardEntry[];
   /** Board width / height, e.g. 552 / 612 for xiangqi. Drives the fill sizing. */
   boardAspect: number;
@@ -122,12 +130,24 @@ export type ReviewScaffoldConfig = SizingInput & {
   enginePanel?: HTMLElement;
   moves: HTMLElement;
   moveComment?: HTMLElement;
+  /** Study annotation controls (glyph picker + comment editor), below the move
+   *  list and above navigation in the rail box. Absent = a read-only review. */
+  annotations?: HTMLElement;
   /** The right-rail navigation element: a linear scrubber or a tree nav bar. */
   navigation: HTMLElement;
   analysisSummary?: HTMLElement;
+  /** Controls pinned to the bottom of the right rail (e.g. a Reveal toggle). */
+  railFooter?: HTMLElement;
   gauge?: HTMLElement;
   materialTop?: HTMLElement;
   materialBottom?: HTMLElement;
+  /** Show captured material / reserves around the board or in the right rail.
+   *  Off by default so the primary board determines all three column heights. */
+  showBoardMaterial?: boolean;
+  /** Lichess analyse behavior: the underboard (advantage chart) lives below the
+   *  fold instead of shrinking the board to keep everything above it. The board
+   *  fills the viewport; the page scrolls to the chart. */
+  underboardOverflows?: boolean;
   /** Fires after a secondary board is promoted; the caller re-renders (the
    *  scaffold re-fits afterward). */
   onPromote?(): void;
@@ -138,6 +158,8 @@ export type ReviewScaffold = {
   /** Re-measure and size the primary board to fill the viewport. Call once after
    *  the first render, and whenever the underboard region changes height. */
   refit(): void;
+  /** Update the board width/height ratio after an appearance change, then refit. */
+  setBoardAspect(aspect: number): void;
 };
 
 /** Build the shared review layout into `root`. The caller renders board/move
@@ -147,6 +169,8 @@ export function createReviewScaffold(
   root: HTMLElement,
   config: ReviewScaffoldConfig,
 ): ReviewScaffold {
+  let boardAspect = config.boardAspect;
+  const sizingConfig = (): SizingInput => ({ ...config, boardAspect });
   const slots: BoardStageSlot[] = config.boards.map((board) => ({
     key: board.key,
     el: board.el,
@@ -160,12 +184,16 @@ export function createReviewScaffold(
     },
   });
 
-  // Single-board pages: ADOPT the pane's own capture strips into the rail material
-  // rows so the board column stays board-only. The elements MOVE with their
-  // identity intact — variants keep their per-ply fill references.
+  const showBoardMaterial = config.showBoardMaterial ?? false;
+  stage.el.classList.toggle('review-stage--board-only', !showBoardMaterial);
+
+  // Material is intentionally absent from the standardized review for now. Keep
+  // the old adoption path behind an explicit switch so a future material rework
+  // can restore it without changing variant replay adapters.
   let adoptedMaterialTop: HTMLElement | undefined;
   let adoptedMaterialBottom: HTMLElement | undefined;
-  const stripsAdopted = !config.materialTop && !config.materialBottom && slots.length === 1;
+  const stripsAdopted =
+    showBoardMaterial && !config.materialTop && !config.materialBottom && slots.length === 1;
   if (stripsAdopted && slots[0]) {
     const strips = [...slots[0].el.querySelectorAll<HTMLElement>(':scope > .captures-strip')];
     const top = strips.find(
@@ -177,25 +205,52 @@ export function createReviewScaffold(
     adoptedMaterialTop = top;
     adoptedMaterialBottom = bottom;
   }
-  const materialTop = config.materialTop ?? adoptedMaterialTop;
-  const materialBottom = config.materialBottom ?? adoptedMaterialBottom;
+  const materialTop = showBoardMaterial ? (config.materialTop ?? adoptedMaterialTop) : undefined;
+  const materialBottom = showBoardMaterial
+    ? (config.materialBottom ?? adoptedMaterialBottom)
+    : undefined;
 
-  applyBoardSizing(stage.el, config, stripsAdopted);
+  applyBoardSizing(
+    stage.el,
+    sizingConfig(),
+    !showBoardMaterial || stripsAdopted,
+    !showBoardMaterial,
+  );
 
-  const left = infoRail(config);
-  // Right rail, lichess order: material-top · engine panel · move list ·
-  // advice · navigation · summary · material-bottom.
+  const favoriteGameId = root.dataset.favoriteGameId;
+  if (favoriteGameId && config.metaCard) {
+    config.metaCard.append(createGameFavoriteButton(favoriteGameId, { compact: true }));
+  }
+  const actions =
+    favoriteGameId && !config.metaCard
+      ? reviewActionsWithFavorite(config.actions, favoriteGameId)
+      : config.actions;
+  const left = infoRail({ ...config, actions });
+  // Right rail, lichess order: material-top · [analyse table: engine panel ·
+  // move list · advice · navigation] · summary · material-bottom. The analyse
+  // table is ONE visually connected box (lichess's analyse tools) whose bottom
+  // tracks the board bottom; the summary sits below it.
   materialTop?.classList.add('review-material-row');
   materialBottom?.classList.add('review-material-row');
+  const railMain = document.createElement('div');
+  railMain.className = 'review-rail-main';
+  // The box that tracks the board's bottom is MOVES ONLY (engine head + move list +
+  // advice + any study annotations). Playback controls live BELOW it (lichess
+  // analyse), so the box bottom lines up with the board and the controls sit under
+  // both — see config.navigation's position in the rail group below.
+  railMain.append(
+    ...[config.enginePanel, config.moves, config.moveComment, config.annotations].filter(
+      (el): el is HTMLElement => el != null,
+    ),
+  );
   const right = railGroup(
     [
       materialTop,
-      config.enginePanel,
-      config.moves,
-      config.moveComment,
+      railMain,
       config.navigation,
       config.analysisSummary,
       materialBottom,
+      config.railFooter,
     ].filter((el): el is HTMLElement => el != null),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
@@ -225,21 +280,37 @@ export function createReviewScaffold(
   const grip = attachBoardResizeGrip(stage.el, () =>
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
+  const GRIP_SIZE_PX = 15;
+  const GRIP_INSET_PX = 3;
   const positionGrip = (): void => {
     const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (!slot) return;
     const slotRect = slot.getBoundingClientRect();
     const stageRect = stage.el.getBoundingClientRect();
     if (slotRect.width === 0 || stageRect.width === 0) return;
-    grip.style.right = `${Math.max(0, stageRect.right - slotRect.right) - 8}px`;
+    // Tuck the handle just INSIDE the board's bottom-right corner (lichess), not
+    // hanging off the outside edge.
+    grip.style.right = `${Math.max(0, stageRect.right - slotRect.right) + GRIP_INSET_PX}px`;
     grip.style.bottom = 'auto';
-    grip.style.top = `${slotRect.bottom - stageRect.top - 10}px`;
+    grip.style.top = `${slotRect.bottom - stageRect.top - GRIP_SIZE_PX - GRIP_INSET_PX}px`;
   };
 
   function refit(): void {
-    applyBoardSizing(stage.el, config, stripsAdopted);
-    fitPrimaryToViewport(stage.el, config.boardAspect, config.boardMaxPx);
+    applyBoardSizing(
+      stage.el,
+      sizingConfig(),
+      !showBoardMaterial || stripsAdopted,
+      !showBoardMaterial,
+    );
+    fitPrimaryToViewport(stage.el, boardAspect, config.boardMaxPx, {
+      underboardOverflows: config.underboardOverflows,
+    });
     setTimeout(positionGrip, 60);
+  }
+
+  function setBoardAspect(aspect: number): void {
+    boardAspect = aspect;
+    refit();
   }
 
   setTimeout(refit, 60);
@@ -255,7 +326,14 @@ export function createReviewScaffold(
     observer.observe(stage.el);
   }
 
-  return { stage, refit };
+  return { stage, refit, setBoardAspect };
+}
+
+function reviewActionsWithFavorite(existing: HTMLElement | undefined, roomId: string): HTMLElement {
+  const actions = existing ?? document.createElement('div');
+  actions.classList.add('review-actions');
+  actions.append(createGameFavoriteButton(roomId));
+  return actions;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -266,7 +344,25 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
   let ply = adapter.maxPly;
   let flipped = false;
 
-  const scrubber = createReviewScrubber();
+  // Shared lichess control bar (nav + menu overlay), the SAME component the
+  // xiangqi tree surface uses — so every /game review page carries identical
+  // chrome. Playback stays integer-ply over server snapshots; only the chrome
+  // is standardized. Flip lives in the menu; the deferred analyse tools stay
+  // muted placeholders (parity with the tree surface).
+  const controls = createReviewControls({
+    onFirst: () => go(0),
+    onPrevious: () => go(ply - 1),
+    onNext: () => go(ply + 1),
+    onLast: () => go(adapter.maxPly),
+    menuItems: [
+      { label: 'Flip board', icon: REVIEW_MENU_ICONS.flip, onClick: () => flip() },
+      { label: 'Board editor', icon: REVIEW_MENU_ICONS.editor, disabled: true },
+      { label: 'Learn from your mistakes', icon: REVIEW_MENU_ICONS.learn, disabled: true },
+      { label: 'Continue from here', icon: REVIEW_MENU_ICONS.continue, disabled: true },
+      { label: 'Study', icon: REVIEW_MENU_ICONS.study, disabled: true },
+      { label: 'Settings', icon: REVIEW_MENU_ICONS.settings, disabled: true },
+    ],
+  });
   const scaffold = createReviewScaffold(root, {
     ariaLabel: adapter.ariaLabel,
     pageClassName: adapter.pageClassName,
@@ -286,11 +382,13 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     enginePanel: adapter.enginePanel,
     moves: adapter.moves,
     moveComment: adapter.moveComment,
-    navigation: scrubber.el,
+    navigation: controls.el,
     analysisSummary: adapter.analysisSummary,
+    railFooter: adapter.railFooter,
     gauge: adapter.gauge,
     materialTop: adapter.materialTop,
     materialBottom: adapter.materialBottom,
+    showBoardMaterial: adapter.showBoardMaterial,
     onPromote: () => render(),
   });
 
@@ -298,8 +396,7 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     const ctx = { ply, flipped, primaryKey: scaffold.stage.primaryKey() };
     adapter.renderBoards(ctx);
     adapter.renderMoves?.(ctx, go);
-    scrubber.status.textContent = `Ply ${ply} of ${adapter.maxPly}`;
-    scrubber.setBounds(ply, adapter.maxPly);
+    controls.setBounds({ atStart: ply <= 0, atEnd: ply >= adapter.maxPly });
   }
 
   const go = (target: number): void => {
@@ -310,12 +407,6 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     flipped = !flipped;
     render();
   };
-
-  scrubber.first.addEventListener('click', () => go(0));
-  scrubber.previous.addEventListener('click', () => go(ply - 1));
-  scrubber.next.addEventListener('click', () => go(ply + 1));
-  scrubber.last.addEventListener('click', () => go(adapter.maxPly));
-  scrubber.flip.addEventListener('click', flip);
 
   installReviewKeyboard({
     stepBack: () => go(ply - 1),
@@ -381,14 +472,24 @@ export function installReviewKeyboard(
 // Board sizing (viewport-fill). Shared by every scaffold consumer.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function fitPrimaryToViewport(stageEl: HTMLElement, aspect: number, maxPx?: number): void {
+function fitPrimaryToViewport(
+  stageEl: HTMLElement,
+  aspect: number,
+  maxPx?: number,
+  opts?: { underboardOverflows?: boolean },
+): void {
   scheduleAnimationFrame(() => {
     if (typeof window === 'undefined') return;
     const centerCol = stageEl.parentElement;
     const underboard = centerCol?.classList.contains('review-center-column')
       ? centerCol.querySelector<HTMLElement>('.review-underboard')
       : null;
-    const underboardPx = underboard ? underboard.getBoundingClientRect().height + STACK_GAP_PX : 0;
+    // Below-the-fold underboards (lichess analyse chart) don't shrink the board:
+    // they contribute 0 to the height budget and the page scrolls to them.
+    const underboardPx =
+      underboard && !opts?.underboardOverflows
+        ? underboard.getBoundingClientRect().height + STACK_GAP_PX
+        : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
     if (cluster) {
       const baseChrome = Number(cluster.dataset.uniBaseChrome ?? '0') || 0;
@@ -396,15 +497,16 @@ function fitPrimaryToViewport(stageEl: HTMLElement, aspect: number, maxPx?: numb
         '--uni-board-chrome-h',
         `${baseChrome + Math.round(underboardPx)}px`,
       );
-      cluster.style.setProperty('--uni-underboard-h', `${Math.round(underboardPx)}px`);
     }
     const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx;
     const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (available <= 0 || !slot) return;
-    const gaps = Math.max(0, stageEl.children.length - 1) * STACK_GAP_PX;
+    const visibleStageRows = [...stageEl.children].filter(
+      (child) => child.getBoundingClientRect().height > 0,
+    );
+    const gaps = Math.max(0, visibleStageRows.length - 1) * STACK_GAP_PX;
     const contentHeight =
-      [...stageEl.children].reduce((h, child) => h + child.getBoundingClientRect().height, 0) +
-      gaps;
+      visibleStageRows.reduce((h, child) => h + child.getBoundingClientRect().height, 0) + gaps;
     const currentWidth = slot.getBoundingClientRect().width;
     const flankBoard = slot.querySelector<HTMLElement>('.review-flank__board');
     const boardWidth = flankBoard ? flankBoard.getBoundingClientRect().width : currentWidth;
@@ -443,15 +545,21 @@ function scheduleAnimationFrame(callback: () => void): void {
   setTimeout(callback, 0);
 }
 
-function applyBoardSizing(stageEl: HTMLElement, config: SizingInput, stripsAdopted = false): void {
+function applyBoardSizing(
+  stageEl: HTMLElement,
+  config: SizingInput,
+  materialOutsideBoard = false,
+  primaryChromeHidden = false,
+): void {
   const aspect = config.boardAspect;
-  const extraPerBoard = stripsAdopted ? 0 : (config.boardChromePx ?? 0);
+  const extraPerBoard = materialOutsideBoard ? 0 : (config.boardChromePx ?? 0);
   const secondaryWidth = config.secondaryWidthPx ?? SECONDARY_WIDTH_PX;
   const hasSecondaries = config.boards.some((board) => board.tier === 'secondary');
   const secondaryStackPx = hasSecondaries
     ? STACK_GAP_PX + SECONDARY_LABEL_PX + Math.round(secondaryWidth / aspect) + extraPerBoard
     : 0;
-  const chromePx = NAV_AND_PADDING_PX + PRIMARY_LABEL_PX + extraPerBoard + secondaryStackPx;
+  const primaryChromePx = primaryChromeHidden ? 0 : PRIMARY_LABEL_PX;
+  const chromePx = NAV_AND_PADDING_PX + primaryChromePx + extraPerBoard + secondaryStackPx;
   const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
   if (cluster) {
     cluster.style.setProperty('--uni-board-aspect', aspect.toFixed(4));
@@ -459,7 +567,6 @@ function applyBoardSizing(stageEl: HTMLElement, config: SizingInput, stripsAdopt
     cluster.dataset.uniBaseChrome = String(baseChrome);
     cluster.style.setProperty('--uni-board-chrome-h', `${baseChrome}px`);
     cluster.style.removeProperty('--uni-board-fit-w');
-    cluster.style.removeProperty('--uni-underboard-h');
   }
   stageEl.style.setProperty(
     '--review-stage-primary-max',
@@ -528,47 +635,6 @@ function centerColumn(stageEl: HTMLElement, underboard: HTMLElement): HTMLElemen
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation bars.
 // ─────────────────────────────────────────────────────────────────────────────
-
-type ReviewScrubber = {
-  el: HTMLElement;
-  status: HTMLElement;
-  first: HTMLButtonElement;
-  previous: HTMLButtonElement;
-  next: HTMLButtonElement;
-  last: HTMLButtonElement;
-  flip: HTMLButtonElement;
-  setBounds(ply: number, maxPly: number): void;
-};
-
-function createReviewScrubber(): ReviewScrubber {
-  const el = document.createElement('div');
-  el.className = 'review-scrubber';
-  const status = document.createElement('span');
-  status.className = 'review-scrubber__status';
-  status.setAttribute('aria-live', 'polite');
-  const first = scrubButton('|<', 'First ply');
-  const previous = scrubButton('<', 'Previous ply');
-  const next = scrubButton('>', 'Next ply');
-  const last = scrubButton('>|', 'Final ply');
-  const flip = scrubButton('Flip', 'Flip all boards');
-  flip.title = 'Flip all boards (f)';
-  el.append(status, first, previous, next, last, flip);
-  return {
-    el,
-    status,
-    first,
-    previous,
-    next,
-    last,
-    flip,
-    setBounds(ply, maxPly) {
-      first.disabled = ply <= 0;
-      previous.disabled = ply <= 0;
-      next.disabled = ply >= maxPly;
-      last.disabled = ply >= maxPly;
-    },
-  };
-}
 
 function scrubButton(text: string, label: string): HTMLButtonElement {
   const button = document.createElement('button');

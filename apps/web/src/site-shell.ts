@@ -1,15 +1,18 @@
 import './site-shell.css';
+import type { AccountPreferences } from './account-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './i18n/locale.js';
 import {
+  adminNavItems,
   communityNavItems,
+  donateNavItem,
   learnNavItems,
   type NavItem,
   primaryNavItems,
   toolsNavItems,
   watchNavItems,
 } from './nav-items.js';
-import { isLikelySignedIn } from './signed-in-state.js';
+import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
 
 export const GITHUB_URL = 'https://github.com/brianhliou/mistboard';
 
@@ -21,6 +24,13 @@ export type AuthUser = {
   handleChangedAt: string | null;
   displayName: string;
   displayNameChangedAt: string | null;
+  bio: string;
+  location: string;
+  profileLinks: string[];
+  displayPreferences: {
+    pieceAnimation?: 'none' | 'fast' | 'normal' | 'slow';
+  };
+  accountPreferences?: Partial<AccountPreferences>;
   profileVisibility: 'private' | 'unlisted' | 'public';
   accountRole: 'player' | 'admin';
   locale: Locale | null;
@@ -67,14 +77,35 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   const [play, puzzles, watch] = primaryNavItems();
   if (play) links.append(navLink(play, locale));
   if (puzzles) links.append(navLink(puzzles, locale));
-  links.append(navMenu('nav.learn', learnNavItems(), locale));
+  // Rules are the Learn landing and lead its dropdown; the interactive xiangqi
+  // course remains directly reachable as the second item.
+  links.append(navMenu('nav.learn', learnNavItems(), locale, '/rules'));
   // Watch title links to Mistboard TV (/watch); the dropdown adds Broadcasts.
   links.append(navMenu('nav.watch', watchNavItems(), locale, watch?.href ?? '/watch'));
   // Community title itself links to the player page (lichess parity): hovering
   // opens the dropdown, clicking the word navigates to /player.
   links.append(navMenu('nav.community', communityNavItems(), locale, '/player'));
+  // Tools title links to the analysis board (the anchor tool); the dropdown
+  // lists it too, so touch/no-hover users can still reach it after the first tap.
   const tools = toolsNavItems();
-  if (tools.length > 0) links.append(navMenu('nav.tools', tools, locale));
+  if (tools.length > 0)
+    links.append(navMenu('nav.tools', tools, locale, tools[0]?.href ?? '/analysis/xiangqi'));
+  // Donate is the rightmost public item, immediately left of the admin-only menu.
+  const donate = navLink(donateNavItem(), locale);
+  donate.classList.add('site-nav-link-donate');
+  const donateIcon = document.createElement('span');
+  donateIcon.className = 'site-nav-donate-icon';
+  donateIcon.setAttribute('aria-hidden', 'true');
+  donate.prepend(donateIcon);
+  links.append(donate);
+  // Consolidate internal tools under one admin-only menu. Initial visibility
+  // comes from the persisted admin hint; account-nav reconciles it once auth
+  // resolves. This is cosmetic only: both pages are admin-gated server-side.
+  const adminMenu = navMenu('nav.admin', adminNavItems(), locale);
+  adminMenu.classList.add('site-nav-menu-admin');
+  adminMenu.dataset.adminOnly = '';
+  adminMenu.hidden = !isLikelyAdmin();
+  links.append(adminMenu);
 
   const utilities = document.createElement('div');
   utilities.className = 'site-nav-utilities';
@@ -366,7 +397,6 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   { href: '/patron', labelKey: 'footer.patron' },
   { href: '/contact', labelKey: 'footer.contact' },
   { href: '/source', labelKey: 'footer.source' },
-  { href: GITHUB_URL, labelKey: 'footer.github', external: true },
   { href: '/terms', labelKey: 'footer.terms' },
   { href: '/privacy', labelKey: 'footer.privacy' },
 ];

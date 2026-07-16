@@ -79,7 +79,7 @@ async function loadTournamentRows(db: pg.Pool, options: LoadOptions): Promise<To
     game_index: number;
     job_id: string;
     ply_count: number | null;
-    result: 'white-wins' | 'black-wins' | 'draw' | null;
+    result: 'white-wins' | 'black-wins' | 'red-wins' | 'draw' | null;
     runtime_payload: Record<string, unknown> | null;
     status: string;
     termination: string | null;

@@ -8,6 +8,7 @@ import './live-xiangqi.css';
 import type { StandardXiangqiPlayerView } from '@mistboard/game';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import type { ReplayHandle } from './replay.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
 import {
@@ -36,6 +37,7 @@ export function mountXiangqiWatchReplay(
     XiangqiPostgameViewKey
   >(root, roomId, options, {
     installStyles: () => {},
+    appearanceEvent: xiangqiAppearanceChangedEvent,
     loadPostgame: loadXiangqiPostgame,
     maxPly: postgameReplayMaxPly,
     viewEntries: (postgame) =>

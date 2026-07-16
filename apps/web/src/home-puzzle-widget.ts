@@ -24,6 +24,7 @@ import {
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
 import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
+import { t } from './i18n/catalog.js';
 import {
   installMiniXiangqiBoardStyles,
   renderMiniXiangqiBoardSvg,
@@ -39,7 +40,8 @@ const HOME_PUZZLE_PIECE_SIZE = 64;
 const HOME_PUZZLE_VARIANTS: readonly string[] = [
   MINI_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
+  // Fortress omitted: the daily rotation no longer selects it (demoted, awaiting
+  // a re-mine). Re-add when the Fortress daily provider is restored.
   XIANGQI_SPEC_ID,
 ];
 
@@ -117,7 +119,7 @@ export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
   const link = document.createElement('a');
   link.className = 'home-puzzle-widget';
   link.href = `/puzzles/${encodeURIComponent(puzzle.id)}`;
-  link.setAttribute('aria-label', `Puzzle of the day: ${puzzle.title}`);
+  link.setAttribute('aria-label', t('homePuzzle.ariaLabel', { title: puzzle.title }));
 
   const paint = () => link.replaceChildren(...renderHomePuzzleWidgetContent(puzzle));
   paint();
@@ -128,11 +130,11 @@ export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
 function renderHomePuzzleWidgetContent(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement[] {
   const title = document.createElement('span');
   title.className = 'home-puzzle-widget-title';
-  title.textContent = `Puzzle of the day - ${variantLabel(puzzle.variant)}`;
+  title.textContent = t('homePuzzle.title', { variant: variantLabel(puzzle.variant) });
 
   const turn = document.createElement('span');
   turn.className = 'home-puzzle-widget-turn';
-  turn.textContent = `${colorLabel(puzzle.sideToMove)} to play`;
+  turn.textContent = t('homePuzzle.toPlay', { color: colorLabel(puzzle.sideToMove) });
 
   return [title, renderHomePuzzleBox(puzzle), turn];
 }
@@ -211,7 +213,7 @@ function fortressReserveColumn(
   for (const owner of [opponent, perspective] as const) {
     const hand = document.createElement('div');
     hand.className = 'home-puzzle-hand';
-    hand.setAttribute('aria-label', `${owner} reserve`);
+    hand.setAttribute('aria-label', t('homePuzzle.reserve', { color: colorLabel(owner) }));
     fillFortressXiangqiReserve(hand, view, owner);
     col.append(hand);
   }
@@ -228,7 +230,7 @@ function dropReserveColumn(
   for (const owner of [opponent, perspective] as const) {
     const hand = document.createElement('div');
     hand.className = 'home-puzzle-hand';
-    hand.setAttribute('aria-label', `${owner} reserve`);
+    hand.setAttribute('aria-label', t('homePuzzle.reserve', { color: colorLabel(owner) }));
     fillDropMiniXiangqiReserve(hand, dropView, owner);
     col.append(hand);
   }
@@ -263,7 +265,7 @@ function isHomeDailyPuzzle(value: Partial<HomeDailyPuzzle>): value is HomeDailyP
 }
 
 function variantLabel(variant: string): string {
-  if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress';
+  if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress Xiangqi';
   if (variant === DROP_MINI_XIANGQI_SPEC_ID) return 'Drop Mini Xiangqi';
   if (variant === MINI_XIANGQI_SPEC_ID) return 'Mini Xiangqi';
   if (variant === XIANGQI_SPEC_ID) return 'Xiangqi';
@@ -275,5 +277,5 @@ function variantLabel(variant: string): string {
 }
 
 function colorLabel(color: MiniXiangqiColor | null): string {
-  return color === 'black' ? 'Black' : 'Red';
+  return color === 'black' ? t('setup.black') : t('setup.red');
 }

@@ -1,11 +1,15 @@
 import { type Color, clockRemainingMs, type GameEvent, type PlayerView } from '@mistboard/game';
+import { shouldShowClockTenths } from './account-preferences.js';
 import { isLive } from './live-replay.js';
 import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { connectionNoticeMode } from './live-status.js';
 import { formatClock, formatDayClock, isColor } from './web-utils.js';
 
-type ClockRefs = Pick<LiveRefs, 'clockTop' | 'clockBottom' | 'clockNote'>;
+type ClockRefs = Pick<
+  LiveRefs,
+  'clockTop' | 'clockBottom' | 'clockNote' | 'playerTop' | 'playerBottom'
+>;
 
 // Tracks the previous active clock color across renderClocks() calls so we can
 // detect the turn flip into the seated player's clock and play a flash.
@@ -18,6 +22,8 @@ export function resetClockState(): void {
 export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
   refs.clockTop.replaceChildren();
   refs.clockBottom.replaceChildren();
+  refs.playerTop.replaceChildren();
+  refs.playerBottom.replaceChildren();
   refs.clockNote.hidden = true;
   refs.clockNote.textContent = '';
   if (!view?.clock) {
@@ -26,33 +32,43 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       (e): e is Extract<GameEvent, { type: 'room-created' }> => e.type === 'room-created',
     );
     const tc = roomCreated?.timeControl;
+    const dayScale = daysPerMoveAllowance() !== null;
+    // Correspondence rooms are 'playing' before the clock arms (the first
+    // move starts it), so the side to move is already real and marked.
+    const toMove = dayScale && view?.status.type === 'playing' ? view.status.turn : null;
+    const colors: Color[] = ['black', 'white'];
+    colors.forEach((color, index) => {
+      const isTurn = color === toMove;
+      const playerLine = document.createElement('span');
+      playerLine.className = isTurn ? 'clock-player-line active' : 'clock-player-line';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'clock-name';
+      const name = liveState.seatDisplayNames[color] ?? capitalize(color);
+      nameEl.textContent = name;
+      nameEl.title = name;
+      playerLine.append(nameEl);
+      if (isTurn) {
+        const pill = document.createElement('span');
+        pill.className = 'clock-to-move';
+        pill.textContent = color === liveState.seat ? 'your move' : 'to move';
+        pill.setAttribute('aria-hidden', 'false');
+        playerLine.append(pill);
+      }
+      (index === 0 ? refs.playerTop : refs.playerBottom).append(playerLine);
+      if (!tc) return;
+      const row = document.createElement('div');
+      row.className = isTurn ? 'pregame active' : 'pregame';
+      const time = document.createElement('strong');
+      time.textContent = dayScale ? formatDayClock(tc.initialMs) : formatClock(tc.initialMs);
+      row.append(time);
+      (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
+    });
     if (tc) {
-      const dayScale = daysPerMoveAllowance() !== null;
-      // Correspondence rooms are 'playing' before the clock arms (the first
-      // move starts it), so the side to move is already real and marked.
-      const toMove = dayScale && view?.status.type === 'playing' ? view.status.turn : null;
       const incrementSec = Math.round(tc.incrementMs / 1000);
       const tcLabel =
         incrementSec > 0
           ? `${formatClock(tc.initialMs)}+${incrementSec}`
           : formatClock(tc.initialMs);
-      const colors: Color[] = ['black', 'white'];
-      colors.forEach((color, index) => {
-        const row = document.createElement('div');
-        row.className = color === toMove ? 'pregame active' : 'pregame';
-        const label = document.createElement('span');
-        label.textContent = liveState.seatDisplayNames[color] ?? capitalize(color);
-        if (color === toMove) {
-          const pill = document.createElement('span');
-          pill.className = 'clock-to-move';
-          pill.textContent = color === liveState.seat ? 'your move' : 'to move';
-          label.append(' ', pill);
-        }
-        const time = document.createElement('strong');
-        time.textContent = dayScale ? formatDayClock(tc.initialMs) : formatClock(tc.initialMs);
-        row.append(label, time);
-        (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
-      });
       refs.clockNote.textContent = dayScale
         ? daysPerMoveNote()
         : `${tcLabel} · clock starts when both players are ready`;
@@ -116,19 +132,15 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     time.textContent =
       daysPerMoveAllowance() !== null
         ? formatDayClock(remainingMs)
-        : formatClock(remainingMs, isActive && remainingMs < 10_000);
+        : formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
     const classes = ['clock-time-row'];
     if (isActive) classes.push('active');
     if (isActive && flashThisRender) classes.push('just-activated');
     row.className = classes.join(' ');
     row.append(time);
     if (isActive) playerLine.classList.add('active');
-    const slot = index === 0 ? refs.clockTop : refs.clockBottom;
-    if (index === 0) {
-      slot.append(playerLine, row);
-    } else {
-      slot.append(row, playerLine);
-    }
+    (index === 0 ? refs.playerTop : refs.playerBottom).append(playerLine);
+    (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
   });
   if (daysPerMoveAllowance() !== null) {
     refs.clockNote.textContent = daysPerMoveNote();
@@ -179,7 +191,7 @@ export function tickClockTimers(refs: ClockRefs, view: PlayerView | null): void 
     if (strong) {
       strong.textContent = dayScale
         ? formatDayClock(remainingMs)
-        : formatClock(remainingMs, isActive && remainingMs < 10_000);
+        : formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
     }
   }
 }

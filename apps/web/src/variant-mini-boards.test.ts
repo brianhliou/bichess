@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mountVariantMarksLab } from './variant-marks-lab.js';
-import { renderVariantMiniBoard } from './variant-mini-boards.js';
+import { renderVariantMiniBoard, VARIANT_MINIS } from './variant-mini-boards.js';
 
 describe('variant mini-board markers', () => {
   it('renders the Kriegspiel marker as a fogged own-army board', () => {
@@ -8,7 +8,6 @@ describe('variant mini-board markers', () => {
 
     expect(svg).toContain('data-mini-id="kriegspiel"');
     expect(svg.match(/class="vm-chess-fog"/g)).toHaveLength(15);
-    expect(svg).toContain('vm-frame-chess');
   });
 
   it('renders the Dark Crossroads marker as a fogged river board', () => {
@@ -26,7 +25,6 @@ describe('variant mini-board markers', () => {
       ['2', '9'],
       ['26', '9'],
     ]);
-    expect(svg).toContain('vm-frame-chess');
   });
 
   it('renders the Dark Crazyhouse marker with the shared Crazyhouse image', () => {
@@ -35,7 +33,6 @@ describe('variant mini-board markers', () => {
     expect(svg).toContain('data-mini-id="dark-crazyhouse"');
     expect(svg).toContain('vm-hand-tray');
     expect(svg).not.toContain('vm-chess-fog');
-    expect(svg).toContain('vm-frame-chess');
   });
 
   it('renders the Drop Mini Xiangqi marker with an open board and reserve tray', () => {
@@ -44,7 +41,6 @@ describe('variant mini-board markers', () => {
     expect(svg).toContain('data-mini-id="drop-mini-xiangqi"');
     expect(svg).toContain('vm-hand-tray');
     expect(svg).not.toContain('vm-xq-fog');
-    expect(svg).toContain('vm-frame-xq');
   });
 
   it('renders the Reveal Chess marker backs as white Banqi-style outlined discs', () => {
@@ -67,9 +63,8 @@ describe('variant mini-board markers', () => {
   it('renders the Jungle marker as the bottom-center 3x3 (den + traps) of the real board', () => {
     const svg = renderVariantMiniBoard('jungle', { size: 100 });
     expect(svg).toContain('data-mini-id="jungle"');
-    expect(svg).toContain('vm-frame-jungle');
     // The real dobutsu board cropped to files c-e: grass + the den + trap tiles + the
-    // leopard (c3) and wolf (e3), in its own frame (not the xiangqi wood-brown).
+    // leopard (c3) and wolf (e3).
     expect(svg).toContain('/piece-sets/jungle/dobutsu/board/grass.png');
     expect(svg).toContain('/piece-sets/jungle/dobutsu/board/den.png');
     expect(svg).toContain('/piece-sets/jungle/dobutsu/board/trap.png');
@@ -81,13 +76,18 @@ describe('variant mini-board markers', () => {
   it('renders the Flip Jungle marker as a 2x2 with two flipped elephants on opposite corners', () => {
     const svg = renderVariantMiniBoard('jungle-flip', { size: 100 });
     expect(svg).toContain('data-mini-id="jungle-flip"');
-    expect(svg).toContain('vm-frame-jungle');
     // The real flip board cropped: the bushy board + a face-down jade disc, plus the red
     // and black elephants flipped up on opposite corners.
     expect(svg).toContain('/piece-sets/jungle/dobutsu/board/flip-board.png');
     expect(svg).toContain('fill="#2f8f6b"');
     expect(svg).toContain('/piece-sets/jungle/dobutsu/red-elephant.png');
     expect(svg).toContain('/piece-sets/jungle/dobutsu/black-elephant.png');
+  });
+
+  it('keeps every variant marker free of a decorative outer outline', () => {
+    for (const def of VARIANT_MINIS) {
+      expect(renderVariantMiniBoard(def.id, { size: 100 }), def.id).not.toContain('vm-frame-');
+    }
   });
 
   it('focuses the marker lab sheet on active design-pass variants', () => {

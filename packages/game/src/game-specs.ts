@@ -196,21 +196,21 @@ export const DARK_DUAL_CHESS_SPEC_ID = 'dark-dual-chess' satisfies GameSpecAlias
 // canonicalVariantOrderIndex (just curate it here).
 // 2026-07 xiangqi pivot (project_xiangqi_pivot_track): repositioned as the
 // lichess-of-Chinese-chess. Open xiangqi anchors, then the approachable
-// flip/animal cluster (Banqi, Jungle, Flip Jungle, Jieqi), then the fog trio
-// (Fog Elephant Chess, Fog Chess, Fog Shogi). The Mini Xiangqi sub-family +
+// flip/animal cluster (Banqi, Jungle, Flip Jungle), the authored Fortress
+// variant, then Jieqi; followed by the fog trio
+// (Fog Xiangqi, Fog Chess, Fog Shogi). The Mini Xiangqi sub-family +
 // Dark Crazyhouse are retired to the tail (hidden from menu/rail/grids;
 // deep-link URLs stay alive).
 export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
-  // Chinese-chess anchors. Standard Xiangqi is the open-info anchor, followed
-  // by Fortress as the authored product variant.
+  // Standard Xiangqi is the open-info anchor.
   XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  // Approachable flip/animal cluster. Banqi sits with Jungle/Flip Jungle for
-  // its animal-themed presentation even though the rules kernel is
-  // xiangqi-family; Jieqi closes the cluster as the full-board flip variant.
+  // Approachable flip/animal cluster. The authored Fortress variant follows
+  // the established games so it stays discoverable without outranking them;
+  // Jieqi closes the cluster as the full-board reveal variant.
   BANQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   // Fog trio, clustered together after the open/flip games.
   DARK_XIANGQI_SPEC_ID,
@@ -448,7 +448,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // literal general capture). Rules engine:
     // packages/game/src/variants-xiangqi-standard.ts.
     id: XIANGQI_SPEC_ID,
-    publicName: 'Elephant Chess',
+    publicName: 'Xiangqi',
     family: 'xiangqi',
     board: 'xiangqi-9x10',
     movement: 'xiangqi',
@@ -466,7 +466,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     id: DARK_XIANGQI_SPEC_ID,
-    publicName: 'Fog Elephant Chess',
+    publicName: 'Fog Xiangqi',
     family: 'xiangqi',
     board: 'xiangqi-9x10',
     movement: 'xiangqi',
@@ -484,7 +484,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     id: JIEQI_SPEC_ID,
-    publicName: 'Flip Elephant Chess',
+    publicName: 'Flip Xiangqi',
     family: 'xiangqi',
     board: 'xiangqi-9x10',
     movement: 'xiangqi',
@@ -505,7 +505,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // the opponent with no legal move — the general is not royal. Rules engine:
     // packages/game/src/variants-banqi.ts.
     id: BANQI_SPEC_ID,
-    publicName: 'Half-Flip Chess',
+    publicName: 'Half Xiangqi',
     family: 'xiangqi',
     board: 'banqi-8x4',
     movement: 'banqi',

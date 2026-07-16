@@ -67,7 +67,7 @@ let draggingFrom: XiangqiSquare | null = null;
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
-  displayName: 'Elephant Chess',
+  displayName: 'Xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
@@ -75,9 +75,9 @@ const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   enabled: xiangqiEnabled,
   reviewUrl: (roomId) => `/xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: xiangqiReasonPhrase,
-  disabledTitle: 'Elephant Chess disabled',
+  disabledTitle: 'Xiangqi disabled',
   disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Elephant Chess room is not active. Create a new invite to start a game.',
+  rejectedBody: 'This Xiangqi room is not active. Create a new invite to start a game.',
   spectatorBody: 'Watching the full board.',
   selectInstruction: 'Select one of your pieces, then choose a destination.',
 };
@@ -170,7 +170,6 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    emptyText: 'No moves yet',
     notate: (move) => `${move.from}-${move.to}`,
     isMoveEvent: isXiangqiMoveEvent,
   },
@@ -195,7 +194,7 @@ export function bootstrapXiangqiLiveRoom(): void {
 
 function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null): void {
   liveRefs.board.className = 'board xiangqi-live-board';
-  liveRefs.board.setAttribute('aria-label', 'Elephant Chess board');
+  liveRefs.board.setAttribute('aria-label', 'Xiangqi board');
   if (!view) {
     liveRefs.board.replaceChildren();
     return;

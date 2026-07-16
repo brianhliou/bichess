@@ -8,9 +8,10 @@ import { fsfUciToXiangqiSquares } from '@mistboard/game';
 import type { XiangqiBoardArrow } from '../../xiangqi-board.js';
 import type { CevalLine } from './ceval.js';
 
-/** PV1 also shows the expected reply as a faint dashed second segment (the
- *  "length encodes strength" nod). Flip to false to disable. */
-export const SHOW_PV1_REPLY_SEGMENT = true;
+/** PV1 can also show the expected reply as a faint dashed second segment (the
+ *  "length encodes strength" nod). OFF for now (2026-07-10): the dashed enemy
+ *  arrow read as noise next to the ranked candidate arrows. */
+export const SHOW_PV1_REPLY_SEGMENT = false;
 
 const MAX_ARROW_LINES = 3;
 

@@ -52,14 +52,14 @@ describe('Crossroads Chess postgame page', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/api/crossroads-chess/games/dchess_postgame');
     expect(root.textContent).toContain('Crossroads Chess');
     expect(root.textContent).toContain('White wins');
-    expect(root.textContent).toContain('Play again');
-    const download = root.querySelector<HTMLAnchorElement>(
-      'a[href="/api/crossroads-chess/games/dchess_postgame/export.json"]',
-    );
-    expect(download?.textContent).toBe('Download JSON');
-    expect(download?.getAttribute('download')).toBe('mistboard-dchess_postgame.json');
+    expect(root.textContent).not.toContain('Play again');
     expect(root.querySelector('.move-row')?.textContent?.replace(/\s+/g, '')).toBe('1a2-a3');
-    expect(root.textContent).toContain('Ply 1 of 1');
+    // The scrubber's "Ply X of Y" status was removed with the lichess control bar;
+    // the nav buttons disable at the bounds instead. Opens at the final ply (1 of 1):
+    // next/last disabled.
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    expect(nav('Next move')?.disabled).toBe(true);
     expect(root.querySelectorAll('.crossroads-live-svg')).toHaveLength(1);
     expect(root.querySelector('.crossroads-postgame-board .crossroads-live-svg')).not.toBeNull();
     // The shared review layout sizes the board slot; the SVG fills it (the
@@ -73,13 +73,17 @@ describe('Crossroads Chess postgame page', () => {
         .height,
     ).toBe('auto');
 
-    // The layout owns the scrubber + flip; keys are bound on the mount root.
-    root.querySelector<HTMLButtonElement>('[aria-label="Flip all boards (f)"]')?.click();
+    // The layout owns the scrubber + flip; keys are bound on the mount root. Flip
+    // now lives in the control bar's menu overlay (present even while closed).
+    [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')]
+      .find((b) => b.textContent?.includes('Flip board'))
+      ?.click();
     expect(root.querySelectorAll('.crossroads-live-svg')).toHaveLength(1);
-    root.querySelector<HTMLButtonElement>('[aria-label="Previous ply"]')?.click();
-    expect(root.textContent).toContain('Ply 0 of 1');
+    nav('Previous move')?.click();
+    // Ply 0: at the start, first/prev disabled.
+    expect(nav('Previous move')?.disabled).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
-    expect(root.textContent).toContain('Ply 1 of 1');
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 
   it('scrubs the review with the shared layout controls', async () => {
@@ -90,12 +94,16 @@ describe('Crossroads Chess postgame page', () => {
     mountCrossroadsChessPostgame(root, 'dchess_postgame');
     await flushPromises();
 
-    // The review opens at the final ply; the scrubber buttons step it.
-    expect(root.textContent).toContain('Ply 1 of 1');
-    root.querySelector<HTMLButtonElement>('[aria-label="Previous ply"]')?.click();
-    expect(root.textContent).toContain('Ply 0 of 1');
-    root.querySelector<HTMLButtonElement>('[aria-label="Next ply"]')?.click();
-    expect(root.textContent).toContain('Ply 1 of 1');
+    // The review opens at the final ply; the scrubber buttons step it. (The
+    // scrubber's "Ply X of Y" status was removed with the lichess control bar;
+    // the nav buttons disable at the bounds instead.)
+    const nav = (label: string) =>
+      root.querySelector<HTMLButtonElement>(`.review-controls__nav[aria-label="${label}"]`);
+    expect(nav('Next move')?.disabled).toBe(true);
+    nav('Previous move')?.click();
+    expect(nav('Previous move')?.disabled).toBe(true);
+    nav('Next move')?.click();
+    expect(nav('Next move')?.disabled).toBe(true);
   });
 
   it('renders red wins with Crossroads copy instead of black-side copy', async () => {

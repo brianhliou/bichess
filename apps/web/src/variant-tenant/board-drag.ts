@@ -126,3 +126,41 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
     document.addEventListener('pointerup', onUp);
   });
 }
+
+export interface BoardDrawHandlers {
+  // Same persistent `[data-square]` container as installBoardDrag.
+  board: HTMLElement;
+  // A right-button gesture completed: `orig` is the square pressed; `dest` is the
+  // square released over (null off-board, or equal to `orig` for a tap). `alt` =
+  // a modifier was held (Shift/Ctrl/Meta/Alt) selecting the secondary brush. The
+  // caller decides shape kind (dest==orig|null → circle at orig; else arrow) and
+  // toggles it on the current node. The context menu is suppressed while enabled.
+  onDraw: (orig: string, dest: string | null, opts: { alt: boolean }) => void;
+  // Outer gate; default always on. Drawing is an annotation affordance, so review
+  // surfaces enable it always; a live board can leave it off.
+  enabled?: () => boolean;
+}
+
+// Right-button draw for the self-rendered SVG boards — the shape-annotation
+// counterpart to installBoardDrag. Left button is untouched (installBoardDrag owns
+// it); this listens only to button 2, so click-to-move and draw never collide.
+export function installBoardDraw(handlers: BoardDrawHandlers): void {
+  const gate = (): boolean => handlers.enabled?.() ?? true;
+
+  handlers.board.addEventListener('contextmenu', (event) => {
+    if (gate()) event.preventDefault();
+  });
+
+  handlers.board.addEventListener('pointerdown', (event) => {
+    if (event.button !== 2 || !gate()) return;
+    const orig = squareOf(event.target);
+    if (!orig) return;
+    const alt = event.shiftKey || event.ctrlKey || event.metaKey || event.altKey;
+    event.preventDefault();
+    const onUp = (up: PointerEvent): void => {
+      document.removeEventListener('pointerup', onUp);
+      handlers.onDraw(orig, squareUnderPoint(up.clientX, up.clientY), { alt });
+    };
+    document.addEventListener('pointerup', onUp);
+  });
+}

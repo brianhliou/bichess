@@ -9,29 +9,31 @@ import {
 import type { Article } from '../types.js';
 
 export const banqiArticle: Article = {
-    slug: 'banqi',
+    slug: 'flip-xiangqi',
+    gameSpecId: 'banqi',
     boardFamily: 'xiangqi',
     kind: 'rules',
     playableOnMistboard: true,
-    title: 'Half-Flip Chess Rules',
+    title: 'Flip Xiangqi Rules',
     summary:
-      'Half-Flip Chess rules, traditionally banqi (暗棋): the 4x8 half-board xiangqi flip game, with face-down pieces, rank captures, screen-jumping cannons, and no royal general.',
+      'Flip Xiangqi rules, traditionally banqi (暗棋): the 4x8 half-board xiangqi flip game, with face-down pieces, rank captures, screen-jumping cannons, and no royal general.',
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-15',
+    updatedAt: '2026-07-12',
     audience:
-      'Players who grew up with banqi and newcomers who want the Taiwanese rules, the rank ladder, and the cannon explained on one page.',
+      'Players who grew up with banqi and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
     thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
     intro: [
       {
         kind: 'paragraph',
         text:
-          "Half-Flip Chess is Mistboard's public name for banqi (暗棋, 'dark chess', also called half chess or flip chess). It is played on half a xiangqi board with all thirty-two pieces shuffled face-down. Each turn, flip an unknown piece or move one of your revealed pieces one square. Captures follow rank, except for the cannon. You win by leaving the opponent with no legal move.",
+          "Flip Xiangqi is Mistboard's English name for banqi (暗棋, 'dark chess'), also called half chess or flip chess. It is played on half a xiangqi board with all thirty-two pieces shuffled face-down. Each turn, flip an unknown piece or move one of your revealed pieces one square. Captures follow rank, except for the cannon. You win by leaving the opponent with no legal move.",
       },
       {
         kind: 'paragraph',
         text:
-          'It is the casual sibling of [Elephant Chess](/rules/xiangqi): a short game that needs only an ordinary xiangqi set and half the board. It shares names with [Fog Chess](/rules/dark-chess), the fog-of-war chess variant played on Mistboard, but it is a different game. This page follows Taiwanese rules, the version with screen-jumping cannons.',
+          'It is the casual sibling of [Xiangqi](/rules/xiangqi): a short game that needs only an ordinary xiangqi set and half the board. It shares names with [Fog Chess](/rules/fog-chess), but it is a different game. Banqi rules vary between communities; this page states the exact rules used on Mistboard.',
       },
     ],
     sections: [
@@ -70,7 +72,7 @@ export const banqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'Most pieces capture enemy pieces of their own rank or lower by stepping onto an adjacent square. In Taiwanese rules, the order is General > Advisor > Elephant > Chariot > Horse > Soldier. Two exceptions cross the ladder: a soldier can capture the general, and the general cannot capture soldiers.',
+              'Most pieces capture enemy pieces of their own rank or lower by stepping onto an adjacent square. On Mistboard, the order is General > Advisor > Elephant > Chariot > Horse > Soldier. Two exceptions cross the ladder: a soldier can capture the general, and the general cannot capture soldiers.',
           },
           {
             kind: 'paragraph',
@@ -118,27 +120,12 @@ export const banqiArticle: Article = {
         ],
       },
       {
-        heading: 'Regional rules',
+        heading: 'Rules used on Mistboard',
         blocks: [
           {
             kind: 'paragraph',
             text:
-              'Taiwanese rules (this page): non-cannon pieces move and capture one square by rank. Cannon is outside the rank ladder and captures by screen jump.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Hong Kong rules: pieces still move one square, but the rank order usually follows xiangqi material value more closely, with chariot and horse above cannon, advisor, elephant, and soldier. Cannon captures by adjacency as part of that ladder.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              "Mainland rules: often close to Taiwanese ranking, but cannon sits in the ladder instead of jumping, commonly just above soldier. Some versions also relax the general-soldier exception depending on which piece moves first.",
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'House variants: some groups allow capture attempts on face-down pieces, where an impossible capture flips the target instead. Decide this, repetition, and no-progress rules before over-the-board play.',
+              'There is no single worldwide banqi rules authority. Rank order, cannon captures, repetition, and no-progress limits can differ between clubs, families, and online implementations. Mistboard uses the ladder and screen-jumping cannon described above. For an over-the-board game, agree on those details before the first flip.',
           },
         ],
       },
@@ -148,7 +135,7 @@ export const banqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "暗棋 is Mandarin ànqí, 'dark chess'. The same game is also called 半棋 (half chess), the source of the English name banqi, and 翻棋 (flip chess). Computer-game literature often calls it Chinese Dark Chess. None of these are [Flip Elephant Chess](/rules/jieqi), the full-board xiangqi variant where shuffled pieces reveal as they move, and none are the fog-of-war [Fog Chess](/rules/dark-chess) played here.",
+              "暗棋 is Mandarin ànqí, 'dark chess'. The same game is also called 半棋 (half chess) and 翻棋 (flip chess); computer-game literature often calls it Chinese Dark Chess or banqi. Mistboard uses Flip Xiangqi to describe the turn-over-a-tile action. [Reveal Xiangqi](/rules/reveal-xiangqi) is the full-board game where hidden pieces reveal after moving, and [Fog Chess](/rules/fog-chess) is the chess variant played under Fog of War.",
           },
         ],
       },
@@ -158,7 +145,7 @@ export const banqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'Step through a real game below: MistyBanqi (Strongest) moving first, a human second. The opening flip leaves MistyBanqi playing Red and the human Black. Black wins the opening material (the first eight captures are all Black’s), but Red keeps its elephant, the highest piece left, and grinds out the win. A clean illustration that in Half-Flip Chess, rank beats raw material. Tiles flip to their dealt piece the first time they are turned over.',
+              'Step through a real game below: MistyBanqi (Strongest) moving first, a human second. The opening flip leaves MistyBanqi playing Red and the human Black. Black wins the opening material (the first eight captures are all Black’s), but Red keeps its elephant, the highest piece left, and grinds out the win. It is a clean illustration that in Flip Xiangqi, rank beats raw material. Tiles flip to their dealt piece the first time they are turned over.',
           },
           {
             kind: 'banqi-replay',
@@ -175,16 +162,12 @@ export const banqiArticle: Article = {
         ],
       },
       playClosing({
-        heading: 'Where to next',
-        lead: 'Half-Flip Chess is playable on Mistboard: take on MistyBanqi at the strength you pick, or challenge a friend. Elephant Chess is the parent game, and Flip Elephant Chess is the other hidden-identity cousin.',
-        playLabel: 'Play MistyBanqi',
+        heading: 'Play on Mistboard',
+        lead: 'Flip Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=banqi',
         secondary: [
           { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
-          { label: 'Elephant Chess Rules', href: '/rules/xiangqi', emphasis: 'secondary' },
-          { label: 'Flip Elephant Chess', href: '/rules/jieqi', emphasis: 'secondary' },
-          { label: 'Fog Chess', href: '/rules/dark-chess', emphasis: 'secondary' },
-          { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],
       }),
     ],

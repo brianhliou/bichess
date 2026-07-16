@@ -26,8 +26,12 @@ describe('Kriegspiel watch replay', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
+    const onPlyChange = vi.fn();
 
-    const handle = await mountKriegspielWatchReplay(root, 'kr_watch', { autoplay: false });
+    const handle = await mountKriegspielWatchReplay(root, 'kr_watch', {
+      autoplay: false,
+      onPlyChange,
+    });
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/kriegspiel/games/kr_watch');
     expect(handle.activeSampleId()).toBe('kr_watch');
@@ -38,9 +42,11 @@ describe('Kriegspiel watch replay', () => {
     expect(root.textContent).toContain('3+2');
     expect(root.textContent).toContain('Ply 0 / 1');
     expect(root.querySelectorAll('.kriegspiel-live-svg')).toHaveLength(3);
+    expect(onPlyChange).toHaveBeenLastCalledWith(0, 1);
 
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
     expect(root.textContent).toContain('Ply 1 / 1 - White wins');
+    expect(onPlyChange).toHaveBeenLastCalledWith(1, 1);
 
     await handle.loadGame('kr_next');
     expect(fetchSpy).toHaveBeenCalledWith('/api/kriegspiel/games/kr_next');

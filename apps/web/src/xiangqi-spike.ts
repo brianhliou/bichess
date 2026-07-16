@@ -1143,10 +1143,9 @@ async function createServerRoom(): Promise<void> {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ mode: 'pvp', gameSpecId: 'dark-xiangqi' }),
     });
-    if (!response.ok)
-      throw new Error(`Fog Elephant Chess room creation failed: ${response.status}`);
+    if (!response.ok) throw new Error(`Fog Xiangqi room creation failed: ${response.status}`);
     const data = (await response.json()) as { url?: string };
-    if (!data.url) throw new Error('Fog Elephant Chess room creation response missing url');
+    if (!data.url) throw new Error('Fog Xiangqi room creation response missing url');
     window.location.assign(data.url);
   } catch (err) {
     console.warn(err);

@@ -150,11 +150,11 @@ function rerender(): void {
       <header class="xqd-header">
         <div>
           <p class="xqd-kicker">Private demo</p>
-          <h1>Fog Elephant Chess</h1>
+          <h1>Fog Xiangqi</h1>
         </div>
-        <a class="xqd-rules-link" href="/rules/dark-xiangqi">Rules</a>
+        <a class="xqd-rules-link" href="/rules/fog-xiangqi">Rules</a>
       </header>
-      <section class="xqd-game" aria-label="Fog Elephant Chess game">
+      <section class="xqd-game" aria-label="Fog Xiangqi game">
         <aside class="xqd-sidebar">
           <section class="xqd-panel" aria-label="Game controls">
             <div class="xqd-side" role="group" aria-label="Choose side">

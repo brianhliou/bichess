@@ -1,10 +1,9 @@
 /**
  * Dark Xiangqi (9x10, hidden/dev-only) registry entry. Owns the tenant's
  * live-room map, the room-factory binding, and hydration (moved out of
- * index.ts at the registry dispatch collapse). No rematch flow and no lobby
- * surface — the lobby route answers dark_xiangqi_not_integrated while the
- * flag is on. Imported for side effects by
- * variant-tenant/register-tenants.ts.
+ * index.ts at the registry dispatch collapse). No rematch flow yet. Matchmaking
+ * is casual random-seat (unrated) and gated by the tenant enable flag. Imported
+ * for side effects by variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
@@ -15,6 +14,7 @@ import type {
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDarkXiangqiCreate, requestsDarkXiangqi } from './routes/dark-xiangqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   createDarkXiangqiLiveRoom,
   type DarkXiangqiLiveRoomCreation,
@@ -76,7 +76,7 @@ registerVariantTenant({
   watch: {
     channelId: 'dark-xiangqi',
     family: 'xiangqi',
-    label: 'Fog Elephant Chess',
+    label: 'Fog Xiangqi',
     legacyVariants: ['dark-xiangqi'],
   },
   ownsSpecRouting: true,
@@ -104,6 +104,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createDarkXiangqiRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`dark_xiangqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

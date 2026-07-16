@@ -309,7 +309,7 @@ describe('Dark Mini Xiangqi live room', () => {
     });
   });
 
-  it('offers no play-again after an abort — only Home (parity with dark chess)', () => {
+  it('offers no actions after an abort (no play-again, no Home)', () => {
     const refs = refsFixture();
     liveState.state = {
       ...viewFixture(),
@@ -321,8 +321,9 @@ describe('Dark Mini Xiangqi live room', () => {
     const labels = [...refs.roomActions.querySelectorAll('button, a')].map((el) => el.textContent);
     // An aborted game spun up a fresh solo room (mover could play before the
     // opponent joined, no cue to the opponent); chess shows nothing here either.
+    // Home is gone too (lichess parity): the site nav is the way out.
     expect(labels).not.toContain('Play again');
-    expect(labels).toContain('Home');
+    expect(labels).not.toContain('Home');
   });
 
   it('links to the postgame review from a finished game', () => {
@@ -639,6 +640,8 @@ function refsFixture(): LiveRefs {
     gameInfo: el('div'),
     moveList: el('ol'),
     offerSection: el('section'),
+    playerBottom: el('div'),
+    playerTop: el('div'),
     promotion: el('div'),
     replayControls: root.querySelectorAll<HTMLButtonElement>('[data-replay]'),
     replayMeta: el('p'),

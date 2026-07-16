@@ -66,9 +66,9 @@ describe('web variant launch registry', () => {
     // Xiangqi pivot: drop-mini is off the rating grids now; chess is deranked so
     // it sorts after the xiangqi + animal-rank buckets.
     expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
-      FORTRESS_XIANGQI_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
     ]);
     vi.unstubAllEnvs();
@@ -85,9 +85,9 @@ describe('web variant launch registry', () => {
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const flagged = await import('./variants.js');
     const expected = [
-      FORTRESS_XIANGQI_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       DARK_MINI_XIANGQI_SPEC_ID,
     ];
@@ -156,34 +156,28 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('shows local rating surfaces without disabled Crossroads, Reveal, and Kriegspiel variants', () => {
+  it('shows only product-profile variants on default local rating surfaces', () => {
     // Xiangqi pivot: canonical order (xiangqi anchors, then the flip/animal
     // cluster, then the fog trio), and drop-mini is off the rating grids.
     expect(leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
       BANQI_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       JIEQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
-      DARK_SHOGI_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
     ]);
     expect(profileRatingVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
       BANQI_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       JIEQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
-      DARK_SHOGI_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
     ]);
     expect(enabledVariants.map((v) => v.gameSpecId)).not.toContain(DARK_SHOGI_SPEC_ID);
     expect(variantMiniIdForGameSpec(DARK_SHOGI_SPEC_ID)).toBe('dark-shogi');
@@ -213,10 +207,10 @@ describe('web variant launch registry', () => {
     // Xiangqi pivot: VARIANTS follows the new CANONICAL_VARIANT_ORDER.
     expect(VARIANTS.map((v) => [v.gameSpecId, v.apiParam])).toEqual([
       [XIANGQI_SPEC_ID, 'xiangqi'],
-      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
       [BANQI_SPEC_ID, 'banqi'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
+      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
       [JIEQI_SPEC_ID, 'jieqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
       [DARK_CHESS_SPEC_ID, 'fog'],
@@ -264,7 +258,7 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('shows Dark Crossroads + Dark Shogi + Dark Crazyhouse + Kriegspiel on rating surfaces behind their flags, never in the lobby', async () => {
+  it('keeps parked Fog Shogi off rating surfaces while other variants follow their flags', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'true');
@@ -275,7 +269,6 @@ describe('web variant launch registry', () => {
 
     for (const specId of [
       DARK_CROSSROADS_CHESS_SPEC_ID,
-      DARK_SHOGI_SPEC_ID,
       DARK_CRAZYHOUSE_SPEC_ID,
       KRIEGSPIEL_SPEC_ID,
     ]) {
@@ -283,6 +276,10 @@ describe('web variant launch registry', () => {
       expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toContain(specId);
       expect(flagged.enabledVariants.map((v) => v.gameSpecId)).not.toContain(specId);
     }
+    expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(DARK_SHOGI_SPEC_ID);
+    expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(
+      DARK_SHOGI_SPEC_ID,
+    );
 
     vi.unstubAllEnvs();
     vi.resetModules();

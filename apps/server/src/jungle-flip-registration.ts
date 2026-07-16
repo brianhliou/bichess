@@ -1,7 +1,8 @@
 /**
  * Flip Jungle registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. PvP + PvE (Tier-B MistyJungleFlip UCI engine); no lobby
- * open-seek. Imported for side effects by variant-tenant/register-tenants.ts.
+ * binding, and hydration. PvP + PvE (Tier-B MistyJungleFlip UCI engine);
+ * matchmaking is casual random-seat (unrated). Imported for side effects by
+ * variant-tenant/register-tenants.ts.
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
@@ -9,6 +10,7 @@ import type { JungleFlipCreatorPreference, JungleFlipRuntimeRoom } from './jungl
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import * as persistence from './persistence.js';
 import { handleJungleFlipCreate, requestsJungleFlip } from './routes/jungle-flip-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import {
   createJungleFlipLiveRoom,
   type JungleFlipLiveRoomCreation,
@@ -93,6 +95,14 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body) =>
       handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body),
   },
-  lobby: null,
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createJungleFlipRoom(timeControl, 'random');
+      if (!created.ok) throw new Error(`jungle_flip_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   sweepDueDeadline: null,
 });

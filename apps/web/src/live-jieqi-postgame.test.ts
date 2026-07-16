@@ -1,5 +1,18 @@
+import {
+  applyJieqiMove,
+  createInitialJieqiState,
+  getJieqiLegalMoves,
+  getJieqiPlayerView,
+  jieqiTruthView,
+  STANDARD_JIEQI_DEAL,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jieqiPostgameApiUrl, mountJieqiPostgame } from './live-jieqi-postgame.js';
+
+// A deterministic legal opening move + its coordinate label, shared by the fixture
+// and the assertions (getJieqiLegalMoves is stable, so [0] is a fixed move).
+const OPENING = getJieqiLegalMoves(createInitialJieqiState('jq_postgame', STANDARD_JIEQI_DEAL))[0]!;
+const OPENING_SAN = `${OPENING.from}-${OPENING.to}`;
 
 describe('Jieqi postgame page', () => {
   beforeEach(() => {
@@ -22,7 +35,7 @@ describe('Jieqi postgame page', () => {
     expect(jieqiPostgameApiUrl('jq room')).toBe('/api/jieqi/games/jq%20room');
   });
 
-  it('renders a dark-chess-style review: single board, two-column moves, reveal toggle, arrow nav', async () => {
+  it('reconstructs the deal, renders a single masked board, and lists the opening move', async () => {
     const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
@@ -31,46 +44,46 @@ describe('Jieqi postgame page', () => {
     await flushPromises();
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/jieqi/games/jq_postgame');
-    expect(root.textContent).toContain('Flip Elephant Chess');
+    expect(root.textContent).toContain('Reveal Xiangqi');
     expect(root.textContent).toContain('Red wins');
-    // No jieqi play-again action in v1; the review keeps Home + Room links.
-    expect(root.textContent).toContain('Home');
-    expect(root.textContent).toContain('Room');
+    // The review left column is button-free.
     expect(root.textContent).not.toContain('Play again');
-    // Two-column move list (dark-chess style): the cell shows the bare coordinate
-    // move, not a "Red"-prefixed line.
-    expect(root.textContent).toContain('b3-b10');
-    expect(root.textContent).toContain('Ply 1 of 1');
+    // Two-column move list: the cell shows the bare coordinate move (jieqi has no
+    // flip; every move is from-to).
+    expect(root.textContent).toContain(OPENING_SAN);
 
-    // A SINGLE board (no triptych, no perspective picker).
+    // A SINGLE board (no triptych, no perspective picker). Its presence proves the
+    // deal reconstructed from history.truth and the tree replayed.
     expect(root.querySelectorAll('.jieqi-board')).toHaveLength(1);
     expect(root.querySelectorAll('.dxq-postgame__view-button')).toHaveLength(0);
 
-    // Default is the as-played board (identities hidden): h8 renders as a face-down
-    // back, not the revealed black cannon.
+    // The board renders MASKED as-played: the still-dark pieces are face-down backs,
+    // not identified pieces (branching reveals them; the tree does not spoil the deal).
     const boardHtml = () => root.querySelector('.jieqi-board')?.innerHTML ?? '';
     expect(boardHtml()).toContain('hidden piece');
-    expect(boardHtml()).not.toContain('aria-label="black cannon"');
 
-    // Toggling reveal on shows server truth, where h8 is the black cannon glyph.
-    const revealBtn = Array.from(root.querySelectorAll('button')).find((btn) =>
-      /identities/i.test(btn.textContent ?? ''),
-    );
-    expect(revealBtn).toBeTruthy();
-    revealBtn?.click();
-    expect(boardHtml()).toContain('aria-label="black cannon"');
-    expect(boardHtml()).not.toContain('hidden piece');
+    // Opens at the final ply (the opening move is the mainline tip): the highlighted
+    // current cell is that move.
+    const currentSan = () =>
+      root
+        .querySelector('.review-move-list__move--current')
+        ?.querySelector('.review-move-list__san')?.textContent ?? null;
+    expect(currentSan()).toBe(OPENING_SAN);
 
-    // Arrow keys scrub the replay: ArrowLeft from the final ply steps back to ply 0.
-    // The shared review layout binds the keyboard on the mount root.
+    // Arrow keys scrub the replay: ArrowLeft from the final ply steps back to the
+    // root (ply 0), where no move is highlighted.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(root.textContent).toContain('Ply 0 of 1');
+    expect(root.querySelector('.review-move-list__move--current')).toBeNull();
   });
 });
 
 function postgameFixture() {
-  // Red cannon b3 -> b10 captured a black dark piece (a horse); Red's cannon is
-  // now revealed on b10. Black resigns. Every other piece stays dealt face-down.
+  // Build a REAL 1-ply jieqi game with the kernel so the tree can reconstruct the
+  // deal (from history.truth's ply-0 board) and replay it: the standard fixed deal,
+  // a deterministic legal opening move, then black resigns. Generating from the
+  // kernel keeps the fixture legal.
+  const initial = createInitialJieqiState('jq_postgame', STANDARD_JIEQI_DEAL);
+  const afterMove = applyJieqiMove(initial, OPENING);
   return {
     game: {
       roomId: 'jq_postgame',
@@ -88,83 +101,22 @@ function postgameFixture() {
     },
     state: {
       status: { type: 'finished', winner: 'red', reason: 'resignation' },
-      moveNumber: 1,
+      moveNumber: afterMove.moveNumber,
       timeControl: { initialMs: 180000, incrementMs: 2000 },
     },
     timeline: [
-      { type: 'move-played', at: 4, color: 'red', move: { from: 'b3', to: 'b10' }, ply: 1 },
+      { type: 'move-played', at: 4, color: 'red', move: OPENING, ply: 1 },
       { type: 'seat-resigned', at: 5, color: 'black', winner: 'red' },
     ],
-    view: truthView('jq_postgame_truth'),
+    view: getJieqiPlayerView(afterMove, 'red'),
     history: {
-      red: [{ ply: 1, view: redView('jq_postgame_red_1') }],
-      truth: [{ ply: 1, view: truthView('jq_postgame_truth_1') }],
-      black: [{ ply: 1, view: blackView('jq_postgame_black_1') }],
+      // Full-identity spoiler stream; the ply-0 board is the deal the adapter
+      // reconstructs from (jieqi's spoiler key is 'truth', not 'revealed').
+      truth: [
+        { ply: 0, view: jieqiTruthView(initial) },
+        { ply: 1, view: jieqiTruthView(afterMove) },
+      ],
     },
-    views: {
-      red: redView('jq_postgame_red'),
-      truth: truthView('jq_postgame_truth'),
-      black: blackView('jq_postgame_black'),
-    },
-  };
-}
-
-const finished = { type: 'finished', winner: 'red', reason: 'resignation' } as const;
-
-function truthView(id: string) {
-  return {
-    id,
-    perspective: 'red',
-    board: {
-      e1: { color: 'red', role: 'general', faceDown: false },
-      e10: { color: 'black', role: 'general', faceDown: false },
-      b10: { color: 'red', role: 'cannon', faceDown: false },
-      h8: { color: 'black', role: 'cannon', faceDown: false },
-    },
-    legalMoves: [],
-    captured: [{ owner: 'black', role: 'horse' }],
-    inCheck: false,
-    status: finished,
-    moveNumber: 1,
-    lastMove: { from: 'b3', to: 'b10' },
-  };
-}
-
-function redView(id: string) {
-  return {
-    id,
-    perspective: 'red',
-    board: {
-      e1: { color: 'red', role: 'general', faceDown: false },
-      e10: { color: 'black', role: 'general', faceDown: false },
-      b10: { color: 'red', role: 'cannon', faceDown: false },
-      h8: { color: 'black', faceDown: true },
-    },
-    legalMoves: [],
-    captured: [{ owner: 'black', role: 'horse' }],
-    inCheck: false,
-    status: finished,
-    moveNumber: 1,
-    lastMove: { from: 'b3', to: 'b10' },
-  };
-}
-
-function blackView(id: string) {
-  return {
-    id,
-    perspective: 'black',
-    board: {
-      e1: { color: 'red', role: 'general', faceDown: false },
-      e10: { color: 'black', role: 'general', faceDown: false },
-      b10: { color: 'red', role: 'cannon', faceDown: false },
-      h8: { color: 'black', faceDown: true },
-    },
-    legalMoves: [],
-    captured: [{ owner: 'black', role: null }],
-    inCheck: false,
-    status: finished,
-    moveNumber: 1,
-    lastMove: { from: 'b3', to: 'b10' },
   };
 }
 

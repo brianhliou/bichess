@@ -1,0 +1,11 @@
+"timestamp","move_index","move","game_id","red_player","black_player","red_elo_before","red_elo_after","black_elo_before","black_elo_after","time_control","time_control_category","rating_mode","game_status","outcome","game_join_source","analysis","cpl"
+"2026-06-01T10:00:00Z","0","h2e2","sample-red","red-a","black-a","1800","1808","1790","1782","600+5","RAPID","rated","CHECKMATED","RED_WINS","lobby","{depth:12,
+score:5}","8"
+"2026-06-01T10:00:03Z","1","h7e7","sample-red","red-a","black-a","1800","1808","1790","1782","600+5","RAPID","rated","CHECKMATED","RED_WINS","lobby","",""
+"2026-06-01T10:00:07Z","2","h0g2","sample-red","red-a","black-a","1800","1808","1790","1782","600+5","RAPID","rated","CHECKMATED","RED_WINS","lobby","",""
+"2026-06-01T10:00:10Z","3","h9g7","sample-red","red-a","black-a","1800","1808","1790","1782","600+5","RAPID","rated","CHECKMATED","RED_WINS","lobby","",""
+"2026-06-02T11:00:00Z","0","b2e2","sample-draw","red-b","black-b","1650","","1660","","180+2","BLITZ","casual","DRAW","DRAW","invite","",""
+"2026-06-02T11:00:02Z","1","b7e7","sample-draw","red-b","black-b","1650","","1660","","180+2","BLITZ","casual","DRAW","DRAW","invite","",""
+"2026-06-03T12:00:00Z","0","h0g2","sample-correspondence","red-c","black-c","1500","","1510","","604800/move","CORRESPONDENCE","casual","RESIGNED","BLACK_WINS","direct","",""
+"2026-06-03T12:05:00Z","1","h9g7","sample-correspondence","red-c","black-c","1500","","1510","","604800/move","CORRESPONDENCE","casual","RESIGNED","BLACK_WINS","direct","",""
+"2026-06-04T13:00:00Z","0","z9z8","sample-invalid","red-d","black-d","1000","","1000","","60+0","BULLET","casual","ABORTED","","lobby","",""

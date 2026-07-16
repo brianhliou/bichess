@@ -10,6 +10,7 @@ export type TournamentPairing = {
   gameIndex: number;
   pairId: string;
   pairIndex: number;
+  openingIndex: number;
   repeatIndex: number;
   whiteEngineId: string;
 };
@@ -18,6 +19,8 @@ export type TournamentPlanInput = {
   engines: string[];
   gamesPerPair: number;
 };
+
+export type TournamentVariant = 'dark-chess' | 'xiangqi';
 
 export type TournamentCliConfig = {
   artifactPolicy: Record<string, unknown>;
@@ -34,6 +37,7 @@ export type TournamentCliConfig = {
   seed: string;
   timeControl: EngineTaskTimeControl;
   tournamentId: string;
+  variant: TournamentVariant;
 };
 
 export function createRoundRobinPairings(input: TournamentPlanInput): TournamentPairing[] {
@@ -58,6 +62,7 @@ export function createRoundRobinPairings(input: TournamentPlanInput): Tournament
           gameIndex,
           pairId,
           pairIndex,
+          openingIndex: Math.floor(repeatIndex / 2),
           repeatIndex,
           whiteEngineId: swap ? b : a,
         });
@@ -84,14 +89,24 @@ export function parseTournamentArgs(
     args.gamesPerPair ?? env.ENGINE_TOURNAMENT_GAMES_PER_PAIR,
     2,
   );
+  const variant = tournamentVariant(args.variant ?? env.ENGINE_TOURNAMENT_VARIANT);
   const maxPlies = positiveInteger(args.maxPlies ?? env.ENGINE_MAX_PLIES, 160);
   const providers = csv(args.providers ?? env.ENGINE_PROVIDERS ?? 'local,railway');
   const timeControl = parseEngineTimeControl(
-    args.timeControl ?? env.ENGINE_TIME_CONTROL ?? 'standard',
+    args.timeControl ?? env.ENGINE_TIME_CONTROL ?? (variant === 'xiangqi' ? 'none' : 'standard'),
   );
+  if (variant === 'xiangqi' && timeControl.kind !== 'none') {
+    throw new Error('xiangqi calibration currently requires --time-control none');
+  }
+  const openingPolicy = openingPolicyFrom(args.opening ?? env.ENGINE_OPENING_POLICY);
+  if (openingPolicy.kind !== 'standard' && gamesPerPair % 2 !== 0) {
+    throw new Error('paired opening tournaments require an even --games-per-pair');
+  }
   const rated = booleanFlag(args.rated ?? env.ENGINE_RATED, false);
   const ratingAnchorEngineId =
-    args.ratingAnchor ?? env.ENGINE_RATING_ANCHOR ?? 'python-random-legal';
+    args.ratingAnchor ??
+    env.ENGINE_RATING_ANCHOR ??
+    (variant === 'xiangqi' ? engines[0]! : 'python-random-legal');
   const ratingMinAnchorGames = positiveInteger(
     args.ratingMinAnchorGames ?? env.ENGINE_RATING_MIN_ANCHOR_GAMES,
     8,
@@ -110,7 +125,7 @@ export function parseTournamentArgs(
     engines: uniqueNonEmpty(engines),
     gamesPerPair,
     maxPlies,
-    openingPolicy: openingPolicyFrom(args.opening ?? env.ENGINE_OPENING_POLICY),
+    openingPolicy,
     priority: integer(args.priority ?? env.ENGINE_PRIORITY, 0),
     providers,
     rated,
@@ -119,6 +134,7 @@ export function parseTournamentArgs(
     seed: args.seed ?? env.ENGINE_SEED ?? Date.now().toString(),
     timeControl,
     tournamentId,
+    variant,
   };
 }
 
@@ -128,6 +144,18 @@ export function nextTournamentSeed(baseSeed: string, gameIndex: number): string 
   } catch {
     return `${baseSeed}-${gameIndex}`;
   }
+}
+
+export function pairingOpeningPolicy(
+  openingPolicy: Record<string, unknown>,
+  baseSeed: string,
+  pairing: Pick<TournamentPairing, 'openingIndex' | 'pairIndex'>,
+): Record<string, unknown> {
+  if (openingPolicy.kind === 'standard') return openingPolicy;
+  // Each engine pair owns a disjoint opening stream; the two color-swapped
+  // games at openingIndex N receive the same seed and therefore the same line.
+  const streamIndex = pairing.pairIndex * 1_000_000 + pairing.openingIndex;
+  return { ...openingPolicy, seed: nextTournamentSeed(baseSeed, streamIndex) };
 }
 
 export function tournamentJobConfig(
@@ -157,7 +185,7 @@ export function tournamentJobConfig(
       min_anchor_games: config.ratingMinAnchorGames,
       excluded_terminations: ['truncated'],
       pool: {
-        variant: 'dark-chess',
+        variant: config.variant,
         time_control_bucket: timeControlBucket(config.timeControl),
       },
     },
@@ -181,6 +209,7 @@ type RawArgs = {
   seed?: string;
   timeControl?: string;
   tournamentId?: string;
+  variant?: string;
 };
 
 function parseArgs(values: string[]): RawArgs {
@@ -246,6 +275,9 @@ function parseArgs(values: string[]): RawArgs {
       case 'tournament-id':
         parsed.tournamentId = value;
         break;
+      case 'variant':
+        parsed.variant = value;
+        break;
       default:
         throw new Error(`unknown argument --${rawKey}`);
     }
@@ -289,6 +321,12 @@ function booleanFlag(value: string | undefined, fallback: boolean): boolean {
   if (['1', 'true', 'yes', 'on'].includes(value.toLowerCase())) return true;
   if (['0', 'false', 'no', 'off'].includes(value.toLowerCase())) return false;
   throw new Error(`invalid boolean value ${value}`);
+}
+
+function tournamentVariant(value: string | undefined): TournamentVariant {
+  const variant = value ?? 'dark-chess';
+  if (variant === 'dark-chess' || variant === 'xiangqi') return variant;
+  throw new Error(`invalid tournament variant ${variant}; expected dark-chess or xiangqi`);
 }
 
 function slugEngineId(engineId: string): string {

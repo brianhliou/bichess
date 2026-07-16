@@ -118,7 +118,7 @@ export const darkCrazyhouseArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'It runs on the same fog as [Fog Chess](/rules/dark-chess); read that first if the fog rule is new. Below is only what crazyhouse adds: hands, drops, and the drop fog makes strange.',
+      text: 'It runs on the same fog as [Fog Chess](/rules/fog-chess); read that first if the fog rule is new. Below is only what crazyhouse adds: hands, drops, and the drop fog makes strange.',
     },
   ],
   sections: [
@@ -310,7 +310,7 @@ export const darkCrazyhouseArticle: Article = {
               href: '/?play=friend&gameSpecId=dark-crazyhouse',
               emphasis: 'primary',
             },
-            { label: 'Fog Chess Rules', href: '/rules/dark-chess', emphasis: 'secondary' },
+            { label: 'Fog Chess Rules', href: '/rules/fog-chess', emphasis: 'secondary' },
             { label: 'Back to all rules', href: '/rules', emphasis: 'secondary' },
           ],
         } as ArticleBlock,

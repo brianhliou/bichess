@@ -229,7 +229,7 @@ function renderModule(mined: MinedMaterial[]): string {
 // array is assignable when spread there, while keeping this file free of a
 // circular import.
 
-import { JUNGLE_SPEC_ID } from './game-specs.js';
+import type { JUNGLE_SPEC_ID } from './game-specs.js';
 import type { JungleColor, JungleGameState, JungleMove } from './variants-jungle.js';
 
 type MaterialJunglePuzzleTheme =

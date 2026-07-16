@@ -26,6 +26,7 @@
 
 import { type GameSpecId, XIANGQI_SPEC_ID } from './game-specs.js';
 import { MINED_XIANGQI_PUZZLES } from './puzzles-xiangqi-mined.js';
+import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import type {
   XiangqiColor,
   XiangqiGameState,
@@ -76,7 +77,22 @@ export type XiangqiPuzzle = {
   // Pointer to the real game this position came from: replaying the source
   // game's first `ply` moves from the standard opening reproduces `initial`
   // (modulo the puzzle-state reset of progressClock/positionCounts).
-  sourceGame?: { gameId: string; ply: number };
+  //
+  // The event/date/result/player fields are denormalized ATTRIBUTION copied
+  // from the historical_xiangqi_games row at mine time. They travel with the
+  // puzzle so the "From game" card renders without the source game being
+  // hosted (the games themselves stay gated on license clearance — see
+  // docs-private/historical-xiangqi-library-track.md). All optional: older
+  // puzzles and non-db-mined puzzles carry only { gameId, ply }.
+  sourceGame?: {
+    gameId: string;
+    ply: number;
+    event?: string;
+    playedOn?: string; // ISO date, YYYY-MM-DD
+    result?: string; // "1-0" | "0-1" | "1/2-1/2"
+    redName?: string;
+    blackName?: string;
+  };
 };
 
 export type XiangqiPuzzleValidationIssueCode =
@@ -87,6 +103,7 @@ export type XiangqiPuzzleValidationIssueCode =
   | 'solution-ended-before-goal'
   | 'solution-must-end-on-solver-move'
   | 'unsupported-variant'
+  | 'winning-advantage-filler-tail'
   | 'wrong-finish-reason'
   | 'wrong-winner';
 
@@ -141,9 +158,39 @@ export type XiangqiPuzzleAttemptResult =
 // Hand-curated standard-xiangqi puzzles (none yet; the corpus is mined).
 export const CURATED_XIANGQI_PUZZLES: readonly XiangqiPuzzle[] = [];
 
+// Normalize a winning-advantage puzzle so its line ends on the payoff (the
+// solver's last capture), dropping the quiet PV tail the miner truncated to.
+// Checkmate puzzles and captureless (positional) wins are returned unchanged.
+export function trimXiangqiWinningAdvantageTail(puzzle: XiangqiPuzzle): XiangqiPuzzle {
+  if (puzzle.goal.type !== 'winning-advantage') return puzzle;
+  const trimmed = trimXiangqiWinningAdvantageMoves(puzzle.initial, puzzle.solution);
+  if (trimmed.length === puzzle.solution.length) return puzzle;
+  return { ...puzzle, solution: trimmed };
+}
+
+// A handful of mined puzzles whose flagged solver ply has a near-tied second
+// move (two winning moves within a small eval gap), so the "one right answer"
+// is not robust — the independent audit rejects them even though the gated
+// miner accepted them (search nondeterminism between the two engine processes
+// flips a small gap). Held back until the #185 follow-up lands (verify-hash
+// determinism + a slightly higher material-gap so a future re-mine never
+// produces them); then this set and the filter below are removed.
+const AUDIT_FLAGGED_XIANGQI_PUZZLE_IDS: ReadonlySet<string> = new Set([
+  'xq-mined-hxq_2b2b6b6d803b6f4bbd3a12d5-58',
+  'xq-mined-hxq_3087b9e177dc6e0a08d2872a-65',
+  'xq-mined-hxq_4a41e15e9d8a17414cf249ee-42',
+  'xq-mined-hxq_5299fe14e58a6acd13d8dd33-101',
+]);
+
 export const XIANGQI_PUZZLES: readonly XiangqiPuzzle[] = [
   ...CURATED_XIANGQI_PUZZLES,
-  ...MINED_XIANGQI_PUZZLES,
+  // The mined corpus is gated at mine time — every solver ply is verified
+  // uniquely correct by the extend-while-unique miner from the standalone FEN
+  // (#180/#185) — minus the few audit-flagged near-tied cases above. The
+  // quiet-tail trim stays a defensive, idempotent normalization.
+  ...MINED_XIANGQI_PUZZLES.filter((puzzle) => !AUDIT_FLAGGED_XIANGQI_PUZZLE_IDS.has(puzzle.id)).map(
+    trimXiangqiWinningAdvantageTail,
+  ),
 ];
 
 export function standardXiangqiPuzzleById(id: string): XiangqiPuzzle | null {
@@ -195,6 +242,19 @@ export function validateStandardXiangqiPuzzle(
         'solution-must-end-on-solver-move',
         puzzle.solution.length,
         'Winning-advantage solution must end on the solver move, so its length must be odd.',
+      );
+    }
+    // The line must end on the payoff (the solver's last capture): a trailing
+    // quiet solver move is non-forced (one of many winning replies) yet the
+    // solver validates by exact match, so it would reject every alternative.
+    const trimmed = trimXiangqiWinningAdvantageMoves(puzzle.initial, puzzle.solution);
+    if (trimmed.length < puzzle.solution.length) {
+      return validationError(
+        puzzle,
+        'winning-advantage-filler-tail',
+        trimmed.length,
+        'Winning-advantage solution has quiet moves after the last capture; it must end on the payoff.',
+        puzzle.solution[trimmed.length],
       );
     }
     return {

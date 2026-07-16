@@ -94,7 +94,6 @@ function createHarness(
       rowClass: 'move-row test-move-row',
       cellPrefix: 'test-move-row',
       masked,
-      emptyText: masked ? 'No visible moves yet' : 'No moves yet',
       notate: (move) => `${move.from}-${move.to}`,
       isMoveEvent: isTestMoveEvent,
     },

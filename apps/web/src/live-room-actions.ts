@@ -27,7 +27,8 @@ export type PlayAgainRoomRequestBody = {
 
 export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): void {
   const view = currentView();
-  const actions: HTMLElement[] = [roomAction('Back home', '/')];
+  // No standing Back-home action (lichess parity): the site nav is the way out.
+  const actions: HTMLElement[] = [];
   if (shouldShowPostGameRoomActions(view)) {
     const seat = liveState.seat;
     if (liveState.roomMode === 'pvp' && isColor(seat)) {

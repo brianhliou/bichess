@@ -7,14 +7,9 @@ import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import type { FeaturedGame } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
-import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
+import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { buildTitleBadge, isPlayerTitle, titleFullName } from './player-titles.js';
-import {
-  buildProfileGameRow,
-  buildProfileHeaderShell,
-  profileGameSpecLabel,
-  profileResultTone,
-} from './profile-ui.js';
+import { buildProfileGameRow, profileGameSpecLabel, profileResultTone } from './profile-ui.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { attachUserCard } from './user-card.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -50,6 +45,14 @@ type ProfileRatingHistory = {
   points: ProfileRatingHistoryPoint[];
 };
 
+type ProfilePuzzleRating = {
+  variant: string;
+  rating: number;
+  provisional: boolean;
+  solved: number;
+  attempts: number;
+};
+
 type ProfileRelation = { following: boolean; blocked: boolean };
 
 type UserProfile = {
@@ -60,6 +63,9 @@ type UserProfile = {
   user: {
     handle: string;
     displayName: string;
+    bio?: string;
+    location?: string;
+    profileLinks?: string[];
     profileVisibility: 'private' | 'unlisted' | 'public';
     accountRole: 'player' | 'admin';
     // Verified title key ('xgm', 'gm', ...). Absent/null = untitled. Granted
@@ -72,12 +78,15 @@ type UserProfile = {
     createdAt: string;
   };
   ratings: ProfileBucketRating[];
+  // Per-variant puzzle ratings; absent/empty when the user has solved no puzzles.
+  puzzleRatings?: ProfilePuzzleRating[];
   games: FeaturedGame[];
   gamesTotal: number;
 };
 
 // First page is delivered with the profile; "Load more" pulls subsequent pages.
 const PROFILE_GAMES_PAGE = 15;
+const FAVORITE_GAMES_PAGE = 15;
 
 type LeaderboardEntry = {
   rank: number;
@@ -202,12 +211,15 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   let spotlight = buildProfileRatingSpotlight(profile.ratings, selectedVariant, locale);
   void hydrateProfileRatingSpotlight(spotlight, profile.user.handle, selectedVariant, locale);
 
-  const header = buildProfileHeader(profile, locale);
-  void hydrateProfilePresence(header, profile.user.handle, locale);
+  // The overview merges the identity banner and the rating graph into one card
+  // (lichess parity): identity + actions across the top, the graph on the left
+  // two-thirds, and the stat readouts on the right third.
+  const overview = buildProfileOverview(profile, spotlight, locale);
+  void hydrateProfilePresence(overview, profile.user.handle, locale);
 
   const center = document.createElement('div');
   center.className = 'profile-center';
-  center.append(header, spotlight, buildProfileTabs(profile, locale));
+  center.append(overview, buildProfileTabs(profile, locale));
 
   const ratings = buildProfileRatings(profile.ratings, locale, {
     selectedVariant,
@@ -219,6 +231,7 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
       syncSelectedRating(ratings, variant);
     },
   });
+  appendProfilePuzzleRatings(ratings, profile.puzzleRatings ?? [], locale);
 
   const body = document.createElement('div');
   body.className = 'profile-body';
@@ -729,23 +742,60 @@ async function fetchUserRatingHistory(
   return data.history;
 }
 
-export function buildProfileHeader(
+// The merged overview card (lichess parity): identity + actions run across the
+// top, then the body splits into the rating graph (left two-thirds) and the
+// stat readouts (right third). The `spotlight` slot is the graph column; it is
+// swapped in place when the viewer picks a different variant in the rail.
+export function buildProfileOverview(
+  profile: UserProfile,
+  spotlight: HTMLElement,
+  locale: Locale = currentLocale(),
+): HTMLElement {
+  const card = document.createElement('section');
+  card.className = 'profile-overview';
+
+  const top = document.createElement('div');
+  top.className = 'profile-overview-top';
+  top.append(buildProfileIdentity(profile, locale));
+  const actions = buildProfileActions(profile, locale);
+  if (actions) top.append(actions);
+
+  const body = document.createElement('div');
+  body.className = 'profile-overview-body';
+  body.append(spotlight, buildProfileSideInfo(profile, locale));
+
+  card.append(top, body);
+  return card;
+}
+
+// Identity block for the overview top strip: the handle heading (presence dot +
+// gold title abbreviation + @handle) over a dot-separated meta line (join date,
+// full title, role/patron badges).
+export function buildProfileIdentity(
   profile: UserProfile,
   locale: Locale = currentLocale(),
 ): HTMLElement {
-  // Identity meta line (lichess user-infos order): join date first, then the
-  // title/role/patron badges when present. Game counts live in the stat strip
-  // below.
+  const identity = document.createElement('div');
+  identity.className = 'profile-identity';
+
+  // Presence dot ahead of the handle (lichess online line-icon). Rendered
+  // offline-first with a fixed footprint; hydrateProfilePresence fills it once
+  // the online-players fetch lands, so nothing shifts.
+  const presence = document.createElement('span');
+  presence.className = 'profile-presence';
+  presence.setAttribute('aria-hidden', 'true');
+
+  const heading = document.createElement('h1');
+  heading.className = 'profile-identity-handle';
+  heading.append(presence);
+  const titleBadge = buildTitleBadge(profile.user.title, locale);
+  if (titleBadge) heading.append(titleBadge);
+  heading.append(document.createTextNode(`@${profile.user.handle}`));
+  identity.append(heading);
+
+  // Badge line: verified title, admin, and patron badges (the join date now
+  // lives in the side column, lichess-style).
   const metaParts: HTMLElement[] = [];
-  const joined = formatJoinedDate(profile.user.createdAt, locale);
-  if (joined) {
-    const joinedEl = document.createElement('span');
-    joinedEl.className = 'profile-joined';
-    joinedEl.textContent = `${t('profile.memberSince', {}, locale)} ${joined}`;
-    metaParts.push(joinedEl);
-  }
-  // Verified title: the full localized name on the meta line; the h1 carries
-  // the compact gold abbreviation (titleLead below).
   if (isPlayerTitle(profile.user.title)) {
     const titleFull = document.createElement('span');
     titleFull.className = 'profile-role-badge profile-title-full';
@@ -757,54 +807,46 @@ export function buildProfileHeader(
   const patronBadge = buildPatronBadge(profile.user.patronSince, locale);
   if (patronBadge) metaParts.push(patronBadge);
 
-  // Presence dot ahead of the handle (lichess online line-icon). Rendered
-  // offline-first with a fixed footprint; hydrateProfilePresence fills it once
-  // the online-players fetch lands, so nothing shifts.
-  const presence = document.createElement('span');
-  presence.className = 'profile-presence';
-  presence.setAttribute('aria-hidden', 'true');
+  if (metaParts.length > 0) {
+    const meta = document.createElement('p');
+    meta.className = 'profile-header-meta';
+    metaParts.forEach((part, index) => {
+      if (index > 0) meta.append(document.createTextNode(' · '));
+      meta.append(part);
+    });
+    identity.append(meta);
+  }
 
-  // The h1 lead: presence dot, then the gold title abbreviation for titled
-  // players (lichess-style "XGM @handle"). Wrapped so the shell's single
-  // titleLead slot stays unchanged; hydrateProfilePresence still finds the dot
-  // by class.
-  const titleLead = document.createElement('span');
-  titleLead.className = 'profile-title-lead';
-  titleLead.append(presence);
-  const titleBadge = buildTitleBadge(profile.user.title, locale);
-  if (titleBadge) titleLead.append(titleBadge);
+  // Counts strip under the name (lichess user-infos row): compact activity
+  // figures, not the descriptive text (which sits in the side column).
+  identity.append(buildProfileCounts(profile, locale));
 
-  return buildProfileHeaderShell({
-    eyebrow: profile.isViewer
-      ? t('profile.yourProfile', {}, locale)
-      : t('profile.playerProfile', {}, locale),
-    title: `@${profile.user.handle}`,
-    titleLead,
-    metaParts,
-    actions: profile.relation
-      ? buildRelationActions(profile.user.handle, profile.relation, locale)
-      : profile.isViewer
-        ? buildOwnerActions(locale, profile.user.title)
-        : undefined,
-    stats: buildProfileStats(profile, locale),
-  });
+  return identity;
 }
 
-// Own-profile action row (lichess parity: your profile offers Edit profile
-// where someone else's offers Follow/Challenge/Message).
+// The top-strip action row: Follow/Challenge/Message for someone else's profile,
+// Edit profile (+ coach) on your own, nothing for an anonymous viewer.
+function buildProfileActions(
+  profile: UserProfile,
+  locale: Locale = currentLocale(),
+): HTMLElement | null {
+  if (profile.relation) {
+    return buildRelationActions(profile.user.handle, profile.relation, locale);
+  }
+  if (profile.isViewer) return buildOwnerActions(locale, profile.user.title);
+  return null;
+}
+
+// Your own profile offers its editor; someone else's profile offers the social
+// actions assembled above.
 function buildOwnerActions(locale: Locale = currentLocale(), title?: unknown): HTMLElement {
   const row = document.createElement('div');
   row.className = 'profile-relation-actions profile-owner-actions';
   const edit = document.createElement('a');
   edit.className = 'landing-setup-back';
-  edit.href = '/account';
+  edit.href = localizedHref('/account/settings', locale);
   edit.textContent = t('profile.editProfile', {}, locale);
-  // Titled player? Verify it: entry point into the /verify-title pipeline.
-  const verify = document.createElement('a');
-  verify.className = 'landing-setup-back';
-  verify.href = '/verify-title';
-  verify.textContent = t('profile.verifyTitle', {}, locale);
-  row.append(edit, verify);
+  row.append(edit);
   // A held title unlocks the coach directory: offer the editor entry point.
   if (isPlayerTitle(title)) {
     const coach = document.createElement('a');
@@ -928,11 +970,11 @@ async function mutateRelation(
 // only — no win/loss record (which just accumulates losses). Everything derives
 // from data the profile already loads, so nothing here needs a server aggregate.
 // The join date lives on the identity meta line, not here.
-function buildProfileStats(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
+function buildProfileCounts(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
   const strip = document.createElement('div');
-  strip.className = 'profile-stats';
+  strip.className = 'profile-counts';
 
-  const items: Array<{ value: string; label: string; miniId?: VariantMiniId }> = [
+  const items: Array<{ value: string; label: string }> = [
     {
       value: String(profile.gamesTotal),
       label:
@@ -947,33 +989,106 @@ function buildProfileStats(profile: UserProfile, locale: Locale = currentLocale(
     items.push({ value: String(rated), label: t('profile.ratedGames', {}, locale) });
   }
 
-  const top = topVariantStat(profile.ratings, locale);
-  if (top) {
-    items.push({
-      value: top.label,
-      label: t('profile.topVariant', {}, locale),
-      miniId: top.miniId ?? undefined,
-    });
-  }
-
   const best = bestRating(profile.ratings);
   if (best != null) items.push({ value: String(best), label: t('profile.bestRating', {}, locale) });
 
-  for (const { value, label, miniId } of items) {
+  for (const { value, label } of items) {
     const item = document.createElement('div');
-    item.className = 'profile-stat';
+    item.className = 'profile-count';
     const valueEl = document.createElement('span');
-    valueEl.className = 'profile-stat-value';
-    // The top-variant stat leads its value with the shared variant marker.
-    if (miniId) valueEl.append(buildVariantThumb(miniId, 20, 'profile-stat-thumb', value));
-    valueEl.append(document.createTextNode(value));
+    valueEl.className = 'profile-count-value';
+    valueEl.textContent = value;
     const labelEl = document.createElement('span');
-    labelEl.className = 'profile-stat-label';
+    labelEl.className = 'profile-count-label';
     labelEl.textContent = label;
     item.append(valueEl, labelEl);
     strip.append(item);
   }
   return strip;
+}
+
+// The descriptive "user profile text" column (lichess right third): display
+// name (when it differs from the handle), the full join date, and the player's
+// most-played variant. Kept to what the profile payload already carries.
+function buildProfileSideInfo(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
+  const side = document.createElement('aside');
+  side.className = 'profile-overview-side';
+
+  const displayName = profile.user.displayName?.trim();
+  if (displayName && displayName.toLowerCase() !== profile.user.handle.toLowerCase()) {
+    const name = document.createElement('p');
+    name.className = 'profile-side-name';
+    name.textContent = displayName;
+    side.append(name);
+  }
+
+  const bio = profile.user.bio?.trim();
+  if (bio) {
+    const el = document.createElement('p');
+    el.className = 'profile-side-line profile-side-bio';
+    el.textContent = bio;
+    side.append(el);
+  }
+
+  const location = profile.user.location?.trim();
+  if (location) {
+    const el = document.createElement('p');
+    el.className = 'profile-side-line';
+    el.textContent = location;
+    side.append(el);
+  }
+
+  const links = profile.user.profileLinks ?? [];
+  if (links.length > 0) {
+    const list = document.createElement('ul');
+    list.className = 'profile-side-links';
+    for (const href of links) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = href;
+      link.rel = 'nofollow noopener noreferrer';
+      link.target = '_blank';
+      link.textContent = profileLinkLabel(href);
+      item.append(link);
+      list.append(item);
+    }
+    side.append(list);
+  }
+
+  const joined = formatJoinedFull(profile.user.createdAt, locale);
+  if (joined) {
+    const el = document.createElement('p');
+    el.className = 'profile-side-line';
+    el.textContent = `${t('profile.memberSince', {}, locale)} ${joined}`;
+    side.append(el);
+  }
+
+  const top = topVariantStat(profile.ratings, locale);
+  if (top) {
+    const block = document.createElement('div');
+    block.className = 'profile-side-stat';
+    const label = document.createElement('span');
+    label.className = 'profile-side-stat-label';
+    label.textContent = t('profile.topVariant', {}, locale);
+    const value = document.createElement('span');
+    value.className = 'profile-side-stat-value';
+    if (top.miniId)
+      value.append(buildVariantThumb(top.miniId, 18, 'profile-side-thumb', top.label));
+    value.append(document.createTextNode(top.label));
+    block.append(label, value);
+    side.append(block);
+  }
+
+  return side;
+}
+
+function profileLinkLabel(href: string): string {
+  try {
+    const url = new URL(href);
+    return `${url.hostname}${url.pathname === '/' ? '' : url.pathname}`;
+  } catch {
+    return href;
+  }
 }
 
 function defaultSelectedProfileVariant(ratings: ProfileBucketRating[]): ProfileRatingVariant {
@@ -990,6 +1105,17 @@ function defaultSelectedProfileVariant(ratings: ProfileBucketRating[]): ProfileR
   return PROFILE_VARIANT_ORDER[0] ?? 'fog';
 }
 
+// Range presets for the rating graph (lichess/playstrategy parity). ALL is the
+// default so a sparse history still shows every point on first paint.
+type ChartRange = '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'ALL';
+const CHART_RANGES: ChartRange[] = ['1M', '3M', '6M', 'YTD', '1Y', 'ALL'];
+
+// Full (unfiltered) history for each live spotlight, so a range change re-filters
+// without another fetch. Keyed on the section element; the WeakMap lets a swapped
+// out spotlight (variant change) get collected.
+const spotlightHistory = new WeakMap<HTMLElement, ProfileRatingHistoryPoint[]>();
+let chartGradientSeq = 0;
+
 function buildProfileRatingSpotlight(
   ratings: ProfileBucketRating[],
   variant: ProfileRatingVariant,
@@ -998,26 +1124,24 @@ function buildProfileRatingSpotlight(
   const bucket = ratings.find((rating) => rating.variant === variant);
   const section = document.createElement('section');
   section.className = 'profile-rating-spotlight';
+  section.dataset.chartRange = 'ALL';
+  section.dataset.chartStart = '0';
 
-  const header = document.createElement('header');
-  header.className = 'profile-rating-spotlight-header';
+  const head = document.createElement('header');
+  head.className = 'profile-chart-head';
 
-  const eyebrow = document.createElement('span');
-  eyebrow.className = 'account-eyebrow';
-  eyebrow.textContent = t('profile.currentRating', {}, locale);
+  const headline = document.createElement('div');
+  headline.className = 'profile-chart-headline';
 
-  const title = document.createElement('h2');
-  title.textContent = profileVariantLabel(variant, locale);
-  header.append(eyebrow, title);
-
-  const metric = document.createElement('div');
-  metric.className = 'profile-rating-current';
+  const name = document.createElement('span');
+  name.className = 'profile-chart-variant';
+  name.textContent = profileVariantLabel(variant, locale);
 
   const value = document.createElement('span');
-  value.className = 'profile-rating-current-value';
+  value.className = 'profile-chart-value';
 
   const detail = document.createElement('span');
-  detail.className = 'profile-rating-current-detail';
+  detail.className = 'profile-chart-detail';
 
   if (bucket?.eloRating != null && bucket.ratedGamesPlayed > 0) {
     value.textContent = String(bucket.eloRating);
@@ -1034,6 +1158,7 @@ function buildProfileRatingSpotlight(
     );
   } else if (bucket && bucket.totalGamesPlayed > 0) {
     value.textContent = t('profile.unrated', {}, locale);
+    value.classList.add('profile-chart-value-unrated');
     detail.textContent = `${bucket.totalGamesPlayed} ${t(
       bucket.totalGamesPlayed === 1 ? 'profile.gameSingular' : 'profile.gamePlural',
       {},
@@ -1041,11 +1166,57 @@ function buildProfileRatingSpotlight(
     ).toLowerCase()}`;
   } else {
     value.textContent = '—';
+    value.classList.add('profile-chart-value-empty');
     detail.textContent = t('profile.noGamesYet', {}, locale);
   }
-  metric.append(value, detail);
+  headline.append(name, value, detail);
 
-  section.append(header, metric, buildRatingChartFrame(locale));
+  const ranges = document.createElement('div');
+  ranges.className = 'profile-chart-ranges';
+  ranges.setAttribute('role', 'group');
+  ranges.setAttribute('aria-label', t('profile.ratingHistory', {}, locale));
+  for (const range of CHART_RANGES) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'profile-chart-range';
+    button.dataset.range = range;
+    button.textContent = range;
+    const active = range === 'ALL';
+    button.classList.toggle('profile-chart-range-active', active);
+    button.setAttribute('aria-pressed', String(active));
+    button.addEventListener('click', () => {
+      section.dataset.chartRange = range;
+      renderSpotlightChart(section, locale, true);
+    });
+    ranges.append(button);
+  }
+
+  head.append(headline, ranges);
+
+  // Continuous range slider under the chart (lichess navigator): the handle
+  // sets the window's start as a fraction of the full history span; the preset
+  // buttons snap it. Year labels bracket the span.
+  const slider = document.createElement('div');
+  slider.className = 'profile-chart-slider';
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = '0';
+  input.max = '100';
+  input.value = '0';
+  input.step = '1';
+  input.className = 'profile-chart-slider-input';
+  input.setAttribute('aria-label', t('profile.ratingHistory', {}, locale));
+  input.addEventListener('input', () => {
+    section.dataset.chartStart = input.value;
+    section.dataset.chartRange = '';
+    renderSpotlightChart(section, locale, false);
+  });
+  const axis = document.createElement('div');
+  axis.className = 'profile-chart-slider-axis';
+  axis.setAttribute('aria-hidden', 'true');
+  slider.append(input, axis);
+
+  section.append(head, buildRatingChartFrame(locale), slider);
   return section;
 }
 
@@ -1059,11 +1230,112 @@ async function hydrateProfileRatingSpotlight(
   if (!chart) return;
   try {
     const history = await fetchUserRatingHistory(handle, variant);
-    renderRatingChartFrame(chart, history?.points ?? [], locale);
+    spotlightHistory.set(section, history?.points ?? []);
   } catch (err) {
     console.warn(err);
-    renderRatingChartFrame(chart, [], locale);
+    spotlightHistory.set(section, []);
   }
+  renderSpotlightChart(section, locale, true);
+}
+
+// Render the chart from the section's stored history for its current window. The
+// window start is a fraction of the full span; a preset click derives that
+// fraction and snaps the slider, a slider drag sets it directly.
+function renderSpotlightChart(section: HTMLElement, locale: Locale, fromPreset: boolean): void {
+  const points = spotlightHistory.get(section) ?? [];
+  const input = section.querySelector<HTMLInputElement>('.profile-chart-slider-input');
+
+  let fraction: number;
+  if (fromPreset) {
+    const range = (section.dataset.chartRange as ChartRange) || 'ALL';
+    fraction = fractionForRange(points, range);
+    section.dataset.chartStart = String(fraction);
+    if (input) input.value = String(fraction);
+  } else {
+    fraction = Number(section.dataset.chartStart ?? '0');
+  }
+
+  const chart = section.querySelector<HTMLElement>('.profile-rating-chart');
+  if (chart) renderRatingChartFrame(chart, filterPointsByStartFraction(points, fraction), locale);
+
+  // A preset stays highlighted only until the slider moves off it.
+  const activeRange = section.dataset.chartRange ?? '';
+  for (const button of section.querySelectorAll<HTMLElement>('.profile-chart-range')) {
+    const active = activeRange !== '' && button.dataset.range === activeRange;
+    button.classList.toggle('profile-chart-range-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+
+  // The slider is only meaningful with a span to scrub; hide it otherwise.
+  const times = pointTimes(points);
+  section.classList.toggle('profile-chart-no-slider', times.length < 2);
+  renderSliderAxis(section, times, locale);
+}
+
+// Sorted epoch-ms timestamps of the history points (unparseable dates dropped).
+function pointTimes(points: ProfileRatingHistoryPoint[]): number[] {
+  return points
+    .map((point) => new Date(point.endedAt).getTime())
+    .filter((time) => Number.isFinite(time))
+    .sort((a, b) => a - b);
+}
+
+// Epoch-ms cutoff for a range preset, or null for ALL (no lower bound).
+function chartRangeCutoff(range: ChartRange): number | null {
+  if (range === 'ALL') return null;
+  const now = new Date();
+  if (range === 'YTD') return new Date(now.getFullYear(), 0, 1).getTime();
+  const cutoff = new Date(now);
+  if (range === '1M') cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (range === '3M') cutoff.setMonth(cutoff.getMonth() - 3);
+  else if (range === '6M') cutoff.setMonth(cutoff.getMonth() - 6);
+  else if (range === '1Y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+  return cutoff.getTime();
+}
+
+// Map a range preset onto a start fraction [0,100] of the history span, so the
+// slider and the presets share one coordinate.
+function fractionForRange(points: ProfileRatingHistoryPoint[], range: ChartRange): number {
+  const cutoff = chartRangeCutoff(range);
+  if (cutoff == null) return 0;
+  const times = pointTimes(points);
+  if (times.length < 2) return 0;
+  const t0 = times[0]!;
+  const span = times[times.length - 1]! - t0 || 1;
+  return Math.max(0, Math.min(100, ((cutoff - t0) / span) * 100));
+}
+
+function filterPointsByStartFraction(
+  points: ProfileRatingHistoryPoint[],
+  fraction: number,
+): ProfileRatingHistoryPoint[] {
+  if (fraction <= 0) return points;
+  const times = pointTimes(points);
+  if (times.length < 2) return points;
+  const t0 = times[0]!;
+  const span = times[times.length - 1]! - t0 || 1;
+  const start = t0 + span * (fraction / 100);
+  return points.filter((point) => {
+    const time = new Date(point.endedAt).getTime();
+    // A point with an unparseable date keeps its place rather than vanishing.
+    return Number.isFinite(time) ? time >= start : true;
+  });
+}
+
+// Year labels bracketing the slider (empty when there is no span to scrub).
+function renderSliderAxis(section: HTMLElement, times: number[], locale: Locale): void {
+  const axis = section.querySelector<HTMLElement>('.profile-chart-slider-axis');
+  if (!axis) return;
+  if (times.length < 2) {
+    axis.replaceChildren();
+    return;
+  }
+  const fmt = new Intl.DateTimeFormat(LOCALE_META[locale].dateLocale, { year: 'numeric' });
+  const start = document.createElement('span');
+  start.textContent = fmt.format(new Date(times[0]!));
+  const end = document.createElement('span');
+  end.textContent = fmt.format(new Date(times[times.length - 1]!));
+  axis.replaceChildren(start, end);
 }
 
 function buildRatingChartFrame(locale: Locale = currentLocale()): HTMLElement {
@@ -1074,78 +1346,126 @@ function buildRatingChartFrame(locale: Locale = currentLocale()): HTMLElement {
   return frame;
 }
 
+// SVG viewBox geometry for the rating graph. The plot area leaves room on the
+// right for y-axis rating labels and a strip at the bottom for date labels.
+const CHART_W = 600;
+const CHART_H = 232;
+const CHART_X0 = 14;
+const CHART_X1 = 556;
+const CHART_Y0 = 18;
+const CHART_Y1 = 194;
+
 function renderRatingChartFrame(
   frame: HTMLElement,
   points: ProfileRatingHistoryPoint[],
   locale: Locale = currentLocale(),
 ): void {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 420 150');
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${CHART_W} ${CHART_H}`);
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', t('profile.ratingHistory', {}, locale));
 
-  for (const y of [30, 70, 110]) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '24');
-    line.setAttribute('x2', '396');
-    line.setAttribute('y1', String(y));
-    line.setAttribute('y2', String(y));
+  // Five evenly spaced horizontal gridlines span the plot rows.
+  const gridRows = 4;
+  for (let i = 0; i <= gridRows; i += 1) {
+    const y = CHART_Y0 + ((CHART_Y1 - CHART_Y0) * i) / gridRows;
+    const line = document.createElementNS(svgNs, 'line');
+    line.setAttribute('x1', String(CHART_X0));
+    line.setAttribute('x2', String(CHART_X1));
+    line.setAttribute('y1', y.toFixed(1));
+    line.setAttribute('y2', y.toFixed(1));
     line.setAttribute('class', 'profile-rating-chart-grid');
     svg.append(line);
   }
 
   if (points.length > 0) {
     const samples = [
-      { rating: points[0]!.ratingBefore },
-      ...points.map((point) => ({ rating: point.ratingAfter })),
+      { rating: points[0]!.ratingBefore, endedAt: points[0]!.endedAt },
+      ...points.map((point) => ({ rating: point.ratingAfter, endedAt: point.endedAt })),
     ];
     const ratings = samples.map((sample) => sample.rating);
     const minRating = Math.min(...ratings);
     const maxRating = Math.max(...ratings);
-    const padding = Math.max(20, Math.round((maxRating - minRating) * 0.15));
+    const padding = Math.max(16, Math.round((maxRating - minRating) * 0.2));
     const yMin = minRating - padding;
     const yMax = maxRating + padding;
-    const xStart = 36;
-    const xEnd = 384;
-    const yTop = 24;
-    const yBottom = 120;
     const denominator = Math.max(1, samples.length - 1);
     const yRange = Math.max(1, yMax - yMin);
-    const coords = samples.map((sample, index) => {
-      const x = xStart + ((xEnd - xStart) * index) / denominator;
-      const y = yBottom - ((sample.rating - yMin) / yRange) * (yBottom - yTop);
-      return { x, y };
-    });
+    const coords = samples.map((sample, index) => ({
+      x: CHART_X0 + ((CHART_X1 - CHART_X0) * index) / denominator,
+      y: CHART_Y1 - ((sample.rating - yMin) / yRange) * (CHART_Y1 - CHART_Y0),
+    }));
 
-    const ratingLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    const pointsAttr = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+
+    // Gradient area fill under the line (a unique id per render so multiple
+    // charts never collide on the same def).
+    chartGradientSeq += 1;
+    const gradientId = `profile-chart-fill-${chartGradientSeq}`;
+    const defs = document.createElementNS(svgNs, 'defs');
+    const gradient = document.createElementNS(svgNs, 'linearGradient');
+    gradient.setAttribute('id', gradientId);
+    gradient.setAttribute('x1', '0');
+    gradient.setAttribute('y1', '0');
+    gradient.setAttribute('x2', '0');
+    gradient.setAttribute('y2', '1');
+    for (const [offset, cls] of [
+      ['0', 'profile-rating-chart-fill-top'],
+      ['1', 'profile-rating-chart-fill-bottom'],
+    ] as const) {
+      const stop = document.createElementNS(svgNs, 'stop');
+      stop.setAttribute('offset', offset);
+      stop.setAttribute('class', cls);
+      gradient.append(stop);
+    }
+    defs.append(gradient);
+    svg.append(defs);
+
+    const area = document.createElementNS(svgNs, 'polygon');
+    area.setAttribute('class', 'profile-rating-chart-area');
+    area.setAttribute('fill', `url(#${gradientId})`);
+    area.setAttribute('points', `${CHART_X0},${CHART_Y1} ${pointsAttr} ${CHART_X1},${CHART_Y1}`);
+    svg.append(area);
+
+    const ratingLine = document.createElementNS(svgNs, 'polyline');
     ratingLine.setAttribute('class', 'profile-rating-chart-line');
-    ratingLine.setAttribute(
-      'points',
-      coords.map((coord) => `${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(' '),
-    );
+    ratingLine.setAttribute('points', pointsAttr);
     svg.append(ratingLine);
 
-    for (const coord of coords) {
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    // Dots on every sample when the series is short; only the latest when long,
+    // so a busy history stays a clean line.
+    const showAllDots = coords.length <= 16;
+    coords.forEach((coord, index) => {
+      if (!showAllDots && index !== coords.length - 1) return;
+      const dot = document.createElementNS(svgNs, 'circle');
       dot.setAttribute('class', 'profile-rating-chart-dot');
       dot.setAttribute('cx', coord.x.toFixed(1));
       dot.setAttribute('cy', coord.y.toFixed(1));
-      dot.setAttribute('r', '4');
+      dot.setAttribute('r', index === coords.length - 1 ? '4' : '3');
       svg.append(dot);
+    });
+
+    // Right-edge rating labels at top / middle / bottom of the plotted range.
+    for (const [rating, y] of [
+      [maxRating, CHART_Y0],
+      [Math.round((maxRating + minRating) / 2), (CHART_Y0 + CHART_Y1) / 2],
+      [minRating, CHART_Y1],
+    ] as const) {
+      const tick = document.createElementNS(svgNs, 'text');
+      tick.setAttribute('class', 'profile-rating-chart-label');
+      tick.setAttribute('x', String(CHART_X1 + 6));
+      tick.setAttribute('y', (y + 4).toFixed(1));
+      tick.textContent = String(rating);
+      svg.append(tick);
     }
 
-    for (const [label, y] of [
-      [String(yMax), 30],
-      [String(Math.round((yMax + yMin) / 2)), 70],
-      [String(yMin), 110],
-    ] as const) {
-      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tick.setAttribute('class', 'profile-rating-chart-label');
-      tick.setAttribute('x', '396');
-      tick.setAttribute('y', String(y + 4));
-      tick.setAttribute('text-anchor', 'end');
-      tick.textContent = label;
-      svg.append(tick);
+    // First and last dates along the bottom axis.
+    const first = chartAxisDate(samples[0]!.endedAt, locale);
+    const last = chartAxisDate(samples[samples.length - 1]!.endedAt, locale);
+    if (first) svg.append(chartDateLabel(svgNs, CHART_X0, first, 'start'));
+    if (last && samples.length > 1) {
+      svg.append(chartDateLabel(svgNs, CHART_X1, last, 'end'));
     }
   }
 
@@ -1156,6 +1476,35 @@ function renderRatingChartFrame(
   frame.replaceChildren(svg, ...(points.length === 0 ? [empty] : []));
 }
 
+function chartAxisDate(value: string | undefined, locale: Locale): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(LOCALE_META[locale].dateLocale, {
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+function chartDateLabel(
+  svgNs: string,
+  x: number,
+  label: string,
+  anchor: 'start' | 'end',
+): SVGTextElement {
+  const text = document.createElementNS(svgNs, 'text') as SVGTextElement;
+  text.setAttribute('class', 'profile-rating-chart-axis');
+  text.setAttribute('x', String(x));
+  text.setAttribute('y', String(CHART_H - 8));
+  text.setAttribute('text-anchor', anchor);
+  text.textContent = label;
+  return text;
+}
+
+// Activity and Games are the primary profile tabs. A profile owner gets a
+// second-level Games / Saved switch inside Games, mirroring the way Lichess
+// keeps bookmarks under its games area instead of making them a peer of
+// Activity.
 function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-tabs';
@@ -1166,9 +1515,15 @@ function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()
 
   const activityPanel = buildProfileActivity(profile, locale);
   const gamesPanel = buildProfileGames(profile, locale);
+  const saved = profile.isViewer ? buildSavedGamesPanel(locale) : null;
+  const gamesGroup = document.createElement('section');
+  gamesGroup.className = 'profile-games-group';
   activityPanel.id = `profile-activity-${profile.user.handle}`;
-  gamesPanel.id = `profile-games-${profile.user.handle}`;
-  gamesPanel.hidden = true;
+  gamesGroup.id = `profile-games-${profile.user.handle}`;
+  gamesPanel.id = `profile-games-all-${profile.user.handle}`;
+  if (saved) saved.panel.id = `profile-saved-${profile.user.handle}`;
+  gamesGroup.hidden = true;
+  if (saved) saved.panel.hidden = true;
 
   const activityTab = buildProfileTabButton(
     t('profile.activity', {}, locale),
@@ -1178,23 +1533,153 @@ function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()
   // The Games tab carries the total game count (lichess angle-tab parity).
   const gamesTab = buildProfileTabButton(
     t('profile.games', {}, locale),
-    gamesPanel.id,
+    gamesGroup.id,
     false,
     profile.gamesTotal > 0 ? profile.gamesTotal : undefined,
   );
   tabList.append(activityTab, gamesTab);
 
-  const activate = (button: HTMLButtonElement, panel: HTMLElement) => {
-    for (const tab of [activityTab, gamesTab])
-      tab.setAttribute('aria-selected', String(tab === button));
-    activityPanel.hidden = panel !== activityPanel;
-    gamesPanel.hidden = panel !== gamesPanel;
-  };
-  activityTab.addEventListener('click', () => activate(activityTab, activityPanel));
-  gamesTab.addEventListener('click', () => activate(gamesTab, gamesPanel));
+  let loadSaved: (() => void) | null = null;
+  if (saved) {
+    const gameSubtabs = document.createElement('div');
+    gameSubtabs.className = 'profile-games-subtab-list';
+    gameSubtabs.setAttribute('role', 'tablist');
+    gameSubtabs.setAttribute('aria-label', t('profile.games', {}, locale));
+    const allGamesSubtab = buildProfileGamesSubtab(
+      t('profile.games', {}, locale),
+      gamesPanel.id,
+      true,
+      profile.gamesTotal,
+    );
+    const savedSubtab = buildProfileGamesSubtab(
+      t('profile.savedGames', {}, locale),
+      saved.panel.id,
+      false,
+    );
+    const activateGamesSubtab = (button: HTMLButtonElement, panel: HTMLElement) => {
+      for (const subtab of [allGamesSubtab, savedSubtab]) {
+        subtab.setAttribute('aria-selected', String(subtab === button));
+      }
+      gamesPanel.hidden = panel !== gamesPanel;
+      saved.panel.hidden = panel !== saved.panel;
+    };
+    allGamesSubtab.addEventListener('click', () => activateGamesSubtab(allGamesSubtab, gamesPanel));
+    savedSubtab.addEventListener('click', () => activateGamesSubtab(savedSubtab, saved.panel));
+    gameSubtabs.append(allGamesSubtab, savedSubtab);
+    gamesGroup.append(gameSubtabs, gamesPanel, saved.panel);
+    loadSaved = () => {
+      void saved.load((total) => setProfileGamesSubtabCount(savedSubtab, total));
+    };
+  } else {
+    gamesGroup.append(gamesPanel);
+  }
 
-  section.append(tabList, activityPanel, gamesPanel);
+  const activate = (button: HTMLButtonElement, showGames: boolean) => {
+    for (const tab of [activityTab, gamesTab]) {
+      tab.setAttribute('aria-selected', String(tab === button));
+    }
+    activityPanel.hidden = showGames;
+    gamesGroup.hidden = !showGames;
+  };
+  activityTab.addEventListener('click', () => activate(activityTab, false));
+  gamesTab.addEventListener('click', () => {
+    activate(gamesTab, true);
+    loadSaved?.();
+  });
+
+  section.append(tabList, activityPanel, gamesGroup);
   return section;
+}
+
+function setProfileGamesSubtabCount(button: HTMLButtonElement, count: number): void {
+  const existing = button.querySelector<HTMLElement>('.profile-games-subtab-count');
+  if (existing) {
+    existing.textContent = String(count);
+    return;
+  }
+  const badge = document.createElement('span');
+  badge.className = 'profile-games-subtab-count';
+  badge.textContent = String(count);
+  button.prepend(badge, document.createTextNode(' '));
+}
+
+function buildSavedGamesPanel(locale: Locale): {
+  panel: HTMLElement;
+  load(onTotal: (total: number) => void): Promise<void>;
+} {
+  const panel = document.createElement('section');
+  panel.className = 'profile-games profile-saved-games';
+  const status = document.createElement('p');
+  status.className = 'landing-games-empty';
+  status.textContent = t('profile.loading', {}, locale);
+  panel.append(status);
+
+  let loaded = false;
+  const load = async (onTotal: (total: number) => void): Promise<void> => {
+    if (loaded) return;
+    loaded = true;
+    let firstPage: { games: FeaturedGame[]; total: number };
+    try {
+      firstPage = await fetchFavoriteGamesPage(0, FAVORITE_GAMES_PAGE);
+    } catch {
+      loaded = false;
+      status.textContent = t('profile.loadFailedBody', {}, locale);
+      return;
+    }
+    onTotal(firstPage.total);
+    if (firstPage.games.length === 0) {
+      status.textContent = t('profile.noSavedGames', {}, locale);
+      return;
+    }
+
+    const list = document.createElement('ol');
+    list.className = 'profile-game-list';
+    const appendGames = (games: FeaturedGame[]): void => {
+      for (const game of games) list.append(buildProfileGameRow(game, { locale, neutral: true }));
+    };
+    appendGames(firstPage.games);
+    panel.replaceChildren(list);
+
+    let rendered = firstPage.games.length;
+    if (rendered >= firstPage.total) return;
+    const moreWrap = document.createElement('div');
+    moreWrap.className = 'profile-games-more';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'profile-games-more-btn';
+    button.textContent = t('profile.loadMore', {}, locale);
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.textContent = t('profile.loadingMore', {}, locale);
+      try {
+        const page = await fetchFavoriteGamesPage(rendered, FAVORITE_GAMES_PAGE);
+        appendGames(page.games);
+        rendered += page.games.length;
+        onTotal(page.total);
+        if (rendered >= page.total || page.games.length === 0) {
+          moreWrap.remove();
+        } else {
+          button.disabled = false;
+          button.textContent = t('profile.loadMore', {}, locale);
+        }
+      } catch {
+        button.disabled = false;
+        button.textContent = t('profile.loadMore', {}, locale);
+      }
+    });
+    moreWrap.append(button);
+    panel.append(moreWrap);
+  };
+  return { panel, load };
+}
+
+async function fetchFavoriteGamesPage(
+  offset: number,
+  limit: number,
+): Promise<{ games: FeaturedGame[]; total: number }> {
+  const response = await fetch(`/api/games/favorites?offset=${offset}&limit=${limit}`);
+  if (!response.ok) throw new Error(`failed to load saved games: ${response.status}`);
+  return (await response.json()) as { games: FeaturedGame[]; total: number };
 }
 
 function buildProfileTabButton(
@@ -1219,6 +1704,31 @@ function buildProfileTabButton(
   return button;
 }
 
+function buildProfileGamesSubtab(
+  label: string,
+  controls: string,
+  selected: boolean,
+  count?: number,
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'profile-games-subtab';
+  button.setAttribute('role', 'tab');
+  button.setAttribute('aria-controls', controls);
+  button.setAttribute('aria-selected', String(selected));
+  if (count != null) {
+    const badge = document.createElement('span');
+    badge.className = 'profile-games-subtab-count';
+    badge.textContent = String(count);
+    button.append(badge, document.createTextNode(' '));
+  }
+  const text = document.createElement('span');
+  text.className = 'profile-games-subtab-label';
+  text.textContent = label;
+  button.append(text);
+  return button;
+}
+
 type ProfileActivitySummary = {
   key: string;
   day: string;
@@ -1232,10 +1742,7 @@ type ProfileActivitySummary = {
 function buildProfileActivity(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-activity-panel';
-
-  const heading = document.createElement('h2');
-  heading.textContent = t('profile.activity', {}, locale);
-  section.append(heading);
+  // No heading: the Activity tab is this panel's label.
 
   if (profile.games.length === 0) {
     const empty = document.createElement('p');
@@ -1382,26 +1889,15 @@ function buildPatronBadge(
   badge.className = 'profile-role-badge profile-role-patron';
   badge.href = '/patron';
   badge.title = t('profile.patronTitle', {}, locale);
-  // A small paw glyph (animal theme) + the label. innerHTML is the established
-  // inline-icon idiom in this codebase; the string is a static constant.
-  const paw = document.createElement('span');
-  paw.className = 'profile-patron-paw';
-  paw.setAttribute('aria-hidden', 'true');
-  paw.innerHTML = PATRON_PAW_SVG;
-  badge.append(paw, document.createTextNode(t('profile.patron', {}, locale)));
+  const icon = document.createElement('span');
+  icon.className = 'profile-patron-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  badge.append(icon, document.createTextNode(t('profile.patron', {}, locale)));
   return badge;
 }
 
-// A minimal paw print (main pad + four toes), currentColor so the badge tints it.
-const PATRON_PAW_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-  <ellipse cx="12" cy="16" rx="5" ry="4"/>
-  <circle cx="6" cy="10" r="2"/>
-  <circle cx="10" cy="7" r="2"/>
-  <circle cx="14" cy="7" r="2"/>
-  <circle cx="18" cy="10" r="2"/>
-</svg>`;
-
-function formatJoinedDate(
+// Full join date for the side column (lichess "Member since May 28, 2023").
+function formatJoinedFull(
   value: string | undefined,
   locale: Locale = currentLocale(),
 ): string | null {
@@ -1410,6 +1906,7 @@ function formatJoinedDate(
   if (!Number.isFinite(date.getTime())) return null;
   return new Intl.DateTimeFormat(LOCALE_META[locale].dateLocale, {
     month: 'long',
+    day: 'numeric',
     year: 'numeric',
   }).format(date);
 }
@@ -1442,7 +1939,10 @@ export function buildProfileRatings(
   const section = document.createElement('section');
   section.className = 'profile-ratings';
 
+  // The rail carries no visible heading (lichess parity: the rows read as the
+  // whole rail). A visually-hidden heading keeps the landmark labelled.
   const heading = document.createElement('h2');
+  heading.className = 'profile-ratings-heading';
   heading.textContent = t('profile.ratings', {}, locale);
   section.append(heading);
 
@@ -1467,24 +1967,83 @@ export function buildProfileRatings(
   return section;
 }
 
-// Rail order (lichess side-column semantics): variants the player has actually
-// played lead, most active first, so the grid anchors on their real record;
-// never-played variants trail in canonical registry order, dimmed. This is a
-// per-subject presentation order — the leaderboard and picker keep the shared
-// canonical order (#137).
-function orderedProfileVariants(ratings: ProfileBucketRating[]): ProfileRatingVariant[] {
-  const activity = new Map<ProfileRatingVariant, number>();
-  for (const bucket of ratings) {
-    if (bucket.totalGamesPlayed > 0) activity.set(bucket.variant, bucket.totalGamesPlayed);
-  }
-  const canonicalIndex = new Map(PROFILE_VARIANT_ORDER.map((variant, index) => [variant, index]));
-  const played = PROFILE_VARIANT_ORDER.filter((variant) => activity.has(variant)).sort(
-    (a, b) =>
-      (activity.get(b) ?? 0) - (activity.get(a) ?? 0) ||
-      (canonicalIndex.get(a) ?? 0) - (canonicalIndex.get(b) ?? 0),
+// Rail order: the shared canonical registry order (xiangqi first), same as the
+// leaderboard and picker. The earlier per-subject activity ordering (#137,
+// played-most-first) was reverted 2026-07-10: every rating surface reads in
+// one order, and played rows already stand out because never-played rows dim.
+function orderedProfileVariants(_ratings: ProfileBucketRating[]): ProfileRatingVariant[] {
+  return [...PROFILE_VARIANT_ORDER];
+}
+
+// Puzzle-variant display names (the values are GameSpecIds from the puzzle pool,
+// which are not the game RatingVariant keys, so they get their own small map).
+const PUZZLE_VARIANT_LABELS: Record<string, string> = {
+  xiangqi: 'Xiangqi',
+  'fortress-xiangqi': 'Fortress Xiangqi',
+  jungle: 'Jungle',
+  'mini-xiangqi': 'Mini Xiangqi',
+  'drop-mini-xiangqi': 'Drop Mini Xiangqi',
+};
+
+function puzzleVariantLabel(variant: string): string {
+  return (
+    PUZZLE_VARIANT_LABELS[variant] ??
+    variant
+      .split('-')
+      .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(' ')
   );
-  const rest = PROFILE_VARIANT_ORDER.filter((variant) => !activity.has(variant));
-  return [...played, ...rest];
+}
+
+// Append a "Puzzles" block to the ratings column: one row per variant the user
+// has attempted, showing the Glicko rating (with a "?" while provisional) and
+// the solved count. No-op when the user has no puzzle history, so the block only
+// appears once there is something to show.
+function appendProfilePuzzleRatings(
+  section: HTMLElement,
+  puzzleRatings: ProfilePuzzleRating[],
+  locale: Locale,
+): void {
+  if (puzzleRatings.length === 0) return;
+
+  const block = document.createElement('div');
+  block.className = 'profile-puzzle-ratings';
+
+  const heading = document.createElement('h2');
+  heading.textContent = t('nav.puzzles', {}, locale);
+  block.append(heading);
+
+  const rail = document.createElement('div');
+  rail.className = 'profile-puzzle-rail';
+
+  for (const entry of puzzleRatings) {
+    const row = document.createElement('div');
+    row.className = 'profile-puzzle-row';
+
+    const name = document.createElement('span');
+    name.className = 'profile-puzzle-name';
+    name.textContent = puzzleVariantLabel(entry.variant);
+
+    const value = document.createElement('span');
+    value.className = 'profile-puzzle-value';
+    value.textContent = String(entry.rating);
+    if (entry.provisional) {
+      const q = document.createElement('span');
+      q.className = 'profile-rating-q';
+      q.textContent = '?';
+      value.append(q);
+    }
+
+    const solved = document.createElement('span');
+    solved.className = 'profile-puzzle-games';
+    solved.textContent = t('profile.puzzleSolved', { count: entry.solved }, locale);
+
+    row.append(name, value, solved);
+    rail.append(row);
+  }
+
+  block.append(rail);
+  section.append(block);
 }
 
 // One variant row in the ratings rail: compact mini-board beside its name,
@@ -1521,7 +2080,7 @@ function buildRatingRailRow(
     row.append(
       buildVariantThumb(
         miniId,
-        80,
+        32,
         'profile-rating-thumb',
         t('profile.variantBoard', { variant: profileVariantLabel(variant, locale) }, locale),
       ),
@@ -1536,6 +2095,10 @@ function buildRatingRailRow(
   name.textContent = profileVariantLabel(variant, locale);
   meta.append(name);
 
+  // Rating and games count share one line (lichess rail idiom).
+  const figures = document.createElement('span');
+  figures.className = 'profile-rating-figures';
+
   const value = document.createElement('span');
   value.className = 'profile-rating-value';
 
@@ -1548,7 +2111,7 @@ function buildRatingRailRow(
       q.textContent = '?';
       value.append(q);
     }
-    meta.append(value);
+    figures.append(value);
 
     const count = document.createElement('span');
     count.className = 'profile-rating-games';
@@ -1557,11 +2120,11 @@ function buildRatingRailRow(
       { count: bucket.ratedGamesPlayed },
       locale,
     );
-    meta.append(count);
+    figures.append(count);
   } else if (bucket != null && bucket.totalGamesPlayed > 0) {
     value.textContent = t('profile.unrated', {}, locale);
     value.classList.add('profile-rating-value-unrated');
-    meta.append(value);
+    figures.append(value);
 
     // Casual activity still counts as a record: show the total games figure the
     // same way rated rows show their rated-games figure.
@@ -1572,14 +2135,24 @@ function buildRatingRailRow(
       {},
       locale,
     ).toLowerCase()}`;
-    meta.append(count);
+    figures.append(count);
   } else {
     value.textContent = '—';
     value.classList.add('profile-rating-value-empty');
-    meta.append(value);
+    figures.append(value);
   }
 
+  meta.append(figures);
   row.append(meta);
+
+  // Trailing chevron (lichess rail affordance: the row opens that variant's
+  // graph in the overview).
+  const chevron = document.createElement('span');
+  chevron.className = 'profile-rating-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '›';
+  row.append(chevron);
+
   return row;
 }
 
@@ -1594,10 +2167,7 @@ function syncSelectedRating(section: HTMLElement, variant: ProfileRatingVariant)
 function buildProfileGames(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-games';
-
-  const heading = document.createElement('h2');
-  heading.textContent = t('profile.games', {}, locale);
-  section.append(heading);
+  // No heading: the Games tab (with its count) is this panel's label.
 
   if (profile.gamesTotal === 0) {
     const empty = document.createElement('p');

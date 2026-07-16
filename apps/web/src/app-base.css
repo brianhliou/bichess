@@ -1,31 +1,11 @@
-/* Self-hosted Noto Sans (lichess's font), latin subset. No third-party request. */
+/* Self-hosted Noto Sans variable font, reused from lila so the account rail and
+   body copy share its exact metrics. Latin subset, no third-party request. */
 @font-face {
   font-family: "Noto Sans";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url("/fonts/noto-sans-latin-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/fonts/noto-sans-latin-600.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("/fonts/noto-sans-latin-700.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans";
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("/fonts/noto-sans-latin-800.woff2") format("woff2");
+  src: url("/fonts/noto-sans-latin.woff2") format("woff2");
 }
 @font-face {
   font-family: "Roboto";
@@ -68,13 +48,16 @@
   --site-panel-soft: hsl(40, 12%, 96.5%);
   --site-border: hsl(40, 5%, 84%);
   --site-border-soft: hsl(40, 5%, 89%);
-  /* Green accent ramp, hue-locked to 165 (pine) across all three steps so the
-     family reads as one deliberate color: base for actions, -strong deeper for
-     hover/active, -soft a tinted wash (not a near-white) for chips and fills. */
-  --site-accent: hsl(165, 56%, 28%);
-  --site-accent-strong: hsl(165, 60%, 21%);
-  --site-accent-soft: hsl(165, 44%, 95%);
-  --site-on-accent: #ffffff;
+  /* Canonical brand ramp. Page surfaces may override the generic action tokens,
+     while shared chrome can rebind to these route-invariant values. */
+  --site-brand-accent: hsl(165, 56%, 28%);
+  --site-brand-accent-strong: hsl(165, 60%, 21%);
+  --site-brand-accent-soft: hsl(165, 44%, 95%);
+  --site-brand-on-accent: #ffffff;
+  --site-accent: var(--site-brand-accent);
+  --site-accent-strong: var(--site-brand-accent-strong);
+  --site-accent-soft: var(--site-brand-accent-soft);
+  --site-on-accent: var(--site-brand-on-accent);
   --site-link: hsl(209, 77%, 46%);
   --site-metal-top: hsl(0, 0%, 96%);
   --site-metal-bottom: hsl(0, 0%, 93%);
@@ -154,9 +137,9 @@
 }
 
 :root[data-board-theme="colorblind"] {
-  --site-accent: #245f94;
-  --site-accent-strong: #1b496f;
-  --site-accent-soft: #edf5fb;
+  --site-brand-accent: #245f94;
+  --site-brand-accent-strong: #1b496f;
+  --site-brand-accent-soft: #edf5fb;
   --site-focus: rgba(36, 95, 148, 0.24);
   --board-frame: #1d2630;
   --board-light: #f4e6b1;
@@ -281,12 +264,11 @@
   --site-border: hsl(40, 4%, 25%);
   --site-border-soft: hsl(40, 4%, 21%);
   --site-page-top: hsl(41, 16%, 14%);
-  /* Same hue-165 ramp as light, lifted for legibility on the dark field:
-     base brighter, -strong lighter still for hover, -soft a dim tinted panel. */
-  --site-accent: hsl(165, 44%, 45%);
-  --site-accent-strong: hsl(165, 46%, 62%);
-  --site-accent-soft: hsl(165, 24%, 15%);
-  --site-on-accent: #ffffff;
+  /* Same hue-165 brand ramp as light, lifted for legibility on the dark field. */
+  --site-brand-accent: hsl(165, 44%, 45%);
+  --site-brand-accent-strong: hsl(165, 46%, 62%);
+  --site-brand-accent-soft: hsl(165, 24%, 15%);
+  --site-brand-on-accent: #ffffff;
   --site-link: hsl(209, 79%, 56%);
   --site-metal-top: hsl(40, 7%, 22%);
   --site-metal-bottom: hsl(40, 5%, 19%);

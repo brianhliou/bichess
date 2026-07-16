@@ -34,8 +34,10 @@
   padding-left: clamp(12px, 1.5vw, 18px);
 }
 
+/* No gap: the clocks join the boxed table (lichess anatomy — the clock is a
+   tab attached to the table, not a separate card). */
 .game-console {
-  gap: 8px;
+  gap: 0;
 }
 
 /* The boxed game table (lichess round anatomy): move list scrolls in the
@@ -50,28 +52,71 @@
 }
 
 .round-table__box .replay-console {
-  padding: 10px 10px 8px;
+  padding: 0;
+  gap: 0;
 }
 
+/* Interior rows draw NO borders (lichess: one card, content separated by the
+   toolbar's tinted band and whitespace, not rules). */
 .round-table__row {
-  border-top: 1px solid var(--site-border);
-  padding: 10px;
+  padding: 8px 10px;
 }
 
 .round-table__row[hidden] {
   display: none;
 }
 
-.round-table__box .replay-controls {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+/* Player rows at the very top and bottom edges of the boxed table (lichess
+   round anatomy): presence dot + name, small. Empty until the first frame
+   resolves the seats, so they collapse instead of rendering a blank row. */
+.round-table__player {
+  padding: 8px 10px;
 }
 
-.round-table__box .replay-meta {
-  margin: 0;
-  text-align: center;
-  font-size: 12px;
+.round-table__player:empty {
+  display: none;
+}
+
+/* The actions row wrapper collapses when nothing renders into it (e.g. an
+   aborted room offers no actions), so the hugging box shows no empty strip. */
+.round-table__row:has(> .room-actions:empty) {
+  display: none;
+}
+
+/* Replay scrub toolbar: a small flat strip above the move list (lichess round
+   anatomy) — a tinted band, no border lines. */
+.round-table__box .replay-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  background: var(--site-surface);
+}
+
+.round-table__box .replay-controls button {
+  height: 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.round-table__box .replay-controls button:hover:not(:disabled),
+.round-table__box .replay-controls button:focus-visible {
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-heading);
+}
+
+.round-table__box .replay-controls button:disabled {
+  opacity: 0.35;
+}
+
+/* Live move window: roughly four full-move rows, scrolling within (lichess
+   parity); the base .move-list fixed height keeps serving other surfaces. */
+.round-table__box .move-list {
+  height: auto;
+  max-height: 142px;
+  padding: 4px 6px;
 }
 
 .replay-console {
@@ -93,6 +138,40 @@
 
 .action-status {
   min-height: 112px;
+}
+
+/* Inside the hugging boxed table the notice sizes to its content and drops
+   its card chrome (lichess: plain centered text in the panel, no inner box);
+   the 112px floor and border are for the standalone side-panel layout only.
+   Warning/danger tones keep their tinted background as the signal. */
+.round-table__box .action-status,
+.round-table__box .action-notice {
+  min-height: 0;
+}
+
+.round-table__box .action-notice {
+  border: 0;
+  background: transparent;
+  justify-items: center;
+  text-align: center;
+  padding: 6px 10px;
+}
+
+.round-table__box .action-notice a,
+.round-table__box .action-notice button {
+  justify-self: center;
+}
+
+.round-table__box .action-notice.pending {
+  background: var(--site-warning-bg);
+}
+
+.round-table__box .action-notice.success {
+  background: var(--site-accent-soft);
+}
+
+.round-table__box .action-notice.danger {
+  background: #fff1ef;
 }
 
 .action-notice {
@@ -208,25 +287,42 @@
 }
 
 .clocks {
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 0;
+  margin-bottom: 0;
 }
 
+/* Clock rows hold only the big time (the player line lives in the boxed
+   table's player rows): one column, left-aligned, lichess-large. The clock is
+   a partial-width tab joined to the boxed table — rounded on its outer
+   corners only, sharing the table's edge on the joining side. */
 .clocks div {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
+  justify-items: start;
   align-items: center;
-  min-height: 44px;
-  padding: 7px 12px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
+  width: min(62%, 240px);
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1px solid var(--site-border);
   background: var(--site-panel);
 }
 
-.clocks div.clock-time-row {
-  grid-template-columns: 1fr;
-  justify-items: end;
-  min-height: 52px;
-  padding: 10px 12px;
+[data-clock-top] div {
+  border-bottom: 0;
+  border-radius: var(--site-radius, 10px) var(--site-radius, 10px) 0 0;
+}
+
+[data-clock-bottom] div {
+  border-top: 0;
+  border-radius: 0 0 var(--site-radius, 10px) var(--site-radius, 10px);
+}
+
+/* Square the table corner the clock tab sits on, so the two read as one shape. */
+[data-clock-top]:not(:empty) + .round-table__box {
+  border-top-left-radius: 0;
+}
+
+.round-table__box:has(+ [data-clock-bottom]:not(:empty)) {
+  border-bottom-left-radius: 0;
 }
 
 .clocks div.pregame {
@@ -234,7 +330,7 @@
 }
 
 .clocks-pregame-note {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: 11px;
   color: var(--site-muted);
   text-align: center;
@@ -249,14 +345,9 @@
 
 /* Correspondence rooms sit in the pregame clock rows before the first move
    arms the clock, yet one side is already to move. Lift the active row out of
-   the dimmed pregame state and reveal its turn pill so whose-move-it-is reads
-   at a glance (the armed-clock branch reveals the pill via clock-player-line). */
+   the dimmed pregame state so whose-move-it-is reads at a glance (the turn
+   pill itself lives in the boxed table's player row). */
 .clocks div.pregame.active {
-  opacity: 1;
-}
-
-.clocks div.pregame.active .clock-to-move {
-  visibility: visible;
   opacity: 1;
 }
 
@@ -424,22 +515,38 @@
   margin: 0;
 }
 
+/* In-game controls (Abort / Resign): one row of small centered buttons
+   (lichess round anatomy), with the abort/forfeit countdown as a muted line
+   above them. */
 .game-controls {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
+.game-controls .abort-countdown,
+.game-controls .forfeit-countdown {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+}
+
 .game-controls button {
-  display: block;
-  width: 100%;
-  min-height: 38px;
+  display: inline-block;
+  width: auto;
+  min-height: 28px;
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius-sm);
   background: linear-gradient(to bottom, var(--site-metal-top), var(--site-metal-bottom));
   color: var(--site-text);
-  padding: 9px 10px;
+  padding: 4px 18px;
   cursor: pointer;
   font: inherit;
+  font-size: 13px;
   text-align: center;
 }
 
@@ -531,22 +638,23 @@
 
 .clocks strong {
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 
-.clocks .clock-player-line {
+/* Player line (dot + name + turn pill), rendered into the boxed table's
+   top/bottom player rows. Small: the big type belongs to the clocks. */
+.clock-player-line {
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
-  padding: 0 4px;
   line-height: 1.1;
 }
 
-.clocks .clock-name {
+.clock-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -555,11 +663,11 @@
      hidden clips descenders (the foot of names like "dev-testing"). */
   line-height: 1.35;
   color: var(--site-heading);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.clocks .clock-to-move {
+.clock-to-move {
   display: inline-flex;
   align-items: center;
   justify-self: start;
@@ -578,11 +686,11 @@
   opacity: 0;
 }
 
-.clocks .presence-dot {
+.round-table__player .presence-dot {
   margin-right: 0;
 }
 
-.clocks .clock-player-line.active .clock-to-move {
+.clock-player-line.active .clock-to-move {
   visibility: visible;
   opacity: 1;
 }
@@ -597,12 +705,27 @@
   gap: 8px;
 }
 
-/* The postgame button row (review / play again / home), built by room-chrome for
-   every tenant. One shared gap so all variants match; previously each route
+/* The postgame button row (review / rematch / play-again), built by room-chrome
+   for every tenant. One shared gap so all variants match; previously each route
    redefined it (or, for crazyhouse/shogi, never did). */
 .room-actions-row {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Inside the boxed table the actions are compact centered buttons (lichess:
+   flat centered controls, not full-width outlined boxes). */
+.round-table__box .room-actions-row {
+  justify-items: center;
+}
+
+.round-table__box .room-actions a,
+.round-table__box .room-actions button {
+  width: auto;
+  min-width: 170px;
+  min-height: 30px;
+  padding: 5px 18px;
+  font-size: 13px;
 }
 
 .share-room {
@@ -783,8 +906,6 @@
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   width: min(100%, 178px);
-  border: 1px solid var(--board-frame);
-  background: var(--board-frame);
 }
 
 .dev-square {

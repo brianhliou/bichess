@@ -39,7 +39,7 @@ export const kriegspielArticle: Article = {
       {
         kind: 'paragraph',
         text:
-          'Michael Henry Temple invented Kriegspiel in 1899, borrowing the umpire from the Prussian war games that gave it its name. It is the direct ancestor of [dark chess](/rules/dark-chess). If standard chess is new to you, start with [Chess Rules](/rules/chess); everything below assumes them.',
+          'Michael Henry Temple invented Kriegspiel in 1899, borrowing the umpire from the Prussian war games that gave it its name. It is the direct ancestor of [dark chess](/rules/fog-chess). If standard chess is new to you, start with [Chess Rules](/rules/chess); everything below assumes them.',
       },
     ],
     sections: [
@@ -163,7 +163,7 @@ export const kriegspielArticle: Article = {
         playLabel: 'Challenge a friend',
         playHref: '/?play=friend&gameSpecId=kriegspiel',
         secondary: [
-          { label: 'Read Fog Chess', href: '/rules/dark-chess', emphasis: 'secondary' },
+          { label: 'Read Fog Chess', href: '/rules/fog-chess', emphasis: 'secondary' },
           { label: 'Chess Rules', href: '/rules/chess', emphasis: 'secondary' },
           { label: 'All rules', href: '/rules', emphasis: 'secondary' },
         ],

@@ -17,7 +17,7 @@ import {
   handleCrossroadsChessCreate,
   requestsCrossroadsChess,
 } from './routes/crossroads-chess-rooms.js';
-import { isAllowedCrossroadsChessTimeControl } from './routes/lib.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import type { CrossroadsChessRematchContext } from './server-crossroads-chess-rematch.js';
 import {
   type CrossroadsChessLiveRoomCreation,
@@ -127,7 +127,7 @@ registerVariantTenant({
   },
   lobby: {
     supportsRated: false,
-    allowsTimeControl: isAllowedCrossroadsChessTimeControl,
+    allowsTimeControl: isAllowedFullTimeControl,
     createRoom: async (timeControl) => {
       const created = await createCrossroadsChessRoom(timeControl, 'random');
       if (!created.ok) throw new Error(`crossroads_chess_room_create_failed:${created.error}`);

@@ -17,8 +17,8 @@ import {
   crazyhouseHandPieceSvg,
   renderCrazyhouseBoardSvg,
 } from './crazyhouse-render.js';
-import { createDarkCrazyhousePlayAgainRoom } from './dark-crazyhouse-room-actions.js';
 import { darkCrazyhouseEnabled } from './feature-flags.js';
+import { buildReviewMeta } from './review/game-review-meta.js';
 import { mountReviewLayout } from './review/review-layout.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -47,6 +47,12 @@ export type DarkCrazyhousePostgameResponse = {
     visibility: string;
     initialMs: number | null;
     incrementMs: number | null;
+    players?: Array<{
+      color: string;
+      name: string;
+      rating: number | null;
+      kind: 'account' | 'guest' | 'engine';
+    }>;
   };
   state: {
     status: CrazyhousePlayerView['status'];
@@ -144,14 +150,22 @@ function renderPostgame(root: HTMLElement, postgame: DarkCrazyhousePostgameRespo
     return { entry, el, board, topReserve, bottomReserve };
   });
 
+  const status = `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)}`;
+  const { metaCard, details } = buildReviewMeta({
+    markerId: 'dark-crazyhouse',
+    variantName: 'Dark Crazyhouse',
+    game: postgame.game,
+    status,
+  });
+
   root.replaceChildren(buildNav());
   mountReviewLayout(root, {
     pageClassName: 'dark-crazyhouse-review',
     ariaLabel: 'Dark Crazyhouse postgame',
     title: 'Dark Crazyhouse',
-    summary: `${resultLabel(postgame.game.result)} by ${labelize(postgame.game.termination)} · ${postgame.game.plyCount} plies`,
-    actions: postgameActions(postgame),
-    details: detailsPanel(postgame),
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
     moves: timelinePanel(postgame),
     boards: targets.map((target) => ({
       key: target.entry.key,
@@ -263,66 +277,6 @@ export function postgameViewAtPly(
   return selected?.view ?? null;
 }
 
-function postgameActions(postgame: DarkCrazyhousePostgameResponse): HTMLElement {
-  const actions = document.createElement('nav');
-  actions.className = 'dxq-postgame__actions';
-  actions.setAttribute('aria-label', 'Game links');
-  let playAgainStatus: 'creating' | 'failed' | 'idle' = 'idle';
-  const playAgain = document.createElement('button');
-  playAgain.type = 'button';
-  playAgain.className = 'dxq-postgame__link dxq-postgame__link--primary';
-  const syncPlayAgain = () => {
-    playAgain.disabled = playAgainStatus === 'creating';
-    playAgain.textContent =
-      playAgainStatus === 'creating'
-        ? 'Creating'
-        : playAgainStatus === 'failed'
-          ? 'Try play again'
-          : 'Play again';
-  };
-  playAgain.addEventListener('click', () => {
-    playAgainStatus = 'creating';
-    syncPlayAgain();
-    void createDarkCrazyhousePlayAgainRoom({ timeControl: postgameTimeControl(postgame) })
-      .then((url) => {
-        window.location.assign(url);
-      })
-      .catch((err) => {
-        console.warn(err);
-        playAgainStatus = 'failed';
-        syncPlayAgain();
-      });
-  });
-  syncPlayAgain();
-  const home = document.createElement('a');
-  home.className = 'dxq-postgame__link';
-  home.href = '/';
-  home.textContent = 'Back home';
-  const room = document.createElement('a');
-  room.className = 'dxq-postgame__link';
-  room.href = `/room/${encodeURIComponent(postgame.game.roomId)}`;
-  room.textContent = 'Room';
-  actions.append(playAgain, home, room);
-  return actions;
-}
-
-function detailsPanel(postgame: DarkCrazyhousePostgameResponse): HTMLElement {
-  const panel = document.createElement('section');
-  panel.className = 'dxq-postgame__panel';
-  const heading = document.createElement('h2');
-  heading.textContent = 'Game';
-  const details = document.createElement('dl');
-  details.className = 'dxq-postgame__details';
-  details.append(
-    detailRow('Result', resultLabel(postgame.game.result)),
-    detailRow('Ending', labelize(postgame.game.termination)),
-    detailRow('Clock', timeControlLabel(postgame)),
-    detailRow('Ended', dateLabel(postgame.game.endedAt)),
-  );
-  panel.append(heading, details);
-  return panel;
-}
-
 function timelinePanel(postgame: DarkCrazyhousePostgameResponse): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'dxq-postgame__panel';
@@ -373,16 +327,6 @@ function notateCrazyhouseMove(move: CrazyhouseMove): string {
   return `${move.from}${move.to}${move.promotion ? `=${DROP_LETTER[move.promotion]}` : ''}`;
 }
 
-function detailRow(label: string, value: string): HTMLElement {
-  const row = document.createElement('div');
-  const dt = document.createElement('dt');
-  dt.textContent = label;
-  const dd = document.createElement('dd');
-  dd.textContent = value;
-  row.append(dt, dd);
-  return row;
-}
-
 function loadingView(): HTMLElement {
   const shell = document.createElement('main');
   shell.className = 'dxq-postgame__notice';
@@ -427,42 +371,6 @@ function resultLabel(result: string): string {
   if (result === 'black-wins') return 'Black wins';
   if (result === 'draw') return 'Draw';
   return labelize(result);
-}
-
-function timeControlLabel(postgame: DarkCrazyhousePostgameResponse): string {
-  const timeControl = postgameTimeControl(postgame);
-  const initialMs = timeControl?.initialMs ?? null;
-  const incrementMs = timeControl?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return 'Untimed';
-  return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
-}
-
-function postgameTimeControl(
-  postgame: DarkCrazyhousePostgameResponse,
-): { initialMs: number; incrementMs: number } | null {
-  const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
-  const incrementMs = postgame.game.incrementMs ?? postgame.state.timeControl?.incrementMs ?? null;
-  if (initialMs === null || incrementMs === null) return null;
-  return { initialMs, incrementMs };
-}
-
-function clockLabel(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function dateLabel(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function labelize(value: string): string {

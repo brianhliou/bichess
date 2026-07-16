@@ -115,46 +115,57 @@ export function jungleFaceDownDiscSvg(
 }
 
 /** Last-move mark spec shared by Jungle AND Flip Jungle (one ratio set so the two
- *  boards never drift apart again). Same grammar as the xiangqi boards: a darker
- *  shadow fill on the origin cell, a thin calm gold ring on the destination cell.
- *  Concrete colours (no CSS vars) so the marks also render standalone (OG cards). */
+ *  boards never drift apart again). Same grammar and circular geometry as the
+ *  xiangqi boards: a darker shadow disc at the origin and a calm gold halo around
+ *  the destination piece. Concrete colours (no CSS vars) keep the marks visible in
+ *  standalone SVGs such as OG cards. */
 export const JUNGLE_LAST_MOVE = {
-  /** Mark inset from the cell edge ÷ cell. */
-  insetRatio: 0.05,
-  /** Corner rounding ÷ cell. */
-  cornerRatio: 0.08,
+  /** Origin shadow radius ÷ cell, matching xiangqi's piece-sized shadow disc. */
+  fromRadiusRatio: 0.45,
+  /** Destination halo radius ÷ cell (26 on xiangqi's 60-unit grid). */
+  ringRadiusRatio: 26 / 60,
   /** Destination gold ring stroke ÷ cell. */
-  ringRatio: 0.045,
+  ringRatio: 4 / 60,
   /** Dark under-edge stroke ÷ cell (peeks ~half a px around the gold so the ring
    *  stays legible on busy terrain: grass, water, den, trap). */
-  edgeRatio: 0.07,
+  edgeRatio: 0.1,
+  /** A flip has no origin, so it gets one extra outer halo to make the singular
+   *  reveal action as legible as a two-endpoint move. */
+  revealRadiusRatio: 0.475,
+  revealRingRatio: 0.045,
   /** Calm gold, the platform highlight family (app-base --board-highlight). */
   ring: '#e3b34d',
   edge: 'rgba(32,21,3,0.5)',
   /** Origin shadow fill: the token drop-shadow ink (#3a2c20) as a translucent
-   *  cell fill, reading as "the piece came from here". */
-  fromFill: 'rgba(58,44,32,0.32)',
+   *  disc fill, reading as "the piece came from here". */
+  fromFill: 'rgba(58,44,32,0.36)',
 } as const;
 
-function lastMoveRectAttrs(x: number, y: number, cell: number): string {
-  const inset = cell * JUNGLE_LAST_MOVE.insetRatio;
-  const size = cell - inset * 2;
-  const rx = cell * JUNGLE_LAST_MOVE.cornerRatio;
-  return `x="${x + inset}" y="${y + inset}" width="${size}" height="${size}" rx="${rx}"`;
+function lastMoveCenterAttrs(x: number, y: number, cell: number): string {
+  return `cx="${x + cell / 2}" cy="${y + cell / 2}"`;
 }
 
-/** Origin (from) last-move mark: a subtle darker shadow fill on the vacated cell. */
+/** Origin (from) last-move mark: a subtle darker shadow disc on the vacated cell. */
 export function jungleLastMoveFromSvg(x: number, y: number, cell: number): string {
-  return `<rect ${lastMoveRectAttrs(x, y, cell)} fill="${JUNGLE_LAST_MOVE.fromFill}"/>`;
+  return `<circle class="jungle-last-move-from" ${lastMoveCenterAttrs(x, y, cell)} r="${cell * JUNGLE_LAST_MOVE.fromRadiusRatio}" fill="${JUNGLE_LAST_MOVE.fromFill}"/>`;
 }
 
 /** Destination (to) last-move mark: a thin gold ring over a slim dark under-edge. */
 export function jungleLastMoveToSvg(x: number, y: number, cell: number): string {
-  const attrs = lastMoveRectAttrs(x, y, cell);
+  const attrs = lastMoveCenterAttrs(x, y, cell);
+  const radius = cell * JUNGLE_LAST_MOVE.ringRadiusRatio;
   const edge = cell * JUNGLE_LAST_MOVE.edgeRatio;
   const ring = cell * JUNGLE_LAST_MOVE.ringRatio;
   return (
-    `<rect ${attrs} fill="none" stroke="${JUNGLE_LAST_MOVE.edge}" stroke-width="${edge}"/>` +
-    `<rect ${attrs} fill="none" stroke="${JUNGLE_LAST_MOVE.ring}" stroke-width="${ring}"/>`
+    `<circle class="jungle-last-move-ring-edge" ${attrs} r="${radius}" fill="none" stroke="${JUNGLE_LAST_MOVE.edge}" stroke-width="${edge}"/>` +
+    `<circle class="jungle-last-move-ring" ${attrs} r="${radius}" fill="none" stroke="${JUNGLE_LAST_MOVE.ring}" stroke-width="${ring}"/>`
+  );
+}
+
+/** A self-move flip: the destination halo plus a slim outer reveal halo. */
+export function jungleLastMoveRevealSvg(x: number, y: number, cell: number): string {
+  return (
+    jungleLastMoveToSvg(x, y, cell) +
+    `<circle class="jungle-last-move-reveal" ${lastMoveCenterAttrs(x, y, cell)} r="${cell * JUNGLE_LAST_MOVE.revealRadiusRatio}" fill="none" stroke="${JUNGLE_LAST_MOVE.ring}" stroke-width="${cell * JUNGLE_LAST_MOVE.revealRingRatio}"/>`
   );
 }

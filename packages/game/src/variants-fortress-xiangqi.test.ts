@@ -10,6 +10,7 @@ import {
   type FortressXiangqiMove,
   type FortressXiangqiSquare,
   fortressXiangqiCrossedRiver,
+  fortressXiangqiEngineFen,
   fortressXiangqiInOwnHalf,
   fortressXiangqiInPalace,
   fortressXiangqiPerpetualCheckLoser,
@@ -402,4 +403,30 @@ test('state.moveLog accumulates the history and feeds the adjudicator', () => {
   // tenant does) recovers the perpetual checker.
   assert.deepEqual([...(s.moveLog ?? [])], moves);
   assert.equal(fortressXiangqiPerpetualCheckLoser(s.moveLog ?? [], start), 'red');
+});
+
+test('fortressXiangqiEngineFen matches the FSF variant startFen at the initial position', () => {
+  const s = createInitialFortressXiangqiState('fen');
+  // Byte-identical to `startFen` in apps/server/src/fortress-xiangqi.ini — the same
+  // position the server FSF engine (and client ceval) treats as `startpos`.
+  assert.equal(fortressXiangqiEngineFen(s), 'rnceakq/pp1p1pp/7/7/7/7/PP1P1PP/QKAECNR w - - 0 1');
+});
+
+test('fortressXiangqiEngineFen encodes side-to-move and the captured-in-hand pocket', () => {
+  const s = createInitialFortressXiangqiState('fen');
+  // Black to move: the turn token flips to 'b'.
+  const blackToMove: FortressXiangqiGameState = {
+    ...s,
+    status: { type: 'playing', turn: 'black' },
+  };
+  assert.match(fortressXiangqiEngineFen(blackToMove), / b - - 0 1$/);
+
+  // A crazyhouse pocket renders in brackets after the placement: red holds a
+  // chariot + two soldiers, black a horse → `[RPPn]` (uppercase = red, in the fixed
+  // chariot/horse/cannon/elephant/advisor/treasure/soldier order).
+  const withHands: FortressXiangqiGameState = {
+    ...s,
+    hands: { red: { chariot: 1, soldier: 2 }, black: { horse: 1 } },
+  };
+  assert.ok(fortressXiangqiEngineFen(withHands).includes('[RPPn]'));
 });

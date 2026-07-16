@@ -36,10 +36,13 @@ describe('Xiangqi postgame page', () => {
       if (url === '/api/xiangqi/games/xq_postgame/analysis')
         return new Response(null, { status: 204 });
       if (url === '/api/chat/game/xq_postgame') return jsonResponse(chatFixture());
+      if (url === '/api/games/xq_postgame/favorite')
+        return jsonResponse({ authenticated: true, favorited: false });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
+    root.dataset.favoriteGameId = 'xq_postgame';
 
     mountXiangqiPostgame(root, 'xq_postgame');
     await flushPromises();
@@ -47,7 +50,7 @@ describe('Xiangqi postgame page', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/api/xiangqi/games/xq_postgame');
     expect(fetchSpy).toHaveBeenCalledWith('/api/chat/game/xq_postgame');
     expect(root.querySelector('.site-nav')).not.toBeNull();
-    expect(root.textContent).toContain('Elephant Chess');
+    expect(root.textContent).toContain('Xiangqi');
     expect(root.textContent).toContain('Spectator room');
     expect(root.textContent).toContain('hello from review');
     expect(root.querySelector<HTMLInputElement>('.review-spectator-chat__input')?.placeholder).toBe(
@@ -55,6 +58,12 @@ describe('Xiangqi postgame page', () => {
     );
     expect(root.querySelector('.review-actions--rail')).toBeNull();
     expect(root.querySelector('.dxq-postgame__actions')).toBeNull();
+    const favorite = root.querySelector<HTMLButtonElement>(
+      '.game-meta-card > .game-favorite-action--compact',
+    );
+    expect(favorite).not.toBeNull();
+    expect(favorite?.textContent).toBe('☆');
+    expect(favorite?.getAttribute('aria-label')).toBe('Save game');
     expect(root.textContent).not.toContain('Play again');
     expect(root.textContent).not.toContain('Back home');
     expect(root.querySelector<HTMLAnchorElement>('a[href="/room/xq_postgame"]')).toBeNull();
@@ -89,7 +98,7 @@ describe('Xiangqi postgame page', () => {
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="27"',
     );
     expect(board!.innerHTML).toContain(
-      '<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"',
+      '<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="26"',
     );
 
     // Jump back to the start: no move has been played, so no marker.
