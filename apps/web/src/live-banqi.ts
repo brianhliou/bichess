@@ -40,6 +40,7 @@ import {
 } from './live-banqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -169,6 +170,11 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     core = ctx;
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
+    // Repaint when the viewer changes their xiangqi piece set in settings — the
+    // board and captured pool both render from the stored set, so a live game
+    // must hot-reload it (mirrors the chess family's boardAppearanceChangedEvent
+    // hook). Without this the room keeps the piece set it mounted with.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,

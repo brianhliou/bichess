@@ -34,6 +34,7 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -155,6 +156,9 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   setup: (ctx) => {
     core = ctx;
     installDarkXiangqiBoardInteraction(ctx.refs);
+    // Hot-reload the viewer's xiangqi piece set mid-game (the fog board renders
+    // revealed pieces from the stored set); mirrors the chess appearance hook.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,

@@ -31,7 +31,7 @@ import {
 } from './fortress-xiangqi-view.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { setBoardFamily } from './theme.js';
+import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
@@ -143,6 +143,9 @@ const client = createTenantLiveClient<
     installFortressXiangqiBoardStyles();
     setBoardFamily('xiangqi');
     installBoardInteraction(ctx.refs);
+    // Hot-reload the viewer's xiangqi piece set mid-game (board + captured pool
+    // render from the stored set); mirrors the chess family's appearance hook.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board, core?.refs.capturesBottom],
       hasSelection: () => selectedSquare !== null || selectedDropRole !== null,
