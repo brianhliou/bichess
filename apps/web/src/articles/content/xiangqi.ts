@@ -47,7 +47,7 @@ export const xiangqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'The board has 9 files and 10 ranks, but pieces sit on the intersections of the lines, not inside squares.',
+              'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.',
           },
           {
             kind: 'raw-svg',

@@ -448,8 +448,8 @@ const ZH_HANS: Record<string, string> = {
   'Xiangqi Rules': '象棋规则',
   'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.':
     '红黑双方轮流走子，红方先行。每一方开局有 16 枚棋子：一个将（帅）、两个士（仕）、两个象（相）、两个马、两个车、两个炮（砲）和五个兵（卒）。目标是将死对方的将帅。',
-  'The board has 9 files and 10 ranks, but pieces sit on the intersections of the lines, not inside squares.':
-    '棋盘有 9 条纵线和 10 条横线，但棋子落在线的交叉点上，而不是格子内。',
+  'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.':
+    '棋盘有 9 条纵线和 10 条横线。在传统的呈现方式中，棋子落在线的交叉点上，而不是格子内。',
   "The **palace** is the 3 by 3 box on each player's back side. Generals and advisors must stay inside their own palace. The **river** divides the board in half. Elephants cannot cross it, and soldiers gain sideways movement after crossing it.":
     '**九宫**是每一方底线一侧的 3×3 区域。将帅与士仕必须留在己方九宫之内。**楚河汉界**将棋盘分为两半。象（相）不能过河，而兵（卒）过河之后可以横向走子。',
   "A piece captures by landing on an enemy-occupied point, and no piece may move through an occupied point. The cannon's capturing jump is the only exception. The pieces are listed below in the traditional order.":
@@ -1242,8 +1242,8 @@ const ZH_HANT: Record<string, string> = {
   'Xiangqi Rules': '象棋規則',
   'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.':
     '紅黑雙方輪流走子，紅方先行。每一方開局有 16 枚棋子：一個將（帥）、兩個士（仕）、兩個象（相）、兩個馬、兩個車、兩個炮（砲）和五個兵（卒）。目標是將死對方的將帥。',
-  'The board has 9 files and 10 ranks, but pieces sit on the intersections of the lines, not inside squares.':
-    '棋盤有 9 條縱線和 10 條橫線，但棋子落在線的交叉點上，而不是格子內。',
+  'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.':
+    '棋盤有 9 條縱線和 10 條橫線。在傳統的呈現方式中，棋子落在線的交叉點上，而不是格子內。',
   "The **palace** is the 3 by 3 box on each player's back side. Generals and advisors must stay inside their own palace. The **river** divides the board in half. Elephants cannot cross it, and soldiers gain sideways movement after crossing it.":
     '**九宮**是每一方底線一側的 3×3 區域。將帥與士仕必須留在己方九宮之內。**楚河漢界**將棋盤分為兩半。象（相）不能過河，而兵（卒）過河之後可以橫向走子。',
   "A piece captures by landing on an enemy-occupied point, and no piece may move through an occupied point. The cannon's capturing jump is the only exception. The pieces are listed below in the traditional order.":
