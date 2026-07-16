@@ -68,7 +68,7 @@ jobs:
       issues: write
       contents: read
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
@@ -120,7 +120,7 @@ jobs:
       issues: write
       contents: read
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const sha = context.sha.slice(0, 7);
