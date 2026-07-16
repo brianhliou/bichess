@@ -50,6 +50,7 @@ import {
   type ShogiReplayBlock,
   type StaticBoardsBlock,
   type SubHeadingBlock,
+  withXiangqiBoardLayout,
   withXiangqiPieceSet,
   type XiangqiReplayBlock,
 } from './articles-data.js';
@@ -77,6 +78,7 @@ import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini
 import { mountShogiReplay, type ShogiReplayController } from './shogi-replay.js';
 import {
   boardAppearanceChangedEvent,
+  readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   shogiAppearanceChangedEvent,
   xiangqiAppearanceChangedEvent,
@@ -1385,12 +1387,15 @@ function paintXqDiagram(holder: HTMLElement, set: XiangqiPieceSet): void {
     Array.from(holder.children).find((child) =>
       child.classList.contains('article-figure-caption'),
     ) ?? null;
+  const layout = readStoredXiangqiBoardLayout();
   let html: string;
   try {
-    html = withXiangqiPieceSet(set, thunk);
+    html = withXiangqiBoardLayout(layout, () => withXiangqiPieceSet(set, thunk));
   } catch (err) {
     console.warn('xiangqi diagram render failed; falling back to default piece set', err);
-    html = withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk);
+    html = withXiangqiBoardLayout(layout, () =>
+      withXiangqiPieceSet(DEFAULT_XIANGQI_PIECE_SET, thunk),
+    );
   }
   const scratch = document.createElement('div');
   scratch.innerHTML = html;
@@ -1618,7 +1623,12 @@ function renderRawSvgStepperBlock(block: RawSvgStepperBlock, lang?: ArticleLang)
     if (!step) return;
     frame.innerHTML =
       typeof step.svg === 'function'
-        ? localizeSvgMarkup(withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg), lang)
+        ? localizeSvgMarkup(
+            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+              withXiangqiPieceSet(readStoredXiangqiPieceSet(), step.svg as () => string),
+            ),
+            lang,
+          )
         : localizeSvgMarkup(step.svg, lang);
     const hasXiangqiDiagram = Boolean(frame.querySelector('.xq-article-svg'));
     frame.classList.toggle('raw-svg-stepper-frame-xq', hasXiangqiDiagram);
@@ -2016,7 +2026,12 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
         crossroadsThumbPainters.set(wrap, paint);
         ensureCrossroadsDiagramListener();
       } else {
-        const paint = () => applySvg(withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk));
+        const paint = () =>
+          applySvg(
+            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+              withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk),
+            ),
+          );
         paint();
         wrap.dataset.xqThumb = '';
         xqThumbPainters.set(wrap, paint);

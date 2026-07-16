@@ -24,6 +24,11 @@ import {
   readStoredXiangqiBoardLayout,
   type XiangqiBoardLayout,
 } from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 const FILES = 'abcdefghi';
@@ -36,6 +41,15 @@ const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
 const RIVER_TOP = MARGIN + 4 * CELL;
 const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const CELL_RIVER_GAP = 12;
+// The live board's config for the shared geometry core; the article diagrams use
+// their own (smaller) config against the same transform.
+const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
+  fileCount: FILE_COUNT,
+  rankCount: RANK_COUNT,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: CELL_RIVER_GAP,
+};
 const PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
@@ -104,10 +118,8 @@ export function xiangqiBoardSvg(
   state: XiangqiBoardSvgState,
 ): string {
   const layout = state.layout ?? readStoredXiangqiBoardLayout();
-  const viewBox =
-    layout === 'cell'
-      ? `${MARGIN - CELL / 2} ${MARGIN - CELL / 2} ${FILE_COUNT * CELL} ${RANK_COUNT * CELL + CELL_RIVER_GAP}`
-      : `0 0 ${WIDTH} ${HEIGHT}`;
+  const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_GEO);
+  const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   return `
     <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
@@ -746,18 +758,7 @@ function intersection(
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout = 'intersection',
 ): { x: number; y: number } {
-  const displayRank = displayRankFor(rank, perspective);
-  return {
-    x: MARGIN + file * CELL,
-    y:
-      MARGIN +
-      displayRank * CELL +
-      (layout === 'cell' && displayRank >= RANK_COUNT / 2 ? CELL_RIVER_GAP : 0),
-  };
-}
-
-function displayRankFor(rank: number, perspective: XiangqiColor): number {
-  return perspective === 'red' ? RANK_COUNT - rank : rank - 1;
+  return xiangqiBoardPoint(file, rank, perspective, layout, LIVE_BOARD_GEO);
 }
 
 function coordOf(square: XiangqiSquare): { file: number; rank: number } {
