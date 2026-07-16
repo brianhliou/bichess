@@ -1,15 +1,16 @@
 // Flip Jungle (jungle-flip) review surface: the jungle-flip presentation bundle over
-// the generic tree-review controller (mountTreeReview). Jungle-flip has a symmetric
-// hidden deal but no client engine, so `engine: null`. Like banqi the adapter is
-// DEAL-BOUND (a factory over the reconstructed deal), so the presentation is built
-// per-game rather than held as a module constant.
+// the generic tree-review controller (mountTreeReview). It drives the in-browser
+// MistyJungleFlip wasm client engine (positionMode 'fen', per-node redacted FEN), mirroring
+// banqi. Like banqi the adapter is DEAL-BOUND (a factory over the reconstructed deal), so
+// the presentation is built per-game rather than held as a module constant.
 
-import type {
-  JungleFlipDeal,
-  JungleFlipGameState,
-  JungleFlipMove,
-  JungleFlipPlayerView,
-  JungleFlipSeat,
+import {
+  type JungleFlipDeal,
+  type JungleFlipGameState,
+  type JungleFlipMove,
+  type JungleFlipPlayerView,
+  type JungleFlipSeat,
+  jungleFlipStateToEngineFen,
 } from '@mistboard/game';
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleFlipInteractiveBoard } from '../jungle-flip-board.js';
@@ -30,9 +31,23 @@ export type JungleFlipReviewConfig = TreeReviewConfig<JungleFlipMove>;
 /** Handle returned by mountJungleFlipReview: snapshot the current tree to persist it. */
 export type JungleFlipReviewHandle = TreeReviewHandle;
 
-// No client engine and no overlay layer, so Arrow/Marker are unused; the shapeTo*
-// hooks pass the shape through opaquely. Jungle-flip is symmetric-info (both seats
-// see the identical board), so `perspective` never changes the render.
+// Engine UCI uses 0-indexed ranks (a0..d3) with a flip as from===to; render it in board
+// coords for the MultiPV panel — a bare coord ("b3") for a flip, "b3-c3" for a move.
+function formatJungleFlipEngineMove(uci: string): string {
+  if (uci.length < 4) return uci;
+  const toDisplay = (sq: string): string => {
+    const rank = Number(sq[1]);
+    return Number.isNaN(rank) ? sq : `${sq[0]}${rank + 1}`;
+  };
+  const from = toDisplay(uci.slice(0, 2));
+  const to = toDisplay(uci.slice(2, 4));
+  return from === to ? from : `${from}-${to}`;
+}
+
+// No board-overlay layer, so the engine* arrow hooks return [] (the eval gauge + MultiPV
+// panel still light up) and Arrow/Marker are unused — the shapeTo* hooks pass the shape
+// through opaquely. Jungle-flip is symmetric-info (both seats see the identical board), so
+// `perspective` never changes the render.
 function makeJungleFlipPresentation(
   adapter: VariantTreeAdapter<JungleFlipMove, JungleFlipGameState, JungleFlipPlayerView>,
 ): TreePresentation<
@@ -45,7 +60,18 @@ function makeJungleFlipPresentation(
 > {
   return {
     adapter,
-    engine: null,
+    // Client engine: the in-browser MistyJungleFlip wasm (single-shot MultiPV), fed the
+    // per-node REDACTED FEN (positionMode 'fen') — face-down tiles as X — so the client
+    // engine never sees more than the as-played info-state, same boundary as the server.
+    engine: {
+      panelVariant: 'jungleflip',
+      positionMode: 'fen',
+      fen: jungleFlipStateToEngineFen,
+      formatPvMove: formatJungleFlipEngineMove,
+      // No board-overlay layer in the jungle-flip renderer → no on-board engine arrows.
+      engineArrowsFromLines: () => [],
+      bestMoveArrow: () => [],
+    },
     // The analysis engine's best move is 0-indexed UCI with flips as from===to; render it in
     // board coords ("b3 flip") for the "… was best" advice line, not the raw "B2-B2".
     formatBestMove: formatFlipVariantBestMove,

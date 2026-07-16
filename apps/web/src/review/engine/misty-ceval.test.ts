@@ -29,23 +29,27 @@ describe('parseMistyUpdate', () => {
 });
 
 describe('variant dispatch', () => {
-  it('routes only banqi to the Misty backend', () => {
+  it('routes the flip variants (banqi, jungleflip) to the Misty backend', () => {
     expect(isMistyCevalVariant('banqi')).toBe(true);
+    expect(isMistyCevalVariant('jungleflip')).toBe(true);
     expect(isMistyCevalVariant('xiangqi')).toBe(false);
     expect(isMistyCevalVariant('fortressxiangqi')).toBe(false);
   });
 
   it('names the engine per backend', () => {
     expect(mistyEngineName('banqi')).toBe('MistyBanqi');
+    expect(mistyEngineName('jungleflip')).toBe('MistyJungleFlip');
     expect(mistyEngineName('xiangqi')).toBeNull();
     expect(cevalEngineName('banqi')).toBe('MistyBanqi');
+    expect(cevalEngineName('jungleflip')).toBe('MistyJungleFlip');
     expect(cevalEngineName('xiangqi')).toBe('Fairy-Stockfish');
   });
 
-  it('reports banqi as supported without cross-origin isolation (single-thread wasm)', () => {
+  it('reports the Misty flip variants as supported without cross-origin isolation', () => {
     // happy-dom is not cross-origin isolated: FSF variants are unsupported here, but the
-    // single-threaded Misty wasm needs no SharedArrayBuffer, so banqi is always supported.
+    // single-threaded Misty wasm needs no SharedArrayBuffer, so banqi/jungleflip are supported.
     expect(cevalSupported('banqi')).toBe(true);
+    expect(cevalSupported('jungleflip')).toBe(true);
     expect(cevalSupported('xiangqi')).toBe(false);
   });
 });

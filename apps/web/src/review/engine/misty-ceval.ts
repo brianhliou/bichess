@@ -29,9 +29,11 @@ const MISTY_ASSET_VERSION = '0.2.4-1';
 interface MistyEngineConfig {
   /** Public base path of the vendored wasm build. */
   base: string;
+  /** wasm-pack module basename (`<name>.js` + `<name>_bg.wasm`) under `base`. */
+  moduleName: string;
   /** Human label shown in the panel. */
   engineName: string;
-  /** Depth-selector value (14/18/22/26) → search node budget. MistyBanqi searches to a
+  /** Depth-selector value (14/18/22/26) → search node budget. A Misty engine searches to a
    *  node budget, not a fixed depth, so we translate the panel's "Depth" knob into nodes. */
   nodesForDepth: (maxDepth: number) => number;
 }
@@ -39,15 +41,23 @@ interface MistyEngineConfig {
 const MISTY_CONFIGS: Record<string, MistyEngineConfig> = {
   banqi: {
     base: '/engine/misty-banqi/',
+    moduleName: 'banqi_wasm',
     engineName: 'MistyBanqi',
     // 14→280k … 26→520k: a review-board-appropriate budget (~100-400ms/position).
+    nodesForDepth: (maxDepth) => Math.max(80_000, maxDepth * 20_000),
+  },
+  jungleflip: {
+    base: '/engine/misty-jungle-flip/',
+    moduleName: 'jungle_flip_wasm',
+    engineName: 'MistyJungleFlip',
+    // Same budget shape as banqi; the 4×4 flip board resolves comparably fast per position.
     nodesForDepth: (maxDepth) => Math.max(80_000, maxDepth * 20_000),
   },
 };
 
 /** Variants served by a Misty wasm backend (vs the FSF backend in ceval.ts). */
 export function isMistyCevalVariant(variant: CevalVariant): boolean {
-  return variant === 'banqi';
+  return variant === 'banqi' || variant === 'jungleflip';
 }
 
 export function mistyEngineName(variant: CevalVariant): string | null {
@@ -100,8 +110,8 @@ export class MistyCeval implements CevalHandle {
       worker.onerror = (e) => reject(new Error(`misty-ceval: worker error: ${e.message}`));
       worker.postMessage({
         type: 'init',
-        jsUrl: `${this.config.base}banqi_wasm.js?v=${v}`,
-        wasmUrl: `${this.config.base}banqi_wasm_bg.wasm?v=${v}`,
+        jsUrl: `${this.config.base}${this.config.moduleName}.js?v=${v}`,
+        wasmUrl: `${this.config.base}${this.config.moduleName}_bg.wasm?v=${v}`,
       });
     });
   }
