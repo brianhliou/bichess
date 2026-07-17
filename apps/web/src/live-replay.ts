@@ -56,7 +56,7 @@ export function getFogSnapshotToEventsLen(): Map<number, number> {
 }
 
 export function captureFogView(): void {
-  if (!liveState.state || liveState.state.variant !== 'dark-chess') return;
+  if (liveState.state?.variant !== 'dark-chess') return;
   // Consider every server state change, not just eventsLen increases. Opponent moves don't
   // appear in liveState.events (fog-filtered), so eventsLen stays constant after them — using it
   // as the key would collapse own-move and opponent-move positions into one entry. Terminal
@@ -254,7 +254,7 @@ function maybeSoundForReplayStep(prevIndex: number | null, nextIndex: number | n
 
   const eventIndex = effectiveNext - 1;
   const event = liveState.events[eventIndex];
-  if (!event || event.type !== 'move-played') return;
+  if (event?.type !== 'move-played') return;
   playSound(soundForMove(liveState.events.slice(0, eventIndex), event));
 }
 

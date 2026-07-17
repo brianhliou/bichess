@@ -258,7 +258,7 @@ async function loadEventPositions(path: string): Promise<SourcePosition[]> {
     positions.push({ source: `${sourceBase}:start`, ply, state });
     for (const record of records.slice(1)) {
       const event = readObject(record);
-      if (!event || event.type !== 'move-played') continue;
+      if (event?.type !== 'move-played') continue;
       const move = parseMove(event.move);
       if (!move || !isJungleLegalMove(state, move)) {
         stats.invalidMoves += 1;
@@ -392,7 +392,7 @@ function puzzleThemes(state: JungleGameState, solution: JungleMove[]): JunglePuz
   }
   let cursor: JungleGameState | null = state;
   for (const move of solution) {
-    if (!cursor || cursor.status.type !== 'playing') break;
+    if (cursor?.status.type !== 'playing') break;
     const piece = cursor.board[move.from];
     if (piece && cursor.status.turn === state.status.turn) {
       addRoleTheme(themes, piece.role);

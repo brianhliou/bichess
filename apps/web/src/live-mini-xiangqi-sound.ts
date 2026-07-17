@@ -92,7 +92,7 @@ export function miniXiangqiTerminalSoundKey(
   view: MiniXiangqiPlayerView | null,
   seat: Seat,
 ): string | null {
-  if (!view || view.status.type !== 'finished') return null;
+  if (view?.status.type !== 'finished') return null;
   if (seat !== 'red' && seat !== 'black') return null;
   if (view.status.winner === null) return `draw:${view.moveNumber}`;
   return view.status.winner === seat ? `win:${view.moveNumber}` : `lose:${view.moveNumber}`;

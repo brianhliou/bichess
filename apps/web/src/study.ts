@@ -156,7 +156,7 @@ function renderStudy(root: HTMLElement, study: StudyDto, chapters: ChapterDto[])
 
   function renderActive(): void {
     const chapter = chapters.find((entry) => entry.id === activeId) ?? chapters[0];
-    if (!chapter || chapter.variant !== 'xiangqi') {
+    if (chapter?.variant !== 'xiangqi') {
       renderError(root, 415);
       return;
     }

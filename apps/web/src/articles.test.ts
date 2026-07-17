@@ -104,7 +104,7 @@ describe('article public listing gates', () => {
 
   it('filters community-authored posts out of the By Mistboard view', () => {
     const post = articles.find((article) => article.slug === 'server-enforced-fog');
-    if (!post || post.kind !== 'article') throw new Error('missing server-enforced-fog article');
+    if (post?.kind !== 'article') throw new Error('missing server-enforced-fog article');
     const originalPublisher = post.publisher;
 
     try {

@@ -318,7 +318,7 @@ async function loadEventPositions(path: string): Promise<SourcePosition[]> {
 
     for (const record of records.slice(1)) {
       const event = readObject(record);
-      if (!event || event.type !== 'move-played') continue;
+      if (event?.type !== 'move-played') continue;
       const move = parseMove(event.move);
       if (!move) {
         stats.invalidMoves += 1;
@@ -479,7 +479,7 @@ function findExactMateLines(
   const lines: MiniXiangqiPuzzleMove[][] = [];
   for (const firstMove of legalMoves(variant, state)) {
     const afterFirst = applyMove(variant, state, firstMove);
-    if (!afterFirst || afterFirst.status.type !== 'playing') continue;
+    if (afterFirst?.status.type !== 'playing') continue;
     if (checkingFirstMoves && !isDefenderAlreadyInCheck(variant, afterFirst, attacker)) {
       continue;
     }
@@ -490,11 +490,7 @@ function findExactMateLines(
     const replyLines: MiniXiangqiPuzzleMove[][] = [];
     for (const reply of defenderReplies) {
       const afterReply = applyMove(variant, afterFirst, reply);
-      if (
-        !afterReply ||
-        afterReply.status.type !== 'playing' ||
-        afterReply.status.turn !== attacker
-      ) {
+      if (afterReply?.status.type !== 'playing' || afterReply.status.turn !== attacker) {
         replyLines.length = 0;
         break;
       }

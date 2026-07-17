@@ -403,7 +403,7 @@ function fogSlideMoves(state: GameState, from: Square, directions: readonly Dire
 // ── SECTION: Fog castling ───────────────────────────────────────────────────
 function fogCastlingMoves(state: GameState, from: Square): Move[] {
   const piece = state.board[from];
-  if (!piece || piece.role !== 'king') return [];
+  if (piece?.role !== 'king') return [];
 
   const moves: Move[] = [];
   for (const rookSquare of state.castlingRights) {
@@ -597,13 +597,7 @@ function withCastlingAliases(state: GameState, moves: Move[]): Move[] {
   for (const move of moves) {
     const piece = state.board[move.from];
     const target = state.board[move.to];
-    if (
-      !piece ||
-      piece.role !== 'king' ||
-      !target ||
-      target.role !== 'rook' ||
-      target.color !== piece.color
-    )
+    if (piece?.role !== 'king' || !target || target.role !== 'rook' || target.color !== piece.color)
       continue;
     if (!state.castlingRights.includes(move.to)) continue;
     const kingDestination = castlingKingDestination(move.from, move.to);
@@ -616,7 +610,7 @@ function withCastlingAliases(state: GameState, moves: Move[]): Move[] {
 
 function normalizeCastlingMove(state: GameState, move: Move): Move | null {
   const piece = state.board[move.from];
-  if (!piece || piece.role !== 'king') return null;
+  if (piece?.role !== 'king') return null;
   if (rankOf(move.from) !== rankOf(move.to)) return null;
   const target = state.board[move.to];
   if (

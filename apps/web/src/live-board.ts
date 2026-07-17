@@ -38,13 +38,7 @@ export function legalDests(view: PlayerView): cg.Dests {
 export function castlingKingDestinationFromView(view: PlayerView, move: Move): Square | null {
   const piece = view.board[move.from];
   const rook = view.board[move.to];
-  if (
-    !piece ||
-    piece.role !== 'king' ||
-    !rook ||
-    rook.role !== 'rook' ||
-    rook.color !== piece.color
-  )
+  if (piece?.role !== 'king' || !rook || rook.role !== 'rook' || rook.color !== piece.color)
     return null;
   if (rankOf(move.from) !== rankOf(move.to)) return null;
   return `${squareFileIndex(move.to) > squareFileIndex(move.from) ? 'g' : 'c'}${rankOf(move.from)}` as Square;

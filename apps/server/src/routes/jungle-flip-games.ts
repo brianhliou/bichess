@@ -352,7 +352,7 @@ function jungleFlipPostgameHistory(events: readonly JungleFlipEvent[]): {
   revealed: JungleFlipPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [], revealed: [] };
+  if (created?.type !== 'room-created') return { truth: [], revealed: [] };
   let projection = replayTenantEvents(jungleFlipTenant, [created]);
   let ply = 0;
   const truth: JungleFlipPostgameSnapshot[] = [

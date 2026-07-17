@@ -190,7 +190,7 @@ export async function tryHandle(
     return true;
   }
 
-  if (!target || target.action !== 'room') return false;
+  if (target?.action !== 'room') return false;
 
   if (request.method === 'GET') {
     const lines = await persistence.listChatLines(target.room, CHAT_POLICY.servedLines);

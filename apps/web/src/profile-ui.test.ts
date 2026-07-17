@@ -229,11 +229,14 @@ describe('profile game rows', () => {
   // log). This is the lock that a hand-maintained switch lacked, so a newly
   // launched variant can't silently regress to "vs White" / a 403 postgame.
   const tenantsWithPostgame = webVariantTenants().filter((tenant) => tenant.gameRouteBase);
-  it.each(
-    tenantsWithPostgame.map((tenant) => [tenant.gameSpecId, tenant] as const),
-  )('routes %s profile rows to its own postgame surface', (_specId, tenant) => {
-    const roomId = `${tenant.roomIdPrefix}conformance`;
-    const row = buildProfileGameRow(game({ roomId, variant: tenant.gameSpecId }));
-    expect(row.querySelector('a')?.getAttribute('href')).toBe(`${tenant.gameRouteBase}/${roomId}`);
-  });
+  it.each(tenantsWithPostgame.map((tenant) => [tenant.gameSpecId, tenant] as const))(
+    'routes %s profile rows to its own postgame surface',
+    (_specId, tenant) => {
+      const roomId = `${tenant.roomIdPrefix}conformance`;
+      const row = buildProfileGameRow(game({ roomId, variant: tenant.gameSpecId }));
+      expect(row.querySelector('a')?.getAttribute('href')).toBe(
+        `${tenant.gameRouteBase}/${roomId}`,
+      );
+    },
+  );
 });

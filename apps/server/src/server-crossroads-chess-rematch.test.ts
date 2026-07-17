@@ -186,10 +186,10 @@ test('Crossroads rematch mutual offer finalizes with colors swapped', async () =
   assert.equal(redirects.length, 2);
   const whiteRedirect = redirects.find((r) => r.client === whiteClient);
   const redRedirect = redirects.find((r) => r.client === redClient);
-  assert.equal((whiteRedirect?.payload as { seat: string }).seat, 'red');
-  assert.equal((whiteRedirect?.payload as { seatToken: string }).seatToken, 'new-red-token');
-  assert.equal((redRedirect?.payload as { seat: string }).seat, 'white');
-  assert.equal((redRedirect?.payload as { seatToken: string }).seatToken, 'new-white-token');
+  assert.equal((whiteRedirect!.payload as { seat: string }).seat, 'red');
+  assert.equal((whiteRedirect!.payload as { seatToken: string }).seatToken, 'new-red-token');
+  assert.equal((redRedirect!.payload as { seat: string }).seat, 'white');
+  assert.equal((redRedirect!.payload as { seatToken: string }).seatToken, 'new-white-token');
   assert.equal(room.rematch.finalizedRoomId, newRoom.id);
 });
 

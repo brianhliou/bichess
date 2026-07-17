@@ -484,7 +484,7 @@ async function handleAbort(room: Room, client: Client): Promise<void> {
 // ── SECTION: Room event infrastructure ─────────────────────────────────────
 function inMemoryGameSummary(roomId: string): persistence.RecentEveGameRecord | null {
   const room = rooms.get(roomId);
-  if (!room || room.projection.state.status.type !== 'finished') return null;
+  if (room?.projection.state.status.type !== 'finished') return null;
 
   const summary = buildGameSummary(roomMgrCtx, room);
   return {

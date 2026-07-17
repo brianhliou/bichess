@@ -228,7 +228,7 @@ function darkMiniXiangqiPostgameClocks(
   events: readonly DarkMiniXiangqiEvent[],
 ): Array<Record<MiniXiangqiColor, number>> {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return [];
+  if (created?.type !== 'room-created') return [];
   let projection = replayTenantEvents(darkMiniXiangqiTenant, [created]);
   const clocks: Array<Record<MiniXiangqiColor, number>> = [];
   const capture = (ply: number): void => {
@@ -268,7 +268,7 @@ function darkMiniXiangqiPostgameHistory(
   events: readonly DarkMiniXiangqiEvent[],
 ): DarkMiniXiangqiPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(darkMiniXiangqiTenant, [created]);
   let ply = 0;
   let latestMoveColor: MiniXiangqiColor | undefined;

@@ -730,7 +730,7 @@ export async function mountReplay(
     if (!annotation) return null;
     if (currentPly < 1) return null;
     const moveEvent = moveEventAtPly(events, currentPly);
-    if (!moveEvent || moveEvent.type !== 'move-played') return null;
+    if (moveEvent?.type !== 'move-played') return null;
 
     const gameIndex = annotation.gameIndexForSampleId(activeSample);
     const tier1Color = annotation.tier1ColorForSampleId(activeSample);
@@ -1002,7 +1002,7 @@ export async function mountReplay(
     const activeColor = state.status.turn;
     const clock = state.clock;
     const nextEvent = moveEventAtPly(events, nextPly);
-    if (!nextEvent || nextEvent.type !== 'move-played') return;
+    if (nextEvent?.type !== 'move-played') return;
     const startWall = performance.now();
     const tickElapsed = (): number => {
       const elapsedWall = performance.now() - startWall;

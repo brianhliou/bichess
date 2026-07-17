@@ -251,7 +251,7 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
 }
 
 function handleSquareClick(view: BanqiWireView, square: BanqiSquare): void {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = banqiClickResult(view, core.state.seat, selectedSquare, square);
   if (result.kind === 'noop') return;
   if (result.kind === 'select') {
@@ -301,7 +301,7 @@ function installBanqiBoardInteraction(liveRefs: LiveRefs): void {
 // click-only (a flip is a self-move, not a drag to another square).
 function canDragBanqiPiece(square: BanqiSquare): boolean {
   const view = core?.state.view;
-  if (!view || !core || !core.replay.isLive() || core.connection() !== 'connected') return false;
+  if (!view || !core?.replay.isLive() || core.connection() !== 'connected') return false;
   if (!isBanqiSeat(core.state.seat)) return false;
   if (view.status.type !== 'playing' || view.status.turn !== core.state.seat) return false;
   const entry = view.board[square];

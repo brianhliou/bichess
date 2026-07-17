@@ -52,7 +52,7 @@ export async function tryHandle(
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
     const game = await persistence.getHistoricalXiangqiGame(decodeURIComponent(detailMatch[1]!));
-    if (!game || game.visibility !== 'public') {
+    if (game?.visibility !== 'public') {
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }

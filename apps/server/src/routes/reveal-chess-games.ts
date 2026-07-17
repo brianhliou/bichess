@@ -137,7 +137,7 @@ function revealChessPostgameHistory(
   events: readonly RevealChessEvent[],
 ): RevealChessPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(revealChessTenant, [created]);
   let ply = 0;
   const history = postgameHistoryViews(projection, ply);

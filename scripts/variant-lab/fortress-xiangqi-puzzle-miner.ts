@@ -263,7 +263,7 @@ async function loadEventPositions(path: string): Promise<SourcePosition[]> {
     positions.push({ source: `${sourceBase}:start`, ply, state });
     for (const record of records.slice(1)) {
       const event = readObject(record);
-      if (!event || event.type !== 'move-played') continue;
+      if (event?.type !== 'move-played') continue;
       const move = parseMove(event.move);
       if (!move || !isFortressXiangqiLegalMove(state, move)) {
         stats.invalidMoves += 1;

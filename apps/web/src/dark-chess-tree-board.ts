@@ -114,7 +114,7 @@ export function createDarkChessInteractiveBoard(
   function canDrag(square: Square): boolean {
     if (!opts.enabled()) return false;
     const view = opts.getInteractionView();
-    if (!view || view.status.type !== 'playing') return false;
+    if (view?.status.type !== 'playing') return false;
     const seat = opts.seatFor(view);
     const piece = view.board[square];
     if (!piece || piece.color !== seat) return false;

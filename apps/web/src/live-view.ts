@@ -65,7 +65,7 @@ export function currentDevViews(): DevViews | null {
   if (isLive()) return liveState.devViews;
 
   const projection = currentProjection();
-  if (!projection || projection.state.variant !== 'dark-chess') return liveState.devViews;
+  if (projection?.state.variant !== 'dark-chess') return liveState.devViews;
 
   const perspective = liveState.seat === 'black' ? 'black' : 'white';
   const opponent = oppositeColor(perspective);

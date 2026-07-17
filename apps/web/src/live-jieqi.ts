@@ -218,7 +218,7 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
 }
 
 function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = jieqiClickResult(view, core.state.seat, selectedSquare, square);
   if (result.kind === 'noop') return;
   if (result.kind === 'select') {
@@ -270,7 +270,7 @@ function installJieqiBoardInteraction(liveRefs: LiveRefs): void {
 // cannot move, so this need not require a legal move right now.
 function canDragJieqiPiece(square: JieqiSquare): boolean {
   const view = core?.state.view;
-  if (!view || !core || !core.replay.isLive() || core.connection() !== 'connected') return false;
+  if (!view || !core?.replay.isLive() || core.connection() !== 'connected') return false;
   if (!isJieqiColor(core.state.seat)) return false;
   if (view.status.type !== 'playing' || view.status.turn !== core.state.seat) return false;
   const entry = view.board[square];

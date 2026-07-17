@@ -535,7 +535,7 @@ function castlingMoves(
 ): RevealChessMove[] {
   const from = kingSquare(color);
   const king = board[from];
-  if (!king || king.role !== 'king' || king.color !== color || king.faceDown) return [];
+  if (king?.role !== 'king' || king.color !== color || king.faceDown) return [];
   const enemy = oppositeRevealChessColor(color);
   if (isSquareAttacked(board, enemy, from)) return []; // cannot castle out of check
   const moves: RevealChessMove[] = [];
@@ -554,7 +554,7 @@ function castlingMoves(
 
 function isCastleMove(board: RevealChessBoard, move: RevealChessMove): CastleSide | null {
   const piece = board[move.from];
-  if (!piece || piece.role !== 'king' || piece.faceDown) return null;
+  if (piece?.role !== 'king' || piece.faceDown) return null;
   if (move.from !== kingSquare(piece.color)) return null;
   return castleSidesFor(piece.color).find((s) => s.corner === move.to) ?? null;
 }

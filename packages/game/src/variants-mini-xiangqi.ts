@@ -751,7 +751,7 @@ function miniXiangqiFacingGeneralCaptureTarget(
   if (piece.role !== 'general') return null;
   const origin = miniXiangqiCoordOf(from);
   for (const [sq, target] of Object.entries(board)) {
-    if (!target || target.role !== 'general' || target.color === piece.color) continue;
+    if (target?.role !== 'general' || target.color === piece.color) continue;
     const enemy = miniXiangqiCoordOf(sq as MiniXiangqiSquare);
     if (enemy.file !== origin.file) continue;
     const minR = Math.min(origin.rank, enemy.rank);

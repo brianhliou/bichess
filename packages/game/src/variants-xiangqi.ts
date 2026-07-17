@@ -288,7 +288,7 @@ function facingGeneralCaptureTarget(
   if (piece.role !== 'general') return null;
   const origin = coordOf(from);
   for (const [sq, target] of Object.entries(board)) {
-    if (!target || target.role !== 'general' || target.color === piece.color) continue;
+    if (target?.role !== 'general' || target.color === piece.color) continue;
     const enemy = coordOf(sq as XiangqiSquare);
     if (enemy.file !== origin.file) continue;
     const minR = Math.min(origin.rank, enemy.rank);
@@ -589,7 +589,7 @@ function generalVisionInto(
   }
   // The enemy general is also a legal capture target when the file is clear.
   for (const [sq, piece] of Object.entries(board)) {
-    if (!piece || piece.role !== 'general' || piece.color === color) continue;
+    if (piece?.role !== 'general' || piece.color === color) continue;
     const enemy = coordOf(sq as XiangqiSquare);
     if (enemy.file !== file) continue;
     const minR = Math.min(rank, enemy.rank);

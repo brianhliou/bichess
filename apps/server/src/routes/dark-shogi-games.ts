@@ -196,7 +196,7 @@ function darkShogiPostgameViews(
 
 function darkShogiPostgameHistory(events: readonly DarkShogiEvent[]): DarkShogiPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(darkShogiTenant, [created]);
   let ply = 0;
   let latestMoveColor: ShogiColor | undefined;

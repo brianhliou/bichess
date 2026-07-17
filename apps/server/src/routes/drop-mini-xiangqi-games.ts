@@ -211,7 +211,7 @@ function dropMiniXiangqiPostgameHistory(events: readonly DropMiniXiangqiEvent[])
   truth: DropMiniXiangqiPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [] };
+  if (created?.type !== 'room-created') return { truth: [] };
   let projection = replayTenantEvents(dropMiniXiangqiTenant, [created]);
   let ply = 0;
   const truth: DropMiniXiangqiPostgameSnapshot[] = [

@@ -195,8 +195,8 @@ test('mutual offer finalizes: new room created, colors swapped, per-client redir
   const whiteRedirect = redirects.find((r) => r.client === whiteClient);
   const blackRedirect = redirects.find((r) => r.client === blackClient);
   // Old white seat should be handed the black seat token in the new room (color flipped).
-  assert.equal((whiteRedirect?.payload as { seatToken: string }).seatToken, 'new-black-token');
-  assert.equal((blackRedirect?.payload as { seatToken: string }).seatToken, 'new-white-token');
+  assert.equal((whiteRedirect!.payload as { seatToken: string }).seatToken, 'new-black-token');
+  assert.equal((blackRedirect!.payload as { seatToken: string }).seatToken, 'new-white-token');
   assert.equal(room.rematch.finalizedRoomId, newRoom.id);
 });
 

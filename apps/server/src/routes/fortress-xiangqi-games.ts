@@ -355,7 +355,7 @@ function fortressXiangqiPostgameHistory(events: readonly FortressXiangqiEvent[])
   truth: FortressXiangqiPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [] };
+  if (created?.type !== 'room-created') return { truth: [] };
   let projection = replayTenantEvents(fortressXiangqiTenant, [created]);
   let ply = 0;
   const truth: FortressXiangqiPostgameSnapshot[] = [

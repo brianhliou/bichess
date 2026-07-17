@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -19,6 +19,7 @@
       "!**/articles-data.ts",
       "!apps/web/src/articles",
       "!apps/web/public/engine",
+      "!apps/web/public/**/*.svg",
       "!apps/server/fixtures/dpxq"
     ]
   },

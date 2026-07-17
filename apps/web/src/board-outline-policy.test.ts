@@ -76,10 +76,8 @@ describe('board outer-outline policy', () => {
     const revealBlock =
       reveal && articleBlocks(reveal).find((block) => block.kind === 'jieqi-replay');
     const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');
-    if (!revealBlock || revealBlock.kind !== 'jieqi-replay')
-      throw new Error('missing Reveal Xiangqi replay');
-    if (!flipBlock || flipBlock.kind !== 'banqi-replay')
-      throw new Error('missing Flip Xiangqi replay');
+    if (revealBlock?.kind !== 'jieqi-replay') throw new Error('missing Reveal Xiangqi replay');
+    if (flipBlock?.kind !== 'banqi-replay') throw new Error('missing Flip Xiangqi replay');
 
     const revealHost = document.createElement('div');
     const flipHost = document.createElement('div');

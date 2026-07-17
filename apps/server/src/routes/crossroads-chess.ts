@@ -270,7 +270,7 @@ function crossroadsChessPostgameHistory(
   events: readonly CrossroadsChessEvent[],
 ): CrossroadsChessPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(crossroadsChessTenant, [created]);
   let ply = 0;
   const history = postgameHistoryViews(projection, ply);
@@ -358,7 +358,7 @@ function crossroadsChessPostgameClocks(
   events: readonly CrossroadsChessEvent[],
 ): Array<Record<CrossroadsChessColor, number>> {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return [];
+  if (created?.type !== 'room-created') return [];
   let projection = replayTenantEvents(crossroadsChessTenant, [created]);
   const clocks: Array<Record<CrossroadsChessColor, number>> = [];
   const capture = (ply: number): void => {

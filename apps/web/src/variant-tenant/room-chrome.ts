@@ -384,7 +384,7 @@ export function createTenantRoomChrome<C extends string>(
   // rooms never read as waiting.
   function waitingForOpponent(): boolean {
     const view = ctx.view();
-    if (!view || view.status.type !== 'playing' || view.moveNumber >= 2) return false;
+    if (view?.status.type !== 'playing' || view.moveNumber >= 2) return false;
     if (ctx.connectionState() !== 'connected') return false;
     const seat = seatColor();
     if (seat === null) return false;
@@ -572,7 +572,7 @@ export function createTenantRoomChrome<C extends string>(
     refs.gameControls.replaceChildren();
     refs.gameControlsSection.hidden = true;
     const view = ctx.view();
-    if (!view || view.status.type !== 'playing' || seatColor() === null) return;
+    if (view?.status.type !== 'playing' || seatColor() === null) return;
 
     const children: HTMLElement[] = [];
     const isSideToMove = view.status.turn === ctx.seat();

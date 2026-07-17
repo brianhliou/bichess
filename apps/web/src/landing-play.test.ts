@@ -1392,7 +1392,7 @@ function lobbyPostBody(fetchSpy: ReturnType<typeof vi.fn>): Record<string, unkno
       String(input) === '/api/lobby' && (init as RequestInit | undefined)?.method === 'POST',
   );
   expect(call).toBeDefined();
-  return JSON.parse(String((call?.[1] as RequestInit).body)) as Record<string, unknown>;
+  return JSON.parse(String((call![1] as RequestInit).body)) as Record<string, unknown>;
 }
 
 function roomPostBody(fetchSpy: ReturnType<typeof vi.fn>): Record<string, unknown> {
@@ -1401,7 +1401,7 @@ function roomPostBody(fetchSpy: ReturnType<typeof vi.fn>): Record<string, unknow
       String(input) === '/api/rooms' && (init as RequestInit | undefined)?.method === 'POST',
   );
   expect(call).toBeDefined();
-  return JSON.parse(String((call?.[1] as RequestInit).body)) as Record<string, unknown>;
+  return JSON.parse(String((call![1] as RequestInit).body)) as Record<string, unknown>;
 }
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {

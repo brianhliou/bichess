@@ -129,7 +129,7 @@ export function createJungleFlipInteractiveBoard(
   function canDrag(square: JungleFlipSquare): boolean {
     if (!opts.enabled()) return false;
     const view = opts.getInteractionView();
-    if (!view || view.status.type !== 'playing') return false;
+    if (view?.status.type !== 'playing') return false;
     return canSelect(view, square);
   }
 

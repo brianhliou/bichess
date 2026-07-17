@@ -366,7 +366,7 @@ function banqiPostgameHistory(events: readonly BanqiEvent[]): {
   revealed: BanqiPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [], revealed: [] };
+  if (created?.type !== 'room-created') return { truth: [], revealed: [] };
   let projection = replayTenantEvents(banqiTenant, [created]);
   let ply = 0;
   const truth: BanqiPostgameSnapshot[] = [

@@ -100,7 +100,7 @@ export function createBanqiInteractiveBoard(
   function canDrag(square: BanqiSquare): boolean {
     if (!opts.enabled()) return false;
     const view = opts.getInteractionView();
-    if (!view || view.status.type !== 'playing') return false;
+    if (view?.status.type !== 'playing') return false;
     const entry = view.board[square];
     if (!entry || entry.faceDown) return false;
     return view.legalMoves.some((move) => move.from === square && move.to !== square);

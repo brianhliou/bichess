@@ -209,7 +209,7 @@ function renderBoardReconciled(liveRefs: LiveRefs, view: FortressXiangqiPlayerVi
 }
 
 function renderCheckStatus(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null): void {
-  if (!view || view.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
+  if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
   liveRefs.actionSection.hidden = false;
   liveRefs.actionStatus.replaceChildren();
   const notice = document.createElement('div');

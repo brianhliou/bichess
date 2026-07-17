@@ -100,7 +100,7 @@ export function createJieqiInteractiveBoard(
   function canDrag(square: JieqiSquare): boolean {
     if (!opts.enabled()) return false;
     const view = opts.getInteractionView();
-    if (!view || view.status.type !== 'playing') return false;
+    if (view?.status.type !== 'playing') return false;
     const seat = opts.seatFor(view);
     const entry = view.board[square];
     if (!seat || !entry || entry.color !== seat) return false;

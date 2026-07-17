@@ -345,7 +345,7 @@ function xiangqiPostgameHistory(events: readonly XiangqiEvent[]): {
   truth: XiangqiPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [] };
+  if (created?.type !== 'room-created') return { truth: [] };
   let projection = replayTenantEvents(xiangqiTenant, [created]);
   let ply = 0;
   const truth: XiangqiPostgameSnapshot[] = [

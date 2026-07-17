@@ -355,7 +355,7 @@ function jieqiPostgameViews(state: JieqiGameState): JieqiPostgameViews {
 
 function jieqiPostgameHistory(events: readonly JieqiEvent[]): JieqiPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(jieqiTenant, [created]);
   let ply = 0;
   const history = postgameHistoryViews(projection, ply);

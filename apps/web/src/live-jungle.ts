@@ -236,7 +236,7 @@ function installJungleBoardInteraction(liveRefs: LiveRefs): void {
 // A piece may be lifted if it's your own animal on your turn (it snaps back if dropped
 // somewhere it cannot move). Mirrors the click-to-move select rule.
 function canDragJunglePiece(square: JungleSquare): boolean {
-  if (!core || !core.canActNow() || core.connection() !== 'connected') return false;
+  if (!core?.canActNow() || core.connection() !== 'connected') return false;
   const view = core.state.view;
   const seat = core.state.seat;
   if (!view || !isJungleColor(seat)) return false;
@@ -259,7 +259,7 @@ function dropJunglePiece(liveRefs: LiveRefs, from: JungleSquare, to: JungleSquar
 }
 
 function handleSquareClick(view: JungleWireView, square: JungleSquare): void {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const seat = core.state.seat;
   if (!isJungleColor(seat) || view.status.type !== 'playing' || view.status.turn !== seat) {
     selectedSquare = null;

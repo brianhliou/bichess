@@ -95,7 +95,7 @@ function engineToMove(room: JieqiEngineRoom, seat: JieqiColor): boolean {
 function jieqiEngineRepWindow(room: JieqiEngineRoom): { fen: string; moves: string[] } {
   const events = room.events as readonly JieqiEvent[];
   const created = events[0];
-  if (!created || created.type !== 'room-created') {
+  if (created?.type !== 'room-created') {
     return { fen: jieqiStateToPikafishFen(room.projection.state), moves: [] };
   }
   let proj = replayTenantEvents(jieqiTenant, [created]);

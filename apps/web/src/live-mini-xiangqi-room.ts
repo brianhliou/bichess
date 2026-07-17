@@ -157,7 +157,7 @@ export function resetDarkMiniXiangqiReplayState(): void {
 
 export function reconcileDarkMiniXiangqiInteractionState(): void {
   const view = currentMiniView();
-  if (!view || view.status.type !== 'playing') {
+  if (view?.status.type !== 'playing') {
     selectedSquare = null;
     return;
   }
@@ -369,7 +369,7 @@ function installMiniXiangqiBoardDrag(refs: LiveRefs): void {
     canDragFrom: (square) => canDragMiniPiece(square as MiniXiangqiSquare),
     ghostHtml: (square) => {
       const entry = currentMiniView()?.board[square as MiniXiangqiSquare];
-      if (!entry || entry.shrouded !== false) return null;
+      if (entry?.shrouded !== false) return null;
       return miniXiangqiPieceGhostSvg(entry.piece);
     },
     onDragStart: (from) => {
@@ -447,7 +447,7 @@ function canInteract(view: MiniXiangqiPlayerView): boolean {
 function canSelect(view: MiniXiangqiPlayerView, square: MiniXiangqiSquare): boolean {
   if (!canInteract(view)) return false;
   const entry = view.board[square];
-  if (!entry || entry.shrouded !== false || entry.piece.color !== liveState.seat) return false;
+  if (entry?.shrouded !== false || entry.piece.color !== liveState.seat) return false;
   return view.legalMoves.some((move) => move.from === square);
 }
 

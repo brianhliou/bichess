@@ -179,7 +179,7 @@ test('a full legal-move sweep from the initial position is non-empty and self-co
   for (const sq of ALL_JUNGLE_SQUARES) {
     const piece = s.board[sq];
     const ms = getJungleLegalMovesFrom(s, sq);
-    if (!piece || piece.color !== 'red') {
+    if (piece?.color !== 'red') {
       assert.equal(ms.length, 0, `no moves from ${sq}`);
     } else {
       for (const m of ms) assert.equal(m.from, sq);

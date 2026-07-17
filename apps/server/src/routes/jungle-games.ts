@@ -195,7 +195,7 @@ export async function junglePostgameForApi(
 
 function junglePostgameHistory(events: readonly JungleEvent[]): JunglePostgameSnapshot[] {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return [];
+  if (created?.type !== 'room-created') return [];
   let projection = replayTenantEvents(jungleTenant, [created]);
   let ply = 0;
   const history: JunglePostgameSnapshot[] = [

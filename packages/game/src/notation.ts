@@ -118,7 +118,7 @@ export function promotionLetter(role: PromotionRole): string {
 
 function castlingMoveSide(state: GameState, move: Move): 'king' | 'queen' | null {
   const piece = state.board[move.from];
-  if (!piece || piece.role !== 'king' || rankOf(move.from) !== rankOf(move.to)) return null;
+  if (piece?.role !== 'king' || rankOf(move.from) !== rankOf(move.to)) return null;
 
   const target = state.board[move.to];
   if (

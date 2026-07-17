@@ -208,7 +208,7 @@ function darkXiangqiPostgameHistory(
   events: readonly DarkXiangqiEvent[],
 ): DarkXiangqiPostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   // Full ledger once; each ply's history entry gets the ledger truncated to
   // captures that had happened by that ply, so a scrubbing client sees captures
   // accumulate rather than the final tallies from the first frame.

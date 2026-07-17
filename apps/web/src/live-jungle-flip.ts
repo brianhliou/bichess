@@ -275,7 +275,7 @@ function installJungleFlipBoardInteraction(liveRefs: LiveRefs): void {
 // Only a revealed own animal can be lifted (face-down tiles are clicked to flip, not
 // dragged). It snaps back if dropped somewhere it cannot move.
 function canDragFlipPiece(square: JungleFlipSquare): boolean {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return false;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return false;
   const seat = core.state.seat;
   const view = core.state.view;
   if (!view || !isJungleFlipSeat(seat)) return false;
@@ -307,7 +307,7 @@ function dropFlipPiece(
 }
 
 function handleSquareClick(view: JungleFlipWireView, square: JungleFlipSquare): void {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const seat = core.state.seat;
   if (!isJungleFlipSeat(seat) || view.status.type !== 'playing' || view.status.turn !== seat) {
     selectedSquare = null;

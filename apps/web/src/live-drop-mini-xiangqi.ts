@@ -186,7 +186,7 @@ function renderBoardReconciled(liveRefs: LiveRefs, view: DropMiniXiangqiPlayerVi
 }
 
 function renderCheckStatus(liveRefs: LiveRefs, view: DropMiniXiangqiPlayerView | null): void {
-  if (!view || view.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
+  if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
 
   liveRefs.actionSection.hidden = false;
   liveRefs.actionStatus.replaceChildren();

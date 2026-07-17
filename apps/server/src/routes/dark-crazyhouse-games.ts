@@ -152,7 +152,7 @@ function darkCrazyhousePostgameHistory(
   events: readonly DarkCrazyhouseEvent[],
 ): DarkCrazyhousePostgameHistory {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return {};
+  if (created?.type !== 'room-created') return {};
   let projection = replayTenantEvents(darkCrazyhouseTenant, [created]);
   let ply = 0;
   let latestMoveColor: Color | undefined;

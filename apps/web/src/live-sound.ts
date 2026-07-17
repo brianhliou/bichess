@@ -800,7 +800,7 @@ function isCastleMoveInView(view: PlayerView, move: Move, color: Color): boolean
 
 function isCastleMoveOnBoard(board: Board, move: Move, color: Color): boolean {
   const piece = board[move.from];
-  if (!piece || piece.role !== 'king' || piece.color !== color) return false;
+  if (piece?.role !== 'king' || piece.color !== color) return false;
   const target = board[move.to];
   if (target?.role === 'rook' && target.color === color) return true;
   return (

@@ -193,7 +193,7 @@ function miniXiangqiPostgameHistory(events: readonly MiniXiangqiEvent[]): {
   truth: MiniXiangqiPostgameSnapshot[];
 } {
   const created = events[0];
-  if (!created || created.type !== 'room-created') return { truth: [] };
+  if (created?.type !== 'room-created') return { truth: [] };
   let projection = replayTenantEvents(miniXiangqiTenant, [created]);
   let ply = 0;
   const truth: MiniXiangqiPostgameSnapshot[] = [

@@ -595,7 +595,7 @@ function installLuzhanqiBoardInteraction(liveRefs: LiveRefs): void {
 }
 
 function handleSquareClick(view: LuzhanqiWireView, square: LuzhanqiSquare): void {
-  if (!core || !core.replay.isLive() || core.connection() !== 'connected') return;
+  if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const seat = core.state.seat;
   if (!isLuzhanqiColor(seat)) {
     selectedSquare = null;

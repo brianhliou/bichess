@@ -41,7 +41,7 @@ export function clampPlay(ms: number): number {
  */
 export function thinkingDurationForPly(events: GameEvent[], ply: number): number | null {
   const event = moveEventAtPly(events, ply);
-  if (!event || event.type !== 'move-played') return null;
+  if (event?.type !== 'move-played') return null;
   const ext = event as MovePlayedExt;
   if (typeof ext.thinkTimeMs === 'number' && ext.thinkTimeMs >= 0) {
     return ext.thinkTimeMs;
@@ -80,7 +80,7 @@ function thinkTimeDelayForPly(
   budgetMs: number | null,
 ): number | null {
   const event = moveEventAtPly(events, ply);
-  if (!event || event.type !== 'move-played') return null;
+  if (event?.type !== 'move-played') return null;
   const ext = event as MovePlayedExt;
   if (typeof ext.thinkTimeMs !== 'number' || ext.thinkTimeMs < 0) return null;
   const thinkMs = Math.max(0, ext.thinkTimeMs);
@@ -92,7 +92,7 @@ function thinkTimeDelayForPly(
 
 function recordedDelayForPly(events: GameEvent[], ply: number): number | null {
   const event = moveEventAtPly(events, ply);
-  if (!event || event.type !== 'move-played') return null;
+  if (event?.type !== 'move-played') return null;
   const previousAt = ply > 1 ? moveEventAtPly(events, ply - 1)?.at : replayStartAt(events);
   if (typeof previousAt !== 'number') return null;
 
@@ -103,7 +103,7 @@ function recordedDelayForPly(events: GameEvent[], ply: number): number | null {
 
 function computeDelayForPly(events: GameEvent[], ply: number): number | null {
   const event = moveEventAtPly(events, ply);
-  if (!event || event.type !== 'move-played') return null;
+  if (event?.type !== 'move-played') return null;
   const ext = event as MovePlayedExt;
   if (typeof ext.compute_ms === 'number' && ext.compute_ms >= 0) {
     return clampPlay(ext.compute_ms * COMPUTE_SCALE);
