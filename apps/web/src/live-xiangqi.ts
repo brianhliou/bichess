@@ -13,6 +13,9 @@
 // shrouded entries, and no visible-square gating.
 
 import {
+  applyStandardXiangqiMove,
+  createInitialXiangqiState,
+  getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
@@ -182,6 +185,27 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
       }
       if (ctx.positionChanged && view.lastMove) return ctx.latestPly + 1;
       return ctx.latestPly;
+    },
+  },
+  // Perfect information: the event log carries every move unredacted, so the
+  // full per-ply history is rebuilt through the standard kernel on mount and
+  // after every reconnect (#80). Same client-held data, no new server payload.
+  replayHistory: {
+    rebuild: ({ events, view, state }) => {
+      const perspective = isXiangqiColor(state.seat) ? state.seat : view.perspective;
+      let gameState = createInitialXiangqiState(view.id);
+      const snapshots = [{ ply: 0, view: getStandardXiangqiPlayerView(gameState, perspective) }];
+      for (const event of events) {
+        if (!isXiangqiMoveEvent(event)) continue;
+        const next = applyStandardXiangqiMove(gameState, event.move);
+        if (next === gameState) return null; // kernel rejected: keep captured history
+        gameState = next;
+        snapshots.push({
+          ply: snapshots.length,
+          view: getStandardXiangqiPlayerView(gameState, perspective),
+        });
+      }
+      return snapshots;
     },
   },
 });

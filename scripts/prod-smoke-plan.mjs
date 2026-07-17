@@ -4,8 +4,11 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 
+import { DEFAULT_PROD_BASE_URL, normalizeBaseUrl, revisionMatches } from './lib/base-url.mjs';
+import { fetchWithTimeout } from './lib/http.mjs';
+import { parsePositiveInteger, requiredValue } from './lib/smoke-args.mjs';
+
 const DEFAULT_CONFIG = 'railway.web.json';
-const DEFAULT_BASE_URL = 'https://mistboard.com';
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_PRINTED_FILES = 30;
 
@@ -225,7 +228,7 @@ function evaluateWatchPatterns(file, patterns) {
 }
 
 async function fetchProdRevision({ baseUrl, requestTimeoutMs }) {
-  const url = normalizeBaseUrl(baseUrl ?? process.env.MISTBOARD_BASE_URL ?? DEFAULT_BASE_URL);
+  const url = normalizeBaseUrl(baseUrl ?? process.env.MISTBOARD_BASE_URL ?? DEFAULT_PROD_BASE_URL);
   const response = await fetchWithTimeout(
     new URL('/api/server-status', url),
     requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
@@ -239,16 +242,6 @@ async function fetchProdRevision({ baseUrl, requestTimeoutMs }) {
     throw new Error('/api/server-status did not report build.revision');
   }
   return revision;
-}
-
-async function fetchWithTimeout(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 function matchesWatchPattern(file, pattern) {
@@ -417,32 +410,6 @@ function formatFileSection(label, values) {
   return [`#### ${label}`, '', ...printed, ''];
 }
 
-function requiredValue(args, index, flag) {
-  const value = args[index];
-  if (!value || value.startsWith('--')) throw new Error(`${flag} requires a value`);
-  return value;
-}
-
-function parsePositiveInteger(value, flag) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
-  }
-  return parsed;
-}
-
-function revisionMatches(actual, expected) {
-  return actual === expected || actual.startsWith(expected) || expected.startsWith(actual);
-}
-
-function normalizeBaseUrl(value) {
-  const url = new URL(value);
-  url.pathname = '/';
-  url.search = '';
-  url.hash = '';
-  return url;
-}
-
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
 }
@@ -456,7 +423,7 @@ function printHelp() {
 Options:
   --base <ref>             Base ref for git diff. If omitted, reads files changed by --head.
   --base-from-prod         Compare from the current production /api/server-status revision.
-  --base-url <url>         Production URL for --base-from-prod, default ${DEFAULT_BASE_URL}.
+  --base-url <url>         Production URL for --base-from-prod, default ${DEFAULT_PROD_BASE_URL}.
   --head <ref>             Head ref, default HEAD.
   --config <path>          Railway config to read, default ${DEFAULT_CONFIG}.
   --file <path>            Explicit changed file. Repeatable; skips git diff.

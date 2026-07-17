@@ -81,3 +81,54 @@ export async function saveGameAnalysisBlob<T>(
     [roomId, engineId, depth, JSON.stringify(blob)],
   );
 }
+
+// ── Incremental progress checkpoints ────────────────────────────────────────
+// A whole-game sweep / decision decomposition is expensive to produce and cheap
+// to store, so it checkpoints per item as it computes (repo rule: persist
+// expensive output incrementally) — a crash mid-sweep then loses at most one
+// in-flight eval, and the re-enqueued job resumes instead of recomputing.
+// Checkpoints live in the SAME game_analysis table under a derived engine id
+// (`<engineId>!progress` — `!` never appears in real engine ids, so no
+// collision) and, unlike final rows, they are mutable: the writer UPSERTS the
+// growing blob and deletes it once the final immutable row lands.
+
+const PROGRESS_ENGINE_ID_SUFFIX = '!progress';
+
+function progressEngineId(engineId: string): string {
+  return `${engineId}${PROGRESS_ENGINE_ID_SUFFIX}`;
+}
+
+export async function getGameAnalysisProgress<T>(
+  roomId: string,
+  engineId: string,
+  depth: number,
+): Promise<T | null> {
+  return getGameAnalysisBlob<T>(roomId, progressEngineId(engineId), depth);
+}
+
+export async function saveGameAnalysisProgress<T>(
+  roomId: string,
+  engineId: string,
+  depth: number,
+  blob: T,
+): Promise<void> {
+  if (!isInitialized()) return;
+  await getPool().query(
+    `INSERT INTO game_analysis (room_id, engine_id, depth, plies)
+       VALUES ($1, $2, $3, $4::jsonb)
+     ON CONFLICT (room_id, engine_id, depth) DO UPDATE SET plies = EXCLUDED.plies`,
+    [roomId, progressEngineId(engineId), depth, JSON.stringify(blob)],
+  );
+}
+
+export async function deleteGameAnalysisProgress(
+  roomId: string,
+  engineId: string,
+  depth: number,
+): Promise<void> {
+  if (!isInitialized()) return;
+  await getPool().query(
+    `DELETE FROM game_analysis WHERE room_id = $1 AND engine_id = $2 AND depth = $3`,
+    [roomId, progressEngineId(engineId), depth],
+  );
+}

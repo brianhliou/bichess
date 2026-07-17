@@ -21,6 +21,12 @@ import {
   winPercent,
 } from '@mistboard/game';
 import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  mapWithConcurrency,
+  resolveCachedComputation,
+} from './game-analysis-kernel.js';
+import {
   isVacuousAnalysis,
   type SweepPlyEval,
   VacuousAnalysisError,
@@ -107,6 +113,7 @@ export async function analyzeJungleFlipPostgame(
   evaluate: (
     state: JungleFlipGameState,
   ) => Promise<JungleFlipPositionEval> = evaluateJungleFlipPosition,
+  progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<JungleFlipGameAnalysis> {
   let state = createInitialJungleFlipState('analysis', deal);
   const states: JungleFlipGameState[] = [state];
@@ -114,8 +121,11 @@ export async function analyzeJungleFlipPostgame(
     state = applyJungleFlipMove(state, move);
     states.push(state);
   }
-  const plies: SweepPlyEval[] = [];
-  for (let ply = 0; ply < states.length; ply += 1) {
+  // With a progress store the sweep checkpoints after every evaluated ply and
+  // resumes from the last checkpoint (persist expensive output incrementally).
+  const resumed = progress ? await progress.load() : null;
+  const plies: SweepPlyEval[] = resumed ? [...resumed.items] : [];
+  for (let ply = plies.length; ply < states.length; ply += 1) {
     const s = states[ply]!;
     if (s.status.type !== 'playing') {
       plies.push(terminalPlyEval(ply, s));
@@ -123,6 +133,7 @@ export async function analyzeJungleFlipPostgame(
     }
     const evaluation = await evaluate(s);
     plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+    if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
   }
   return {
     engineId: JUNGLE_FLIP_ANALYSIS_ENGINE_ID,
@@ -144,14 +155,13 @@ const liveAnalysisCache: JungleFlipAnalysisCache = {
     persistence.saveGameAnalysis(roomId, engineId, depth, plies),
 };
 
-const inflightAnalysis = new Map<string, Promise<JungleFlipGameAnalysis>>();
-
 /**
- * Cache-first, coalesced whole-game analysis. A finished game's eval series is immutable given
- * (room, engine, depth): serve a stored result immediately, else compute once (sharing one
- * in-flight promise), persist it, and return. `computeIfMissing = false` makes it a pure cache
- * read (204-on-miss for GET). A scoreless (all-null) sweep throws VacuousAnalysisError and is
- * never cached, so a fixed engine can recompute later.
+ * Cache-first, coalesced whole-game analysis (shared skeleton: game-analysis-kernel).
+ * A finished game's eval series is immutable given (room, engine, depth): serve a stored
+ * result immediately, else compute once (sharing one in-flight promise), persist it, and
+ * return. `computeIfMissing = false` makes it a pure cache read (204-on-miss for GET).
+ * A scoreless (all-null) sweep throws VacuousAnalysisError and is never cached, so a
+ * fixed engine can recompute later; the route maps it to 503 analysis_engine_unavailable.
  */
 export async function resolveJungleFlipAnalysis(
   roomId: string,
@@ -166,32 +176,29 @@ export async function resolveJungleFlipAnalysis(
 ): Promise<JungleFlipGameAnalysis | null> {
   const engineId = JUNGLE_FLIP_ANALYSIS_ENGINE_ID;
   const depth = JUNGLE_FLIP_ANALYSIS_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, plies: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightAnalysis.get(key);
-  if (existing) return existing;
-
-  const compute = (async () => {
-    const analysis = analyze
-      ? await analyze(moves, deal)
-      : await analyzeJungleFlipPostgame(moves, deal);
-    // Fail closed on a scoreless sweep: never cache a vacuous (all-null) series — it would
-    // render as a flawless game forever. Throwing keeps the key uncached so a fixed engine
-    // recomputes; the route maps this to 503 analysis_engine_unavailable.
-    if (isVacuousAnalysis(analysis.plies)) throw new VacuousAnalysisError('jungle-flip');
-    await cache.save(roomId, engineId, depth, analysis.plies);
-    return analysis;
-  })();
-  inflightAnalysis.set(key, compute);
-  try {
-    return await compute;
-  } finally {
-    inflightAnalysis.delete(key);
-  }
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () => {
+      const analysis = analyze
+        ? await analyze(moves, deal)
+        : await analyzeJungleFlipPostgame(moves, deal, undefined, progress ?? undefined);
+      return analysis.plies;
+    },
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('jungle-flip');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 // ── Decision-vs-luck decomposition (Layer 2) ──────────────────────────────────────
@@ -220,6 +227,9 @@ export async function resolveJungleFlipAnalysis(
 // Lighter than the Layer-1 sweep since a flip fans out; one-time and cached.
 const JUNGLE_FLIP_DECISION_NODES = 256_000;
 const JUNGLE_FLIP_DECISION_MOVETIME_CAP_MS = 4_000;
+// Matches the jungle-flip-analysis engine pool's slot count: with launch
+// concurrency == pool slots, no fan-out eval ever waits in the pool queue.
+const JUNGLE_FLIP_DECISION_EVAL_CONCURRENCY = 2;
 
 /** One flip ply's decision-vs-luck numbers, all in WIN% from the MOVER's (seat's) POV. */
 export type JungleFlipDecision = {
@@ -303,36 +313,37 @@ async function poolMeanWin(
   }
   const entries = [...pool.values()];
   const total = entries.reduce((sum, e) => sum + e.count, 0);
-  const wins = await Promise.all(
-    entries.map((entry) => {
-      // Counterfactual: the flipped square is (entry.color, entry.role) instead of its true tile.
-      // The MULTISET of hidden pieces is FIXED — we only relocate which one lies under move.from —
-      // so we SWAP move.from's identity with a donor face-down square that holds `entry`, moving
-      // the true tile (`source`) there. Relabeling move.from ALONE would change the global counts
-      // (an off-colour draw adds a phantom piece of that ink and drops a real one of the other),
-      // which materially unbalances the position and inflates the pool-mean baseline. Mirrors banqi.
-      const cf: JungleFlipGameState = {
-        ...state,
-        board: {
-          ...state.board,
-          [move.from]: { color: entry.color, role: entry.role, faceDown: true },
-        },
-      };
-      if (entry.color !== source.color || entry.role !== source.role) {
-        const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
-          (sq) =>
-            sq !== move.from &&
-            state.board[sq]?.faceDown === true &&
-            state.board[sq]?.color === entry.color &&
-            state.board[sq]?.role === entry.role,
-        );
-        // `entry` is drawn from the hidden tiles OTHER than move.from (which holds `source` ≠
-        // `entry`), so a donor always exists; guard defensively regardless.
-        if (donor) cf.board[donor] = { color: source.color, role: source.role, faceDown: true };
-      }
-      return moverWinAfter(applyJungleFlipMove(cf, move), mover, evalPosition);
-    }),
-  );
+  // Bounded fan-out (mirrors banqi): launch concurrency == the analysis pool's
+  // slot count, so no counterfactual eval ever waits in the pool queue and one
+  // queue timeout can no longer detonate the whole batch.
+  const wins = await mapWithConcurrency(entries, JUNGLE_FLIP_DECISION_EVAL_CONCURRENCY, (entry) => {
+    // Counterfactual: the flipped square is (entry.color, entry.role) instead of its true tile.
+    // The MULTISET of hidden pieces is FIXED — we only relocate which one lies under move.from —
+    // so we SWAP move.from's identity with a donor face-down square that holds `entry`, moving
+    // the true tile (`source`) there. Relabeling move.from ALONE would change the global counts
+    // (an off-colour draw adds a phantom piece of that ink and drops a real one of the other),
+    // which materially unbalances the position and inflates the pool-mean baseline. Mirrors banqi.
+    const cf: JungleFlipGameState = {
+      ...state,
+      board: {
+        ...state.board,
+        [move.from]: { color: entry.color, role: entry.role, faceDown: true },
+      },
+    };
+    if (entry.color !== source.color || entry.role !== source.role) {
+      const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+        (sq) =>
+          sq !== move.from &&
+          state.board[sq]?.faceDown === true &&
+          state.board[sq]?.color === entry.color &&
+          state.board[sq]?.role === entry.role,
+      );
+      // `entry` is drawn from the hidden tiles OTHER than move.from (which holds `source` ≠
+      // `entry`), so a donor always exists; guard defensively regardless.
+      if (donor) cf.board[donor] = { color: source.color, role: source.role, faceDown: true };
+    }
+    return moverWinAfter(applyJungleFlipMove(cf, move), mover, evalPosition);
+  });
   let baseline = 0;
   let realized = 50;
   entries.forEach((entry, idx) => {
@@ -354,11 +365,21 @@ export async function analyzeJungleFlipDecisions(
   moves: readonly JungleFlipMove[],
   deal: JungleFlipDeal,
   deps: JungleFlipDecisionDeps = liveDecisionDeps,
+  progress?: AnalysisProgressStore<JungleFlipDecision>,
 ): Promise<JungleFlipDecision[]> {
   let state = createInitialJungleFlipState('analysis', deal);
-  const decisions: JungleFlipDecision[] = [];
+  // With a progress store, checkpoint after every graded flip and resume from
+  // the saved move cursor (quiet moves before it just re-advance the state —
+  // kernel replay is free; the engine fan-outs are what we refuse to redo).
+  const resumed = progress ? await progress.load() : null;
+  const decisions: JungleFlipDecision[] = resumed ? [...resumed.items] : [];
+  const startIndex = resumed?.nextIndex ?? 0;
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
+    if (i < startIndex) {
+      state = applyJungleFlipMove(state, move);
+      continue;
+    }
     const source = state.board[move.from];
     const mover: JungleFlipSeat = state.status.type === 'playing' ? state.status.turn : 'red';
     const isFlip =
@@ -390,6 +411,7 @@ export async function analyzeJungleFlipDecisions(
       const bestWin = baselines.length ? Math.max(...baselines) : playedWin;
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
       decisions.push({ ply: i + 1, mover, bestWin, playedWin, realizedWin, playedRank });
+      if (progress) await progress.save({ nextIndex: i + 1, items: decisions });
     }
     state = applyJungleFlipMove(state, move);
   }
@@ -420,8 +442,6 @@ const liveDecisionsCache: JungleFlipDecisionsCache = {
     persistence.saveGameAnalysisBlob(roomId, engineId, depth, decisions),
 };
 
-const inflightDecisions = new Map<string, Promise<JungleFlipDecision[]>>();
-
 export type JungleFlipDecisionsResult = {
   engineId: string;
   depth: number;
@@ -430,11 +450,12 @@ export type JungleFlipDecisionsResult = {
 
 /**
  * Cache-first, coalesced decision-vs-luck decomposition (the heavier, opt-in tier on top of the
- * basic eval sweep). Self-contained — it recomputes realized in the same search as the mean it is
- * compared against, so it needs no Layer-1 sweep input. A scoreless decomposition (flips exist but
- * every win% is the null-eval 50/50) fails closed like the basic sweep: throws, caches nothing. A
- * game with no flip plies caches an empty array. The `depth` cache dimension is the family nominal
- * (the real dial is the node budget, encoded in the engine id).
+ * basic eval sweep; shared skeleton: game-analysis-kernel). Self-contained — it recomputes
+ * realized in the same search as the mean it is compared against, so it needs no Layer-1 sweep
+ * input. A scoreless decomposition (flips exist but every win% is the null-eval 50/50) fails
+ * closed like the basic sweep: throws, caches nothing; the route maps it to 503. A game with no
+ * flip plies caches an empty array. The `depth` cache dimension is the family nominal (the real
+ * dial is the node budget, encoded in the engine id).
  */
 export async function resolveJungleFlipDecisions(
   roomId: string,
@@ -449,34 +470,30 @@ export async function resolveJungleFlipDecisions(
 ): Promise<JungleFlipDecisionsResult | null> {
   const engineId = JUNGLE_FLIP_DECISIONS_ENGINE_ID;
   const depth = JUNGLE_FLIP_ANALYSIS_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, decisions: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightDecisions.get(key);
-  if (existing) return existing.then((decisions) => ({ engineId, depth, decisions }));
-
-  const compute = (async () => {
-    const decisions = analyze
-      ? await analyze(moves, deal)
-      : await analyzeJungleFlipDecisions(moves, deal);
-    // Fail closed on a scoreless decomposition: a scoreless engine makes every position eval null,
-    // so every win% collapses to 50 (best === played === realized). Never cache that.
-    if (
-      decisions.length > 0 &&
-      decisions.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
-    ) {
-      throw new VacuousAnalysisError('jungle-flip');
-    }
-    await cache.save(roomId, engineId, depth, decisions);
-    return decisions;
-  })();
-  inflightDecisions.set(key, compute);
-  try {
-    return { engineId, depth, decisions: await compute };
-  } finally {
-    inflightDecisions.delete(key);
-  }
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<JungleFlipDecision>(roomId, engineId, depth);
+  const decisions = await resolveCachedComputation<JungleFlipDecision[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: () =>
+      analyze
+        ? analyze(moves, deal)
+        : analyzeJungleFlipDecisions(moves, deal, undefined, progress ?? undefined),
+    validate: (series) => {
+      // A scoreless engine makes every position eval null, so every win% collapses to 50
+      // (best === played === realized). Never cache that; a fixed engine recomputes.
+      if (
+        series.length > 0 &&
+        series.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
+      ) {
+        throw new VacuousAnalysisError('jungle-flip');
+      }
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return decisions ? { engineId, depth, decisions } : null;
 }

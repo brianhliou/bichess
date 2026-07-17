@@ -22,7 +22,9 @@ import {
 } from './index.js';
 
 test('Mini Xiangqi puzzle registry validates', () => {
-  assert.equal(MINI_XIANGQI_PUZZLES.length, 36);
+  // The 12 hand-built fixtures; the SERVED corpus (these + the mined drop-mini
+  // set) is the seed asset since #183 (see puzzles-seed.test.ts).
+  assert.equal(MINI_XIANGQI_PUZZLES.length, 12);
 
   for (const puzzle of MINI_XIANGQI_PUZZLES) {
     const result = validateMiniXiangqiPuzzle(puzzle);
@@ -67,10 +69,6 @@ test('puzzle lookup and variant filtering expose Mini and Drop Mini tracks', () 
       'drop-mini-xiangqi-red-cannon-clearance-mate-1',
       'drop-mini-xiangqi-red-twin-cannon-mate-1',
       'drop-mini-xiangqi-black-cannon-ladder-mate-1',
-      ...Array.from(
-        { length: 24 },
-        (_, index) => `drop-mini-xiangqi-mined-${String(index + 1).padStart(3, '0')}`,
-      ),
       'drop-mini-xiangqi-black-chariot-drop-mate-1',
     ],
   );

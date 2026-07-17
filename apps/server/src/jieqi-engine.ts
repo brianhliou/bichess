@@ -19,6 +19,7 @@ import {
   runUciEval,
   runUciMultiPv,
   UciEnginePool,
+  UciEngineSession,
   type UciEval,
   type UciMultiPvLine,
 } from './uci-engine-harness.js';
@@ -71,6 +72,20 @@ const enginePool = new UciEnginePool({
   maxProcessesEnvVar: 'MISTBOARD_PIKAFISH_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'pikafish-jieqi concurrency queue timed out',
+});
+
+// Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
+// never from the live pool above, so analysis compute can never occupy a live
+// bot-move slot (the queue-timeout starvation in #208/#168). Two slots match the
+// decisions fan-out concurrency (see mapWithConcurrency call sites); the longer
+// default queue timeout gives queued analysis evals headroom instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'pikajieqi-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_PIKAFISH_JIEQI_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_JIEQI_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'pikafish-jieqi analysis queue timed out',
 });
 
 // Resolve the PikaJieQi binary: explicit env override, else the known dev location,
@@ -136,7 +151,7 @@ export function jieqiEngineBinaryAvailable(): boolean {
 // engines, Pikafish ALREADY emits `info score` — no engine change was needed here, so this just
 // reads what the binary already prints. The dial is a fixed search DEPTH (CPU-independent
 // result, so the cached analysis stays stable) with a movetime cap bounding latency. Gated
-// through the shared pool so a sweep runs sequentially rather than stampeding the binary. Caller
+// through the dedicated ANALYSIS pool so a sweep can never occupy a live bot-move slot. Caller
 // owns POV normalization; the redacted (as-played info-state) FEN is sent as-is — the engine
 // never sees a hidden id.
 export async function evaluateJieqiFen(
@@ -151,7 +166,7 @@ export async function evaluateJieqiFen(
     `position fen ${fen}`,
     `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
   ];
-  const release = await enginePool.acquire();
+  const release = await analysisPool.acquire();
   try {
     return await runUciEval({
       bin: pikaJieqiPath(),
@@ -164,6 +179,45 @@ export async function evaluateJieqiFen(
   }
 }
 
+/**
+ * Run `fn` with a FEN evaluator backed by ONE persistent PikaJieQi process (the
+ * xiangqi #168 pattern): binary spawn + option setup (including the optional
+ * MISTBOARD_PIKAFISH_NET EvalFile — exactly what the per-spawn path loads) happen
+ * once for the whole sweep, then each position is a `position fen …` + `go depth
+ * N movetime T` round-trip — the EXACT go command evaluateJieqiFen sends, so the
+ * eval semantics (and the versioned analysis engine id) are unchanged. Scores are
+ * side-to-move POV; the caller owns normalization, and the redacted FEN is sent
+ * as-is (the engine never sees a hidden id). Holds one analysis-pool slot for the
+ * duration, so a sweep never occupies a live bot-move slot; the session is always
+ * killed on the way out.
+ */
+export async function withJieqiAnalysisSession<T>(
+  fn: (
+    evaluateFen: (fen: string, opts: { depth: number; movetimeMs: number }) => Promise<UciEval>,
+  ) => Promise<T>,
+): Promise<T> {
+  const release = await analysisPool.acquire();
+  const session = new UciEngineSession({
+    bin: pikaJieqiPath(),
+    name: 'pikafish-jieqi-analysis',
+    initCommands: ['uci', ...netOption(), 'ucinewgame', 'isready'],
+  });
+  try {
+    await session.ready();
+    return await fn((fen, opts) =>
+      session.evalPosition({
+        positionCommand: `position fen ${fen}`,
+        goCommand: `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
+        timeoutMs: opts.movetimeMs + 4_000,
+        timeoutMessage: 'pikafish-jieqi analysis eval timed out',
+      }),
+    );
+  } finally {
+    session.close();
+    release();
+  }
+}
+
 // Decision-vs-luck analysis (Layer 2): the per-root-move EV table for a redacted position, in
 // ONE search. Pikafish models dark pieces as chance nodes, so each root move's score is its
 // probability-weighted (downside-adjusted) EXPECTED value over the reveal pool — an honest,
@@ -171,7 +225,7 @@ export async function evaluateJieqiFen(
 // move is unreliable under jieqi's noisy no-net eval (verified: the plain best and the MultiPV
 // best disagree); the MultiPV table is internally consistent (all rows same conditions), which
 // is what the bestEV-vs-playedEV comparison needs. `multiPv` bounds the table width (cost scales
-// with it). Scores are side-to-move POV; the caller normalizes. Gated through the shared pool.
+// with it). Scores are side-to-move POV; the caller normalizes. Gated through the analysis pool.
 export async function evaluateJieqiMultiPv(
   fen: string,
   opts: { depth: number; movetimeMs: number; multiPv: number },
@@ -185,7 +239,7 @@ export async function evaluateJieqiMultiPv(
     `position fen ${fen}`,
     `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
   ];
-  const release = await enginePool.acquire();
+  const release = await analysisPool.acquire();
   try {
     return await runUciMultiPv({
       bin: pikaJieqiPath(),
@@ -213,7 +267,7 @@ export async function evaluateJieqiMoveEv(
     `position fen ${fen}`,
     `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs} searchmoves ${move}`,
   ];
-  const release = await enginePool.acquire();
+  const release = await analysisPool.acquire();
   try {
     return await runUciEval({
       bin: pikaJieqiPath(),

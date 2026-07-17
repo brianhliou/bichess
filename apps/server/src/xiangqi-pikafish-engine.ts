@@ -20,7 +20,13 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { runUciBestmove, runUciEval, UciEnginePool } from './uci-engine-harness.js';
+import {
+  runUciBestmove,
+  runUciEval,
+  UciEnginePool,
+  UciEngineSession,
+  type UciEval,
+} from './uci-engine-harness.js';
 
 // Xiangqi -> engine UCI now lives in @mistboard/game so the browser FSF-wasm
 // analysis engine and this server Pikafish path share one converter. Re-exported
@@ -146,12 +152,29 @@ const XIANGQI_ENGINE_BY_ID: ReadonlyMap<string, XiangqiEngineTier> = new Map(
 );
 
 // Small per-process slot pool (Tier-B UCI subprocess; shared harness). Reuses the
-// same env knobs as the Jieqi Pikafish pool.
+// same env knobs as the Jieqi Pikafish pool. LIVE PvE moves only — analysis sweeps
+// run on their own pool below so a whole-game sweep never starves a live bot move.
 const enginePool = new UciEnginePool({
   name: 'pikafish-xiangqi',
   maxProcessesEnvVar: 'MISTBOARD_PIKAFISH_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_QUEUE_TIMEOUT_MS',
   queueTimeoutMessage: 'pikafish-xiangqi concurrency queue timed out',
+});
+
+// Dedicated ANALYSIS pool (#168): a whole-game sweep holds one persistent engine
+// process for its full duration (up to minutes). On the shared live pool that
+// pinned one of ~2 slots and queued live bot moves into the 5s queue timeout
+// mid-game; a separate pool makes the isolation structural — analysis acquires
+// can never occupy a live-move slot. One slot by default (analysis is a batch
+// workload; parallel sweeps just fight for CPU), and a generous queue timeout so
+// queued sweep jobs wait instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'pikafish-xiangqi-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_PIKAFISH_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_PIKAFISH_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 1,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'pikafish-xiangqi analysis queue timed out',
 });
 
 // Resolve the mainline Pikafish binary: explicit env override, else the known dev
@@ -292,6 +315,16 @@ export function xiangqiEngineMove(
 /** Fixed analysis depth: comparable evals across every ply of a game (P3). */
 export const XIANGQI_ANALYSIS_DEPTH = 18;
 
+// Node budget per analysed position for the whole-game sweep (#168). A node
+// budget gives uniform compute per position (no depth-parity sawtooth) and a
+// CPU-independent, reproducible eval — the lichess/fishnet user-request tier is
+// 1M nodes, which the persistent session makes affordable.
+export const XIANGQI_ANALYSIS_NODES = 1_000_000;
+// Hard per-position wall-clock guard for a sweep eval. 1M nodes is normally a
+// few seconds; this only fires when the engine wedges (then the session dies
+// and the sweep fails closed rather than hanging the job).
+const XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS = 30_000;
+
 export type XiangqiPositionEval = {
   /** Centipawns from RED's POV (positive = Red better); null when mate is set. */
   cp: number | null;
@@ -302,12 +335,34 @@ export type XiangqiPositionEval = {
   depth: number;
 };
 
+// Normalize a side-to-move UCI eval to RED's POV. Red moves first, so Black is
+// to move after an odd number of plies; flip the sign then. `mate 0` = the side
+// to move is already checkmated (a loss for them): 0 cannot carry the POV sign,
+// so encode it as a decisive cp instead — otherwise the winner's mating move
+// looks like it dropped to a loss.
+function redPovEval(evaluation: UciEval, plyCount: number): XiangqiPositionEval {
+  const sign = plyCount % 2 === 0 ? 1 : -1;
+  if (evaluation.mate === 0) {
+    return { cp: sign * -30000, mate: null, best: evaluation.best, depth: evaluation.depth };
+  }
+  return {
+    cp: evaluation.cp == null ? null : evaluation.cp * sign,
+    mate: evaluation.mate == null ? null : evaluation.mate * sign,
+    best: evaluation.best,
+    depth: evaluation.depth,
+  };
+}
+
+function positionCommand(moves: readonly string[]): string {
+  return moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
+}
+
 /**
- * Full-strength eval of a xiangqi position for postgame analysis (P3). Unlike the
- * bot move (node-limited), this runs uncapped to a FIXED DEPTH so a whole-game
- * series is comparable, and normalises the side-to-move UCI score to RED's POV so
- * the advantage chart and accuracy are coherent across the game. Concurrency is
- * gated by the shared engine pool.
+ * Full-strength eval of ONE xiangqi position (P3), normalised to RED's POV so
+ * the advantage chart and accuracy are coherent across a game. One spawn per
+ * call (net reload included) — fine for a single position; whole-game sweeps
+ * must use withXiangqiAnalysisSession instead. Concurrency is gated by the
+ * shared live engine pool.
  */
 export async function evaluateXiangqiPosition(
   moves: string[],
@@ -316,14 +371,12 @@ export async function evaluateXiangqiPosition(
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
   const depth = Math.max(1, Math.floor(opts.depth ?? XIANGQI_ANALYSIS_DEPTH));
-  const position =
-    moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
   const commands = [
     'uci',
     `setoption name EvalFile value ${net}`,
     'ucinewgame',
     'isready',
-    position,
+    positionCommand(moves),
     `go depth ${depth}`,
   ];
   const release = await enginePool.acquire();
@@ -334,22 +387,47 @@ export async function evaluateXiangqiPosition(
       timeoutMs: 20_000,
       timeoutMessage: 'pikafish-xiangqi eval timed out',
     });
-    // Red moves first, so Black is to move after an odd number of plies; flip the
-    // side-to-move score to Red's POV.
-    const sign = moves.length % 2 === 0 ? 1 : -1;
-    // `mate 0` = the side to move is already checkmated (a loss for them). 0 can't
-    // carry the POV sign, so encode it as a decisive cp instead — otherwise the
-    // winner's mating move looks like it dropped to a loss.
-    if (evaluation.mate === 0) {
-      return { cp: sign * -30000, mate: null, best: evaluation.best, depth: evaluation.depth };
-    }
-    return {
-      cp: evaluation.cp == null ? null : evaluation.cp * sign,
-      mate: evaluation.mate == null ? null : evaluation.mate * sign,
-      best: evaluation.best,
-      depth: evaluation.depth,
-    };
+    return redPovEval(evaluation, moves.length);
   } finally {
+    release();
+  }
+}
+
+/**
+ * Run `fn` with a position evaluator backed by ONE persistent Pikafish process
+ * (#168): binary spawn, option setup, and the NNUE net load happen once for the
+ * whole sweep, then each position is an incremental `position startpos moves …`
+ * + `go nodes N` round-trip. The evaluator normalises to RED's POV (same math
+ * as evaluateXiangqiPosition). Holds one DEDICATED analysis-pool slot for the
+ * duration, so a sweep never competes with live PvE moves; the session is
+ * always killed on the way out.
+ */
+export async function withXiangqiAnalysisSession<T>(
+  fn: (evaluate: (moves: string[]) => Promise<XiangqiPositionEval>) => Promise<T>,
+  opts: { nodes?: number } = {},
+): Promise<T> {
+  const bin = pikafishXiangqiPath();
+  const net = pikafishXiangqiNetPath(bin);
+  const nodes = Math.max(1, Math.floor(opts.nodes ?? XIANGQI_ANALYSIS_NODES));
+  const release = await analysisPool.acquire();
+  const session = new UciEngineSession({
+    bin,
+    name: 'pikafish-xiangqi-analysis',
+    initCommands: ['uci', `setoption name EvalFile value ${net}`, 'ucinewgame', 'isready'],
+  });
+  try {
+    await session.ready();
+    return await fn(async (moves) => {
+      const evaluation = await session.evalPosition({
+        positionCommand: positionCommand(moves),
+        goCommand: `go nodes ${nodes}`,
+        timeoutMs: XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS,
+        timeoutMessage: 'pikafish-xiangqi analysis eval timed out',
+      });
+      return redPovEval(evaluation, moves.length);
+    });
+  } finally {
+    session.close();
     release();
   }
 }

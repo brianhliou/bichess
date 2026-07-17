@@ -20,7 +20,8 @@
       "!apps/web/src/articles",
       "!apps/web/public/engine",
       "!apps/web/public/**/*.svg",
-      "!apps/server/fixtures/dpxq"
+      "!apps/server/fixtures/dpxq",
+      "!packages/game/seed"
     ]
   },
   "formatter": {

@@ -9,6 +9,7 @@ import {
   moveJudgment,
   winPercent,
 } from '@mistboard/game';
+import { postAnalysisJob } from './analysis-job-poll.js';
 
 /** One eval point from the server: position AFTER `ply` plies, from Red's POV. */
 export type PlyEval = {
@@ -232,11 +233,12 @@ function analysisUrl(variant: string, roomId: string): string {
   ).pathname;
 }
 
-/** POST the analysis request for a finished game and compute the derived view. */
+/** POST the analysis request for a finished game and compute the derived view.
+ *  A cached game answers immediately (200); otherwise the server enqueues a
+ *  background job (202) and this polls it to completion (see analysis-job-poll). */
 export async function requestGameAnalysis(variant: string, roomId: string): Promise<GameAnalysis> {
-  const response = await fetch(analysisUrl(variant, roomId), { method: 'POST' });
-  if (!response.ok) throw new Error(`analysis_request_failed_${response.status}`);
-  return computeGameAnalysis((await response.json()) as XiangqiGameAnalysisResponse);
+  const body = await postAnalysisJob<XiangqiGameAnalysisResponse>(analysisUrl(variant, roomId));
+  return computeGameAnalysis(body);
 }
 
 /** GET the already-cached analysis, or null if it hasn't been computed yet (204).

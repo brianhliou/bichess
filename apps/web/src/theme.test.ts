@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  buildAppearanceMenu,
   initializeThemeSettings,
   readStoredSiteTheme,
   setSiteThemePreference,
@@ -110,10 +111,10 @@ describe('appearance family gating', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('puts signed-out language choices inside the gear menu', () => {
+  it('puts signed-out language choices inside the gear menu', async () => {
     window.history.replaceState(null, '', '/zh-hant/rules/flip-xiangqi');
 
-    rebuildThemePanel();
+    await rebuildThemePanel();
 
     expect(document.querySelector('.site-nav-language')).toBeNull();
     expect(
@@ -133,8 +134,8 @@ describe('appearance family gating', () => {
     ).toBe('zh-Hant');
   });
 
-  it('renders signed-out sound, appearance, and connection controls in the gear menu', () => {
-    rebuildThemePanel();
+  it('renders signed-out sound, appearance, and connection controls in the gear menu', async () => {
+    await rebuildThemePanel();
 
     expect(document.querySelector('[data-theme-control] .account-nav-status')).not.toBeNull();
 
@@ -177,14 +178,14 @@ describe('appearance family gating', () => {
     ).toEqual(['Device theme', 'Light', 'Dark']);
   });
 
-  it('surfaces current xiangqi and chess settings without retired shogi controls', () => {
+  it('surfaces current xiangqi and chess settings without retired shogi controls', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
 
-    rebuildThemePanel();
+    await rebuildThemePanel();
 
     const familyGroup = document.querySelector<HTMLElement>('[data-board-family-select]');
     expect(
@@ -219,13 +220,13 @@ describe('appearance family gating', () => {
     expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('intersection');
   });
 
-  it('keeps Crossroads inside the xiangqi appearance family', () => {
+  it('keeps Crossroads inside the xiangqi appearance family', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
 
-    rebuildThemePanel();
+    await rebuildThemePanel();
 
     const familyGroup = document.querySelector<HTMLElement>('[data-board-family-select]');
     expect(
@@ -240,8 +241,8 @@ describe('appearance family gating', () => {
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
   });
 
-  it('surfaces the Game toggle + xiangqi pickers without xiangqi env flags', () => {
-    rebuildThemePanel();
+  it('surfaces the Game toggle + xiangqi pickers without xiangqi env flags', async () => {
+    await rebuildThemePanel();
 
     expect(document.querySelector('[data-board-family-select]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
@@ -249,8 +250,8 @@ describe('appearance family gating', () => {
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
   });
 
-  it('opens board and piece settings on the first Xiangqi family option by default', () => {
-    rebuildThemePanel();
+  it('opens board and piece settings on the first Xiangqi family option by default', async () => {
+    await rebuildThemePanel();
 
     for (const key of ['board', 'pieces']) {
       document.querySelector<HTMLButtonElement>(`[data-appearance-target="${key}"]`)?.click();
@@ -268,11 +269,42 @@ describe('appearance family gating', () => {
       submenu?.querySelector<HTMLButtonElement>('.appearance-submenu-back')?.click();
     }
   });
+
+  it('swaps the real appearance menu into the buildAppearanceMenu facade placeholder', async () => {
+    // account-nav embeds the menu synchronously; the facade returns an empty
+    // .appearance-menu holder and replaces it once the lazy settings chunk
+    // lands, so the embed contract stays synchronous without the panel code
+    // riding in the entry chunk.
+    const host = document.createElement('div');
+    document.body.append(host);
+    const holder = buildAppearanceMenu();
+    host.append(holder);
+
+    expect(holder.classList.contains('appearance-menu')).toBe(true);
+    expect(holder.querySelector('[data-appearance-target]')).toBeNull();
+
+    await vi.waitFor(() => {
+      if (!host.querySelector('[data-appearance-target="sound"]')) {
+        throw new Error('appearance menu not swapped in yet');
+      }
+    });
+    // The placeholder was replaced, not nested: still exactly one menu element.
+    expect(host.querySelectorAll('.appearance-menu')).toHaveLength(1);
+  });
 });
 
 // Drop any panel the persistent nav observer mounted before the flag stub, then
-// rebuild from scratch so the panel reflects the env stubbed in this test.
-function rebuildThemePanel(): void {
+// rebuild from scratch so the panel reflects the env stubbed in this test. The
+// panel body lives in the lazily loaded theme-settings-panel chunk and is built
+// on first gear open, so exercise that real path: click the trigger and wait
+// for the menu rows to land.
+async function rebuildThemePanel(): Promise<void> {
   for (const control of document.querySelectorAll('[data-theme-control]')) control.remove();
   initializeThemeSettings();
+  document.querySelector<HTMLButtonElement>('.theme-control-trigger')?.click();
+  await vi.waitFor(() => {
+    if (!document.querySelector('[data-theme-control] [data-appearance-target]')) {
+      throw new Error('settings panel not populated yet');
+    }
+  });
 }

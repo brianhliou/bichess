@@ -1,6 +1,9 @@
 // Unit tests for the generic live-client core: frame application, replay
-// capture policies, the two-column move list (masked and unmasked), and the
-// disabled branch. Drives a client through the socketFactory test seam with a
+// capture policies, the two-column move list (masked and unmasked), the
+// disabled branch, the replay-history rebuild hook (per-ply views from the
+// event log on mount/reconnect, #80), the custom move-list renderer hook
+// (clickable ply jump, #84), and the fog hidden-info regression for the
+// replay path. Drives a client through the socketFactory test seam with a
 // minimal two-color test variant; no real WebSocket.
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -11,9 +14,11 @@ import {
   type TenantLiveClientConfig,
   type TenantLiveEvent,
   type TenantLiveFrame,
+  type TenantMoveListRenderContext,
   type TenantMovePlayed,
   type TenantPendingAnimation,
 } from './live-client.js';
+import { createTenantReplayController } from './replay-controller.js';
 import type { TenantWebView, WebVariantTenant } from './room-chrome.js';
 import type { TenantSocketClientOptions } from './socket-client.js';
 
@@ -352,5 +357,273 @@ describe('animateBoard hook (one-shot pending-animation channel)', () => {
     // Drained again on the following render.
     h.client.renderAll();
     expect(h.pendings.at(-1)).toBeNull();
+  });
+});
+
+describe('replayHistory hook (per-ply rebuild from the event log, #80)', () => {
+  // Toy kernel: replay move events onto an empty square map (ply = move count,
+  // ply 0 = initial position) — the shape real tenants implement with their
+  // variant kernel from @mistboard/game.
+  function rebuildFromLog(events: readonly TenantLiveEvent[]): Array<{ ply: number; view: TView }> {
+    const squares: Record<string, TColor> = {};
+    const snapshots = [{ ply: 0, view: view({ squares: { ...squares } }) }];
+    for (const event of events) {
+      if (!isTestMoveEvent(event)) continue;
+      squares[event.move.to] = event.color;
+      snapshots.push({ ply: snapshots.length, view: view({ squares: { ...squares } }) });
+    }
+    return snapshots;
+  }
+
+  function rebuildHarness(): Harness {
+    return createHarness({
+      replayHistory: { rebuild: ({ events }) => rebuildFromLog(events) },
+    });
+  }
+
+  it('rebuilds the full per-ply history from a hello frame (fresh mount of a played game)', () => {
+    const h = rebuildHarness();
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    expect(h.client.replay.historyLength()).toBe(3);
+    expect(h.client.replay.latestPly()).toBe(2);
+    // Stepping works immediately: the board shows the rebuilt earlier plies.
+    h.client.replay.handleControl('prev');
+    h.client.renderAll();
+    expect(h.boardRenders.at(-1)?.squares).toEqual({ a2: 'red' });
+    h.client.replay.handleControl('first');
+    h.client.renderAll();
+    expect(h.boardRenders.at(-1)?.squares).toEqual({});
+  });
+
+  it('#80: a reconnect snapshot restores stepping for a client that only held the final view', () => {
+    const h = rebuildHarness();
+    h.feedHello({ state: view() });
+    expect(h.client.replay.historyLength()).toBe(1);
+    // Reconnect/resync delivers the final state + the full event log in one
+    // snapshot — previously the client kept a single ply and ‹/› were dead.
+    h.feedSnapshot({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    expect(h.client.replay.historyLength()).toBe(3);
+    expect(h.client.replay.controlDisabled('prev')).toBe(false);
+    h.client.replay.handleControl('prev');
+    h.client.renderAll();
+    expect(h.boardRenders.at(-1)?.squares).toEqual({ a2: 'red' });
+  });
+
+  it('does not re-capture the rebuilt live view on subsequent renders', () => {
+    const h = rebuildHarness();
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1)],
+      state: view({ squares: { a2: 'red' } }),
+    });
+    expect(h.client.replay.historyLength()).toBe(2);
+    h.client.renderAll();
+    h.client.renderAll();
+    expect(h.client.replay.historyLength()).toBe(2);
+  });
+
+  it('a null rebuild keeps the incrementally captured history (kernel-reject fallback)', () => {
+    const h = createHarness({ replayHistory: { rebuild: () => null } });
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    // Capture-only: the single received view.
+    expect(h.client.replay.historyLength()).toBe(1);
+  });
+});
+
+describe('custom move-list renderer hook (clickable ply jump, #84)', () => {
+  type ListCtx = TenantMoveListRenderContext<TColor, TMove>;
+
+  function customHarness(): Harness & { listContexts: ListCtx[] } {
+    const listContexts: ListCtx[] = [];
+    const h = createHarness({
+      replayHistory: {
+        rebuild: ({ events }) => {
+          const squares: Record<string, TColor> = {};
+          const snapshots = [{ ply: 0, view: view({ squares: { ...squares } }) }];
+          for (const event of events) {
+            if (!isTestMoveEvent(event)) continue;
+            squares[event.move.to] = event.color;
+            snapshots.push({ ply: snapshots.length, view: view({ squares: { ...squares } }) });
+          }
+          return snapshots;
+        },
+      },
+      moveList: {
+        rowClass: 'move-row test-move-row',
+        cellPrefix: 'test-move-row',
+        masked: false,
+        notate: (move) => `${move.from}-${move.to}`,
+        isMoveEvent: isTestMoveEvent,
+        render: (ctx) => {
+          listContexts.push(ctx);
+          ctx.refs.moveList.replaceChildren();
+          ctx.moves.forEach((move, index) => {
+            const item = document.createElement('li');
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'jump';
+            button.textContent = `${move.move.from}-${move.move.to}`;
+            button.addEventListener('click', () => ctx.jumpToPly(index + 1));
+            item.append(button);
+            ctx.refs.moveList.append(item);
+          });
+        },
+      },
+    });
+    return Object.assign(h, { listContexts });
+  }
+
+  function jumpButtons(h: Harness): HTMLButtonElement[] {
+    return [...h.refs().moveList.querySelectorAll<HTMLButtonElement>('button.jump')];
+  }
+
+  it('delegates the list to the tenant renderer instead of the standard two-column rows', () => {
+    const h = customHarness();
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    expect(jumpButtons(h)).toHaveLength(2);
+    expect(h.refs().moveList.querySelector('.test-move-row__move')).toBeNull();
+  });
+
+  it('jumpToPly scrubs the board to the clicked ply and re-renders', () => {
+    const h = customHarness();
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    jumpButtons(h)[0].click();
+    expect(h.client.replay.isLive()).toBe(false);
+    expect(h.client.replay.activePly()).toBe(1);
+    expect(h.boardRenders.at(-1)?.squares).toEqual({ a2: 'red' });
+    // The re-render handed the renderer the scrubbed context.
+    expect(h.listContexts.at(-1)?.activePly).toBe(1);
+  });
+
+  it('jumping to the latest ply returns to live', () => {
+    const h = customHarness();
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' }, moveNumber: 2 }),
+    });
+    jumpButtons(h)[0].click();
+    expect(h.client.replay.isLive()).toBe(false);
+    jumpButtons(h)[1].click();
+    expect(h.client.replay.isLive()).toBe(true);
+  });
+});
+
+describe('hidden-info regression: fog replay path never synthesizes views', () => {
+  // Fog tenants must NOT configure replayHistory: their event logs are
+  // redacted (opponent moves are omitted or stripped by the server), so a
+  // client-side rebuild is impossible without widening the payload with
+  // hidden information. The invariant under test: every view the replay path
+  // ever shows is one the server actually sent this client, and a reconnect
+  // leaves a single-ply history (stepping disabled) rather than fabricating
+  // earlier positions.
+  function fogHarness(): Harness {
+    return createHarness(
+      {
+        replayCapture: {
+          positionKey: (v) => JSON.stringify(v.squares),
+          // Fog ply policy: derive from moveNumber + turn (red moves first);
+          // redacted opponent moves never arrive as events.
+          plyForView: (v) =>
+            Math.max(0, v.moveNumber - 1) * 2 +
+            (v.status.type === 'playing' && v.status.turn === 'red' ? 0 : 1),
+        },
+      },
+      { masked: true },
+    );
+  }
+
+  it('a fresh mount into a played fog game holds ONLY the received view; stepping stays disabled', () => {
+    const h = fogHarness();
+    // Reload/reconnect of a game after two plies: the hello carries the final
+    // fog view + the REDACTED log (own move only; the opponent ply is absent).
+    h.feedHello({
+      seat: 'red',
+      events: [moveEvent('red', 'a1', 'a2', 1)],
+      state: view({ moveNumber: 2, squares: { a2: 'red', z9: 'blue' } }),
+    });
+    expect(h.client.replay.historyLength()).toBe(1);
+    expect(h.client.replay.controlDisabled('prev')).toBe(true);
+    expect(h.client.replay.controlDisabled('first')).toBe(true);
+  });
+
+  it('every view the board ever renders is a server-sent view object (identity)', () => {
+    const h = fogHarness();
+    const v0 = view({ squares: {} });
+    const v1 = view({ status: { type: 'playing', turn: 'blue' }, squares: { a2: 'red' } });
+    const v2 = view({ moveNumber: 2, squares: { a2: 'red', z9: 'blue' } });
+    h.feedHello({ seat: 'red', state: v0 });
+    h.feedEvent({ seat: 'red', event: moveEvent('red', 'a1', 'a2', 1), state: v1 });
+    // Redacted opponent ply arrives with a new view but no move payload.
+    h.feedEvent({ seat: 'red', event: { type: 'ply-advanced', color: 'blue', at: 0 }, state: v2 });
+    expect(h.client.replay.historyLength()).toBe(3);
+    h.client.replay.handleControl('prev');
+    h.client.renderAll();
+    h.client.replay.handleControl('first');
+    h.client.renderAll();
+    h.client.replay.handleControl('latest');
+    h.client.renderAll();
+    const served = new Set<TView | null>([v0, v1, v2, null]);
+    for (const rendered of h.boardRenders) {
+      expect(served.has(rendered)).toBe(true);
+    }
+  });
+});
+
+describe('replay controller: replaceHistory + jumpToPly', () => {
+  function seeded() {
+    const controller = createTenantReplayController<string>();
+    controller.push({ ply: 0, view: 'start' });
+    controller.push({ ply: 1, view: 'one' });
+    controller.push({ ply: 2, view: 'two' });
+    return controller;
+  }
+
+  it('replaceHistory keeps a live controller live', () => {
+    const controller = seeded();
+    controller.replaceHistory([
+      { ply: 0, view: 'r0' },
+      { ply: 1, view: 'r1' },
+      { ply: 2, view: 'r2' },
+    ]);
+    expect(controller.isLive()).toBe(true);
+    expect(controller.currentView('live')).toBe('live');
+  });
+
+  it('replaceHistory re-anchors a scrubbed controller to the same ply', () => {
+    const controller = seeded();
+    controller.handleControl('prev'); // ply 1
+    controller.replaceHistory([
+      { ply: 0, view: 'r0' },
+      { ply: 1, view: 'r1' },
+      { ply: 2, view: 'r2' },
+      { ply: 3, view: 'r3' },
+    ]);
+    expect(controller.isLive()).toBe(false);
+    expect(controller.currentView('live')).toBe('r1');
+  });
+
+  it('jumpToPly scrubs to the ply, records the step, and the latest ply returns live', () => {
+    const controller = seeded();
+    controller.jumpToPly(1);
+    expect(controller.activePly()).toBe(1);
+    expect(controller.currentView('live')).toBe('one');
+    expect(controller.takeLastStep()).toEqual({ fromPly: 2, toPly: 1 });
+    controller.jumpToPly(2);
+    expect(controller.isLive()).toBe(true);
+    expect(controller.currentView('live')).toBe('live');
   });
 });

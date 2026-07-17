@@ -16,7 +16,7 @@ import {
   type XiangqiMove,
   type XiangqiPuzzle,
 } from './index.js';
-import { MINED_XIANGQI_PUZZLES } from './puzzles-xiangqi-mined.js';
+import { loadSeedPuzzleRegistry } from './puzzle-seed.js';
 
 function playingState(
   id: string,
@@ -261,12 +261,17 @@ test('helpers: side to move, move equality, move labels', () => {
 });
 
 // ── Mined corpus (real-game puzzles) ─────────────────────────────────────────
-// The miner regenerates puzzles-xiangqi-mined.ts wholesale, so these tests pin
-// the corpus contract the web player and daily rotation rely on: unique
-// prefix-disjoint ids, known theme vocabulary, 3-7 ply lines ending on the
-// solver's move, and a full kernel replay of every solution line.
+// Since #183 the SERVED corpus is the seed asset (packages/game/seed/puzzles/
+// xiangqi.json, regenerated wholesale by the miner's --emit-seed), so these
+// tests pin the corpus contract the web player and daily rotation rely on
+// AGAINST THE SEED: unique prefix-disjoint ids, known theme vocabulary, 1-7
+// ply lines ending on the solver's move, and a full kernel replay of every
+// solution line. (XIANGQI_PUZZLES itself is a small fixture subset of the
+// seed; puzzles-seed.test.ts pins that relationship.)
 
-const MINED_PUZZLES = XIANGQI_PUZZLES.filter((puzzle) => puzzle.id.startsWith('xq-mined-'));
+const MINED_PUZZLES = (loadSeedPuzzleRegistry('xiangqi') as XiangqiPuzzle[]).filter((puzzle) =>
+  puzzle.id.startsWith('xq-mined-'),
+);
 
 const MINED_THEMES: ReadonlySet<string> = new Set([
   'checkmate',
@@ -285,16 +290,11 @@ function minedSolverMoves(puzzle: XiangqiPuzzle): XiangqiMove[] {
 }
 
 test('mined corpus: ids unique, themes known, lines 1-7 plies ending on the solver move', () => {
-  // Guard against an accidental truncation of the generated module (the exact
-  // count moves with every re-mine; the floor should not). The corpus is the
-  // gated re-mine (#180) POC — a 500-game pass — so the floor is modest; raise
-  // it when a full-corpus re-mine lands.
-  assert.ok(
-    MINED_XIANGQI_PUZZLES.length >= 40,
-    `raw mined module shrank to ${MINED_XIANGQI_PUZZLES.length} puzzles`,
-  );
-  // Served = raw minus the few audit-flagged near-tied puzzles (see
-  // AUDIT_FLAGGED_XIANGQI_PUZZLE_IDS); floor is modest for the POC corpus.
+  // Guard against an accidental truncation of the seed (the exact count moves
+  // with every re-mine; the floor should not). The corpus is the gated re-mine
+  // (#180) POC — a 500-game pass — so the floor is modest; raise it when a
+  // full-corpus re-mine lands. (The pre-#183 audit-flagged near-tied puzzles
+  // were dropped before the seed was cut, so served == seed.)
   assert.ok(MINED_PUZZLES.length >= 35, `served corpus shrank to ${MINED_PUZZLES.length} puzzles`);
   const ids = new Set<string>();
   for (const puzzle of MINED_PUZZLES) {
@@ -462,11 +462,11 @@ test('winning-advantage tail: every served winning-advantage line ends on a capt
 });
 
 test('winning-advantage tail: trimming never touches checkmate puzzles', () => {
-  for (const puzzle of MINED_XIANGQI_PUZZLES) {
+  for (const puzzle of MINED_PUZZLES) {
     if (puzzle.goal.type !== 'checkmate') continue;
     // A mate line can legitimately end on a non-capturing mating move.
     assert.equal(
-      trimXiangqiWinningAdvantageTail(puzzle as XiangqiPuzzle).solution.length,
+      trimXiangqiWinningAdvantageTail(puzzle).solution.length,
       puzzle.solution.length,
       `${puzzle.id}: a checkmate line was trimmed`,
     );
@@ -474,7 +474,7 @@ test('winning-advantage tail: trimming never touches checkmate puzzles', () => {
 });
 
 test('mined puzzles carry source-game attribution for the "From game" card', () => {
-  for (const puzzle of MINED_XIANGQI_PUZZLES) {
+  for (const puzzle of MINED_PUZZLES) {
     const source = puzzle.sourceGame;
     assert.ok(source?.gameId, `${puzzle.id}: missing sourceGame.gameId`);
     assert.equal(typeof source.ply, 'number', `${puzzle.id}: missing sourceGame.ply`);

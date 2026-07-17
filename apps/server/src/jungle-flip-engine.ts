@@ -64,6 +64,20 @@ const enginePool = new UciEnginePool({
   queueTimeoutMessage: 'jungle-flip-engine concurrency queue timed out',
 });
 
+// Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
+// never from the live pool above, so analysis compute can never occupy a live
+// bot-move slot (the queue-timeout starvation in #208/#168). Two slots match the
+// decisions fan-out concurrency (see mapWithConcurrency call sites); the longer
+// default queue timeout gives queued analysis evals headroom instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'jungle-flip-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_JUNGLE_FLIP_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_JUNGLE_FLIP_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'jungle-flip-engine analysis queue timed out',
+});
+
 // Resolve the MistyJungleFlip binary: explicit env override, else the dev build
 // location, else the prod (railpack-compiled) / system locations.
 export function jungleFlipEnginePath(): string {
@@ -230,8 +244,8 @@ export function jungleFlipEngineMove(
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read the
 // engine's `info … score` for a redacted current-position FEN, side-to-move POV. Same
 // node-budget dial as play, so the eval is CPU-independent and reproducible — which keeps
-// the cached analysis stable. Gated through the shared pool so an analysis sweep runs
-// sequentially. Each position is evaluated standalone (no `reps` seed — a single-position
+// the cached analysis stable. Gated through the dedicated ANALYSIS pool so a sweep can
+// never occupy a live bot-move slot. Each position is evaluated standalone (no `reps` seed — a single-position
 // eval needs no threefold history); the redacted FEN is sent as-is (hidden ids stay hidden).
 export async function evaluateJungleFlipFenNodes(
   fen: string,
@@ -244,7 +258,7 @@ export async function evaluateJungleFlipFenNodes(
     buildJungleFlipPositionCommand(fen),
     `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
   ];
-  const release = await enginePool.acquire();
+  const release = await analysisPool.acquire();
   try {
     return await runUciEval({
       bin: jungleFlipEnginePath(),

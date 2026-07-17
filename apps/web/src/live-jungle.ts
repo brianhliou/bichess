@@ -5,12 +5,15 @@
 // the wire view type, board rendering (jungle-render.ts), click/drag
 // interaction, sounds, and the from-to move notation.
 
-import type {
-  JungleColor,
-  JungleGameStatus,
-  JungleMove,
-  JunglePieceRole,
-  JungleSquare,
+import {
+  applyJungleMove,
+  createInitialJungleState,
+  getJunglePlayerView,
+  type JungleColor,
+  type JungleGameStatus,
+  type JungleMove,
+  type JunglePieceRole,
+  type JungleSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleEnabled } from './feature-flags.js';
@@ -173,6 +176,28 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
       }),
     // Ply = number of moves played so far; the initial position is ply 0.
     plyForView: (_view, ctx) => ctx.events.filter(isJungleMoveEvent).length,
+  },
+  // Perfect information: the event log carries every move unredacted, so the
+  // full per-ply history is rebuilt through the kernel on mount and after
+  // every reconnect (#80). The kernel's JunglePlayerView is structurally the
+  // wire view. No new server payload.
+  replayHistory: {
+    rebuild: ({ events, view, state }) => {
+      const perspective = isJungleColor(state.seat) ? state.seat : view.perspective;
+      let gameState = createInitialJungleState(view.id);
+      const snapshots = [{ ply: 0, view: getJunglePlayerView(gameState, perspective) }];
+      for (const event of events) {
+        if (!isJungleMoveEvent(event)) continue;
+        const next = applyJungleMove(gameState, event.move);
+        if (next === gameState) return null; // kernel rejected: keep captured history
+        gameState = next;
+        snapshots.push({
+          ply: snapshots.length,
+          view: getJunglePlayerView(gameState, perspective),
+        });
+      }
+      return snapshots;
+    },
   },
 });
 

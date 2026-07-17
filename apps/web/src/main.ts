@@ -10,7 +10,7 @@ import {
   reloadForChunkLoadError,
 } from './chunk-load-recovery.js';
 import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './feature-flags.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl } from './i18n/locale.js';
 import {
   correspondenceNotificationSource,
@@ -30,7 +30,14 @@ import {
 // post-bootstrap lazy loads on long-lived tabs (/watch) that no per-mount guard
 // wraps — gets the one-shot stale-chunk reload after a deploy.
 installGlobalChunkLoadRecovery();
-initializeLocaleFromCurrentUrl();
+const bootLocale = initializeLocaleFromCurrentUrl();
+// zh catalogs live in lazy per-locale chunks (see i18n/catalog.ts). Kick the
+// load off now and hold localized rendering (nav, page mounts, localized
+// titles) on this one promise, so zh visitors get zh copy on first paint; for
+// English it resolves immediately. A failed fetch degrades to English copy;
+// the stale-chunk-after-deploy case is already covered by the one-shot reload
+// in installGlobalChunkLoadRecovery above.
+const localeReady = ensureLocaleCatalog(bootLocale).catch(() => undefined);
 initializeThemeSettings();
 // Register notification sources before the nav mounts — account-nav mounts the
 // bell once signed in, and a bell with no sources is a no-op. Correspondence
@@ -38,7 +45,9 @@ initializeThemeSettings();
 // zero snapshot for anonymous visitors, and the bell only mounts signed-in).
 if (correspondenceEnabled()) registerNotificationSource(correspondenceNotificationSource);
 registerNotificationSource(inboxNotificationSource);
-initializeAccountNav();
+// The account nav renders localized labels, so it waits for the locale chunk
+// like the route mounts do (mountOrReport). The restart banner is English-only.
+void localeReady.then(() => initializeAccountNav());
 mountRestartBanner();
 void fetch('/api/server-status')
   .then((r) => (r.ok ? r.json() : null))
@@ -693,7 +702,9 @@ if (replaySample) {
 // that rendered above. Lazy-imported so its bundle only loads when the flag is
 // on.
 if (friendsOnlineEnabled()) {
-  void import('./friends-online.js').then(({ mountFriendsOnline }) => mountFriendsOnline());
+  void localeReady.then(() =>
+    import('./friends-online.js').then(({ mountFriendsOnline }) => mountFriendsOnline()),
+  );
 }
 
 function setTitle(page: string): void {
@@ -701,11 +712,16 @@ function setTitle(page: string): void {
 }
 
 function setTitleKey(key: I18nKey): void {
-  setTitle(t(key, {}, currentLocale()));
+  // Localized titles wait for the locale chunk so zh visitors never see an
+  // English tab title stick around; for English this resolves immediately.
+  void localeReady.then(() => setTitle(t(key, {}, currentLocale())));
 }
 
 async function mountOrReport(run: () => Promise<void>): Promise<void> {
   try {
+    // Every page mount renders through t(), so the locale chunk gates all of
+    // them here; awaiting the resolved promise is free for English visitors.
+    await localeReady;
     await run();
     clearChunkReloadAttempt();
   } catch (err) {

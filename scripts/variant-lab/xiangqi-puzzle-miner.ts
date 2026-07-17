@@ -21,18 +21,34 @@
 //      re-validated with validateStandardXiangqiPuzzle before it is accepted.
 //
 // All decision logic lives in packages/game/src/puzzles-xiangqi-mining.ts
-// (engine-free, unit-tested); this driver owns the Pikafish subprocesses, the
-// corpus loading, concurrency, and output.
+// (engine-free, unit-tested); the Pikafish subprocess driver, UCI parsing, and
+// the per-ply gate application are shared with the uniqueness audit via
+// scripts/variant-lab/xiangqi-pikafish-uci.ts (#185: one definition, no
+// drift). This driver owns the corpus loading, concurrency, and output.
 //
 // UCI `score cp` / `score mate` are SIDE-TO-MOVE POV. The scan pass exploits
 // that: the value of the move played from position i is minus the best eval of
 // position i+1, so one MultiPV scan per position covers both sides of the
 // swing (see detectXiangqiBlunderCandidates).
 //
-// Output: --emit-module rewrites packages/game/src/puzzles-xiangqi-mined.ts
-// in the existing mined-module style, a JSONL sidecar records per-puzzle
-// mining metadata, and the LAST stdout line is always a machine-parseable
-// metrics JSON object (the calibration deliverable).
+// Output (#183: puzzle content lives in the DB + committed seed, not TS
+// modules):
+//   --emit-seed         rewrites the mined (xq-mined-*) section of the seed
+//       asset (default packages/game/seed/puzzles/xiangqi.json), preserving
+//       any curated non-mined entries. Committing the refreshed seed is the
+//       DEPLOY path today: on push, the server's boot-time sync
+//       (apps/server/src/puzzle-store.ts) upserts it into the `puzzles` table
+//       with zero manual ops. Update the count/hash pins in
+//       packages/game/src/puzzles-seed.test.ts (run test:puzzles:corpus first).
+//   --insert-db         upserts this run's puzzles straight into the `puzzles`
+//       table at --db-url / DATABASE_URL (source_kind='mined', seq appended).
+//       Against the local dev DB this is for testing the serving path; the
+//       #182 engine-worker flow will run this against prod, making mined
+//       batches live WITHOUT a deploy. Seed-owned rows hit by an id collision
+//       keep source_kind='seed' (the next seed sync re-reconciles them).
+// A JSONL sidecar records per-puzzle mining metadata, and the LAST stdout line
+// is always a machine-parseable metrics JSON object (the calibration
+// deliverable).
 //
 // Run (fixture smoke, no DB):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-miner.ts \
@@ -40,15 +56,13 @@
 //
 // Run (1k-game calibration from the historical DB; the lead runs this):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-miner.ts \
-//     --source db --limit 1000 --concurrency 4 \
-//     --emit-module packages/game/src/puzzles-xiangqi-mined.ts
+//     --source db --limit 1000 --concurrency 4 --emit-seed
 //
 // DB mode connects to DATABASE_URL (default: the shared local dev Postgres,
 // postgres://mistboard:mistboard@localhost:5435/mistboard) and filters to
 // ply_count >= --ply-min (default 20).
 
-import { type ChildProcessWithoutNullStreams, execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
@@ -62,19 +76,23 @@ import {
   detectXiangqiBlunderCandidates,
   importXiangqiGame,
   isStandardXiangqiLegalMove,
-  isXiangqiSolverMoveUnique,
   pikafishUciToXiangqiSquares,
   positionRepetitionKey,
   standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveLabel,
+  trimXiangqiWinningAdvantageTail,
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiPuzzle,
-  type XiangqiUciScore,
   type XiangqiVerifyLine,
   xiangqiMoveToPikafishUci,
   xiangqiUciScoreToCp,
 } from '../../packages/game/src/index.ts';
+import {
+  analyzeXiangqiSolverPly,
+  PikafishEngine,
+  XIANGQI_SOLVER_GATE_DEFAULTS,
+} from './xiangqi-pikafish-uci.ts';
 
 type CliOptions = {
   source: 'db' | 'dir';
@@ -99,7 +117,8 @@ type CliOptions = {
   maxSolutionPlies: number;
   minSolutionPlies: number;
   perGame: number;
-  emitModule: string | null;
+  emitSeed: string | null;
+  insertDb: boolean;
   jsonl: string;
   binary: string | null;
   net: string | null;
@@ -143,6 +162,7 @@ type Metrics = {
 };
 
 const DEFAULT_DB_URL = 'postgres://mistboard:mistboard@localhost:5435/mistboard';
+const DEFAULT_SEED_TARGET = 'packages/game/seed/puzzles/xiangqi.json';
 
 const { values } = parseArgs({
   allowPositionals: false,
@@ -162,13 +182,24 @@ const { values } = parseArgs({
     'decided-cp': { type: 'string', default: '800' },
     'unique-gap-cp': { type: 'string', default: '150' },
     'verify-depth': { type: 'string', default: '20' },
-    'win-hi': { type: 'string', default: '0.80' },
-    'win-lo': { type: 'string', default: '0.60' },
-    'material-gap-cp': { type: 'string', default: '250' },
+    // Winning-floor gate knobs: defaults come from the module shared with the
+    // audit tool, so the two CLIs cannot drift apart on what "unique" means.
+    'win-hi': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi) },
+    'win-lo': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo) },
+    'material-gap-cp': {
+      type: 'string',
+      default: String(XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp),
+    },
     'min-ply': { type: 'string', default: '8' },
     'max-solution-plies': { type: 'string', default: '7' },
     'min-solution-plies': { type: 'string', default: '3' },
     'per-game': { type: 'string', default: '3' },
+    'emit-seed': { type: 'boolean', default: false },
+    'seed-path': { type: 'string' },
+    'insert-db': { type: 'boolean', default: false },
+    // Retired by #183 (puzzle content lives in the seed + DB, not a TS
+    // module); parsed only to fail loudly with guidance instead of silently
+    // resurrecting the deleted module.
     'emit-module': { type: 'string' },
     jsonl: { type: 'string' },
     binary: { type: 'string' },
@@ -198,14 +229,18 @@ const options: CliOptions = {
   decidedCp: parsePositiveInt(values['decided-cp'], 800),
   uniqueGapCp: parsePositiveInt(values['unique-gap-cp'], 150),
   verifyDepth: parsePositiveInt(values['verify-depth'], 20),
-  winHi: Number.parseFloat(values['win-hi'] ?? '0.80'),
-  winLo: Number.parseFloat(values['win-lo'] ?? '0.60'),
-  materialGapCp: parsePositiveInt(values['material-gap-cp'], 250),
+  winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
+  winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
+  materialGapCp: parsePositiveInt(
+    values['material-gap-cp'],
+    XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp,
+  ),
   minPly: parseNonNegativeInt(values['min-ply'], 8),
   maxSolutionPlies: parsePositiveInt(values['max-solution-plies'], 7),
   minSolutionPlies: parsePositiveInt(values['min-solution-plies'], 3),
   perGame: parsePositiveInt(values['per-game'], 3),
-  emitModule: values['emit-module'] ?? null,
+  emitSeed: values['emit-seed'] === true ? (values['seed-path'] ?? DEFAULT_SEED_TARGET) : null,
+  insertDb: values['insert-db'] === true,
   jsonl: values.jsonl ?? resolve('scripts/variant-lab/out/xiangqi-puzzle-mine.jsonl'),
   binary: values.binary ?? null,
   net: values.net ?? null,
@@ -216,158 +251,12 @@ if (options.source === 'dir' && !options.dir) {
   process.exit(1);
 }
 
-// ── UCI engine driver (mainline Pikafish) ────────────────────────────────────
-
-type ScoredLine = { rank: number; score: XiangqiUciScore; pvUci: string[] };
-
-const ANALYZE_TIMEOUT_MS = 240_000;
-
-class PikafishEngine {
-  #proc: ChildProcessWithoutNullStreams;
-  #buf = '';
-  #waiter: {
-    pred: (line: string) => boolean;
-    resolve: (lines: string[]) => void;
-    reject: (err: Error) => void;
-    timer: NodeJS.Timeout;
-    lines: string[];
-  } | null = null;
-  #multipv = 1;
-
-  constructor(binary: string, net: string) {
-    this.#proc = spawn(binary, [], { stdio: ['pipe', 'pipe', 'ignore'] });
-    this.#proc.stdout.setEncoding('utf8');
-    this.#proc.stdout.on('data', (chunk: string) => this.#onData(chunk));
-    this.net = net;
-  }
-
-  net: string;
-
-  #onData(chunk: string): void {
-    this.#buf += chunk;
-    let nl = this.#buf.indexOf('\n');
-    while (nl >= 0) {
-      const line = this.#buf.slice(0, nl).trim();
-      this.#buf = this.#buf.slice(nl + 1);
-      const w = this.#waiter;
-      if (w) {
-        w.lines.push(line);
-        if (w.pred(line)) {
-          clearTimeout(w.timer);
-          this.#waiter = null;
-          w.resolve(w.lines);
-        }
-      }
-      nl = this.#buf.indexOf('\n');
-    }
-  }
-
-  #request(cmds: string[], pred: (line: string) => boolean): Promise<string[]> {
-    return new Promise((res, rej) => {
-      const timer = setTimeout(() => {
-        this.#waiter = null;
-        rej(new Error(`pikafish request timed out: ${cmds[cmds.length - 1]}`));
-      }, ANALYZE_TIMEOUT_MS);
-      timer.unref();
-      this.#waiter = { pred, resolve: res, reject: rej, timer, lines: [] };
-      for (const cmd of cmds) this.#proc.stdin.write(`${cmd}\n`);
-    });
-  }
-
-  async init(): Promise<void> {
-    await this.#request(['uci'], (l) => l === 'uciok');
-    // Mainline Pikafish requires an absolute NNUE EvalFile (same setoption the
-    // server engine path sends in xiangqi-pikafish-engine.ts).
-    await this.#request([`setoption name EvalFile value ${this.net}`, 'isready'], (l) =>
-      l.startsWith('readyok'),
-    );
-  }
-
-  async newGame(): Promise<void> {
-    await this.#request(['ucinewgame', 'isready'], (l) => l.startsWith('readyok'));
-  }
-
-  async analyze(
-    movesUci: string[],
-    nodes: number,
-    multipv: number,
-    depth?: number,
-  ): Promise<ScoredLine[]> {
-    const cmds: string[] = [];
-    if (multipv !== this.#multipv) {
-      cmds.push(`setoption name MultiPV value ${multipv}`);
-      this.#multipv = multipv;
-    }
-    const position =
-      movesUci.length > 0 ? `position startpos moves ${movesUci.join(' ')}` : 'position startpos';
-    // A depth floor (not just a node cap) keeps best-vs-second ordering stable:
-    // too-low search mis-orders the top moves and makes the uniqueness gap lie.
-    const go = depth ? `go depth ${depth} nodes ${nodes}` : `go nodes ${nodes}`;
-    cmds.push(position, go);
-    const lines = await this.#request(cmds, (l) => l.startsWith('bestmove'));
-    return parseScoredLines(lines);
-  }
-
-  // Analyze a standalone position (FEN), not a game-history move list. The
-  // uniqueness verify uses this so the miner judges each puzzle from exactly the
-  // position a solver sees — history-free, matching the audit tool (#185) — and
-  // so its verdict does not drift from the served puzzle's real eval.
-  async analyzeFen(
-    fen: string,
-    nodes: number,
-    multipv: number,
-    depth?: number,
-  ): Promise<ScoredLine[]> {
-    const cmds: string[] = [];
-    if (multipv !== this.#multipv) {
-      cmds.push(`setoption name MultiPV value ${multipv}`);
-      this.#multipv = multipv;
-    }
-    const go = depth ? `go depth ${depth} nodes ${nodes}` : `go nodes ${nodes}`;
-    cmds.push(`position fen ${fen}`, go);
-    const lines = await this.#request(cmds, (l) => l.startsWith('bestmove'));
-    return parseScoredLines(lines);
-  }
-
-  kill(): void {
-    if (this.#waiter) {
-      clearTimeout(this.#waiter.timer);
-      this.#waiter = null;
-    }
-    this.#proc.kill();
-  }
-
-  quit(): void {
-    if (this.#waiter) {
-      clearTimeout(this.#waiter.timer);
-      this.#waiter = null;
-    }
-    this.#proc.stdin.write('quit\n');
-    this.#proc.stdin.end();
-  }
-}
-
-const MULTIPV_RE = /\bmultipv (\d+)\b/;
-const SCORE_RE = /\bscore (cp|mate) (-?\d+)\b/;
-const PV_RE = /\bpv (.+)$/;
-
-function parseScoredLines(lines: string[]): ScoredLine[] {
-  const byRank = new Map<number, ScoredLine>();
-  for (const line of lines) {
-    if (!line.startsWith('info ')) continue;
-    const score = SCORE_RE.exec(line);
-    const pv = PV_RE.exec(line);
-    if (!score || !pv) continue;
-    const rank = Number(MULTIPV_RE.exec(line)?.[1] ?? '1');
-    const kind = score[1];
-    const value = Number(score[2]);
-    byRank.set(rank, {
-      rank,
-      score: kind === 'mate' ? { cp: null, mate: value } : { cp: value, mate: null },
-      pvUci: pv[1]!.trim().split(/\s+/),
-    });
-  }
-  return [...byRank.values()].sort((a, b) => a.rank - b.rank);
+if (values['emit-module'] !== undefined) {
+  console.error(
+    '--emit-module is retired (#183: the mined TS module was deleted; content lives in the seed + DB).\n' +
+      'Use --emit-seed to refresh packages/game/seed/puzzles/xiangqi.json, and/or --insert-db.',
+  );
+  process.exit(1);
 }
 
 // ── Corpus loading ───────────────────────────────────────────────────────────
@@ -517,7 +406,7 @@ async function mineGame(
       scans.push(null);
       continue;
     }
-    const lines = await engine.analyze(uciMoves.slice(0, i), opts.scanNodes, 2);
+    const lines = await engine.analyzeMoves(uciMoves.slice(0, i), { nodes: opts.scanNodes }, 2);
     metrics.positionsEvaluated += 1;
     const best = lines[0] ? xiangqiUciScoreToCp(lines[0].score) : null;
     scans.push(best);
@@ -587,17 +476,20 @@ type GatedLineResult =
   | { ok: false; reason: string; evals: number };
 
 // Extend a solution line from the post-blunder position, verifying uniqueness at
-// EVERY solver ply (MultiPV 2 at a depth floor) instead of trusting one PV. The
-// solver move must be uniquely correct by the winning-floor gate; the defender
-// reply is the engine's best (its uniqueness is not required). The line stops at
-// the first non-unique solver move, at mate, or at the ply cap, and always ends
-// on the solver's move.
+// EVERY solver ply instead of trusting one PV. Each ply is judged by the shared
+// analyzeXiangqiSolverPly (history-free FEN, MultiPV 2 at a depth floor, the
+// winning-floor gate) — the SAME call the audit tool makes, so audit verdicts
+// are definitionally consistent with what this gate enforced (#185). The
+// defender reply is the engine's best (its uniqueness is not required). The
+// line stops at the first non-unique solver move, at mate, or at the ply cap,
+// and always ends on the solver's move.
 async function buildGatedLine(
   engine: PikafishEngine,
   postBlunderState: XiangqiGameState,
   opts: CliOptions,
 ): Promise<GatedLineResult> {
   const gate = { winHi: opts.winHi, winLo: opts.winLo, materialGapCp: opts.materialGapCp };
+  const limits = { depth: opts.verifyDepth, nodes: opts.verifyNodes };
   const pv: XiangqiMove[] = [];
   let cur: XiangqiGameState = postBlunderState;
   let firstScore: XiangqiVerifyLine | null = null;
@@ -605,30 +497,18 @@ async function buildGatedLine(
   let evals = 0;
   while (pv.length < opts.maxSolutionPlies) {
     if (cur.status.type !== 'playing') break;
-    const lines = await engine.analyzeFen(
-      standardXiangqiEngineFen(cur),
-      opts.verifyNodes,
-      2,
-      opts.verifyDepth,
-    );
+    const ply = await analyzeXiangqiSolverPly(engine, cur, limits, gate);
     evals += 1;
-    const vlines: XiangqiVerifyLine[] = [];
-    for (const line of lines) {
-      const cp = xiangqiUciScoreToCp(line.score);
-      if (cp !== null) vlines.push({ scoreCp: cp, mate: line.score.mate });
-    }
-    const best = vlines[0];
-    const second = vlines[1];
     const firstSolverPly = pv.length === 0;
     if (firstSolverPly) {
-      firstScore = best ?? null;
-      firstSecondCp = second?.scoreCp ?? null;
+      firstScore = ply.best ?? null;
+      firstSecondCp = ply.second?.scoreCp ?? null;
     }
-    if (!isXiangqiSolverMoveUnique(best, second, gate)) {
+    if (!ply.unique) {
       if (firstSolverPly) return { ok: false, reason: 'not-unique-or-not-winning', evals };
       break; // line ends on the last committed solver move
     }
-    const solverTok = lines[0]?.pvUci[0];
+    const solverTok = ply.lines[0]?.pvUci[0];
     const sq = solverTok ? pikafishUciToXiangqiSquares(solverTok) : null;
     if (!sq || !solverTok) return { ok: false, reason: 'pv-parse', evals };
     const solverMove: XiangqiMove = { from: sq.from, to: sq.to };
@@ -639,12 +519,7 @@ async function buildGatedLine(
     if (cur.status.type !== 'playing') break; // mate: line ends on the solver move
     if (pv.length >= opts.maxSolutionPlies) break;
     // Defender reply: the engine's best defense (uniqueness not required of it).
-    const replyLines = await engine.analyzeFen(
-      standardXiangqiEngineFen(cur),
-      opts.verifyNodes,
-      1,
-      opts.verifyDepth,
-    );
+    const replyLines = await engine.analyzeFen(standardXiangqiEngineFen(cur), limits, 1);
     evals += 1;
     const replyTok = replyLines[0]?.pvUci[0];
     const rsq = replyTok ? pikafishUciToXiangqiSquares(replyTok) : null;
@@ -669,60 +544,74 @@ function bumpReject(metrics: Metrics, reason: string): void {
 
 // ── Output ───────────────────────────────────────────────────────────────────
 
-export function renderMinedModule(puzzles: readonly XiangqiPuzzle[]): string {
-  const header = `// Generated by the standard-xiangqi puzzle miner
-// (scripts/variant-lab/xiangqi-puzzle-miner.ts, \`--emit-module\`). Do not
-// hand-edit; re-run the miner and let it overwrite this file.
-//
-// Lichess-style puzzles mined from REAL historical games (not engine
-// self-play): a MultiPV Pikafish scan finds moments where the game move lost
-// decisively, a deeper verify pass confirms the refutation is winning AND
-// unique, and the whole solution line is kernel-replayed for legality. Each
-// puzzle links back to its game via sourceGame:{gameId, ply}: gameId is the
-// historical_xiangqi_games row id (db mode) or the input file name (dir mode),
-// and replaying that game's first \`ply\` moves reproduces \`initial\`.
-//
-// The local structural type mirrors \`XiangqiPuzzle\` in puzzles-xiangqi.ts so
-// the array is assignable when spread there, while keeping this file free of a
-// circular import.
+// One puzzle per line: compact but diffable/mergeable. Must stay format-
+// compatible with the loader in packages/game/src/puzzle-seed.ts.
+export function renderXiangqiSeedFile(puzzles: readonly XiangqiPuzzle[]): string {
+  const lines = puzzles.map((puzzle) => `    ${JSON.stringify(puzzle)}`);
+  return `{\n  "format": "mistboard-puzzle-seed-v1",\n  "registry": "xiangqi",\n  "puzzles": [\n${lines.join(
+    ',\n',
+  )}\n  ]\n}\n`;
+}
 
-import type { XIANGQI_SPEC_ID } from './game-specs.js';
-import type { XiangqiColor, XiangqiGameState, XiangqiMove } from './variants-xiangqi.js';
+// Rewrite the seed's mined (xq-mined-*) section wholesale with this run's
+// output — the same replace-the-corpus semantics the old --emit-module had —
+// while preserving curated (non-mined-id) entries in their existing order.
+function emitSeed(target: string, mined: readonly XiangqiPuzzle[]): void {
+  let curated: XiangqiPuzzle[] = [];
+  if (existsSync(target)) {
+    const existing = JSON.parse(readFileSync(target, 'utf-8')) as { puzzles?: XiangqiPuzzle[] };
+    curated = (existing.puzzles ?? []).filter((puzzle) => !puzzle.id.startsWith('xq-mined-'));
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, renderXiangqiSeedFile([...curated, ...mined]));
+}
 
-type MinedXiangqiPuzzleTheme =
-  | 'checkmate'
-  | 'matein1'
-  | 'matein2'
-  | 'matein3'
-  | 'winning'
-  | 'winning-material'
-  | 'crushing'
-  | 'endgame'
-  | 'middlegame';
-
-type MinedXiangqiPuzzle = {
-  id: string;
-  variant: typeof XIANGQI_SPEC_ID;
-  title: string;
-  initial: XiangqiGameState;
-  solution: XiangqiMove[];
-  goal:
-    | { type: 'checkmate'; winner?: XiangqiColor }
-    | { type: 'winning-advantage'; winner?: XiangqiColor; centipawns?: number };
-  themes: MinedXiangqiPuzzleTheme[];
-  sourceGame?: {
-    gameId: string;
-    ply: number;
-    event?: string;
-    playedOn?: string;
-    result?: string;
-    redName?: string;
-    blackName?: string;
-  };
-};
-
-export const MINED_XIANGQI_PUZZLES: readonly MinedXiangqiPuzzle[] = `;
-  return `${header}${JSON.stringify(puzzles, null, 2)};\n`;
+// Upsert this run's puzzles into the `puzzles` table (migration 105) as
+// miner-owned rows: source_kind='mined' so the seed sync never reconciles them
+// away, seq appended after the current max so serving order stays stable. An
+// id that already exists keeps its seq (and, if seed-owned, its source_kind).
+async function insertDbPuzzles(dbUrl: string, puzzles: readonly XiangqiPuzzle[]): Promise<void> {
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({ connectionString: dbUrl });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query<{ next: string }>(
+      'SELECT COALESCE(max(seq) + 1, 0)::text AS next FROM puzzles',
+    );
+    let seq = Number.parseInt(rows[0]?.next ?? '0', 10);
+    for (const puzzle of puzzles) {
+      await client.query(
+        `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, mined_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'mined', now())
+         ON CONFLICT (id) DO UPDATE SET
+           variant = EXCLUDED.variant,
+           title = EXCLUDED.title,
+           goal_type = EXCLUDED.goal_type,
+           themes = EXCLUDED.themes,
+           solution_plies = EXCLUDED.solution_plies,
+           data = EXCLUDED.data,
+           mined_at = now()`,
+        [
+          puzzle.id,
+          puzzle.variant,
+          puzzle.title,
+          seq,
+          puzzle.goal.type,
+          [...puzzle.themes],
+          puzzle.solution.length,
+          JSON.stringify(puzzle),
+        ],
+      );
+      seq += 1;
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw err;
+  } finally {
+    await client.end();
+  }
 }
 
 function jsonlLine(record: MinedPuzzleRecord): string {
@@ -805,21 +694,23 @@ async function main(): Promise<void> {
   // Deterministic output order regardless of worker interleaving.
   records.sort((a, b) => a.puzzle.id.localeCompare(b.puzzle.id));
 
-  if (options.emitModule) {
-    const target = resolve(options.emitModule);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, renderMinedModule(records.map((record) => record.puzzle)));
-    // The module is rendered as JSON (quoted keys); bring it to repo style so
-    // the emitted file is commit-ready. Non-fatal: worst case the lead runs
-    // `npx biome check --write` on it.
-    try {
-      execFileSync(resolve('node_modules', '.bin', 'biome'), ['check', '--write', target], {
-        stdio: 'ignore',
-      });
-    } catch {
-      console.error(`biome format of ${target} failed; run: npx biome check --write ${target}`);
-    }
-    console.error(`wrote ${records.length} puzzles to ${target}`);
+  // Serving normal form: winning-advantage lines end on the payoff capture
+  // (the pre-#183 aggregator applied this trim before serving; the seed and DB
+  // carry records already in normal form, and validation rejects filler tails).
+  const servedPuzzles = records.map((record) => trimXiangqiWinningAdvantageTail(record.puzzle));
+
+  if (options.emitSeed) {
+    const target = resolve(options.emitSeed);
+    emitSeed(target, servedPuzzles);
+    console.error(
+      `wrote ${servedPuzzles.length} mined puzzles to ${target} — update the pins in packages/game/src/puzzles-seed.test.ts`,
+    );
+  }
+  if (options.insertDb) {
+    await insertDbPuzzles(options.dbUrl, servedPuzzles);
+    console.error(
+      `upserted ${servedPuzzles.length} mined puzzles into ${options.dbUrl.replace(/\/\/.*@/, '//<redacted>@')}`,
+    );
   }
   mkdirSync(dirname(resolve(options.jsonl)), { recursive: true });
   writeFileSync(resolve(options.jsonl), records.map((r) => `${jsonlLine(r)}\n`).join(''));
@@ -920,14 +811,19 @@ Detection:
   --per-game N            Max puzzles mined per game. Default: 3.
 
 Output:
-  --emit-module PATH      Rewrite the mined module (packages/game/src/puzzles-xiangqi-mined.ts).
+  --emit-seed             Rewrite the mined section of the committed seed asset
+                          (packages/game/seed/puzzles/xiangqi.json; override with --seed-path).
+                          Curated (non-mined-id) entries are kept.
+  --seed-path PATH        Seed asset target for --emit-seed.
+  --insert-db             Upsert this run's puzzles into the puzzles table at --db-url
+                          (source_kind='mined'; the boot-time seed sync never touches them).
   --jsonl PATH            Sidecar path. Default: scripts/variant-lab/out/xiangqi-puzzle-mine.jsonl.
 
 The last stdout line is always a metrics JSON object (kind=xiangqi-puzzle-mine-metrics).`);
 }
 
 // Only run when invoked directly (tsx scripts/.../xiangqi-puzzle-miner.ts), not
-// when imported for its exports (e.g. renderMinedModule in a backfill script).
+// when imported for its exports (e.g. renderXiangqiSeedFile in a backfill script).
 if (import.meta.url === `file://${process.argv[1]}`) {
   await main();
 }

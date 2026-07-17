@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { FortressXiangqiMove } from '@mistboard/game';
-import type { SweepPlyEval } from './../game-analysis-sweep.js';
+import { type SweepPlyEval, VacuousAnalysisError } from './../game-analysis-sweep.js';
 import {
   analyzeFortressXiangqiPostgame,
   type FortressXiangqiAnalysisCache,
@@ -97,6 +97,23 @@ test('resolveFortressXiangqiAnalysis with computeIfMissing=false is a pure cache
   const hit = await resolveFortressXiangqiAnalysis('room-ro', oneMovePayload, cache, spy, false);
   assert.ok(hit);
   assert.equal(hit.plies.length, 1);
+});
+
+test('resolveFortressXiangqiAnalysis never caches a scoreless (vacuous) sweep', async () => {
+  const cache = memoryCache();
+  // Engine produced a series but no eval on ANY ply — a broken/score-less binary
+  // that would otherwise cache as a flat, mistake-free game. Fail closed.
+  const vacuous = async (moves: string[]): Promise<SweepPlyEval[]> =>
+    moves.map((_, i) => ({ ply: i + 1, cp: null, mate: null, best: null }));
+  await assert.rejects(
+    resolveFortressXiangqiAnalysis('room-vacuous', oneMovePayload, cache, vacuous),
+    VacuousAnalysisError,
+  );
+  assert.equal(cache.saved, 0, 'a vacuous sweep is never persisted');
+  // A fixed engine can recompute later: the next call computes fresh + caches.
+  const fixed = await resolveFortressXiangqiAnalysis('room-vacuous', oneMovePayload, cache, onePly);
+  assert.ok(fixed);
+  assert.equal(cache.saved, 1);
 });
 
 test('resolveFortressXiangqiAnalysis coalesces concurrent misses into one compute', async () => {

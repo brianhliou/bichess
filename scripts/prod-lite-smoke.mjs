@@ -1,10 +1,30 @@
-const DEFAULT_BASE_URL = 'https://mistboard.com';
+// Lite prod smoke: read-only GET checks (health, homepage, server-status,
+// playable engines, /watch shell, one zh-hans prerendered page). Runs on every
+// release tier; creates nothing.
+import { resolveBaseUrl } from './lib/base-url.mjs';
+import { fetchJson, fetchText } from './lib/http.mjs';
+import { parseSmokeArgs } from './lib/smoke-args.mjs';
+import { reportResult } from './lib/smoke-report.mjs';
+
 const DEFAULT_TIMEOUT_MS = 10_000;
 
-const options = parseArgs(process.argv.slice(2));
-const baseUrl = normalizeBaseUrl(
-  options.baseUrl ?? process.env.MISTBOARD_BASE_URL ?? DEFAULT_BASE_URL,
-);
+const options = parseSmokeArgs(process.argv.slice(2), {
+  usage: 'npm run prod:smoke:lite -- [options]',
+  flags: {
+    '--base': {
+      key: 'baseUrl',
+      placeholder: '<url>',
+      help: 'Base URL to smoke, default https://mistboard.com',
+    },
+    '--timeout-ms': {
+      key: 'timeoutMs',
+      placeholder: '<ms>',
+      kind: 'positive-int',
+      help: `Timeout per network step, default ${DEFAULT_TIMEOUT_MS}`,
+    },
+  },
+});
+const baseUrl = resolveBaseUrl(options.baseUrl);
 const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
 const health = await fetchJson(new URL('/health', baseUrl), { timeoutMs });
@@ -56,99 +76,12 @@ if (!zhRules.body.includes('象棋规则')) {
   throw new Error('/zh-hans/rules/xiangqi missing translated title marker 象棋规则');
 }
 
-console.log(
-  JSON.stringify({
-    ok: true,
-    baseUrl: baseUrl.href,
-    health: health.body,
-    serverStatus: serverStatus.body,
-    playableEngines: engines.body.engines.map((engine) => engine.id),
-    watchShell: true,
-    zhHansRulesXiangqi: true,
-  }),
-);
-
-async function fetchJson(url, { timeoutMs, init = {} }) {
-  const response = await fetchWithTimeout(url, timeoutMs, init);
-  const text = await response.text();
-  let body = null;
-  if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      throw new Error(`${url.pathname} returned non-JSON response: ${text.slice(0, 120)}`);
-    }
-  }
-  return { status: response.status, body };
-}
-
-async function fetchText(url, { timeoutMs, init = {} }) {
-  const response = await fetchWithTimeout(url, timeoutMs, init);
-  return { status: response.status, body: await response.text() };
-}
-
-async function fetchWithTimeout(url, timeoutMs, init) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function parseArgs(args) {
-  const result = {
-    baseUrl: null,
-    timeoutMs: null,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--base') {
-      result.baseUrl = requiredValue(args, ++index, '--base');
-    } else if (arg === '--timeout-ms') {
-      result.timeoutMs = parsePositiveInteger(
-        requiredValue(args, ++index, '--timeout-ms'),
-        '--timeout-ms',
-      );
-    } else if (arg === '--help' || arg === '-h') {
-      printHelp();
-      process.exit(0);
-    } else {
-      throw new Error(`unknown argument: ${arg}`);
-    }
-  }
-  return result;
-}
-
-function requiredValue(args, index, flag) {
-  const value = args[index];
-  if (!value) throw new Error(`${flag} requires a value`);
-  return value;
-}
-
-function parsePositiveInteger(value, flag) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
-  }
-  return parsed;
-}
-
-function normalizeBaseUrl(value) {
-  const url = new URL(value);
-  url.pathname = '/';
-  url.search = '';
-  url.hash = '';
-  return url;
-}
-
-function printHelp() {
-  console.log(`Usage: npm run prod:smoke:lite -- [options]
-
-Options:
-  --base <url>       Base URL to smoke, default ${DEFAULT_BASE_URL}
-  --timeout-ms <ms>  Timeout per network step, default ${DEFAULT_TIMEOUT_MS}
-`);
-}
+reportResult({
+  ok: true,
+  baseUrl: baseUrl.href,
+  health: health.body,
+  serverStatus: serverStatus.body,
+  playableEngines: engines.body.engines.map((engine) => engine.id),
+  watchShell: true,
+  zhHansRulesXiangqi: true,
+});

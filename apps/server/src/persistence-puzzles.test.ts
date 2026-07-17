@@ -1,6 +1,8 @@
+import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { getPool } from './persistence-db.js';
 import { getOrCreateDailyPuzzleSelection } from './persistence-puzzles.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
 
 definePersistenceTests('daily puzzles', () => {
   test('persists and reuses the homepage daily puzzle assignment', async () => {
@@ -19,5 +21,52 @@ definePersistenceTests('daily puzzles', () => {
       ['2026-07-01', 'homepage'],
     );
     assert.equal(rows[0]?.count, '1');
+  });
+
+  // #183: the puzzles table is seeded on first store use and the DB round trip
+  // (json column, seq ordering) reproduces the committed seed byte for byte —
+  // the serving-contract pin for the persistence-ON path.
+  test('puzzle store syncs the seed and round-trips it byte-identically', async () => {
+    // Defensive: a prior aborted run may have leaked the mined test row below.
+    await getPool().query(`DELETE FROM puzzles WHERE id = 'xq-mined-test-row-1'`);
+    resetPuzzleStoreForTests();
+    const store = await getPuzzleStore();
+    assert.equal(store.source, 'database');
+
+    const seed = loadAllSeedPuzzles();
+    assert.equal(store.puzzles.length, seed.length);
+    assert.equal(JSON.stringify(store.puzzles), JSON.stringify(seed));
+
+    const { rows } = await getPool().query<{ seed_hash: string; count: string }>(
+      `SELECT s.seed_hash, (SELECT count(*)::text FROM puzzles WHERE source_kind = 'seed') AS count
+         FROM puzzle_seed_sync s WHERE s.slot = 'puzzles'`,
+    );
+    assert.equal(rows[0]?.seed_hash, seedPuzzleContentHash());
+    assert.equal(rows[0]?.count, String(seed.length));
+  });
+
+  // Seed reconciliation must never touch miner-owned rows, and re-syncs are
+  // hash-gated no-ops.
+  test('seed re-sync is idempotent and leaves mined rows alone', async () => {
+    resetPuzzleStoreForTests();
+    await getPuzzleStore();
+
+    await getPool().query(
+      `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, mined_at)
+       VALUES ('xq-mined-test-row-1', 'xiangqi', 'Test mined row',
+               (SELECT max(seq) + 1 FROM puzzles), 'checkmate', '{checkmate}', 1,
+               '{"id":"xq-mined-test-row-1","variant":"xiangqi"}', 'mined', now())
+       ON CONFLICT (id) DO NOTHING`,
+    );
+
+    resetPuzzleStoreForTests();
+    const store = await getPuzzleStore();
+    // The mined row survives the (skipped) re-sync and is served after the
+    // seed set, in seq order.
+    assert.equal(store.puzzles.length, loadAllSeedPuzzles().length + 1);
+    assert.equal(store.puzzles.at(-1)?.id, 'xq-mined-test-row-1');
+
+    await getPool().query(`DELETE FROM puzzles WHERE id = 'xq-mined-test-row-1'`);
+    resetPuzzleStoreForTests();
   });
 });

@@ -4,8 +4,11 @@
 // normalization (the score must already be Red POV — see evaluateXiangqiPosition /
 // evaluateFortressXiangqiPosition); this helper only walks the move prefixes,
 // SEQUENTIALLY, since each evaluate typically gates through a per-engine pool and a
-// stampede would just queue-timeout. This is the shared spine the per-variant
-// analysis routes call (xiangqi keeps its own copy in analyzeXiangqiGame for now).
+// stampede would just queue-timeout. This is the shared spine every per-variant
+// analysis route calls, including xiangqi (whose real path binds the evaluate to
+// one persistent engine session per sweep — see withXiangqiAnalysisSession, #168).
+
+import type { AnalysisProgressStore } from './game-analysis-kernel.js';
 
 export type SweepPlyEval = {
   ply: number;
@@ -38,15 +41,24 @@ export type PositionEvaluate = (
   opts: { depth: number },
 ) => Promise<{ cp: number | null; mate: number | null; best: string | null }>;
 
+/**
+ * Walk the move prefixes and evaluate each. With a `progress` store the sweep
+ * checkpoints after every evaluated ply and RESUMES from the last checkpoint
+ * (repo rule: persist expensive output incrementally — a killed sweep loses at
+ * most one in-flight eval instead of the whole pass).
+ */
 export async function sweepPlyEvals(
   movesUci: readonly string[],
   evaluate: PositionEvaluate,
   depth: number,
+  progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<SweepPlyEval[]> {
-  const evals: SweepPlyEval[] = [];
-  for (let ply = 0; ply <= movesUci.length; ply += 1) {
+  const resumed = progress ? await progress.load() : null;
+  const evals: SweepPlyEval[] = resumed ? [...resumed.items] : [];
+  for (let ply = evals.length; ply <= movesUci.length; ply += 1) {
     const evaluation = await evaluate([...movesUci.slice(0, ply)], { depth });
     evals.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+    if (progress) await progress.save({ nextIndex: ply + 1, items: evals });
   }
   return evals;
 }

@@ -7,11 +7,14 @@
 // sounds, and the drop-aware move notation.
 
 import {
+  applyDropMiniXiangqiMove,
+  createInitialDropMiniXiangqiState,
   DROP_MINI_XIANGQI_DROP_ROLES,
   DROP_MINI_XIANGQI_SPEC_ID,
   type DropMiniXiangqiDropRole,
   type DropMiniXiangqiMove,
   type DropMiniXiangqiPlayerView,
+  getDropMiniXiangqiPlayerView,
   type MiniXiangqiColor,
   type MiniXiangqiSquare,
 } from '@mistboard/game';
@@ -166,6 +169,28 @@ const client = createTenantLiveClient<
   replayCapture: {
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
+  },
+  // Perfect information: the event log carries every move (board + drop)
+  // unredacted, so the full per-ply history is rebuilt through the kernel on
+  // mount and after every reconnect (#80). The room's rule set rides the view,
+  // so the rebuild replays under the same rules. No new server payload.
+  replayHistory: {
+    rebuild: ({ events, view, state }) => {
+      const perspective = isMiniColor(state.seat) ? state.seat : view.perspective;
+      let gameState = createInitialDropMiniXiangqiState(view.id, view.rules);
+      const snapshots = [{ ply: 0, view: getDropMiniXiangqiPlayerView(gameState, perspective) }];
+      for (const event of events) {
+        if (!isDropMiniMoveEvent(event)) continue;
+        const next = applyDropMiniXiangqiMove(gameState, event.move);
+        if (next === gameState) return null; // kernel rejected: keep captured history
+        gameState = next;
+        snapshots.push({
+          ply: snapshots.length,
+          view: getDropMiniXiangqiPlayerView(gameState, perspective),
+        });
+      }
+      return snapshots;
+    },
   },
 });
 

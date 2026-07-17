@@ -56,7 +56,7 @@
     "engine:artifact-closeout": "node scripts/engine-artifact-closeout.mjs",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:tooling && npm run test:unit --workspaces --if-present",
-    "test:tooling": "node --test scripts/*.test.mjs",
+    "test:tooling": "node --test scripts/*.test.mjs && tsx --test scripts/variant-lab/*.test.ts",
     "test:puzzles:corpus": "npm run test:puzzles:corpus --workspace @mistboard/game",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check",

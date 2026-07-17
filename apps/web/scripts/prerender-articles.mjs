@@ -145,6 +145,65 @@ function routeAssetLinks(manifest, entryId, shellHtml) {
   return links.join('');
 }
 
+// --- per-route modulepreload manifest for the SPA shell (issue #31) ------------
+// dist/index.html (the shell the server serves for every non-prerendered client
+// route) declares only the entry script, so a cold load discovers the route's
+// chunk one round-trip AFTER the entry executes: HTML -> entry -> route chunk
+// (+ its deps, preloaded together by Vite's helper) -> data. The server
+// collapses the route-chunk layer by injecting the matched route's stylesheet +
+// modulepreload links into the shell head (server-static-pages.ts,
+// routePreloadLinksForPath), so the route graph downloads in parallel with the
+// entry. This table is the only hand-maintained part: route pattern -> source
+// module, mirroring main.ts's dispatch for the public, cold-load-heavy routes.
+// The emitted file lists are generated from the build manifest, so hrefs always
+// point at really-emitted hashed chunks; a renamed/missing module key fails the
+// build loudly instead of silently shipping stale hints. A route absent from
+// this table just serves the plain shell (graceful degradation).
+const ROUTE_PRELOADS = [
+  { pattern: '^/watch$', module: 'src/watch-route.ts' },
+  { pattern: '^/room(?:/[^/]+)?$', module: 'src/live.ts' },
+  // /game/:id mounts the replay/review surface through landing.ts (mountGame),
+  // which statically pulls the shared replay + board graph.
+  { pattern: '^/game/[^/]+$', module: 'src/landing.ts' },
+  { pattern: '^/puzzles(?:/[^/]+)?$', module: 'src/puzzles.ts' },
+  // /player normally serves the prerendered player.html (already hinted); this
+  // covers /player/rating-stats and the fallback when player.html is absent.
+  { pattern: '^/player(?:/rating-stats)?$', module: 'src/profile.ts' },
+  { pattern: '^/@/[^/]+$', module: 'src/profile.ts' },
+  { pattern: '^/videos$', module: 'src/videos.ts' },
+  { pattern: '^/forum(?:/.+)?$', module: 'src/forum.ts' },
+  { pattern: '^/learn/xiangqi$', module: 'src/learn-xiangqi/learn-xiangqi-page.ts' },
+  { pattern: '^/account(?:/.+)?$', module: 'src/account.ts' },
+  { pattern: '^/inbox(?:/.+)?$', module: 'src/inbox.ts' },
+  {
+    pattern: '^/(?:about|source|contact|patron|faq|terms|privacy|feed|news)$',
+    module: 'src/pages-static.ts',
+  },
+];
+
+async function writeRoutePreloadManifest(manifest, shellHtml) {
+  const routes = ROUTE_PRELOADS.map(({ pattern, module }) => {
+    if (!manifest[module]) {
+      throw new Error(
+        `route-preload manifest: "${module}" is not in the build manifest (route ${pattern}); ` +
+          'update ROUTE_PRELOADS to match main.ts',
+      );
+    }
+    const { css, js } = collectRouteAssets(manifest, module);
+    return {
+      pattern,
+      css: css.filter((file) => !shellHtml.includes(file)),
+      js: js.filter((file) => !shellHtml.includes(file)),
+    };
+  });
+  await fs.writeFile(
+    resolve(distDir, 'route-preload-manifest.json'),
+    `${JSON.stringify({ version: 1, routes }, null, 2)}\n`,
+    'utf-8',
+  );
+  console.log(`route-preload manifest: ${routes.length} route pattern(s)`);
+}
+
 // Production env for the SSR pass so modules see the same import.meta.env the
 // built client bundle does: NODE_ENV drives DEV/PROD, mode drives .env file
 // selection. Without both, the prerender baked dev-on flag-gated variants into
@@ -188,6 +247,25 @@ try {
   );
   const articleAssetLinks = routeAssetLinks(manifest, 'src/pages-static.ts', shell);
   const landingAssetLinks = routeAssetLinks(manifest, 'src/landing.ts', shell);
+
+  await writeRoutePreloadManifest(manifest, shell);
+
+  // zh catalogs live in lazy per-locale chunks (i18n/catalog.ts); main.ts gates
+  // every localized mount on that fetch. The prerender knows each page's locale,
+  // so bake a modulepreload for the locale chunk into the zh variants — the
+  // catalog then downloads in parallel with the entry instead of one round-trip
+  // after it. Keyed by the ArticleLang the variants table uses below.
+  const localePreloadLinks = {};
+  for (const [lang, moduleId] of [
+    ['zh-Hans', 'src/i18n/locales/zh-hans.ts'],
+    ['zh-Hant', 'src/i18n/locales/zh-hant.ts'],
+  ]) {
+    const node = manifest[moduleId];
+    if (!node?.file) {
+      throw new Error(`locale preload: "${moduleId}" is not in the build manifest`);
+    }
+    localePreloadLinks[lang] = `<link rel="modulepreload" crossorigin href="/${node.file}">`;
+  }
 
   const published = articles.filter((a) => a.status === 'published');
   let count = 0;
@@ -250,9 +328,10 @@ try {
         article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)
           ? '<meta name="robots" content="noindex, follow" />'
           : '';
+      const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
       html = html.replace(
         '</head>',
-        `${robots}${canonical}${hreflang}${ldScript}${articleAssetLinks}</head>`,
+        `${robots}${canonical}${hreflang}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
       );
 
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));

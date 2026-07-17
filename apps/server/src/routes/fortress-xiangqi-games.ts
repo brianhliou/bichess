@@ -9,16 +9,25 @@ import {
   getFortressXiangqiPlayerView,
   oppositeFortressXiangqiColor,
 } from '@mistboard/game';
-import { currentAccountUser } from './../account-session.js';
 import { fortressXiangqiEnabled } from './../feature-flags.js';
 import {
-  evaluateFortressXiangqiPosition,
   FORTRESS_XIANGQI_ANALYSIS_DEPTH,
   FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID,
+  withFortressXiangqiAnalysisSession,
 } from './../fortress-xiangqi-fsf-engine.js';
 import { fortressXiangqiRooms } from './../fortress-xiangqi-registration.js';
 import { type FortressXiangqiEvent, fortressXiangqiTenant } from './../fortress-xiangqi-tenant.js';
-import { type SweepPlyEval, sweepPlyEvals } from './../game-analysis-sweep.js';
+import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  resolveCachedComputation,
+} from './../game-analysis-kernel.js';
+import {
+  isVacuousAnalysis,
+  type SweepPlyEval,
+  sweepPlyEvals,
+  VacuousAnalysisError,
+} from './../game-analysis-sweep.js';
 import * as persistence from './../persistence.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
 import {
@@ -28,6 +37,7 @@ import {
   tenantPveEngineId,
 } from './../variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './../variant-tenant/tenant.js';
+import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import { type HttpApiContext, postgamePlayers, requireMethod, writeJson } from './lib.js';
 
 type FortressXiangqiPostgameSnapshot = {
@@ -76,6 +86,23 @@ const defaultPersistence: FortressXiangqiPostgamePersistence = {
   loadRoomEvents: (roomId) => persistence.loadRoomEvents<FortressXiangqiEvent>(roomId),
 };
 
+// Computer analysis: full-strength fixed-depth FSF eval of every ply, cached and
+// coalesced. Mirrors the xiangqi analysis route; the fortress engine's `best` is
+// already in our coords (board + drops), so there is no rewrite step. Gates/
+// envelopes: the shared factory. No engineBinary gate — FSF resolution happens
+// lazily inside the eval itself.
+const handleAnalysisRoutes = createGameAnalysisRoutes({
+  routeId: 'fortress-xiangqi',
+  logPrefix: 'fortress_xiangqi',
+  variantLabel: 'Fortress Xiangqi',
+  enabled: fortressXiangqiEnabled,
+  requiresPersistence: false,
+  loadInputs: (roomId) => fortressXiangqiPostgameForApi(roomId),
+  countPlies: (payload) => payload.timeline.filter((entry) => entry.type === 'move-played').length,
+  resolveAnalysis: (roomId, payload, computeIfMissing) =>
+    resolveFortressXiangqiAnalysis(roomId, payload, liveAnalysisCache, undefined, computeIfMissing),
+});
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -83,49 +110,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
-  // Computer analysis: full-strength fixed-depth FSF eval of every ply, cached and
-  // coalesced. GET returns only the cached result (204 on a miss, so the client can
-  // auto-load on open); POST computes on a miss and is account-gated (the expensive
-  // whole-game sweep). Mirrors the xiangqi analysis route; the fortress engine's
-  // `best` is already in our coords (board + drops), so there is no rewrite step.
-  const analysisMatch = pathname.match(/^\/api\/fortress-xiangqi\/games\/([^/]+)\/analysis$/);
-  if (analysisMatch) {
-    const method = request.method ?? 'GET';
-    if (method !== 'GET' && method !== 'POST') {
-      writeJson(response, 405, { error: 'method_not_allowed' });
-      return true;
-    }
-    if (!fortressXiangqiEnabled()) {
-      writeJson(response, 404, { error: 'not_found' });
-      return true;
-    }
-    if (method === 'POST') {
-      const user = await currentAccountUser(request);
-      if (!user) {
-        writeJson(response, 401, { error: 'not_signed_in' });
-        return true;
-      }
-    }
-    const analysisRoomId = decodeURIComponent(analysisMatch[1]!);
-    const analysisPayload = await fortressXiangqiPostgameForApi(analysisRoomId);
-    if (!analysisPayload) {
-      writeJson(response, 404, { error: 'not_found' });
-      return true;
-    }
-    const analysis = await resolveFortressXiangqiAnalysis(
-      analysisRoomId,
-      analysisPayload,
-      liveAnalysisCache,
-      undefined,
-      method === 'POST',
-    );
-    if (!analysis) {
-      response.writeHead(204).end();
-      return true;
-    }
-    writeJson(response, 200, analysis);
-    return true;
-  }
+  if (await handleAnalysisRoutes(request, response, pathname)) return true;
 
   const postgameMatch = pathname.match(/^\/api\/fortress-xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
@@ -156,16 +141,33 @@ type FortressXiangqiAnalysisPayload = {
   timeline: ReadonlyArray<{ type: string; move?: FortressXiangqiMove }>;
 };
 
+// The real whole-game sweep: the shared prefix walker bound to ONE persistent FSF
+// session (spawn + variant setup once, then incremental position/go per ply — the
+// same go command as the old per-spawn path, so evals and the engine id are
+// unchanged). With a `progress` store the sweep checkpoints after every evaluated
+// ply and resumes from the last checkpoint.
+function fortressXiangqiAnalysisSweep(
+  movesUci: string[],
+  progress?: AnalysisProgressStore<SweepPlyEval>,
+): Promise<SweepPlyEval[]> {
+  return withFortressXiangqiAnalysisSession((evaluate) =>
+    // The session evaluator carries the fixed analysis depth internally; the
+    // sweep's depth argument is the nominal cache dimension, not a search limit.
+    sweepPlyEvals(movesUci, (moves) => evaluate(moves), FORTRESS_XIANGQI_ANALYSIS_DEPTH, progress),
+  );
+}
+
 /**
  * Build the Red-POV eval series for a finished fortress game from its postgame
  * payload. `analyze` is injectable for tests; it defaults to the real FSF whole-game
- * sweep. Unlike xiangqi/Pikafish there is NO `best`-coordinate rewrite — fortress FSF
- * UCI is already our notation (board moves + `Q@d4` drops).
+ * sweep (one persistent engine process per sweep). Unlike xiangqi/Pikafish there is
+ * NO `best`-coordinate rewrite — fortress FSF UCI is already our notation (board
+ * moves + `Q@d4` drops).
  */
 export async function analyzeFortressXiangqiPostgame(
   payload: FortressXiangqiAnalysisPayload,
   analyze: (movesUci: string[]) => Promise<SweepPlyEval[]> = (movesUci) =>
-    sweepPlyEvals(movesUci, evaluateFortressXiangqiPosition, FORTRESS_XIANGQI_ANALYSIS_DEPTH),
+    fortressXiangqiAnalysisSweep(movesUci),
 ): Promise<FortressXiangqiGameAnalysis> {
   const movesUci = payload.timeline
     .filter((entry): entry is { type: 'move-played'; move: FortressXiangqiMove } =>
@@ -193,14 +195,13 @@ const liveAnalysisCache: FortressXiangqiAnalysisCache = {
     persistence.saveGameAnalysis(roomId, engineId, depth, plies),
 };
 
-// One in-flight compute per (room, engine, depth) so concurrent viewers don't run the
-// whole-game sweep twice; cleared in `finally` so a failed compute never wedges the key.
-const inflightAnalysis = new Map<string, Promise<FortressXiangqiGameAnalysis>>();
-
 /**
- * Cache-first, coalesced whole-game analysis. A finished game's eval series is
- * immutable given (room, engine, depth): serve a stored result immediately, else
- * compute once (sharing one in-flight promise), persist it, and return.
+ * Cache-first, coalesced whole-game analysis (shared skeleton: game-analysis-kernel).
+ * A finished game's eval series is immutable given (room, engine, depth): serve a
+ * stored result immediately, else compute once (sharing one in-flight promise),
+ * persist it, and return. A scoreless (all-null) sweep throws VacuousAnalysisError
+ * and is never cached, so a fixed engine can recompute later; the route maps it to
+ * 503 analysis_engine_unavailable.
  */
 export async function resolveFortressXiangqiAnalysis(
   roomId: string,
@@ -211,26 +212,30 @@ export async function resolveFortressXiangqiAnalysis(
 ): Promise<FortressXiangqiGameAnalysis | null> {
   const engineId = FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID;
   const depth = FORTRESS_XIANGQI_ANALYSIS_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, plies: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightAnalysis.get(key);
-  if (existing) return existing;
-
-  const compute = (async () => {
-    const analysis = await analyzeFortressXiangqiPostgame(payload, analyze);
-    await cache.save(roomId, engineId, depth, analysis.plies);
-    return analysis;
-  })();
-  inflightAnalysis.set(key, compute);
-  try {
-    return await compute;
-  } finally {
-    inflightAnalysis.delete(key);
-  }
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () =>
+      (
+        await analyzeFortressXiangqiPostgame(
+          payload,
+          analyze ?? ((movesUci) => fortressXiangqiAnalysisSweep(movesUci, progress ?? undefined)),
+        )
+      ).plies,
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('fortress-xiangqi');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 export async function fortressXiangqiPostgameForApi(

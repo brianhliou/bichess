@@ -2,14 +2,26 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
-  FORTRESS_XIANGQI_PUZZLES,
-  JUNGLE_PUZZLES,
-  MINI_XIANGQI_PUZZLES,
+  type FortressXiangqiPuzzle,
+  type JunglePuzzle,
+  type MiniXiangqiPuzzle,
   puzzleShortCode,
-  XIANGQI_PUZZLES,
+  type XiangqiPuzzle,
 } from '@mistboard/game';
+import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
+
+// These tests run persistence-off, so the routes serve the puzzle store's
+// seed-backed snapshot. Assertions therefore compare against the SEED corpus
+// (the served source of truth since #183), not the small in-package fixture
+// arrays.
+const MINI_XIANGQI_PUZZLES = loadSeedPuzzleRegistry('mini-xiangqi') as readonly MiniXiangqiPuzzle[];
+const FORTRESS_XIANGQI_PUZZLES = loadSeedPuzzleRegistry(
+  'fortress-xiangqi',
+) as readonly FortressXiangqiPuzzle[];
+const JUNGLE_PUZZLES = loadSeedPuzzleRegistry('jungle') as readonly JunglePuzzle[];
+const XIANGQI_PUZZLES = loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[];
 
 type ResponseCapture = { body: string; headers: Record<string, string>; status: number | null };
 

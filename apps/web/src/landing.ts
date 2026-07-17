@@ -752,28 +752,13 @@ function buildLandingStage(
     communityStrip,
   );
 
-  // Both side board boxes (viewer left, daily puzzle right) track the center block
-  // height (articles + support/store) so they stay flush top AND bottom at every
-  // width: the feed height shrinks with the viewport but the rail width does not,
-  // and pure CSS can't tie a box to the feed height across the grid gutters.
-  // One shared square = min(feed height, narrower rail) keeps the two rails
-  // symmetric and never overflows either column. A future grid-line-sharing pass
-  // could remove this JS.
-  if (!opts.skipLiveWidgets && typeof ResizeObserver !== 'undefined') {
-    const syncBandBoxSize = (): void => {
-      const feedHeight = centerBelow.getBoundingClientRect().height;
-      const puzzleRail = puzzleColumn.getBoundingClientRect().width;
-      const viewerRail = viewerColumn.getBoundingClientRect().width;
-      const rail = Math.min(puzzleRail || Infinity, viewerRail || Infinity);
-      if (feedHeight > 0 && Number.isFinite(rail) && rail > 0) {
-        section.style.setProperty('--home-puzzle-box-size', `${Math.min(feedHeight, rail)}px`);
-      }
-    };
-    const bandBoxObserver = new ResizeObserver(syncBandBoxSize);
-    bandBoxObserver.observe(centerBelow);
-    bandBoxObserver.observe(puzzleColumn);
-    bandBoxObserver.observe(viewerColumn);
-  }
+  // Both side board boxes (viewer left, daily puzzle right) track the center
+  // block (articles + support/store) so they stay flush top AND bottom. This is
+  // pure CSS grid-line sharing since issue #120: the rail columns are absolutely
+  // positioned into their grid areas (so the feed alone defines the shared row
+  // height) and each is a size query container the boxes read via
+  // min(100cqw, 100cqh). See the "Grid-line sharing" block in landing.css; the
+  // ResizeObserver that used to compute --home-puzzle-box-size is gone.
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against

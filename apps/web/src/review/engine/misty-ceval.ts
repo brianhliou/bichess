@@ -25,7 +25,9 @@ import type {
 // version query. The worker's own imports are unversioned (bare path), so the main thread
 // posts the versioned URLs in `init` — bump this on any vendored-asset change to mint fresh
 // edge cache keys for the worker script, the JS glue, AND the wasm.
-const MISTY_ASSET_VERSION = '0.2.4-2';
+// -coep1: the 0.2.4-2 keys were edge-cached before the server started sending
+// COEP/CORP on /engine/<pkg>/ assets (2026-07-16); fresh keys pick the headers up.
+const MISTY_ASSET_VERSION = '0.2.4-coep1';
 
 interface MistyEngineConfig {
   /** Public base path of the vendored wasm build. */

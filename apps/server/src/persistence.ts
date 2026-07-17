@@ -1,38 +1,39 @@
 export type {
-  AccountClosureChallenge,
   AccountDisplayPreferences,
   AccountLocale,
   AccountPreferenceKey,
   AccountPreferences,
   AccountRole,
-  AccountSession,
-  AccountSessionSummary,
-  ActivePlayerEntry,
-  AuthRateLimitInput,
-  AuthRateLimitScope,
-  BestRatingEntry,
   ClockTenthsPreference,
-  CloseUserAccountResult,
   DmPolicy,
-  EmailChangeChallenge,
-  EmailLoginChallenge,
-  LeaderboardEntry,
-  LeaderboardQuery,
-  LeaderboardSummaryLadder,
   PieceAnimationPreference,
-  ProfileBucketRating,
-  ProfileRatingHistory,
-  ProfileRatingHistoryPoint,
   ProfileVisibility,
-  PublicProfileUser,
-  UpdateUserEmailResult,
-  UpdateUserProfileResult,
   UserAccount,
-  UserProfile,
 } from './persistence-accounts.js';
 export {
   ACCOUNT_LOCALES,
-  backfillUserAccountSessionAgent,
+  createUser,
+  DEFAULT_ACCOUNT_PREFERENCES,
+  DM_POLICIES,
+  findUserByEmail,
+  isAccountLocale,
+  isClockTenthsPreference,
+  isDmPolicy,
+  isPieceAnimationPreference,
+  isProfileVisibility,
+  userExists,
+  userIdForHandle,
+} from './persistence-accounts.js';
+export type {
+  AccountClosureChallenge,
+  AuthRateLimitInput,
+  AuthRateLimitScope,
+  CloseUserAccountResult,
+  EmailChangeChallenge,
+  EmailLoginChallenge,
+  UpdateUserEmailResult,
+} from './persistence-auth.js';
+export {
   closedAccountExistsForEmailHash,
   closeUserAccount,
   consumeAccountClosureChallenge,
@@ -40,50 +41,16 @@ export {
   consumeEmailChangeChallenge,
   consumeEmailLoginChallenge,
   createAccountClosureChallenge,
-  createAccountSession,
   createEmailChangeChallenge,
   createEmailLoginChallenge,
-  createUser,
-  DEFAULT_ACCOUNT_PREFERENCES,
-  DM_POLICIES,
   deleteAccountClosureChallenge,
   deleteEmailChangeChallenge,
   deleteEmailLoginChallenge,
-  findUserByEmail,
-  getBestRatings,
-  getBestRatingsAnyTimeClass,
-  getGamesTotals,
-  getLeaderboard,
-  getLeaderboardSummary,
-  getMostActivePlayers,
-  getUserByAccountSession,
-  getUserDmPolicy,
-  getUserGamesPage,
-  getUserProfileByHandle,
-  getUserRatingHistory,
-  isAccountLocale,
-  isClockTenthsPreference,
-  isDmPolicy,
-  isPieceAnimationPreference,
-  isProfileVisibility,
-  listActiveAccountSessions,
   markUserEmailVerified,
   pruneAuthRateLimitBuckets,
-  revokeAccountSession,
-  revokeOtherUserAccountSessions,
-  revokeUserAccountSession,
   supersedeEmailLoginChallenges,
-  updateUserAccountPreference,
-  updateUserDmPolicy,
   updateUserEmail,
-  updateUserLocale,
-  updateUserPieceAnimationPreference,
-  updateUserProfile,
-  updateUserProfileVisibility,
-  updateUserPublicProfileDetails,
-  userExists,
-  userIdForHandle,
-} from './persistence-accounts.js';
+} from './persistence-auth.js';
 export type {
   BotDirectoryEntry,
   BotModeRecord,
@@ -206,10 +173,13 @@ export {
 } from './persistence-forum.js';
 export type { StoredPlyEval } from './persistence-game-analysis.js';
 export {
+  deleteGameAnalysisProgress,
   getGameAnalysis,
   getGameAnalysisBlob,
+  getGameAnalysisProgress,
   saveGameAnalysis,
   saveGameAnalysisBlob,
+  saveGameAnalysisProgress,
 } from './persistence-game-analysis.js';
 export type {
   GameDebugArtifactInput,
@@ -313,6 +283,21 @@ export {
   upsertHistoricalXiangqiPlayer,
   upsertHistoricalXiangqiSource,
 } from './persistence-historical-xiangqi.js';
+export type {
+  ActivePlayerEntry,
+  BestRatingEntry,
+  LeaderboardEntry,
+  LeaderboardQuery,
+  LeaderboardSummaryLadder,
+} from './persistence-leaderboards.js';
+export {
+  getBestRatings,
+  getBestRatingsAnyTimeClass,
+  getGamesTotals,
+  getLeaderboard,
+  getLeaderboardSummary,
+  getMostActivePlayers,
+} from './persistence-leaderboards.js';
 export type { PatronSubscriptionInput, PatronTransaction } from './persistence-patron.js';
 export {
   applyPatronSubscription,
@@ -322,6 +307,27 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
+export type {
+  ProfileBucketRating,
+  ProfileRatingHistory,
+  ProfileRatingHistoryPoint,
+  PublicProfileUser,
+  UpdateUserProfileResult,
+  UserProfile,
+} from './persistence-profiles.js';
+export {
+  getUserDmPolicy,
+  getUserGamesPage,
+  getUserProfileByHandle,
+  getUserRatingHistory,
+  updateUserAccountPreference,
+  updateUserDmPolicy,
+  updateUserLocale,
+  updateUserPieceAnimationPreference,
+  updateUserProfile,
+  updateUserProfileVisibility,
+  updateUserPublicProfileDetails,
+} from './persistence-profiles.js';
 export type {
   FollowResult,
   RelationListEntry,
@@ -365,6 +371,16 @@ export {
   upsertRoomSeatToken,
   verifyRoomSeatToken,
 } from './persistence-seat-tokens.js';
+export type { AccountSession, AccountSessionSummary } from './persistence-sessions.js';
+export {
+  backfillUserAccountSessionAgent,
+  createAccountSession,
+  getUserByAccountSession,
+  listActiveAccountSessions,
+  revokeAccountSession,
+  revokeOtherUserAccountSessions,
+  revokeUserAccountSession,
+} from './persistence-sessions.js';
 export type {
   PublicSiteStats,
   PublicStatsDay,

@@ -27,11 +27,22 @@ import {
   winPercent,
 } from '@mistboard/game';
 import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  mapWithConcurrency,
+  resolveCachedComputation,
+} from './game-analysis-kernel.js';
+import {
   isVacuousAnalysis,
   type SweepPlyEval,
   VacuousAnalysisError,
 } from './game-analysis-sweep.js';
-import { evaluateJieqiFen, evaluateJieqiMultiPv, JIEQI_ENGINE_VERSION } from './jieqi-engine.js';
+import {
+  evaluateJieqiFen,
+  evaluateJieqiMultiPv,
+  JIEQI_ENGINE_VERSION,
+  withJieqiAnalysisSession,
+} from './jieqi-engine.js';
 import {
   jieqiMoveToPikafishUci,
   jieqiStateToPikafishFen,
@@ -71,12 +82,20 @@ export type JieqiPositionEval = {
  * Pikafish reports the score from the side-to-move POV, and side-to-move IS the mover seat
  * (the FEN's stm field just encodes that seat), so we flip the sign when Black is to move —
  * exactly as banqi/jungle do. Throws (via pikaJieqiPath) when the binary is absent; callers
- * pre-check availability and fail closed.
+ * pre-check availability and fail closed. `evaluateFen` is the engine backend: the default
+ * spawns one process per call; the sweep binds it to a persistent session
+ * (withJieqiAnalysisSession) with the same depth/movetime, so the POV math lives here once.
  */
-export async function evaluateJieqiPosition(state: JieqiGameState): Promise<JieqiPositionEval> {
+export async function evaluateJieqiPosition(
+  state: JieqiGameState,
+  evaluateFen: (
+    fen: string,
+    opts: { depth: number; movetimeMs: number },
+  ) => Promise<{ cp: number | null; mate: number | null; best: string | null }> = evaluateJieqiFen,
+): Promise<JieqiPositionEval> {
   const mover: JieqiColor = state.status.type === 'playing' ? state.status.turn : 'red';
   const sign = mover === 'red' ? 1 : -1;
-  const evaluation = await evaluateJieqiFen(jieqiStateToPikafishFen(state), {
+  const evaluation = await evaluateFen(jieqiStateToPikafishFen(state), {
     depth: JIEQI_ANALYSIS_DEPTH_SEARCH,
     movetimeMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
   });
@@ -108,12 +127,15 @@ export type JieqiGameAnalysis = {
  * Ply 0 is the initial position; ply k is the position after k moves. Reconstruction uses the
  * SAME kernel the live game did (createInitialJieqiState(deal) + applyJieqiMove), so reveals
  * reproduce exactly (a face-down piece reveals its dealt identity the first time it moves).
- * `evaluate` is injectable so tests drive the sweep without an engine.
+ * `evaluate` is injectable so tests drive the sweep without an engine; the default path runs
+ * the walk against ONE persistent PikaJieQi session (spawn + option setup once, then a
+ * FEN-per-position round-trip at the same depth/movetime the per-spawn path used).
  */
 export async function analyzeJieqiPostgame(
   moves: readonly JieqiMove[],
   deal: JieqiDeal,
-  evaluate: (state: JieqiGameState) => Promise<JieqiPositionEval> = evaluateJieqiPosition,
+  evaluate?: (state: JieqiGameState) => Promise<JieqiPositionEval>,
+  progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<JieqiGameAnalysis> {
   let state = createInitialJieqiState('analysis', deal);
   const states: JieqiGameState[] = [state];
@@ -121,16 +143,30 @@ export async function analyzeJieqiPostgame(
     state = applyJieqiMove(state, move);
     states.push(state);
   }
-  const plies: SweepPlyEval[] = [];
-  for (let ply = 0; ply < states.length; ply += 1) {
-    const s = states[ply]!;
-    if (s.status.type !== 'playing') {
-      plies.push(terminalPlyEval(ply, s));
-      continue;
+  // With a progress store the sweep checkpoints after every evaluated ply and
+  // resumes from the last checkpoint (persist expensive output incrementally).
+  const sweep = async (
+    evaluatePosition: (state: JieqiGameState) => Promise<JieqiPositionEval>,
+  ): Promise<SweepPlyEval[]> => {
+    const resumed = progress ? await progress.load() : null;
+    const plies: SweepPlyEval[] = resumed ? [...resumed.items] : [];
+    for (let ply = plies.length; ply < states.length; ply += 1) {
+      const s = states[ply]!;
+      if (s.status.type !== 'playing') {
+        plies.push(terminalPlyEval(ply, s));
+        continue;
+      }
+      const evaluation = await evaluatePosition(s);
+      plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+      if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
     }
-    const evaluation = await evaluate(s);
-    plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
-  }
+    return plies;
+  };
+  const plies = evaluate
+    ? await sweep(evaluate)
+    : await withJieqiAnalysisSession((evaluateFen) =>
+        sweep((s) => evaluateJieqiPosition(s, evaluateFen)),
+      );
   return { engineId: JIEQI_ANALYSIS_ENGINE_ID, depth: JIEQI_ANALYSIS_DEPTH, plies };
 }
 
@@ -171,16 +207,13 @@ const liveAnalysisCache: JieqiAnalysisCache = {
     persistence.saveGameAnalysis(roomId, engineId, depth, plies),
 };
 
-// One in-flight compute per (room, engine, depth) so concurrent viewers don't run the
-// whole-game sweep twice; cleared in `finally` so a failed compute never wedges the key.
-const inflightAnalysis = new Map<string, Promise<JieqiGameAnalysis>>();
-
 /**
- * Cache-first, coalesced whole-game analysis. A finished game's eval series is immutable given
- * (room, engine, depth): serve a stored result immediately, else compute once (sharing one
- * in-flight promise), persist it, and return. `computeIfMissing = false` makes it a pure cache
- * read (204-on-miss for the GET path). A scoreless (all-null) sweep throws VacuousAnalysisError
- * and is never cached, so a fixed engine can recompute later.
+ * Cache-first, coalesced whole-game analysis (shared skeleton: game-analysis-kernel).
+ * A finished game's eval series is immutable given (room, engine, depth): serve a stored
+ * result immediately, else compute once (sharing one in-flight promise), persist it, and
+ * return. `computeIfMissing = false` makes it a pure cache read (204-on-miss for the GET
+ * path). A scoreless (all-null) sweep throws VacuousAnalysisError and is never cached, so
+ * a fixed engine can recompute later; the route maps it to 503 analysis_engine_unavailable.
  */
 export async function resolveJieqiAnalysis(
   roomId: string,
@@ -192,30 +225,29 @@ export async function resolveJieqiAnalysis(
 ): Promise<JieqiGameAnalysis | null> {
   const engineId = JIEQI_ANALYSIS_ENGINE_ID;
   const depth = JIEQI_ANALYSIS_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, plies: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightAnalysis.get(key);
-  if (existing) return existing;
-
-  const compute = (async () => {
-    const analysis = analyze ? await analyze(moves, deal) : await analyzeJieqiPostgame(moves, deal);
-    // Fail closed on a scoreless sweep: never cache a vacuous (all-null) series — it would
-    // render as a flawless game forever. Throwing keeps the key uncached so a fixed engine
-    // recomputes; the route maps this to 503 analysis_engine_unavailable.
-    if (isVacuousAnalysis(analysis.plies)) throw new VacuousAnalysisError('jieqi');
-    await cache.save(roomId, engineId, depth, analysis.plies);
-    return analysis;
-  })();
-  inflightAnalysis.set(key, compute);
-  try {
-    return await compute;
-  } finally {
-    inflightAnalysis.delete(key);
-  }
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () => {
+      const analysis = analyze
+        ? await analyze(moves, deal)
+        : await analyzeJieqiPostgame(moves, deal, undefined, progress ?? undefined);
+      return analysis.plies;
+    },
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('jieqi');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 // ── Decision-vs-luck decomposition (Layer 2) ──────────────────────────────────────
@@ -246,6 +278,9 @@ export async function resolveJieqiAnalysis(
 // reveal → a couple of minutes for a whole game, one-time and cached.
 const JIEQI_DECISION_DEPTH = 10;
 const JIEQI_DECISION_MOVETIME_CAP_MS = 4_000;
+// Matches the pikajieqi-analysis engine pool's slot count: with launch
+// concurrency == pool slots, no fan-out eval ever waits in the pool queue.
+const JIEQI_DECISION_EVAL_CONCURRENCY = 2;
 const JIEQI_DECISION_MULTIPV = 12;
 // How many of the engine's top moves to true-baseline as the decision ceiling (plus the played
 // move). The engine's own ranking is unreliable under the clamp, so we re-score a few and take the
@@ -329,32 +364,33 @@ async function poolMeanWin(
   }
   const total = [...pool.values()].reduce((a, b) => a + b, 0);
   const roles = [...pool.keys()];
-  const wins = await Promise.all(
-    roles.map((role) => {
-      // Counterfactual: this dark square is `role` instead of its true role. The MULTISET of the
-      // mover's remaining hidden roles is FIXED — we only relocate which one lies under move.from —
-      // so we SWAP move.from's role with a donor dark tile of the mover that holds `role`, moving
-      // the true role (`source.role`) there. Relabeling move.from ALONE would change the hidden-role
-      // counts (adding a phantom `role` and dropping a real `source.role`), skewing the baseline.
-      const cf: JieqiGameState = {
-        ...state,
-        board: { ...state.board, [move.from]: { color: mover, role, faceDown: true } },
-      };
-      if (role !== source.role) {
-        const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
-          (sq) =>
-            sq !== move.from &&
-            state.board[sq]?.faceDown === true &&
-            state.board[sq]?.color === mover &&
-            state.board[sq]?.role === role,
-        );
-        // `role` is drawn from the mover's hidden tiles OTHER than move.from (which holds
-        // `source.role` ≠ `role`), so a donor always exists; guard defensively regardless.
-        if (donor) cf.board[donor] = { color: mover, role: source.role, faceDown: true };
-      }
-      return moverWinAfter(applyJieqiMove(cf, move), mover, evalPosition);
-    }),
-  );
+  // Bounded fan-out (mirrors banqi): launch concurrency == the analysis pool's
+  // slot count, so no counterfactual eval ever waits in the pool queue and one
+  // queue timeout can no longer detonate the whole batch.
+  const wins = await mapWithConcurrency(roles, JIEQI_DECISION_EVAL_CONCURRENCY, (role) => {
+    // Counterfactual: this dark square is `role` instead of its true role. The MULTISET of the
+    // mover's remaining hidden roles is FIXED — we only relocate which one lies under move.from —
+    // so we SWAP move.from's role with a donor dark tile of the mover that holds `role`, moving
+    // the true role (`source.role`) there. Relabeling move.from ALONE would change the hidden-role
+    // counts (adding a phantom `role` and dropping a real `source.role`), skewing the baseline.
+    const cf: JieqiGameState = {
+      ...state,
+      board: { ...state.board, [move.from]: { color: mover, role, faceDown: true } },
+    };
+    if (role !== source.role) {
+      const donor = (Object.keys(state.board) as (keyof typeof state.board)[]).find(
+        (sq) =>
+          sq !== move.from &&
+          state.board[sq]?.faceDown === true &&
+          state.board[sq]?.color === mover &&
+          state.board[sq]?.role === role,
+      );
+      // `role` is drawn from the mover's hidden tiles OTHER than move.from (which holds
+      // `source.role` ≠ `role`), so a donor always exists; guard defensively regardless.
+      if (donor) cf.board[donor] = { color: mover, role: source.role, faceDown: true };
+    }
+    return moverWinAfter(applyJieqiMove(cf, move), mover, evalPosition);
+  });
   let baseline = 0;
   let realized = 50;
   roles.forEach((role, idx) => {
@@ -376,11 +412,21 @@ export async function analyzeJieqiDecisions(
   moves: readonly JieqiMove[],
   deal: JieqiDeal,
   deps: JieqiDecisionDeps = liveDecisionDeps,
+  progress?: AnalysisProgressStore<JieqiDecision>,
 ): Promise<JieqiDecision[]> {
   let state = createInitialJieqiState('analysis', deal);
-  const decisions: JieqiDecision[] = [];
+  // With a progress store, checkpoint after every graded reveal and resume from
+  // the saved move cursor (quiet moves before it just re-advance the state —
+  // kernel replay is free; the engine fan-outs are what we refuse to redo).
+  const resumed = progress ? await progress.load() : null;
+  const decisions: JieqiDecision[] = resumed ? [...resumed.items] : [];
+  const startIndex = resumed?.nextIndex ?? 0;
   for (let i = 0; i < moves.length; i += 1) {
     const move = moves[i]!;
+    if (i < startIndex) {
+      state = applyJieqiMove(state, move);
+      continue;
+    }
     const source = state.board[move.from];
     const mover: JieqiColor = state.status.type === 'playing' ? state.status.turn : 'red';
     const isReveal = source?.faceDown === true && state.status.type === 'playing';
@@ -415,6 +461,7 @@ export async function analyzeJieqiDecisions(
       // Rank by true baseline: 1 + how many candidates strictly beat the played move.
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
       decisions.push({ ply: i + 1, mover, bestWin, playedWin, realizedWin, playedRank });
+      if (progress) await progress.save({ nextIndex: i + 1, items: decisions });
     }
     state = applyJieqiMove(state, move);
   }
@@ -440,16 +487,15 @@ const liveDecisionsCache: JieqiDecisionsCache = {
     persistence.saveGameAnalysisBlob(roomId, engineId, depth, decisions),
 };
 
-const inflightDecisions = new Map<string, Promise<JieqiDecision[]>>();
-
 export type JieqiDecisionsResult = { engineId: string; depth: number; decisions: JieqiDecision[] };
 
 /**
  * Cache-first, coalesced decision-vs-luck decomposition (the heavier, opt-in tier on top of the
- * basic eval sweep). Self-contained — it recomputes realized in the same search as the mean it is
- * compared against, so it needs no Layer-1 sweep input. A scoreless decomposition (reveals exist
- * but every win% is the null-eval 50/50) fails closed like the basic sweep: throws, caches
- * nothing. A game with no reveal plies caches an empty array (a valid, terminal result).
+ * basic eval sweep; shared skeleton: game-analysis-kernel). Self-contained — it recomputes
+ * realized in the same search as the mean it is compared against, so it needs no Layer-1 sweep
+ * input. A scoreless decomposition (reveals exist but every win% is the null-eval 50/50) fails
+ * closed like the basic sweep: throws, caches nothing; the route maps it to 503. A game with no
+ * reveal plies caches an empty array (a valid, terminal result).
  */
 export async function resolveJieqiDecisions(
   roomId: string,
@@ -461,35 +507,30 @@ export async function resolveJieqiDecisions(
 ): Promise<JieqiDecisionsResult | null> {
   const engineId = JIEQI_DECISIONS_ENGINE_ID;
   const depth = JIEQI_DECISION_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, decisions: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightDecisions.get(key);
-  if (existing) return existing.then((decisions) => ({ engineId, depth, decisions }));
-
-  const compute = (async () => {
-    const decisions = analyze
-      ? await analyze(moves, deal)
-      : await analyzeJieqiDecisions(moves, deal);
-    // Fail closed on a scoreless decomposition: a scoreless engine makes every position eval null,
-    // so every win% collapses to 50 (best === played === realized). Never cache that (a fixed
-    // engine recomputes); the route maps this to 503.
-    if (
-      decisions.length > 0 &&
-      decisions.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
-    ) {
-      throw new VacuousAnalysisError('jieqi');
-    }
-    await cache.save(roomId, engineId, depth, decisions);
-    return decisions;
-  })();
-  inflightDecisions.set(key, compute);
-  try {
-    return { engineId, depth, decisions: await compute };
-  } finally {
-    inflightDecisions.delete(key);
-  }
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<JieqiDecision>(roomId, engineId, depth);
+  const decisions = await resolveCachedComputation<JieqiDecision[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: () =>
+      analyze
+        ? analyze(moves, deal)
+        : analyzeJieqiDecisions(moves, deal, undefined, progress ?? undefined),
+    validate: (series) => {
+      // A scoreless engine makes every position eval null, so every win% collapses to 50
+      // (best === played === realized). Never cache that; a fixed engine recomputes.
+      if (
+        series.length > 0 &&
+        series.every((d) => d.bestWin === 50 && d.playedWin === 50 && d.realizedWin === 50)
+      ) {
+        throw new VacuousAnalysisError('jieqi');
+      }
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return decisions ? { engineId, depth, decisions } : null;
 }

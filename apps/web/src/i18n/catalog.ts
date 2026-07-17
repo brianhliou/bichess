@@ -1,47 +1,34 @@
-import {
-  CRITICAL_ACCOUNT_I18N_KEYS,
-  EN_ACCOUNT,
-  ZH_HANS_ACCOUNT,
-  ZH_HANT_ACCOUNT,
-} from './catalogs/account.js';
-import {
-  CRITICAL_COMMUNITY_I18N_KEYS,
-  EN_COMMUNITY,
-  ZH_HANS_COMMUNITY,
-  ZH_HANT_COMMUNITY,
-} from './catalogs/community.js';
-import {
-  CRITICAL_CONTENT_I18N_KEYS,
-  EN_CONTENT,
-  ZH_HANS_CONTENT,
-  ZH_HANT_CONTENT,
-} from './catalogs/content.js';
-import { CRITICAL_PLAY_I18N_KEYS, EN_PLAY, ZH_HANS_PLAY, ZH_HANT_PLAY } from './catalogs/play.js';
-import {
-  CRITICAL_REVIEW_I18N_KEYS,
-  EN_REVIEW,
-  ZH_HANS_REVIEW,
-  ZH_HANT_REVIEW,
-} from './catalogs/review.js';
-import {
-  CRITICAL_SHELL_I18N_KEYS,
-  EN_SHELL,
-  ZH_HANS_SHELL,
-  ZH_HANT_SHELL,
-} from './catalogs/shell.js';
+// App translation catalog. English is statically bundled: it is the fallback
+// for every lookup and the compile-time key authority (I18nKey below plus the
+// per-domain `satisfies` checks in catalogs/*.zh-*.ts). The zh catalogs ship
+// as lazy per-locale chunks (src/i18n/locales/*) so an English-only visitor
+// never downloads them; the bootstrap in main.ts awaits ensureLocaleCatalog()
+// before first render, after which t() stays fully synchronous.
+import { CRITICAL_ACCOUNT_I18N_KEYS, EN_ACCOUNT } from './catalogs/account.js';
+import { CRITICAL_COMMUNITY_I18N_KEYS, EN_COMMUNITY } from './catalogs/community.js';
+import { CRITICAL_CONTENT_I18N_KEYS, EN_CONTENT } from './catalogs/content.js';
+import { CRITICAL_PLAY_I18N_KEYS, EN_PLAY } from './catalogs/play.js';
+import { CRITICAL_REVIEW_I18N_KEYS, EN_REVIEW } from './catalogs/review.js';
+import { CRITICAL_SHELL_I18N_KEYS, EN_SHELL } from './catalogs/shell.js';
 import { currentLocale, type Locale } from './locale.js';
 
 type I18nParams = Record<string, number | string>;
 
+export type ZhLocale = Exclude<Locale, 'en'>;
+
 export type AppI18nDomain = {
   critical: readonly string[];
   english: Readonly<Record<string, string>>;
-  locales: Readonly<Record<Exclude<Locale, 'en'>, Readonly<Record<string, string>>>>;
+  locales: Readonly<Record<ZhLocale, Readonly<Record<string, string>>>>;
   name: string;
   prefixes: readonly string[];
 };
 
-export const APP_I18N_DOMAINS: readonly AppI18nDomain[] = [
+type AppI18nDomainDef = Omit<AppI18nDomain, 'locales'> & { name: DomainName };
+
+type DomainName = 'shell' | 'content' | 'account' | 'community' | 'play' | 'review';
+
+const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
   {
     name: 'shell',
     prefixes: [
@@ -57,7 +44,6 @@ export const APP_I18N_DOMAINS: readonly AppI18nDomain[] = [
       'homeForum',
     ],
     english: EN_SHELL,
-    locales: { 'zh-Hans': ZH_HANS_SHELL, 'zh-Hant': ZH_HANT_SHELL },
     critical: CRITICAL_SHELL_I18N_KEYS,
   },
   {
@@ -78,14 +64,12 @@ export const APP_I18N_DOMAINS: readonly AppI18nDomain[] = [
       'privacy',
     ],
     english: EN_CONTENT,
-    locales: { 'zh-Hans': ZH_HANS_CONTENT, 'zh-Hant': ZH_HANT_CONTENT },
     critical: CRITICAL_CONTENT_I18N_KEYS,
   },
   {
     name: 'account',
     prefixes: ['account'],
     english: EN_ACCOUNT,
-    locales: { 'zh-Hans': ZH_HANS_ACCOUNT, 'zh-Hant': ZH_HANT_ACCOUNT },
     critical: CRITICAL_ACCOUNT_I18N_KEYS,
   },
   {
@@ -103,21 +87,18 @@ export const APP_I18N_DOMAINS: readonly AppI18nDomain[] = [
       'challenge',
     ],
     english: EN_COMMUNITY,
-    locales: { 'zh-Hans': ZH_HANS_COMMUNITY, 'zh-Hant': ZH_HANT_COMMUNITY },
     critical: CRITICAL_COMMUNITY_I18N_KEYS,
   },
   {
     name: 'play',
     prefixes: ['game', 'play', 'lobby', 'setup', 'variant', 'live', 'result'],
     english: EN_PLAY,
-    locales: { 'zh-Hans': ZH_HANS_PLAY, 'zh-Hant': ZH_HANT_PLAY },
     critical: CRITICAL_PLAY_I18N_KEYS,
   },
   {
     name: 'review',
     prefixes: ['replay', 'watch'],
     english: EN_REVIEW,
-    locales: { 'zh-Hans': ZH_HANS_REVIEW, 'zh-Hant': ZH_HANT_REVIEW },
     critical: CRITICAL_REVIEW_I18N_KEYS,
   },
 ];
@@ -133,28 +114,72 @@ const EN = {
 
 export type I18nKey = keyof typeof EN;
 
-const ZH_HANS = {
-  ...ZH_HANS_SHELL,
-  ...ZH_HANS_CONTENT,
-  ...ZH_HANS_ACCOUNT,
-  ...ZH_HANS_COMMUNITY,
-  ...ZH_HANS_PLAY,
-  ...ZH_HANS_REVIEW,
-} satisfies Partial<Record<I18nKey, string>>;
+type LocaleDomainCatalogs = Readonly<Record<DomainName, Readonly<Record<string, string>>>>;
 
-const ZH_HANT = {
-  ...ZH_HANT_SHELL,
-  ...ZH_HANT_CONTENT,
-  ...ZH_HANT_ACCOUNT,
-  ...ZH_HANT_COMMUNITY,
-  ...ZH_HANT_PLAY,
-  ...ZH_HANT_REVIEW,
-} satisfies Partial<Record<I18nKey, string>>;
-
-const CATALOGS: Record<Exclude<Locale, 'en'>, Partial<Record<I18nKey, string>>> = {
-  'zh-Hans': ZH_HANS,
-  'zh-Hant': ZH_HANT,
+// The typed loader table is the only edge to the zh modules, and it is a
+// dynamic import: Rollup emits one chunk per locale, fetched only when the
+// visitor's locale needs it. The return type checks that each locale module
+// covers every domain name.
+const LOCALE_LOADERS: Record<ZhLocale, () => Promise<{ domains: LocaleDomainCatalogs }>> = {
+  'zh-Hans': () => import('./locales/zh-hans.js'),
+  'zh-Hant': () => import('./locales/zh-hant.js'),
 };
+
+const loadedDomains: Partial<Record<ZhLocale, LocaleDomainCatalogs>> = {};
+const loadedCatalogs: Partial<Record<ZhLocale, Partial<Record<I18nKey, string>>>> = {};
+const localeLoads: Partial<Record<ZhLocale, Promise<void>>> = {};
+
+// Under SSR (the prerender and i18n:check scripts load this module through
+// ssrLoadModule) and under vitest, register every locale before the module
+// graph finishes evaluating: those environments call t() for zh locales
+// synchronously, without the browser bootstrap's ensureLocaleCatalog await.
+// Both conditions are statically false in the client build, so the branch and
+// its top-level await are dead-code-eliminated from the entry chunk (the
+// bundle-size guard in catalog.test.ts plus the release smokes would catch a
+// regression here).
+if (import.meta.env.SSR || import.meta.env.MODE === 'test') {
+  await Promise.all(
+    (Object.keys(LOCALE_LOADERS) as ZhLocale[]).map((locale) => ensureLocaleCatalog(locale)),
+  );
+}
+
+// Loads and registers a locale's catalog chunk; resolved (and idempotent) for
+// locales already registered, immediate for English. Callers that render
+// localized copy must await this once per page load before the first t() call;
+// afterwards t() is synchronous. Rejects on a failed chunk fetch (the caller
+// picks the fallback policy) and clears the memo so a later call can retry.
+export function ensureLocaleCatalog(locale: Locale): Promise<void> {
+  if (locale === 'en') return Promise.resolve();
+  let pending = localeLoads[locale];
+  if (!pending) {
+    pending = LOCALE_LOADERS[locale]().then((module) => {
+      loadedDomains[locale] = module.domains;
+      loadedCatalogs[locale] = mergeDomainCatalogs(module.domains);
+    });
+    pending.catch(() => {
+      if (localeLoads[locale] === pending) delete localeLoads[locale];
+    });
+    localeLoads[locale] = pending;
+  }
+  return pending;
+}
+
+// Structural view for the i18n checker and catalog tests: the same fully
+// populated domain shape the old static APP_I18N_DOMAINS export carried, now
+// behind an await of every locale chunk. Runtime lookups should use t() and
+// ensureLocaleCatalog instead.
+export async function loadAppI18nDomains(): Promise<readonly AppI18nDomain[]> {
+  await Promise.all(
+    (Object.keys(LOCALE_LOADERS) as ZhLocale[]).map((locale) => ensureLocaleCatalog(locale)),
+  );
+  return APP_I18N_DOMAIN_DEFS.map((def) => ({
+    ...def,
+    locales: {
+      'zh-Hans': loadedDomains['zh-Hans']?.[def.name] ?? {},
+      'zh-Hant': loadedDomains['zh-Hant']?.[def.name] ?? {},
+    },
+  }));
+}
 
 export const CRITICAL_I18N_KEYS = [
   ...CRITICAL_SHELL_I18N_KEYS,
@@ -172,7 +197,7 @@ export function t(key: I18nKey, params: I18nParams = {}, locale: Locale = curren
 
 export function hasAppTranslation(locale: Locale, key: I18nKey): boolean {
   if (locale === 'en') return key in EN;
-  return CATALOGS[locale][key] !== undefined;
+  return loadedCatalogs[locale]?.[key] !== undefined;
 }
 
 export function appTranslationKeys(): I18nKey[] {
@@ -181,7 +206,16 @@ export function appTranslationKeys(): I18nKey[] {
 
 function translationFor(locale: Locale, key: I18nKey): string {
   if (locale === 'en') return EN[key];
-  return CATALOGS[locale][key] ?? EN[key];
+  // English fallback covers both untranslated keys and a locale chunk that has
+  // not been registered yet (bootstrap awaits ensureLocaleCatalog, so the
+  // latter only happens when the chunk failed to load).
+  return loadedCatalogs[locale]?.[key] ?? EN[key];
+}
+
+function mergeDomainCatalogs(domains: LocaleDomainCatalogs): Partial<Record<I18nKey, string>> {
+  const merged: Record<string, string> = {};
+  for (const catalog of Object.values(domains)) Object.assign(merged, catalog);
+  return merged as Partial<Record<I18nKey, string>>;
 }
 
 function interpolate(template: string, params: I18nParams): string {

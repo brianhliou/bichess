@@ -18,6 +18,11 @@ import {
   type JungleMove,
 } from '@mistboard/game';
 import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  resolveCachedComputation,
+} from './game-analysis-kernel.js';
+import {
   isVacuousAnalysis,
   type SweepPlyEval,
   VacuousAnalysisError,
@@ -103,6 +108,7 @@ export { isVacuousAnalysis, VacuousAnalysisError };
 export async function analyzeJunglePostgame(
   moves: readonly JungleMove[],
   evaluate: (state: JungleGameState) => Promise<JunglePositionEval> = evaluateJunglePosition,
+  progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<JungleGameAnalysis> {
   let state = createInitialJungleState('analysis');
   const states: JungleGameState[] = [state];
@@ -110,8 +116,11 @@ export async function analyzeJunglePostgame(
     state = applyJungleMove(state, move);
     states.push(state);
   }
-  const plies: SweepPlyEval[] = [];
-  for (let ply = 0; ply < states.length; ply += 1) {
+  // With a progress store the sweep checkpoints after every evaluated ply and
+  // resumes from the last checkpoint (persist expensive output incrementally).
+  const resumed = progress ? await progress.load() : null;
+  const plies: SweepPlyEval[] = resumed ? [...resumed.items] : [];
+  for (let ply = plies.length; ply < states.length; ply += 1) {
     const s = states[ply]!;
     if (s.status.type !== 'playing') {
       plies.push(terminalPlyEval(ply, s));
@@ -119,6 +128,7 @@ export async function analyzeJunglePostgame(
     }
     const evaluation = await evaluate(s);
     plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+    if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
   }
   return { engineId: JUNGLE_ANALYSIS_ENGINE_ID, depth: JUNGLE_ANALYSIS_DEPTH, plies };
 }
@@ -138,15 +148,13 @@ const liveAnalysisCache: JungleAnalysisCache = {
     persistence.saveGameAnalysis(roomId, engineId, depth, plies),
 };
 
-// One in-flight compute per (room, engine, depth) so concurrent viewers don't run the
-// whole-game sweep twice; cleared in `finally` so a failed compute never wedges the key.
-const inflightAnalysis = new Map<string, Promise<JungleGameAnalysis>>();
-
 /**
- * Cache-first, coalesced whole-game analysis. A finished game's eval series is immutable
- * given (room, engine, depth): serve a stored result immediately, else compute once
- * (sharing one in-flight promise), persist it, and return. `computeIfMissing = false`
- * makes it a pure cache read (204-on-miss for the GET path).
+ * Cache-first, coalesced whole-game analysis (shared skeleton: game-analysis-kernel).
+ * A finished game's eval series is immutable given (room, engine, depth): serve a stored
+ * result immediately, else compute once (sharing one in-flight promise), persist it, and
+ * return. `computeIfMissing = false` makes it a pure cache read (204-on-miss for the GET
+ * path). A scoreless (all-null) sweep throws VacuousAnalysisError and is never cached, so
+ * a fixed engine can recompute later; the route maps it to 503 analysis_engine_unavailable.
  */
 export async function resolveJungleAnalysis(
   roomId: string,
@@ -157,28 +165,27 @@ export async function resolveJungleAnalysis(
 ): Promise<JungleGameAnalysis | null> {
   const engineId = JUNGLE_ANALYSIS_ENGINE_ID;
   const depth = JUNGLE_ANALYSIS_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, plies: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightAnalysis.get(key);
-  if (existing) return existing;
-
-  const compute = (async () => {
-    const analysis = analyze ? await analyze(moves) : await analyzeJunglePostgame(moves);
-    // Fail closed on a scoreless sweep: never cache a vacuous (all-null) series — it would
-    // render as a flawless game forever. Throwing keeps the key uncached so a fixed engine
-    // recomputes; the route maps this to 503 analysis_engine_unavailable.
-    if (isVacuousAnalysis(analysis.plies)) throw new VacuousAnalysisError();
-    await cache.save(roomId, engineId, depth, analysis.plies);
-    return analysis;
-  })();
-  inflightAnalysis.set(key, compute);
-  try {
-    return await compute;
-  } finally {
-    inflightAnalysis.delete(key);
-  }
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () => {
+      const analysis = analyze
+        ? await analyze(moves)
+        : await analyzeJunglePostgame(moves, undefined, progress ?? undefined);
+      return analysis.plies;
+    },
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError();
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }

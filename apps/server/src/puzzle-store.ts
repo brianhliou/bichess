@@ -1,0 +1,222 @@
+// Server-side source of the SERVED puzzle corpus (#183).
+//
+// Puzzle content lives in the `puzzles` table (see migrations/105_puzzles.sql);
+// the committed seed assets in packages/game/seed/ are synced into it here, on
+// first use, gated on a content hash. That makes deploys zero-manual-ops: a
+// `git push` that changes the seed re-syncs on the next puzzle request, an
+// unchanged deploy is a no-op, and miner-appended rows (source_kind='mined')
+// are never touched by the reconciliation.
+//
+// Persistence-off runtimes (dev:memory, unit tests) serve the seed directly —
+// the same corpus, the same order — so the puzzle surface behaves identically
+// without Postgres.
+//
+// Serving order is the `seq` column (registry concatenation order, matching
+// the pre-#183 in-memory aggregation); the snapshot caches rows in memory with
+// a short TTL so routes stay array-shaped and miner inserts show up without a
+// restart. Rows whose variant is not a known puzzle variant are SKIPPED with a
+// warning (fail-closed: unknown variants never reach dispatch).
+
+import {
+  DROP_MINI_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
+  type FortressXiangqiPuzzle,
+  JUNGLE_SPEC_ID,
+  type JunglePuzzle,
+  MINI_XIANGQI_SPEC_ID,
+  type MiniXiangqiPuzzle,
+  XIANGQI_SPEC_ID,
+  type XiangqiPuzzle,
+} from '@mistboard/game';
+import {
+  loadAllSeedPuzzles,
+  loadSeedSourceGames,
+  seedPuzzleContentHash,
+} from '@mistboard/game/puzzle-seed';
+import type pg from 'pg';
+import { getPool, isInitialized, withTransaction } from './persistence-db.js';
+
+export type StoredPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+
+export type PuzzleStoreSnapshot = {
+  // Every stored puzzle (including hidden-from-discovery variants), seq order.
+  puzzles: readonly StoredPuzzle[];
+  byId: ReadonlyMap<string, StoredPuzzle>;
+  source: 'database' | 'seed';
+};
+
+const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
+  MINI_XIANGQI_SPEC_ID,
+  DROP_MINI_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  XIANGQI_SPEC_ID,
+]);
+
+const SEED_SYNC_SLOT = 'puzzles';
+const SEED_SYNC_LOCK_KEY = 'mistboard:puzzle-seed-sync';
+// Short enough that miner-appended rows show up without a redeploy, long
+// enough that the row scan never sits on the request hot path.
+const SNAPSHOT_TTL_MS = 5 * 60_000;
+
+let snapshot: PuzzleStoreSnapshot | null = null;
+let snapshotLoadedAt = 0;
+let seedSyncChecked = false;
+let inFlight: Promise<PuzzleStoreSnapshot> | null = null;
+
+export function resetPuzzleStoreForTests(): void {
+  snapshot = null;
+  snapshotLoadedAt = 0;
+  seedSyncChecked = false;
+  inFlight = null;
+}
+
+export async function getPuzzleStore(): Promise<PuzzleStoreSnapshot> {
+  if (!isInitialized()) {
+    if (snapshot?.source !== 'seed') {
+      snapshot = buildSnapshot(loadAllSeedPuzzles() as readonly StoredPuzzle[], 'seed');
+    }
+    return snapshot;
+  }
+  if (
+    snapshot &&
+    snapshot.source === 'database' &&
+    Date.now() - snapshotLoadedAt < SNAPSHOT_TTL_MS
+  ) {
+    return snapshot;
+  }
+  if (!inFlight) {
+    inFlight = loadFromDatabase().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
+  if (!seedSyncChecked) {
+    await ensureSeedSynced();
+    seedSyncChecked = true;
+  }
+  const { rows } = await getPool().query<{ data: StoredPuzzle }>(
+    'SELECT data FROM puzzles ORDER BY seq, id',
+  );
+  const puzzles: StoredPuzzle[] = [];
+  for (const row of rows) {
+    // Fail-closed: a row with an unknown variant (bad insert, future variant
+    // deployed out of order) is withheld from serving, never dispatched.
+    if (!KNOWN_PUZZLE_VARIANTS.has(row.data.variant)) {
+      console.warn(`puzzle-store: skipping puzzle ${row.data.id} with unknown variant`, {
+        variant: row.data.variant,
+      });
+      continue;
+    }
+    puzzles.push(row.data);
+  }
+  snapshot = buildSnapshot(puzzles, 'database');
+  snapshotLoadedAt = Date.now();
+  return snapshot;
+}
+
+function buildSnapshot(
+  puzzles: readonly StoredPuzzle[],
+  source: PuzzleStoreSnapshot['source'],
+): PuzzleStoreSnapshot {
+  return {
+    puzzles,
+    byId: new Map(puzzles.map((puzzle) => [puzzle.id, puzzle])),
+    source,
+  };
+}
+
+// Upsert the committed seed corpus into the puzzles/puzzle_source_games tables.
+// Hash-gated (a no-op on every boot after an unchanged deploy) and fully
+// reconciling when the seed changed: seed-owned rows are upserted AND removed
+// when they left the seed, miner-owned rows are never touched. Runs inside one
+// transaction under an advisory lock so concurrent first requests (or several
+// server processes) cannot interleave.
+async function ensureSeedSynced(): Promise<void> {
+  const seedHash = seedPuzzleContentHash();
+  const current = await readSyncedHash(getPool());
+  if (current === seedHash) return;
+
+  await withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [SEED_SYNC_LOCK_KEY]);
+    // Another process may have completed the sync while we waited on the lock.
+    if ((await readSyncedHash(client)) === seedHash) return;
+
+    const puzzles = loadAllSeedPuzzles();
+    for (const [index, puzzle] of puzzles.entries()) {
+      await client.query(
+        `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed')
+         ON CONFLICT (id) DO UPDATE SET
+           variant = EXCLUDED.variant,
+           title = EXCLUDED.title,
+           seq = EXCLUDED.seq,
+           goal_type = EXCLUDED.goal_type,
+           themes = EXCLUDED.themes,
+           solution_plies = EXCLUDED.solution_plies,
+           data = EXCLUDED.data,
+           source_kind = 'seed'`,
+        [
+          puzzle.id,
+          puzzle.variant,
+          puzzle.title,
+          index,
+          puzzle.goal.type,
+          [...puzzle.themes],
+          puzzle.solution.length,
+          JSON.stringify(puzzle),
+        ],
+      );
+    }
+    await client.query(
+      `DELETE FROM puzzles WHERE source_kind = 'seed' AND NOT (id = ANY($1::text[]))`,
+      [puzzles.map((puzzle) => puzzle.id)],
+    );
+
+    const sourceGames = loadSeedSourceGames();
+    const games = [...sourceGames.jungle, ...sourceGames.fortressXiangqi];
+    for (const game of games) {
+      await client.query(
+        `INSERT INTO puzzle_source_games (id, variant, data, source_kind)
+         VALUES ($1, $2, $3, 'seed')
+         ON CONFLICT (id) DO UPDATE SET
+           variant = EXCLUDED.variant,
+           data = EXCLUDED.data,
+           source_kind = 'seed'`,
+        [game.id, game.variant, JSON.stringify(game)],
+      );
+    }
+    await client.query(
+      `DELETE FROM puzzle_source_games WHERE source_kind = 'seed' AND NOT (id = ANY($1::text[]))`,
+      [games.map((game) => game.id)],
+    );
+
+    await client.query(
+      `INSERT INTO puzzle_seed_sync (slot, seed_hash, synced_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (slot) DO UPDATE SET seed_hash = EXCLUDED.seed_hash, synced_at = now()`,
+      [SEED_SYNC_SLOT, seedHash],
+    );
+    console.log(
+      `puzzle-store: seed sync applied (${puzzles.length} puzzles, ${games.length} source games, hash ${seedHash.slice(0, 12)})`,
+    );
+  });
+}
+
+type Queryable = {
+  query<T extends pg.QueryResultRow = pg.QueryResultRow>(
+    text: string,
+    values?: readonly unknown[],
+  ): Promise<pg.QueryResult<T>>;
+};
+
+async function readSyncedHash(db: Queryable): Promise<string | null> {
+  const { rows } = await db.query<{ seed_hash: string }>(
+    'SELECT seed_hash FROM puzzle_seed_sync WHERE slot = $1',
+    [SEED_SYNC_SLOT],
+  );
+  return rows[0]?.seed_hash ?? null;
+}

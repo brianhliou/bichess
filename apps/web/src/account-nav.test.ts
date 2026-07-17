@@ -36,7 +36,7 @@ describe('account nav', () => {
       vi.fn(async () => jsonResponse({ user })),
     );
 
-    const { initializeAccountNav } = await import('./account-nav.js');
+    const { initializeAccountNav, setAccountNavUser } = await import('./account-nav.js');
     const { buildNav } = await import('./site-shell.js');
 
     initializeAccountNav();
@@ -52,9 +52,16 @@ describe('account nav', () => {
     expect(document.querySelector('.site-nav-link-signin')).toBeNull();
     expect(document.querySelector('.site-nav-language')).toBeNull();
     // Language is the first row of the unified appearance menu inside the panel.
-    expect(
-      document.querySelector('.account-nav-panel [data-appearance-target="language"]'),
-    ).not.toBeNull();
+    // The menu body arrives via the lazily loaded settings chunk (theme.ts
+    // facade), so wait for the swap.
+    await appearanceMenuReady('.account-nav-panel');
+
+    // Neutralize this instance before the next test: vi.resetModules() leaves
+    // this module's document.body MutationObserver alive, and with a signed-in
+    // cachedUser it would keep re-mounting the dropdown into later tests' navs
+    // (tearing out their signed-out links and gear mid-test).
+    setAccountNavUser(null);
+    await vi.dynamicImportSettled();
   });
 
   it('can replace a mounted account menu with signed-out links', async () => {
@@ -74,6 +81,8 @@ describe('account nav', () => {
     expect(document.querySelector('.account-nav-trigger')).toBeNull();
     expect(document.querySelector('.account-nav-profile-icon')).toBeNull();
     expect(document.querySelector('.site-nav-language')).toBeNull();
+    // The gear's panel body is built on first open (lazy settings chunk).
+    await gearMenuReady();
     expect(
       document.querySelector<HTMLElement>(
         '[data-theme-control] [data-appearance-target="language"]',
@@ -102,6 +111,8 @@ describe('account nav', () => {
     initializeAccountNav();
     await flushDom();
 
+    // The gear's panel body is built on first open (lazy settings chunk).
+    await gearMenuReady();
     expect(
       document.querySelector<HTMLElement>(
         '[data-theme-control] [data-appearance-target="language"]',
@@ -121,6 +132,7 @@ describe('account nav', () => {
     document.body.append(buildNav());
 
     setAccountNavUser(testUser('misty'));
+    await appearanceMenuReady('.account-nav-panel');
 
     expect(document.querySelector('.account-nav-trigger')?.getAttribute('aria-label')).toBe(
       'misty 的帳號選單',
@@ -182,6 +194,12 @@ describe('account nav', () => {
     // Signing out hides them again.
     setAccountNavUser(null);
     expect(adminMenu()?.hidden).toBe(true);
+
+    // Settle the appearance-menu chunk loads the dropdowns above kicked off, so
+    // no dynamic import is still in flight when the next test resets modules
+    // (a cross-reset resolution binds against a half-evaluated fresh module).
+    await vi.dynamicImportSettled();
+    await flushDom();
   });
 
   it('switches the signed-in dropdown into a full-panel appearance submenu', async () => {
@@ -195,6 +213,7 @@ describe('account nav', () => {
     document.body.append(buildNav());
 
     setAccountNavUser(testUser('misty'));
+    await appearanceMenuReady('.account-nav-panel');
 
     const trigger = document.querySelector<HTMLButtonElement>('.account-nav-trigger');
     trigger?.click();
@@ -244,6 +263,33 @@ function jsonResponse(data: unknown): Response {
 async function flushDom(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+// The appearance menu's body lives in the lazily loaded theme-settings-panel
+// chunk (theme.ts facade swaps it in). Wait until the drill-in rows exist under
+// the given scope, which also guarantees the dynamic import settled inside THIS
+// test instead of straddling the next test's vi.resetModules().
+async function appearanceMenuReady(scope: string): Promise<void> {
+  await vi.waitFor(() => {
+    if (!document.querySelector(`${scope} [data-appearance-target="language"]`)) {
+      throw new Error('appearance menu not swapped in yet');
+    }
+  });
+}
+
+// The signed-out gear builds its panel body on first OPEN, so the trigger must
+// be clicked. Stale nav observers from earlier tests (vi.resetModules leaves
+// old module instances' MutationObservers alive on document.body) can tear down
+// and recreate the gear mid-test, so re-click the CURRENT trigger on each poll
+// until a populated menu sticks.
+async function gearMenuReady(): Promise<void> {
+  await vi.waitFor(() => {
+    const control = document.querySelector<HTMLElement>('[data-theme-control]');
+    if (!control?.querySelector('[data-appearance-target="language"]')) {
+      control?.querySelector<HTMLButtonElement>('.theme-control-trigger')?.click();
+      throw new Error('gear menu not populated yet');
+    }
+  });
 }
 
 function memoryStorage(): Storage {

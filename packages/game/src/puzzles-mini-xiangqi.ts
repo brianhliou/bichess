@@ -1,5 +1,4 @@
 import { DROP_MINI_XIANGQI_SPEC_ID, type GameSpecId, MINI_XIANGQI_SPEC_ID } from './game-specs.js';
-import { MINED_DROP_MINI_XIANGQI_PUZZLES } from './puzzles-mini-xiangqi-mined.js';
 import {
   applyDropMiniXiangqiMove,
   DEFAULT_DROP_MINI_XIANGQI_RULES,
@@ -135,12 +134,15 @@ export type MiniXiangqiMateInOneCandidate = {
   winner: MiniXiangqiColor;
 };
 
-// Assembled by a named builder behind a @__PURE__ annotation (instead of an
-// inline module-scope array literal full of helper calls) so bundlers can prove
-// the initializer is side-effect-free and drop the corpus — including the mined
-// drop-mini puzzles spread in below — from chunks that never read it: the raw
-// module-scope construction defeated tree-shaking and shipped the mined data in
-// the web entry chunk.
+// Hand-built TEST fixture registry. Since #183 the SERVED corpus (these twelve
+// hand-built puzzles plus the mined drop-mini set) lives in the committed seed
+// asset packages/game/seed/puzzles/mini-xiangqi.json and in the server's
+// `puzzles` table; this array exists for kernel/unit/adapter tests. Assembled
+// by a named builder behind a @__PURE__ annotation (instead of an inline
+// module-scope array literal full of helper calls) so bundlers can prove the
+// initializer is side-effect-free and drop the corpus from chunks that never
+// read it: the raw module-scope construction defeated tree-shaking and shipped
+// the puzzle data in the web entry chunk.
 export const MINI_XIANGQI_PUZZLES: readonly MiniXiangqiPuzzle[] =
   /* @__PURE__ */ buildMiniXiangqiPuzzles();
 
@@ -501,7 +503,6 @@ function buildMiniXiangqiPuzzles(): readonly MiniXiangqiPuzzle[] {
       goal: { type: 'checkmate', winner: 'black' },
       themes: ['checkmate', 'drop', 'palace-net'],
     },
-    ...MINED_DROP_MINI_XIANGQI_PUZZLES,
     {
       id: 'drop-mini-xiangqi-black-chariot-drop-mate-1',
       variant: DROP_MINI_XIANGQI_SPEC_ID,

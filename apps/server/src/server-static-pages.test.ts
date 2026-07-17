@@ -6,11 +6,13 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   injectPageMeta,
+  routePreloadLinksForPath,
   serveArticlePage,
   serveArticlesIndexPage,
   serveNotFoundShell,
   serveRulesIndexPage,
   serveSitemap,
+  serveSpaShellWithRoutePreloads,
 } from './server-static-pages.js';
 
 type ResponseCapture = {
@@ -334,4 +336,115 @@ test('serveRulesIndexPage injects rules metadata', async () => {
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard.test\/zh-hant\/rules">/,
   );
+});
+
+// --- per-route modulepreload hints (issue #31) ---------------------------------
+
+function routePreloadManifestJson(): string {
+  return JSON.stringify({
+    version: 1,
+    routes: [
+      {
+        pattern: '^/watch$',
+        css: ['assets/watch-route-abc.css'],
+        js: ['assets/watch-route-abc.js', 'assets/review-shell-def.js'],
+      },
+      { pattern: '^/game/[^/]+$', css: [], js: ['assets/landing-ghi.js'] },
+      { pattern: '^/empty$', css: [], js: [] },
+    ],
+  });
+}
+
+async function staticDirWithPreloadManifest(): Promise<string> {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'route-preload-manifest.json'), routePreloadManifestJson());
+  return staticDir;
+}
+
+test('routePreloadLinksForPath renders stylesheet + modulepreload links for a matched route', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+
+  const links = await routePreloadLinksForPath({ staticDir, pathname: '/watch' });
+
+  assert.equal(
+    links,
+    '<link rel="stylesheet" crossorigin href="/assets/watch-route-abc.css">' +
+      '<link rel="modulepreload" crossorigin href="/assets/watch-route-abc.js">' +
+      '<link rel="modulepreload" crossorigin href="/assets/review-shell-def.js">',
+  );
+});
+
+test('routePreloadLinksForPath normalizes trailing slashes like isClientRoute', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+
+  const links = await routePreloadLinksForPath({ staticDir, pathname: '/watch/' });
+
+  assert.match(links ?? '', /watch-route-abc\.js/);
+});
+
+test('routePreloadLinksForPath returns null for unmatched routes, empty entries, and missing or malformed manifests', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  assert.equal(await routePreloadLinksForPath({ staticDir, pathname: '/streamer' }), null);
+  assert.equal(await routePreloadLinksForPath({ staticDir, pathname: '/empty' }), null);
+
+  const bareDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(bareDir, 'index.html'), indexHtml(), 'utf-8');
+  assert.equal(await routePreloadLinksForPath({ staticDir: bareDir, pathname: '/watch' }), null);
+
+  const brokenDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(brokenDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(brokenDir, 'route-preload-manifest.json'), 'not json');
+  assert.equal(await routePreloadLinksForPath({ staticDir: brokenDir, pathname: '/watch' }), null);
+});
+
+test('routePreloadLinksForPath skips an invalid pattern without dropping later routes', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(
+    join(staticDir, 'route-preload-manifest.json'),
+    JSON.stringify({
+      version: 1,
+      routes: [
+        { pattern: '^/(watch$', js: ['assets/broken.js'] },
+        { pattern: '^/watch$', js: ['assets/watch-route-abc.js'] },
+      ],
+    }),
+  );
+
+  const links = await routePreloadLinksForPath({ staticDir, pathname: '/watch' });
+
+  assert.equal(links, '<link rel="modulepreload" crossorigin href="/assets/watch-route-abc.js">');
+});
+
+test('serveSpaShellWithRoutePreloads injects hints into the shell head for a known route', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const response = captureResponse();
+
+  const served = await serveSpaShellWithRoutePreloads({ response, staticDir, pathname: '/watch' });
+
+  assert.equal(served, true);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers['content-type'], 'text/html; charset=utf-8');
+  assert.match(
+    response.body,
+    /<link rel="modulepreload" crossorigin href="\/assets\/watch-route-abc\.js"><link rel="modulepreload" crossorigin href="\/assets\/review-shell-def\.js"><\/head>/,
+  );
+  // Still the SPA shell: empty mount point, no prerendered markup.
+  assert.match(response.body, /<div id="app"><\/div>/);
+});
+
+test('serveSpaShellWithRoutePreloads leaves the response untouched when nothing matches', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const response = captureResponse();
+
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/streamer',
+  });
+
+  assert.equal(served, false);
+  assert.equal(response.status, null);
+  assert.equal(response.body, '');
 });

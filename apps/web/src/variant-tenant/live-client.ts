@@ -9,7 +9,11 @@
  * board rendering, click/drag interaction (installed in setup so drops,
  * promotions, and flip actions never leak in here), sounds, move notation,
  * and any snapshot extras (roomMode, pveEngineId, forfeitDeadline) captured
- * through onFrame.
+ * through onFrame. Two optional capabilities extend the core without touching
+ * tenants that skip them: replayHistory (kernel rebuild of per-ply views from
+ * the event log, so reconnects keep full replay stepping — perfect-info
+ * tenants only, fog logs are redacted) and moveList.render (a tenant-owned
+ * clickable move list replacing the standard two-column one).
  *
  * Composes the existing glue: socket-client (connection state machine),
  * room-chrome (clocks/status/actions), replay-controller (scrub state).
@@ -20,7 +24,11 @@ import { initLiveSound, resetLiveSoundState } from '../live-sound.js';
 import { clearSeatTokenForRoom, type LiveRefs } from '../live-state.js';
 import { roomIdFromPath } from '../room-url.js';
 import { syncMoveListScroll } from './chrome-dom.js';
-import { createTenantReplayController, type TenantReplayController } from './replay-controller.js';
+import {
+  createTenantReplayController,
+  type TenantReplayController,
+  type TenantReplaySnapshot,
+} from './replay-controller.js';
 import {
   createTenantRoomChrome,
   type TenantRoomChrome,
@@ -104,6 +112,19 @@ export type TenantLiveClientContext<C extends string, V> = {
   orientation(): C;
 };
 
+// Everything a tenant-owned move-list renderer needs from the core. `moves`
+// is the (fog-redacted) move-event slice of the event log this client holds.
+export type TenantMoveListRenderContext<C extends string, M> = {
+  refs: LiveRefs;
+  moves: readonly TenantMovePlayed<C, M>[];
+  /** Scrubbed ply for the active-move highlight, or null when live. */
+  activePly: number | null;
+  latestPly: number;
+  isLive: boolean;
+  /** Scrub to a ply (the latest ply returns to live) and re-render the room. */
+  jumpToPly(ply: number): void;
+};
+
 export type TenantMoveListConfig<C extends string, M> = {
   /** Class list for each move row (e.g. 'move-row xiangqi-move-row'). */
   rowClass: string;
@@ -123,6 +144,38 @@ export type TenantMoveListConfig<C extends string, M> = {
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
+  /**
+   * OPTIONAL full replacement for the standard two-column list (Crossroads:
+   * clickable ply-jump buttons). Owns everything inside refs.moveList; the
+   * core still renders the replay shell (meta line + scrub buttons) and
+   * applies listClass. Tenants without it keep the standard list unchanged.
+   */
+  render?(ctx: TenantMoveListRenderContext<C, M>): void;
+};
+
+export type TenantReplayHistoryConfig<C extends string, V> = {
+  /**
+   * OPTIONAL replay-history injection: rebuild the full per-ply view list
+   * (ply 0 = initial position through the latest ply) from the event log the
+   * client already legitimately holds. Runs after every hello/snapshot frame
+   * — mount, reconnect, and seq-gap resync all arrive as one of those — so
+   * replay stepping works after a reconnect, when only the final view was
+   * captured live (#80). The core keeps the server-sent view for the latest
+   * ply (kernel replay cannot derive non-move endings like resignation).
+   *
+   * HIDDEN-INFO INVARIANT: only perfect-information tenants may implement
+   * this. The input is the same PlayerView event stream the server already
+   * sent this client — nothing new crosses the wire. Fog tenants receive
+   * redacted logs (opponent moves are omitted or stripped), CANNOT rebuild,
+   * and must stay on incremental capture; never infer hidden state here.
+   * Return null to keep the captured history (e.g. when an event fails to
+   * replay through the kernel).
+   */
+  rebuild(ctx: {
+    events: readonly TenantLiveEvent[];
+    view: V;
+    state: TenantLiveState<C, V>;
+  }): TenantReplaySnapshot<V>[] | null;
 };
 
 /**
@@ -156,6 +209,12 @@ export type TenantReplayCaptureConfig<C extends string, V> = {
 export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>, M> = {
   tenant: WebVariantTenant<C>;
   gameSpecId: string;
+  /**
+   * Layout sizing spec override when a variant reuses another's board layout
+   * (Dark Crossroads renders the crossroads-chess 6x8 board). Defaults to
+   * gameSpecId.
+   */
+  layoutGameSpecId?: string;
   /** Dev fallback room id when the URL carries none (e.g. 'jgl_dev'). */
   defaultRoomId: string;
   /** Board host class (e.g. 'jungle-live-board'); '--disabled' is appended for the off state. */
@@ -195,6 +254,7 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   orientation?(state: TenantLiveState<C, V>): C;
   moveList: TenantMoveListConfig<C, M>;
   replayCapture: TenantReplayCaptureConfig<C, V>;
+  replayHistory?: TenantReplayHistoryConfig<C, V>;
   chrome?: {
     forfeitDeadline?(): number | null;
     roomMode?(): string;
@@ -306,6 +366,27 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     config.onFrame?.(frame);
   }
 
+  // Replay-history injection (#80): after a hello/snapshot — mount, reconnect,
+  // seq-gap resync — the client holds only the latest view, so scrubbing has a
+  // single ply. Tenants that can replay their event log through the variant
+  // kernel (perfect information only; fog logs are redacted) rebuild the full
+  // per-ply history here. Event-appended frames keep the incremental capture
+  // path — the server view that rides each event is captured as its ply.
+  function rebuildReplayHistory(): void {
+    const view = state.view;
+    if (!config.replayHistory || !view) return;
+    const snapshots = config.replayHistory.rebuild({ events: state.events, view, state });
+    if (!snapshots || snapshots.length === 0) return;
+    // The server-sent view is authoritative for the latest ply: kernel replay
+    // cannot derive non-move endings (resignation, timeout, abandonment).
+    const rebuilt = [...snapshots];
+    const last = rebuilt[rebuilt.length - 1];
+    rebuilt[rebuilt.length - 1] = { ply: last.ply, view };
+    replay.replaceHistory(rebuilt);
+    lastCapturedView = view;
+    lastCapturedKey = config.replayCapture.positionKey(view);
+  }
+
   function applyEventFrame(frame: TenantLiveFrame<C, V>): void {
     const events = state.events;
     applyFrame(frame);
@@ -373,7 +454,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     }
 
     refs = createLiveLayout(app, { debugRequested: false, roomId: room });
-    setLiveLayoutGameSpec(app, config.gameSpecId);
+    setLiveLayoutGameSpec(app, config.layoutGameSpecId ?? config.gameSpecId);
     chrome.setRenderTarget(refs, {
       sendSocket: send,
       reconnectNow: () => socket?.connect(),
@@ -395,9 +476,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const createSocket = config.socketFactory ?? createTenantSocketClient;
     socket = createSocket({
       room,
-      applyHello: (frame) => applyFrame(frame as TenantLiveFrame<C, V>),
+      applyHello: (frame) => {
+        applyFrame(frame as TenantLiveFrame<C, V>);
+        rebuildReplayHistory();
+      },
       applySnapshot: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
+        rebuildReplayHistory();
         config.onSnapshotApplied?.();
       },
       applyEvent: (frame) => applyEventFrame(frame as TenantLiveFrame<C, V>),
@@ -463,6 +548,22 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
 
   function renderMoveList(liveRefs: LiveRefs): void {
     const moves = state.events.filter(moveList.isMoveEvent);
+    // A tenant-owned renderer (clickable ply-jump lists) replaces the standard
+    // two-column list wholesale; the replay shell above it is already rendered.
+    if (moveList.render) {
+      moveList.render({
+        refs: liveRefs,
+        moves,
+        activePly: replay.activePly(),
+        latestPly: replay.latestPly(),
+        isLive: replay.isLive(),
+        jumpToPly: (ply) => {
+          replay.jumpToPly(ply);
+          renderAll();
+        },
+      });
+      return;
+    }
     // Fog tenants trim to the scrubbed ply (a fog replay only shows what had
     // been received by then); perfect-info tenants keep the full list and rely
     // on the active-ply highlight. plyWindow overrides the default coupling.

@@ -1,23 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { loadAllSeedPuzzles } from './puzzle-seed.js';
 import {
   looksLikePuzzleShortCode,
   puzzleShortCode,
   resolvePuzzleShortCode,
 } from './puzzle-short-code.js';
-import { FORTRESS_XIANGQI_PUZZLES } from './puzzles-fortress-xiangqi.js';
-import { JUNGLE_PUZZLES } from './puzzles-jungle.js';
-import { MINI_XIANGQI_PUZZLES } from './puzzles-mini-xiangqi.js';
-import { XIANGQI_PUZZLES } from './puzzles-xiangqi.js';
 
-// Every id resolvable through the server's puzzleById() choke point. Keep in
-// sync with routes/puzzles.ts:puzzleById (same four registries).
-const ALL_PUZZLE_IDS: readonly string[] = [
-  ...MINI_XIANGQI_PUZZLES,
-  ...FORTRESS_XIANGQI_PUZZLES,
-  ...JUNGLE_PUZZLES,
-  ...XIANGQI_PUZZLES,
-].map((puzzle) => puzzle.id);
+// Every id resolvable through the server's puzzleById() choke point: since
+// #183 that is the seed corpus (synced into the `puzzles` table and served
+// from there), not the in-package fixture arrays. Miner-appended DB rows join
+// the resolvable set later, but the committed corpus is what this conformance
+// invariant can and must pin.
+const ALL_PUZZLE_IDS: readonly string[] = loadAllSeedPuzzles().map((puzzle) => puzzle.id);
 
 test('puzzle short codes are deterministic and well-formed', () => {
   for (const id of ALL_PUZZLE_IDS) {

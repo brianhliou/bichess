@@ -7,6 +7,8 @@
 // sounds, and the drop-aware move notation.
 
 import {
+  applyFortressXiangqiMove,
+  createInitialFortressXiangqiState,
   FORTRESS_DROP_ROLES,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiColor,
@@ -14,6 +16,7 @@ import {
   type FortressXiangqiMove,
   type FortressXiangqiPlayerView,
   type FortressXiangqiSquare,
+  getFortressXiangqiPlayerView,
 } from '@mistboard/game';
 import './drop-mini-xiangqi.css';
 import { fortressXiangqiEnabled } from './feature-flags.js';
@@ -167,6 +170,27 @@ const client = createTenantLiveClient<
   replayCapture: {
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
+  },
+  // Perfect information: the event log carries every move (board + drop)
+  // unredacted, so the full per-ply history is rebuilt through the kernel on
+  // mount and after every reconnect (#80). No new server payload.
+  replayHistory: {
+    rebuild: ({ events, view, state }) => {
+      const perspective = isFortressColor(state.seat) ? state.seat : view.perspective;
+      let gameState = createInitialFortressXiangqiState(view.id);
+      const snapshots = [{ ply: 0, view: getFortressXiangqiPlayerView(gameState, perspective) }];
+      for (const event of events) {
+        if (!isFortressMoveEvent(event)) continue;
+        const next = applyFortressXiangqiMove(gameState, event.move);
+        if (next === gameState) return null; // kernel rejected: keep captured history
+        gameState = next;
+        snapshots.push({
+          ply: snapshots.length,
+          view: getFortressXiangqiPlayerView(gameState, perspective),
+        });
+      }
+      return snapshots;
+    },
   },
 });
 

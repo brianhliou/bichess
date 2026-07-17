@@ -92,6 +92,22 @@ describe('playable engines loading', () => {
 });
 
 describe('landing shell', () => {
+  it('keeps the grid-line-sharing hooks the homepage band CSS keys on', () => {
+    // The desktop band aligns the side board boxes to the center feed with pure
+    // CSS (landing.css "Grid-line sharing", issue #120). That CSS keys on these
+    // class names; renaming them in the DOM without updating landing.css would
+    // silently break the alignment.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+
+    const demo = wrap.querySelector('.landing-demo');
+    expect(demo).not.toBeNull();
+    expect(demo?.querySelector(':scope > .landing-viewer-column')).not.toBeNull();
+    expect(demo?.querySelector(':scope > .landing-puzzle-column')).not.toBeNull();
+    expect(demo?.querySelector(':scope > .landing-center-below')).not.toBeNull();
+    expect(demo?.querySelector('.landing-viewer-column .landing-board-column')).not.toBeNull();
+  });
+
   it('links only the About Mistboard tagline tail', () => {
     const wrap = document.createElement('div');
     wrap.innerHTML = renderLandingShellForPrerender();

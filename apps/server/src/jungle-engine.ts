@@ -149,11 +149,25 @@ const enginePool = new UciEnginePool({
   queueTimeoutMessage: 'jungle-engine concurrency queue timed out',
 });
 
+// Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
+// never from the live pool above, so analysis compute can never occupy a live
+// bot-move slot (the queue-timeout starvation in #208/#168). Two slots match the
+// decisions fan-out concurrency (see mapWithConcurrency call sites); the longer
+// default queue timeout gives queued analysis evals headroom instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'jungle-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_JUNGLE_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_JUNGLE_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'jungle-engine analysis queue timed out',
+});
+
 // Whole-game ANALYSIS eval (distinct from the playable move providers above): read the
 // engine's `info … score` for a full-board FEN, side-to-move POV. Same node-budget dial
 // as play (jungle has no `go depth`), so the eval is CPU-independent and reproducible —
-// which keeps the cached analysis stable. Gated through the shared pool so an analysis
-// sweep runs sequentially rather than stampeding the binary. Caller owns POV
+// which keeps the cached analysis stable. Gated through the dedicated ANALYSIS pool so a
+// sweep can never occupy a live bot-move slot. Caller owns POV
 // normalization; the fog-free full board is sent as-is (jungle is perfect information).
 export async function evaluateJungleFenNodes(
   fen: string,
@@ -166,7 +180,7 @@ export async function evaluateJungleFenNodes(
     `position fen ${fen}`,
     `go nodes ${opts.nodes} movetime ${opts.movetimeCapMs}`,
   ];
-  const release = await enginePool.acquire();
+  const release = await analysisPool.acquire();
   try {
     return await runUciEval({
       bin: jungleEnginePath(),

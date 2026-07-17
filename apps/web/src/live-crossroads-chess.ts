@@ -1,27 +1,26 @@
-// Live multiplayer room client for perfect-information Crossroads Chess (中西象棋).
+// Live multiplayer room client for perfect-information Crossroads Chess (中西象棋)
+// — an OPEN-INFORMATION tenant on the generic live-client core
+// (variant-tenant/live-client.ts owns bootstrap, frame application, the
+// renderAll skeleton, replay state, and the replay shell). Migrated onto the
+// core (#84) once it grew the two capabilities this client needed:
+//   * replayHistory — the full per-ply view list is rebuilt through the OPEN
+//     kernel from the event log on mount and after every reconnect, so late
+//     joiners and reconnects scrub the entire game (#80);
+//   * moveList.render — the Crossroads clickable move list (every move is a
+//     ply-jump button) replaces the core's standard two-column list.
+// This module keeps what is genuinely Crossroads': the open board rendering,
+// click/drag interaction, sounds, lifecycle analytics, rematch block, and the
+// PvE play-again request shape.
 //
-// Deliberately a self-contained sibling of the shared chess/DMX live room
-// (apps/web/src/live.ts), NOT woven into it. Perfect-information is the lighter
-// tenant — no fog, no per-seat redaction — so this client renders the server's
-// open PlayerView directly and never touches the fog-critical shared shell.
-// The connection state machine (reconnects, displacement, seq-gap resync,
-// seat-token hand-off) lives in the generic tenant socket client
-// (variant-tenant/socket-client.ts, extracted from this module), and the
-// room chrome (clocks, abort/forfeit countdowns, action status with confirm
-// dialogs, room actions) is the shared tenant chrome
-// (variant-tenant/room-chrome.ts, the DMX-pinned baseline); frame
-// application, the open board, move list, replay scrub, rematch block, and
-// sounds stay Crossroads-owned here.
-//
-// Wire protocol locked by server-ws-crossroads-chess.test.ts: hello / snapshot carry
-// the full open view + events; event-appended is the steady-state delta. The
-// server re-validates every move, so the client can be optimistic about input.
+// Wire protocol locked by server-ws-crossroads-chess.test.ts: hello / snapshot
+// carry the full open view + events; event-appended is the steady-state delta.
+// The server re-validates every move, so the client can be optimistic about
+// input.
 
 import {
   applyCrossroadsChessOpenMove,
   CROSSROADS_CHESS_SPEC_ID,
   type CrossroadsChessColor,
-  type CrossroadsChessGameState,
   type CrossroadsChessMove,
   type CrossroadsChessPlayerView,
   type CrossroadsChessSquare,
@@ -47,111 +46,49 @@ import {
   resetCrossroadsChessSoundState,
   soundForOwnCrossroadsChessMove,
 } from './live-crossroads-chess-sound.js';
-import { createLiveLayout, setLiveLayoutGameSpec } from './live-layout.js';
-import { initLiveSound, playSound, resetLiveSoundState } from './live-sound.js';
-import { clearSeatTokenForRoom, type LiveRefs } from './live-state.js';
-import { roomIdFromPath } from './room-url.js';
+import { playSound } from './live-sound.js';
+import type { LiveRefs } from './live-state.js';
 import { boardAppearanceChangedEvent, setBoardFamily } from './theme.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
-import { createTenantRoomChrome, type WebVariantTenant } from './variant-tenant/room-chrome.js';
-import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import {
-  createTenantSocketClient,
-  type TenantConnectionState,
-  type TenantSocketClient,
-} from './variant-tenant/socket-client.js';
+  createTenantLiveClient,
+  type TenantLiveClient,
+  type TenantLiveClientConfig,
+  type TenantLiveClientContext,
+  type TenantLiveEvent,
+  type TenantMoveListRenderContext,
+  type TenantMovePlayed,
+} from './variant-tenant/live-client.js';
+import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
-// ── Wire shapes (the subset this client consumes) ───────────────────────────
-
-type CrossroadsLiveClock = {
-  activeColor: CrossroadsChessColor | null;
-  incrementMs: number;
-  initialMs: number;
-  remainingMs: Record<CrossroadsChessColor, number>;
-  runningSince: number | null;
-};
 type CrossroadsChessLiveTimeControl = { initialMs: number; incrementMs: number };
-
-type CrossroadsMovePlayed = {
-  type: 'move-played';
-  color: CrossroadsChessColor;
-  move: CrossroadsChessMove;
-  ply?: number;
-};
-type CrossroadsLiveEvent = CrossroadsMovePlayed | { type: string };
+type CrossroadsMoveEvent = TenantMovePlayed<CrossroadsChessColor, CrossroadsChessMove>;
 type CrossroadsLiveRematch = {
   offers: Partial<Record<CrossroadsChessColor, boolean>>;
   finalizedRoomId: string | null;
 };
 
-type CrossroadsLiveFrame = {
-  type: 'hello' | 'snapshot' | 'event-appended';
-  clientId?: string;
-  seatToken?: string;
-  seat: CrossroadsChessColor | 'spectator';
-  seats: Partial<Record<CrossroadsChessColor, string>>;
-  seatDisplayNames?: Partial<Record<CrossroadsChessColor, string>>;
-  state: CrossroadsChessPlayerView;
-  clock?: CrossroadsLiveClock | null;
-  connectedSeats?: Record<CrossroadsChessColor, boolean>;
-  abortDeadline?: number | null;
-  forfeitDeadline?: number | null;
-  timeControl?: { initialMs: number; incrementMs: number } | null;
-  rematch?: CrossroadsLiveRematch;
-  pveEngineId?: string;
-  roomMode?: 'pvp' | 'pve';
-  clients?: number;
-  events?: CrossroadsLiveEvent[];
-  event?: CrossroadsLiveEvent;
-  seq?: number;
-};
+// ── Crossroads-owned interaction/render state ────────────────────────────────
 
-type ReplaySnapshot = { ply: number; view: CrossroadsChessPlayerView };
-
-// ── Module state ─────────────────────────────────────────────────────────────
-
-const state = {
-  room: '',
-  seat: null as CrossroadsChessColor | 'spectator' | null,
-  view: null as CrossroadsChessPlayerView | null,
-  clock: null as CrossroadsLiveClock | null,
-  timeControl: null as CrossroadsChessLiveTimeControl | null,
-  seats: {} as Partial<Record<CrossroadsChessColor, string>>,
-  seatDisplayNames: {} as Partial<Record<CrossroadsChessColor, string>>,
-  connectedSeats: { white: false, red: false } as Record<CrossroadsChessColor, boolean>,
-  moves: [] as CrossroadsMovePlayed[],
-  replayHistory: [] as ReplaySnapshot[],
-  replayPly: null as number | null,
-  selected: null as CrossroadsChessSquare | null,
-  abortDeadline: null as number | null,
-  forfeitDeadline: null as number | null,
-  pveEngineId: null as string | null,
-  roomMode: 'pvp' as 'pvp' | 'pve',
-  rematch: {
-    offers: {} as Partial<Record<CrossroadsChessColor, boolean>>,
-    finalizedRoomId: null as string | null,
-    declined: false,
-  },
-  rematchCancelIntent: false,
-};
-
-let client: TenantSocketClient | null = null;
-let refs: LiveRefs | null = null;
-let boardHost: HTMLElement | null = null;
+let core: TenantLiveClientContext<CrossroadsChessColor, CrossroadsChessPlayerView> | null = null;
+let selected: CrossroadsChessSquare | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: CrossroadsChessSquare | null = null;
+// Snapshot extras the tenant wire carries beyond the core frame.
+let roomMode: 'pvp' | 'pve' = 'pvp';
+let pveEngineId: string | null = null;
+let forfeitDeadline: number | null = null;
+let rematch: CrossroadsLiveRematch & { declined: boolean } = {
+  offers: {},
+  finalizedRoomId: null,
+  declined: false,
+};
+let rematchCancelIntent = false;
 const lifecycleTracker = createGameLifecycleTracker();
 
-function send(payload: unknown): boolean {
-  return client?.send(payload) ?? false;
-}
-
-function connection(): TenantConnectionState {
-  return client?.connection() ?? 'connecting';
-}
-
-// ── Shared tenant room chrome ────────────────────────────────────────────────
+// ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const crossroadsChessWebTenant: WebVariantTenant<CrossroadsChessColor> = {
   displayName: 'Crossroads Chess',
@@ -169,157 +106,205 @@ const crossroadsChessWebTenant: WebVariantTenant<CrossroadsChessColor> = {
   selectInstruction: 'Select one of your pieces, then choose a destination.',
 };
 
-const chrome = createTenantRoomChrome(crossroadsChessWebTenant, {
-  view: () => state.view,
-  seat: () => state.seat,
-  connectionState: () => connection(),
-  clock: () => state.clock,
-  timeControl: () => state.timeControl,
-  connectedSeats: () => state.connectedSeats,
-  seatDisplayNames: () => state.seatDisplayNames,
-  abortDeadline: () => state.abortDeadline,
-  forfeitDeadline: () => state.forfeitDeadline,
-  roomMode: () => state.roomMode,
-  room: () => state.room,
-  debugRequested: () => false,
-  isReplayLive,
-  orientation: bottomColor,
-  playAgainRequestBody: () =>
-    crossroadsLivePlayAgainRequestBody(state.timeControl, {
-      mode: state.roomMode,
-      pveEngineId: state.pveEngineId,
-      seat: state.seat,
-    }),
-  rematchControls: () => (isCrossroadsChessColor(state.seat) ? rematchControls(state.seat) : null),
-  variantDetail: () => crossroadsLiveTimeControlLabel(state.timeControl),
-});
+type CrossroadsLiveClientConfig = TenantLiveClientConfig<
+  CrossroadsChessColor,
+  CrossroadsChessPlayerView,
+  CrossroadsChessMove
+>;
 
-// ── Entry point ──────────────────────────────────────────────────────────────
+function createCrossroadsChessLiveClient(
+  socketFactory?: CrossroadsLiveClientConfig['socketFactory'],
+): TenantLiveClient<CrossroadsChessColor, CrossroadsChessPlayerView> {
+  return createTenantLiveClient<
+    CrossroadsChessColor,
+    CrossroadsChessPlayerView,
+    CrossroadsChessMove
+  >({
+    tenant: crossroadsChessWebTenant,
+    gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+    defaultRoomId: 'dchess_dev',
+    boardClass: 'crossroads-live-board',
+    chrome: {
+      forfeitDeadline: () => forfeitDeadline,
+      roomMode: () => roomMode,
+      rematchControls: () =>
+        isCrossroadsChessColor(core?.state.seat) ? rematchControls(core.state.seat) : null,
+      variantDetail: () => crossroadsLiveTimeControlLabel(core?.state.timeControl ?? null),
+    },
+    playAgainRequestBody: (state) =>
+      crossroadsLivePlayAgainRequestBody(state.timeControl, {
+        mode: roomMode,
+        pveEngineId,
+        seat: state.seat,
+      }),
+    // Every frame kind (hello, snapshot, event) updates the tenant extras and
+    // feeds sounds + lifecycle analytics — matching the pre-migration client,
+    // which ran both on all three frame paths.
+    onFrame: (frame) => {
+      if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+      if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+      forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
+      const frameRematch = frame.rematch as CrossroadsLiveRematch | undefined;
+      if (frameRematch) rematch = { ...frameRematch, declined: rematch.declined };
+      if (core) {
+        maybePlayCrossroadsChessSnapshotSound(core.state.view, core.state.seat);
+        trackCrossroadsChessLifecycle(core.state.view);
+      }
+    },
+    onRematchState: (message) => applyRematchState(message as unknown as CrossroadsLiveRematch),
+    resetSounds: resetCrossroadsChessSoundState,
+    resetState: () => {
+      selected = null;
+      draggingFrom = null;
+      roomMode = 'pvp';
+      pveEngineId = null;
+      forfeitDeadline = null;
+      rematch = { offers: {}, finalizedRoomId: null, declined: false };
+      rematchCancelIntent = false;
+      lifecycleTracker.reset();
+    },
+    renderBoard,
+    onDisabled: () => {
+      selected = null;
+    },
+    setup: (ctx) => {
+      core = ctx;
+      setBoardFamily('chess');
+      installBoardInteraction(ctx.refs);
+      // Repaint when the viewer changes their chess appearance in settings.
+      window.addEventListener(boardAppearanceChangedEvent, ctx.renderAll);
+      installSelectionClickAway({
+        roots: () => [core?.refs.board],
+        hasSelection: () => selected !== null,
+        clearSelection: () => {
+          selected = null;
+          draggingFrom = null;
+          if (core) renderBoard(core.refs, core.displayedView());
+        },
+      });
+    },
+    moveList: {
+      rowClass: 'move-row',
+      cellPrefix: 'move',
+      masked: false,
+      notate: uci,
+      isMoveEvent: isCrossroadsMoveEvent,
+      // Crossroads keeps its clickable move list: every move is a ply-jump
+      // button (the capability the core grew for #84).
+      render: renderCrossroadsMoveList,
+    },
+    replayCapture: {
+      positionKey: replayPositionKey,
+      // Ply = number of moves played so far; the initial position is ply 0.
+      plyForView: (_view, ctx) => ctx.events.filter(isCrossroadsMoveEvent).length,
+    },
+    // Perfect information: the event log carries every move unredacted, so the
+    // full per-ply history is rebuilt through the OPEN kernel on mount and
+    // after every reconnect (#80). Same client-held data, no new server
+    // payload.
+    replayHistory: {
+      rebuild: ({ events, view, state }) => {
+        const perspective = isCrossroadsChessColor(state.seat) ? state.seat : view.perspective;
+        let gameState = createInitialCrossroadsChessState(view.id);
+        const snapshots = [{ ply: 0, view: getCrossroadsChessOpenView(gameState, perspective) }];
+        for (const event of events) {
+          if (!isCrossroadsMoveEvent(event)) continue;
+          const next = applyCrossroadsChessOpenMove(gameState, event.move);
+          if (next === gameState) return null; // kernel rejected: keep captured history
+          gameState = next;
+          snapshots.push({
+            ply: snapshots.length,
+            view: getCrossroadsChessOpenView(gameState, perspective),
+          });
+        }
+        return snapshots;
+      },
+    },
+    ...(socketFactory ? { socketFactory } : {}),
+  });
+}
+
+const client = createCrossroadsChessLiveClient();
 
 export function bootstrapCrossroadsChessLiveRoom(): void {
-  const app = document.querySelector<HTMLDivElement>('#app');
-  if (!app) throw new Error('missing #app');
+  client.bootstrap();
+}
 
-  const params = new URLSearchParams(window.location.search);
-  const room = roomIdFromPath(window.location.pathname) ?? params.get('room') ?? 'dchess_dev';
-  state.room = room;
-  chrome.resetState();
-  state.rematch = { offers: {}, finalizedRoomId: null, declined: false };
-  state.rematchCancelIntent = false;
-  lifecycleTracker.reset();
-  initLiveSound();
-  resetLiveSoundState();
-  resetCrossroadsChessSoundState();
+/** Test seam: a fresh client wired to a fake socket (shares module UI state). */
+export function createCrossroadsChessLiveClientForTest(
+  socketFactory: CrossroadsLiveClientConfig['socketFactory'],
+): TenantLiveClient<CrossroadsChessColor, CrossroadsChessPlayerView> {
+  return createCrossroadsChessLiveClient(socketFactory);
+}
 
-  if (params.get('reset') === '1') {
-    clearSeatTokenForRoom(room);
-    params.delete('reset');
-    const search = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${search ? `?${search}` : ''}`,
+// ── Move list (clickable ply-jump buttons; replaces the core's standard list) ─
+
+function renderCrossroadsMoveList(
+  ctx: TenantMoveListRenderContext<CrossroadsChessColor, CrossroadsChessMove>,
+): void {
+  ctx.refs.moveList.replaceChildren();
+  // Zero moves renders an empty list (lichess parity): no placeholder row.
+  if (ctx.moves.length === 0) return;
+  // When live the latest move stays highlighted (pre-migration behavior).
+  const highlightPly = ctx.activePly ?? ctx.latestPly;
+  for (let i = 0; i < ctx.moves.length; i += 2) {
+    const row = document.createElement('li');
+    row.className = 'move-row';
+    const n = document.createElement('span');
+    n.className = 'move-number';
+    n.textContent = `${i / 2 + 1}.`;
+    row.append(
+      n,
+      crossroadsMoveCell(ctx.moves[i], i + 1, highlightPly, ctx.jumpToPly),
+      crossroadsMoveCell(ctx.moves[i + 1], i + 2, highlightPly, ctx.jumpToPly),
     );
+    ctx.refs.moveList.append(row);
   }
-
-  refs = createLiveLayout(app, { debugRequested: false, roomId: room });
-  setLiveLayoutGameSpec(app, 'crossroads-chess');
-  setBoardFamily('chess');
-  boardHost = refs.board;
-  chrome.setRenderTarget(refs, {
-    sendSocket: send,
-    // connect() drops any pending backoff timer and reconnects immediately.
-    reconnectNow: () => client?.connect(),
-  });
-
-  installBoardInteraction();
-  installSelectionClickAway({
-    roots: () => [boardHost],
-    hasSelection: () => state.selected !== null,
-    clearSelection: () => {
-      state.selected = null;
-      draggingFrom = null;
-      renderBoard();
-    },
-  });
-
-  client = createTenantSocketClient({
-    room,
-    applyHello: (frame) => applySnapshotFrame(frame as CrossroadsLiveFrame),
-    applySnapshot: (frame) => applySnapshotFrame(frame as CrossroadsLiveFrame),
-    applyEvent: (frame) => applyEventFrame(frame as CrossroadsLiveFrame),
-    onRematchState: (message) => applyRematchState(message as unknown as CrossroadsLiveRematch),
-    render: renderAll,
-  });
-  client.connect();
-  client.startPing();
-  window.setInterval(() => {
-    chrome.tickClocks();
-    chrome.tickCountdowns();
-  }, 100);
-  document.addEventListener('keydown', handleReplayKeyboard);
-  window.addEventListener(boardAppearanceChangedEvent, renderAll);
-  renderAll();
 }
 
-// ── Frame application (connection mechanics live in the tenant socket client) ─
-
-function applySnapshotFrame(frame: CrossroadsLiveFrame): void {
-  applyFrame(frame);
-  state.moves = movesFromEvents(frame.events ?? []);
-  rebuildReplayHistory();
-  maybePlayCrossroadsChessSnapshotSound(state.view, state.seat);
-}
-
-function applyEventFrame(frame: CrossroadsLiveFrame): void {
-  applyFrame(frame);
-  if (frame.event?.type === 'move-played') state.moves.push(frame.event as CrossroadsMovePlayed);
-  rebuildReplayHistory();
-  maybePlayCrossroadsChessSnapshotSound(state.view, state.seat);
-}
-
-function applyFrame(frame: CrossroadsLiveFrame): void {
-  state.seat = frame.seat;
-  state.view = frame.state;
-  state.clock = frame.clock ?? null;
-  state.timeControl = frame.timeControl ?? state.timeControl;
-  state.roomMode = frame.roomMode ?? state.roomMode;
-  state.pveEngineId = frame.pveEngineId ?? state.pveEngineId;
-  state.abortDeadline = frame.abortDeadline ?? null;
-  state.forfeitDeadline = frame.forfeitDeadline ?? null;
-  if (frame.rematch) {
-    state.rematch = { ...frame.rematch, declined: state.rematch.declined };
+function crossroadsMoveCell(
+  move: CrossroadsMoveEvent | undefined,
+  ply: number,
+  highlightPly: number,
+  jumpToPly: (ply: number) => void,
+): HTMLElement {
+  if (!move) {
+    const empty = document.createElement('span');
+    empty.className = 'move-empty';
+    return empty;
   }
-  state.seats = frame.seats ?? state.seats;
-  state.seatDisplayNames = frame.seatDisplayNames ?? state.seatDisplayNames;
-  if (frame.connectedSeats) state.connectedSeats = frame.connectedSeats;
-  // A fresh frame supersedes the local selection only when the game state moved
-  // on (someone played); keep the selection otherwise so a re-render mid-pick
-  // doesn't drop it.
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = highlightPly === ply ? 'active' : '';
+  button.textContent = uci(move.move);
+  button.title = `${capitalize(move.color)} move ${Math.ceil(ply / 2)}`;
+  button.addEventListener('click', () => {
+    selected = null;
+    jumpToPly(ply);
+  });
+  return button;
 }
 
-function applyRematchState(message: CrossroadsLiveRematch): void {
-  const mySeat = state.seat;
-  const hadMyOffer = isCrossroadsChessColor(mySeat) && Boolean(state.rematch.offers[mySeat]);
-  const stillMyOffer = isCrossroadsChessColor(mySeat) && Boolean(message.offers[mySeat]);
-  const anyOffer = Boolean(message.offers.white || message.offers.red);
-  const iCancelled = state.rematchCancelIntent;
-  state.rematchCancelIntent = false;
-  const declined =
-    hadMyOffer && !stillMyOffer && !message.finalizedRoomId && !iCancelled
-      ? true
-      : anyOffer
-        ? false
-        : state.rematch.declined;
-  state.rematch = {
-    offers: message.offers,
-    finalizedRoomId: message.finalizedRoomId,
-    declined,
-  };
-}
+// ── Rendering ────────────────────────────────────────────────────────────────
 
-function movesFromEvents(events: CrossroadsLiveEvent[]): CrossroadsMovePlayed[] {
-  return events.filter((event): event is CrossroadsMovePlayed => event.type === 'move-played');
+function renderBoard(liveRefs: LiveRefs, view: CrossroadsChessPlayerView | null): void {
+  liveRefs.board.className = 'board crossroads-live-board';
+  liveRefs.board.setAttribute('aria-label', 'Crossroads Chess board');
+  if (!view) {
+    liveRefs.board.replaceChildren();
+    return;
+  }
+  const targets = selected ? legalTargets(selected) : [];
+  liveRefs.board.innerHTML = renderCrossroadsChessBoardSvg(view, {
+    perspective: view.perspective,
+    showFog: false,
+    interactive: (core?.replay.isLive() ?? false) && iAmPlayer(),
+    selected,
+    targets,
+    draggingFrom,
+    lastMove: view.lastMove ?? null,
+    ...readCrossroadsChessAppearance(),
+  });
 }
 
 // ── Interaction ──────────────────────────────────────────────────────────────
@@ -328,52 +313,55 @@ function movesFromEvents(events: CrossroadsLiveEvent[]): CrossroadsMovePlayed[] 
 // survive every innerHTML re-render. Click is the existing select/move; drag
 // lifts an own visible piece and drops it on a legal target. A tap that never
 // crosses the movement threshold falls through to the click handler.
-function installBoardInteraction(): void {
-  if (!boardHost) return;
+function installBoardInteraction(liveRefs: LiveRefs): void {
   installBoardDrag({
-    board: boardHost,
+    board: liveRefs.board,
     ghostSizePx: CROSSROADS_CHESS_BOARD_PX,
     onSquareClick: (square) => handleSquareClick(square as CrossroadsChessSquare),
     canDragFrom: (square) => canDragCrossroadsPiece(square as CrossroadsChessSquare),
     ghostHtml: (square) => crossroadsGhostHtml(square as CrossroadsChessSquare),
     onDragStart: (from) => {
-      state.selected = from as CrossroadsChessSquare;
+      selected = from as CrossroadsChessSquare;
       draggingFrom = from as CrossroadsChessSquare;
-      renderBoard();
+      rerenderBoard();
     },
     onDrop: (from, to) =>
       dropCrossroadsPiece(from as CrossroadsChessSquare, to as CrossroadsChessSquare | null),
   });
 }
 
+function rerenderBoard(): void {
+  if (core) renderBoard(core.refs, core.displayedView());
+}
+
 function handleSquareClick(square: CrossroadsChessSquare): void {
-  const view = liveView();
+  const view = core?.state.view;
   if (!view) return;
-  if (!isReplayLive()) return;
+  if (!core?.replay.isLive()) return;
   if (!iAmPlayer() || !isMyTurn()) return;
 
-  if (state.selected === null) {
+  if (selected === null) {
     // Select only a square that has at least one legal move.
     if (legalTargets(square).length === 0) return;
-    state.selected = square;
-    renderBoard();
+    selected = square;
+    rerenderBoard();
     return;
   }
-  if (square === state.selected) {
-    state.selected = null;
-    renderBoard();
+  if (square === selected) {
+    selected = null;
+    rerenderBoard();
     return;
   }
-  const targets = legalTargets(state.selected);
+  const targets = legalTargets(selected);
   if (targets.includes(square)) {
-    sendCrossroadsMove(view, state.selected, square);
-    state.selected = null;
-    renderBoard();
+    sendCrossroadsMove(view, selected, square);
+    selected = null;
+    rerenderBoard();
     return;
   }
   // Clicked elsewhere: reselect if the new square has moves, else clear.
-  state.selected = legalTargets(square).length > 0 ? square : null;
-  renderBoard();
+  selected = legalTargets(square).length > 0 ? square : null;
+  rerenderBoard();
 }
 
 // Send a move (promotion is mandatory-Queen and derived server-side from the
@@ -385,7 +373,7 @@ function sendCrossroadsMove(
   to: CrossroadsChessSquare,
 ): void {
   const move = { from, to };
-  if (send({ type: 'move', ...move })) {
+  if (core?.send({ type: 'move', ...move })) {
     playSound(soundForOwnCrossroadsChessMove(view, move));
   }
 }
@@ -394,133 +382,77 @@ function sendCrossroadsMove(
 // Any of your visible pieces can be lifted — it snaps back if dropped somewhere
 // it cannot move, not just ones with a legal move right now.
 function canDragCrossroadsPiece(square: CrossroadsChessSquare): boolean {
-  const view = liveView();
-  if (!view || !isReplayLive() || connection() !== 'connected') return false;
+  const view = core?.state.view;
+  if (!view || !core?.replay.isLive() || core.connection() !== 'connected') return false;
   if (!iAmPlayer() || !isMyTurn()) return false;
   const entry = view.board[square];
   if (!entry || entry.shrouded) return false;
-  return entry.piece.color === state.seat;
+  return entry.piece.color === core.state.seat;
 }
 
 function crossroadsGhostHtml(square: CrossroadsChessSquare): string | null {
-  const entry = liveView()?.board[square];
+  const entry = core?.state.view?.board[square];
   if (!entry || entry.shrouded) return null;
   return crossroadsChessPieceGhostSvg(entry.piece, readCrossroadsChessAppearance());
 }
 
 function dropCrossroadsPiece(from: CrossroadsChessSquare, to: CrossroadsChessSquare | null): void {
   draggingFrom = null;
-  const view = liveView();
+  const view = core?.state.view;
   const targets = view ? legalTargets(from) : [];
   if (view && to && targets.includes(to)) {
     sendCrossroadsMove(view, from, to);
-    state.selected = null;
-  } else {
-    state.selected = null;
   }
-  renderBoard();
+  selected = null;
+  rerenderBoard();
 }
 
 function legalTargets(from: CrossroadsChessSquare): CrossroadsChessSquare[] {
-  const view = liveView();
+  const view = core?.state.view;
   if (!view) return [];
   return view.legalMoves.filter((move) => move.from === from).map((move) => move.to);
 }
 
 function iAmPlayer(): boolean {
-  return state.seat === 'white' || state.seat === 'red';
+  return isCrossroadsChessColor(core?.state.seat);
 }
 
 function isMyTurn(): boolean {
-  const view = liveView();
+  const view = core?.state.view;
   return (
     !!view &&
     view.status.type === 'playing' &&
-    view.status.turn === state.seat &&
+    view.status.turn === core?.state.seat &&
     view.legalMoves.length > 0
   );
 }
 
-// ── Rendering ────────────────────────────────────────────────────────────────
+// ── Rematch block ────────────────────────────────────────────────────────────
 
-function renderAll(): void {
-  if (!refs) return;
-  trackCrossroadsChessLifecycle(state.view);
-  chrome.resetHostPanels();
-  chrome.renderMeta();
-  renderBoard();
-  chrome.renderClocks();
-  renderMoves(refs);
-  chrome.renderActionStatus();
-  chrome.renderGameControls();
-  chrome.renderRoomActions();
-}
-
-function trackCrossroadsChessLifecycle(view: CrossroadsChessPlayerView | null): void {
-  lifecycleTracker.update(
-    crossroadsChessLifecycleAnalyticsInput(view, {
-      roomMode: state.roomMode,
-      timeControl: state.timeControl,
-    }),
-  );
-}
-
-export function crossroadsChessLifecycleAnalyticsInput(
-  view: CrossroadsChessPlayerView | null,
-  context: {
-    roomMode: 'pvp' | 'pve';
-    timeControl: CrossroadsChessLiveTimeControl | null;
-  },
-): {
-  statusType: GameLifecycleStatusType;
-  baseProps: Record<string, unknown>;
-  outcome: { winner: CrossroadsChessColor | null; reason: string; moveNumber: number } | null;
-} | null {
-  if (!view) return null;
-  const tc = context.timeControl;
-  const baseProps = {
-    gameId: view.id,
-    ...gameSpecAnalyticsPropsForId(CROSSROADS_CHESS_SPEC_ID),
-    rated: false,
-    roomMode: context.roomMode,
-    initialMs: tc?.initialMs ?? null,
-    incrementMs: tc?.incrementMs ?? null,
-    time_class: tc ? classifyTimeControl(tc.initialMs, tc.incrementMs) : null,
+function applyRematchState(message: CrossroadsLiveRematch): void {
+  const mySeat = core?.state.seat;
+  const hadMyOffer = isCrossroadsChessColor(mySeat) && Boolean(rematch.offers[mySeat]);
+  const stillMyOffer = isCrossroadsChessColor(mySeat) && Boolean(message.offers[mySeat]);
+  const anyOffer = Boolean(message.offers.white || message.offers.red);
+  const iCancelled = rematchCancelIntent;
+  rematchCancelIntent = false;
+  const declined =
+    hadMyOffer && !stillMyOffer && !message.finalizedRoomId && !iCancelled
+      ? true
+      : anyOffer
+        ? false
+        : rematch.declined;
+  rematch = {
+    offers: message.offers,
+    finalizedRoomId: message.finalizedRoomId,
+    declined,
   };
-  const outcome =
-    view.status.type === 'finished'
-      ? { winner: view.status.winner, reason: view.status.reason, moveNumber: view.moveNumber }
-      : null;
-  return { statusType: view.status.type, baseProps, outcome };
-}
-
-function renderBoard(): void {
-  if (!refs || !boardHost) return;
-  const view = displayedView();
-  refs.boardStatus.hidden = view !== null;
-  boardHost.className = 'board crossroads-live-board';
-  boardHost.setAttribute('aria-label', 'Crossroads Chess board');
-  if (!view) {
-    boardHost.replaceChildren();
-    return;
-  }
-  const targets = state.selected ? legalTargets(state.selected) : [];
-  boardHost.innerHTML = renderCrossroadsChessBoardSvg(view, {
-    perspective: view.perspective,
-    showFog: false,
-    interactive: isReplayLive() && iAmPlayer(),
-    selected: state.selected,
-    targets,
-    draggingFrom,
-    lastMove: view.lastMove ?? null,
-    ...readCrossroadsChessAppearance(),
-  });
 }
 
 function rematchControls(mySeat: CrossroadsChessColor): HTMLElement {
   const theirSeat = mySeat === 'white' ? 'red' : 'white';
-  const iOffered = Boolean(state.rematch.offers[mySeat]);
-  const theyOffered = Boolean(state.rematch.offers[theirSeat]);
+  const iOffered = Boolean(rematch.offers[mySeat]);
+  const theyOffered = Boolean(rematch.offers[theirSeat]);
 
   const block = document.createElement('div');
   block.className = 'room-rematch';
@@ -534,8 +466,8 @@ function rematchControls(mySeat: CrossroadsChessColor): HTMLElement {
       rematchNote('Waiting for opponent...'),
       rematchButtonRow(
         actionButton('Cancel rematch', () => {
-          state.rematchCancelIntent = true;
-          send({ type: 'rematch:cancel' });
+          rematchCancelIntent = true;
+          core?.send({ type: 'rematch:cancel' });
         }),
       ),
     );
@@ -545,16 +477,18 @@ function rematchControls(mySeat: CrossroadsChessColor): HTMLElement {
     block.append(
       rematchNote('Your opponent wants a rematch'),
       rematchButtonRow(
-        actionButton('Decline', () => send({ type: 'rematch:decline' })),
-        actionButton('Accept', () => send({ type: 'rematch:offer' }), 'primary'),
+        actionButton('Decline', () => core?.send({ type: 'rematch:decline' })),
+        actionButton('Accept', () => core?.send({ type: 'rematch:offer' }), 'primary'),
       ),
     );
     return block;
   }
-  if (state.rematch.declined) {
+  if (rematch.declined) {
     block.append(rematchNote('Your opponent declined the rematch.'));
   }
-  block.append(rematchButtonRow(actionButton('Rematch', () => send({ type: 'rematch:offer' }))));
+  block.append(
+    rematchButtonRow(actionButton('Rematch', () => core?.send({ type: 'rematch:offer' }))),
+  );
   return block;
 }
 
@@ -588,6 +522,48 @@ function disabledButton(label: string): HTMLButtonElement {
   button.textContent = label;
   return button;
 }
+
+// ── Lifecycle analytics ──────────────────────────────────────────────────────
+
+function trackCrossroadsChessLifecycle(view: CrossroadsChessPlayerView | null): void {
+  lifecycleTracker.update(
+    crossroadsChessLifecycleAnalyticsInput(view, {
+      roomMode,
+      timeControl: core?.state.timeControl ?? null,
+    }),
+  );
+}
+
+export function crossroadsChessLifecycleAnalyticsInput(
+  view: CrossroadsChessPlayerView | null,
+  context: {
+    roomMode: 'pvp' | 'pve';
+    timeControl: CrossroadsChessLiveTimeControl | null;
+  },
+): {
+  statusType: GameLifecycleStatusType;
+  baseProps: Record<string, unknown>;
+  outcome: { winner: CrossroadsChessColor | null; reason: string; moveNumber: number } | null;
+} | null {
+  if (!view) return null;
+  const tc = context.timeControl;
+  const baseProps = {
+    gameId: view.id,
+    ...gameSpecAnalyticsPropsForId(CROSSROADS_CHESS_SPEC_ID),
+    rated: false,
+    roomMode: context.roomMode,
+    initialMs: tc?.initialMs ?? null,
+    incrementMs: tc?.incrementMs ?? null,
+    time_class: tc ? classifyTimeControl(tc.initialMs, tc.incrementMs) : null,
+  };
+  const outcome =
+    view.status.type === 'finished'
+      ? { winner: view.status.winner, reason: view.status.reason, moveNumber: view.moveNumber }
+      : null;
+  return { statusType: view.status.type, baseProps, outcome };
+}
+
+// ── Play again / room requests ───────────────────────────────────────────────
 
 export async function createCrossroadsLivePlayAgainRoom(
   timeControl: CrossroadsChessLiveTimeControl | null,
@@ -651,10 +627,7 @@ export function crossroadsLiveTimeControlLabel(
   return incrementSeconds > 0 ? `${minutes}+${incrementSeconds}` : `${minutes}+0`;
 }
 
-// Which color sits at the bottom of the board for this viewer.
-function bottomColor(): CrossroadsChessColor {
-  return state.seat === 'red' ? 'red' : 'white';
-}
+// ── Labels / URLs / markup ───────────────────────────────────────────────────
 
 function crossroadsChessEndReasonLabel(reason: string): string {
   switch (reason) {
@@ -681,158 +654,6 @@ function crossroadsChessEndReasonLabel(reason: string): string {
   }
 }
 
-function renderMoves(liveRefs: LiveRefs): void {
-  liveRefs.moveList.replaceChildren();
-  const currentPly = currentReplayPly();
-  const maxPly = maxReplayPly();
-  liveRefs.replayMeta.textContent =
-    state.moves.length === 0
-      ? 'Live'
-      : isReplayLive()
-        ? `Live · ply ${maxPly} of ${maxPly}`
-        : `Replay · ply ${currentPly} of ${maxPly}`;
-  for (const button of liveRefs.replayControls) {
-    const action = button.dataset.replay ?? '';
-    button.disabled = replayControlDisabled(action);
-    button.onclick = () => {
-      handleReplayControl(action);
-      renderAll();
-    };
-  }
-  // Zero moves renders an empty list (lichess parity): no placeholder row.
-  if (state.moves.length === 0) return;
-  for (let i = 0; i < state.moves.length; i += 2) {
-    const row = document.createElement('li');
-    row.className = 'move-row';
-    const n = document.createElement('span');
-    n.className = 'move-number';
-    n.textContent = `${i / 2 + 1}.`;
-    row.append(
-      n,
-      liveMoveCell(state.moves[i], i + 1, currentPly),
-      liveMoveCell(state.moves[i + 1], i + 2, currentPly),
-    );
-    liveRefs.moveList.append(row);
-  }
-}
-
-function liveMoveCell(
-  move: CrossroadsMovePlayed | undefined,
-  ply: number,
-  currentPly: number,
-): HTMLElement {
-  if (!move) {
-    const empty = document.createElement('span');
-    empty.className = 'move-empty';
-    return empty;
-  }
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = currentPly === ply ? 'active' : '';
-  button.textContent = uci(move.move);
-  button.title = `${capitalize(move.color)} move ${Math.ceil(ply / 2)}`;
-  button.addEventListener('click', () => {
-    state.replayPly = ply === maxReplayPly() ? null : ply;
-    state.selected = null;
-    renderAll();
-  });
-  return button;
-}
-
-function rebuildReplayHistory(): void {
-  const perspective = liveView()?.perspective ?? (state.seat === 'red' ? 'red' : 'white');
-  let nextState: CrossroadsChessGameState = createInitialCrossroadsChessState(state.room);
-  const history: ReplaySnapshot[] = [
-    { ply: 0, view: getCrossroadsChessOpenView(nextState, perspective) },
-  ];
-  state.moves.forEach((event, index) => {
-    nextState = applyCrossroadsChessOpenMove(nextState, event.move);
-    history.push({ ply: index + 1, view: getCrossroadsChessOpenView(nextState, perspective) });
-  });
-  state.replayHistory = history;
-  if (state.replayPly !== null) {
-    state.replayPly = Math.max(0, Math.min(state.replayPly, maxReplayPly()));
-  }
-}
-
-function displayedView(): CrossroadsChessPlayerView | null {
-  if (isReplayLive()) return liveView();
-  return (
-    state.replayHistory.find((snapshot) => snapshot.ply === state.replayPly)?.view ?? liveView()
-  );
-}
-
-function liveView(): CrossroadsChessPlayerView | null {
-  return state.view;
-}
-
-function isReplayLive(): boolean {
-  return state.replayPly === null;
-}
-
-function currentReplayPly(): number {
-  return state.replayPly ?? maxReplayPly();
-}
-
-function maxReplayPly(): number {
-  return Math.max(0, state.replayHistory.length - 1, state.moves.length);
-}
-
-function replayControlDisabled(action: string): boolean {
-  const current = currentReplayPly();
-  const max = maxReplayPly();
-  if (max === 0) return true;
-  if (action === 'first' || action === 'prev') return current <= 0;
-  if (action === 'next') return isReplayLive() || current >= max;
-  if (action === 'latest') return isReplayLive();
-  return true;
-}
-
-function handleReplayControl(action: string): void {
-  const current = currentReplayPly();
-  const max = maxReplayPly();
-  if (action === 'first') {
-    state.replayPly = 0;
-  } else if (action === 'prev') {
-    state.replayPly = Math.max(0, current - 1);
-  } else if (action === 'next') {
-    state.replayPly = Math.min(max, current + 1);
-  } else if (action === 'latest') {
-    state.replayPly = null;
-  }
-  state.selected = null;
-}
-
-function handleReplayKeyboard(event: KeyboardEvent): void {
-  if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
-    return;
-  }
-  if (isEditableKeyboardTarget(event.target)) return;
-  const action = replayActionForKey(event.key);
-  if (!action || replayControlDisabled(action)) return;
-  event.preventDefault();
-  handleReplayControl(action);
-  renderAll();
-}
-
-function replayActionForKey(key: string): string | null {
-  if (key === 'ArrowLeft') return 'prev';
-  if (key === 'ArrowRight') return 'next';
-  if (key === 'ArrowUp') return 'first';
-  if (key === 'ArrowDown') return 'latest';
-  return null;
-}
-
-function isEditableKeyboardTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
-}
-
 export function crossroadsChessTerminalActionsMarkup(
   roomId: string,
   statusType: 'finished' | 'aborted',
@@ -850,12 +671,43 @@ export function crossroadsChessReviewUrl(roomId: string): string {
   return `/crossroads-chess/game/${encodeURIComponent(roomId)}`;
 }
 
+// ── Notation + replay capture key ────────────────────────────────────────────
+
 function uci(move: CrossroadsChessMove): string {
   return `${move.from}${move.to}${move.promotion ? 'Q' : ''}`;
 }
 
 function capitalize(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
+}
+
+function isCrossroadsMoveEvent(event: TenantLiveEvent): event is CrossroadsMoveEvent {
+  const move = (event as { move?: unknown }).move;
+  return (
+    event.type === 'move-played' &&
+    isCrossroadsChessColor((event as { color?: unknown }).color) &&
+    typeof move === 'object' &&
+    move !== null &&
+    typeof (move as { from?: unknown }).from === 'string' &&
+    typeof (move as { to?: unknown }).to === 'string'
+  );
+}
+
+function replayPositionKey(view: CrossroadsChessPlayerView): string {
+  const board = Object.entries(view.board)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([square, entry]) =>
+      'piece' in entry
+        ? [square, entry.piece.color, entry.piece.role, false]
+        : [square, entry.color, true],
+    );
+  return JSON.stringify({
+    board,
+    lastMove: view.lastMove ?? null,
+    moveNumber: view.moveNumber,
+    perspective: view.perspective,
+    turn: view.status.type === 'playing' ? view.status.turn : view.status.type,
+  });
 }
 
 function isCrossroadsChessColor(value: unknown): value is CrossroadsChessColor {

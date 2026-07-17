@@ -1,12 +1,39 @@
+// Fog-of-war chess engine smoke: for each playable engine, create a PvE room
+// as white, play e2e4, wait for the engine's reply, then abandon the room.
+// Does not fit the variant runner (white seat, per-engine iteration, one JSON
+// line per engine); shares the arg/base-url/fetch helpers from scripts/lib.
 import WebSocket from 'ws';
 
-const DEFAULT_BASE_URL = 'https://mistboard.com';
+import { resolveBaseUrl } from './lib/base-url.mjs';
+import { fetchWithTimeout } from './lib/http.mjs';
+import { parseSmokeArgs } from './lib/smoke-args.mjs';
+import { reportResult } from './lib/smoke-report.mjs';
+
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-const options = parseArgs(process.argv.slice(2));
-const baseUrl = normalizeBaseUrl(
-  options.baseUrl ?? process.env.MISTBOARD_BASE_URL ?? DEFAULT_BASE_URL,
-);
+const options = parseSmokeArgs(process.argv.slice(2), {
+  usage: 'npm run prod:smoke:engines -- [options]',
+  flags: {
+    '--base': {
+      key: 'baseUrl',
+      placeholder: '<url>',
+      help: 'Base URL to smoke, default https://mistboard.com',
+    },
+    '--engine': {
+      key: 'engineIds',
+      placeholder: '<engineId>',
+      repeatable: true,
+      help: 'Engine to smoke. Repeatable. Defaults to all playable engines.',
+    },
+    '--timeout-ms': {
+      key: 'timeoutMs',
+      placeholder: '<ms>',
+      kind: 'positive-int',
+      help: `Per-engine timeout, default ${DEFAULT_TIMEOUT_MS}`,
+    },
+  },
+});
+const baseUrl = resolveBaseUrl(options.baseUrl);
 const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
 const playable = await fetchPlayableEngines(baseUrl);
@@ -27,7 +54,7 @@ for (const engineId of requestedEngineIds) {
     );
   }
   const { seatToken: _seatToken, ...publicResult } = result;
-  console.log(JSON.stringify({ ...publicResult, abandoned }));
+  reportResult({ ...publicResult, abandoned });
 }
 
 async function fetchPlayableEngines(baseUrl) {
@@ -143,14 +170,11 @@ async function createRoom(baseUrl, engineId) {
 async function abandonRoom(baseUrl, roomId, seatToken, timeoutMs) {
   if (!seatToken) return { ok: false, reason: 'no_seat_token' };
   const url = new URL(`/api/rooms/${encodeURIComponent(roomId)}/abandon`, baseUrl);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, timeoutMs, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ seatToken }),
-      signal: controller.signal,
     });
     const text = await response.text();
     let body = null;
@@ -162,66 +186,5 @@ async function abandonRoom(baseUrl, roomId, seatToken, timeoutMs) {
     return { ok: response.status === 200, status: response.status, body };
   } catch (err) {
     return { ok: false, error: err.message ?? String(err) };
-  } finally {
-    clearTimeout(timer);
   }
-}
-
-function parseArgs(args) {
-  const result = {
-    baseUrl: null,
-    engineIds: [],
-    timeoutMs: null,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--base') {
-      result.baseUrl = requiredValue(args, ++index, '--base');
-    } else if (arg === '--engine') {
-      result.engineIds.push(requiredValue(args, ++index, '--engine'));
-    } else if (arg === '--timeout-ms') {
-      result.timeoutMs = parsePositiveInteger(
-        requiredValue(args, ++index, '--timeout-ms'),
-        '--timeout-ms',
-      );
-    } else if (arg === '--help' || arg === '-h') {
-      printHelp();
-      process.exit(0);
-    } else {
-      throw new Error(`unknown argument: ${arg}`);
-    }
-  }
-  return result;
-}
-
-function requiredValue(args, index, flag) {
-  const value = args[index];
-  if (!value) throw new Error(`${flag} requires a value`);
-  return value;
-}
-
-function parsePositiveInteger(value, flag) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0)
-    throw new Error(`${flag} must be a positive integer`);
-  return parsed;
-}
-
-function normalizeBaseUrl(value) {
-  const url = new URL(value);
-  url.pathname = '/';
-  url.search = '';
-  url.hash = '';
-  return url;
-}
-
-function printHelp() {
-  console.log(`Usage: npm run prod:smoke:engines -- [options]
-
-Options:
-  --base <url>          Base URL to smoke, default ${DEFAULT_BASE_URL}
-  --engine <engineId>   Engine to smoke. Repeatable. Defaults to all playable engines.
-  --timeout-ms <ms>     Per-engine timeout, default ${DEFAULT_TIMEOUT_MS}
-`);
 }

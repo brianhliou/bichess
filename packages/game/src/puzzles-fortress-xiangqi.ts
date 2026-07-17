@@ -6,11 +6,18 @@
 // line; solver plies are the even indices (0, 2, 4, ...), defender replies the
 // odd ones. The generator lives in
 // scripts/variant-lab/fortress-xiangqi-puzzle-miner.ts.
+//
+// Since #183 the SERVED corpus lives in the committed seed assets
+// (packages/game/seed/puzzles/fortress-xiangqi.json +
+// seed/source-games/fortress-xiangqi.json) and in the server's `puzzles`
+// table; the FORTRESS_XIANGQI_PUZZLES / FORTRESS_XIANGQI_SOURCE_GAMES arrays
+// below are small TEST fixture sets, not the serving set.
 
 import type { FORTRESS_XIANGQI_SPEC_ID } from './game-specs.js';
-import { MINED_FORTRESS_XIANGQI_PUZZLES } from './puzzles-fortress-xiangqi-mined.js';
-import { TACTIC_SOURCE_GAMES } from './puzzles-fortress-xiangqi-source-games.js';
-import { TACTIC_FORTRESS_XIANGQI_PUZZLES } from './puzzles-fortress-xiangqi-tactics.js';
+import {
+  FIXTURE_FORTRESS_XIANGQI_PUZZLES,
+  FIXTURE_FORTRESS_XIANGQI_SOURCE_GAMES,
+} from './puzzles-fortress-xiangqi-fixtures.js';
 import {
   applyFortressXiangqiMove,
   createInitialFortressXiangqiState,
@@ -144,9 +151,9 @@ export type FortressXiangqiMateInOneCandidate = {
   winner: FortressXiangqiColor;
 };
 
+// TEST fixture registry, NOT the serving set (see the module header).
 export const FORTRESS_XIANGQI_PUZZLES: readonly FortressXiangqiPuzzle[] = [
-  ...MINED_FORTRESS_XIANGQI_PUZZLES,
-  ...TACTIC_FORTRESS_XIANGQI_PUZZLES,
+  ...FIXTURE_FORTRESS_XIANGQI_PUZZLES,
 ];
 
 export function fortressXiangqiPuzzleById(id: string): FortressXiangqiPuzzle | null {
@@ -154,7 +161,7 @@ export function fortressXiangqiPuzzleById(id: string): FortressXiangqiPuzzle | n
 }
 
 export const FORTRESS_XIANGQI_SOURCE_GAMES: readonly FortressXiangqiSourceGame[] =
-  TACTIC_SOURCE_GAMES;
+  FIXTURE_FORTRESS_XIANGQI_SOURCE_GAMES;
 
 export function fortressXiangqiSourceGameById(id: string): FortressXiangqiSourceGame | null {
   return FORTRESS_XIANGQI_SOURCE_GAMES.find((game) => game.id === id) ?? null;

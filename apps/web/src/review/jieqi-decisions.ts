@@ -4,6 +4,7 @@
 // into the display numbers: a DECISION-quality glyph (graded) and a LUCK value (shown per move,
 // never graded). Counterpart to game-analysis.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
+import { postAnalysisJob } from './analysis-job-poll.js';
 
 /** One reveal ply's decomposition, all win% from the MOVER's POV (mirrors the server shape). */
 export type JieqiDecision = {
@@ -111,9 +112,12 @@ export async function fetchCachedJieqiDecisions(
   return summarizeDecisions(((await response.json()) as JieqiDecisionsResponse).decisions);
 }
 
-/** POST to compute the decomposition (account-gated on the server), then summarize it. */
+/** POST to compute the decomposition (account-gated on the server), then summarize it.
+ *  A cached game answers immediately (200); otherwise the server enqueues a background
+ *  job (202) and this polls it to completion (see analysis-job-poll). */
 export async function requestJieqiDecisions(roomId: string): Promise<JieqiDecisionSummary> {
-  const response = await fetch(decisionsUrl(roomId), { method: 'POST' });
-  if (!response.ok) throw new Error(`decisions_request_failed_${response.status}`);
-  return summarizeDecisions(((await response.json()) as JieqiDecisionsResponse).decisions);
+  const body = await postAnalysisJob<JieqiDecisionsResponse>(decisionsUrl(roomId), {
+    errorPrefix: 'decisions_request_failed',
+  });
+  return summarizeDecisions(body.decisions);
 }

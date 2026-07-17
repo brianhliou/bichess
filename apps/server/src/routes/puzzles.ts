@@ -5,33 +5,25 @@ import {
   attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
   DROP_MINI_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_PUZZLES,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiMove,
   type FortressXiangqiPuzzle,
-  fortressXiangqiPuzzleById,
   fortressXiangqiPuzzleNextMove,
   fortressXiangqiPuzzleSideToMove,
-  JUNGLE_PUZZLES,
   JUNGLE_SPEC_ID,
   type JungleMove,
   type JunglePuzzle,
-  junglePuzzleById,
   junglePuzzleNextMove,
   junglePuzzleSideToMove,
-  MINI_XIANGQI_PUZZLES,
   MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
   type MiniXiangqiPuzzleMove,
   type MiniXiangqiPuzzleVariant,
-  miniXiangqiPuzzleById,
   miniXiangqiPuzzleNextMove,
   miniXiangqiPuzzleSideToMove,
   resolvePuzzleShortCode,
-  standardXiangqiPuzzleById,
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
-  XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiMove,
   type XiangqiPuzzle,
@@ -44,13 +36,17 @@ import {
   parseDailyPuzzleSlot,
 } from '../persistence-puzzles.js';
 import { seedPuzzleRating } from '../puzzle-rating.js';
+import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './lib.js';
 
 // The public puzzle surface spans the Mini/Drop-Mini registry, the Fortress
 // Xiangqi registry, the Jungle registry, and the standard-xiangqi registry.
-// Ids are prefix-disjoint across them, so resolution can try each, but every
+// Content comes from the puzzle store (#183: the `puzzles` table, backed by
+// the committed seed; the seed alone when persistence is off). Ids are
+// prefix-disjoint across registries, so resolution scans one map, but every
 // behavioural branch dispatches on `variant` (fail-closed: a new registry
-// needs an explicit branch, not a fallthrough).
+// needs an explicit branch, not a fallthrough — the store already withholds
+// unknown variants from serving).
 type PublicPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
 type PublicPuzzleVariant =
   | MiniXiangqiPuzzleVariant
@@ -62,13 +58,11 @@ type PublicPuzzleMove = MiniXiangqiPuzzleMove | FortressXiangqiMove | JungleMove
 // Fortress is omitted from the discoverable pool (list + random) while the
 // variant is demoted and its puzzles await a re-mine with the per-ply
 // uniqueness gate. Its puzzles stay resolvable by id/short-code below
-// (puzzleByExactId/allPuzzleIds), so existing links do not hard-404. Re-add the
-// Fortress spread here when the re-mined corpus lands.
-const ALL_PUZZLES: readonly PublicPuzzle[] = [
-  ...MINI_XIANGQI_PUZZLES,
-  ...JUNGLE_PUZZLES,
-  ...XIANGQI_PUZZLES,
-];
+// (puzzleById scans the whole store), so existing links do not hard-404.
+// Remove the filter when the re-mined corpus lands.
+function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
+  return store.puzzles.filter((puzzle) => puzzle.variant !== FORTRESS_XIANGQI_SPEC_ID);
+}
 
 type PuzzleSummary = {
   id: string;
@@ -102,9 +96,10 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_variant' });
       return true;
     }
+    const discoverable = discoverablePuzzles(await getPuzzleStore());
     const puzzles = variant
-      ? ALL_PUZZLES.filter((puzzle) => puzzle.variant === variant)
-      : ALL_PUZZLES;
+      ? discoverable.filter((puzzle) => puzzle.variant === variant)
+      : discoverable;
     writeJson(response, 200, { puzzles: puzzles.map(puzzleSummary) });
     return true;
   }
@@ -157,7 +152,7 @@ export async function tryHandle(
   const attemptMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/attempt$/);
   if (attemptMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
-    const puzzle = puzzleById(decodeURIComponent(attemptMatch[1]!));
+    const puzzle = await puzzleById(decodeURIComponent(attemptMatch[1]!));
     if (!puzzle) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
@@ -184,7 +179,7 @@ export async function tryHandle(
   const revealMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/reveal$/);
   if (revealMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
-    const puzzle = puzzleById(decodeURIComponent(revealMatch[1]!));
+    const puzzle = await puzzleById(decodeURIComponent(revealMatch[1]!));
     if (!puzzle) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
@@ -205,7 +200,7 @@ export async function tryHandle(
   if (!detailMatch) return false;
   if (!requireMethod(request, response, 'GET')) return true;
 
-  const puzzle = puzzleById(decodeURIComponent(detailMatch[1]!));
+  const puzzle = await puzzleById(decodeURIComponent(detailMatch[1]!));
   if (!puzzle) {
     writeJson(response, 404, { error: 'not_found' });
     return true;
@@ -214,40 +209,18 @@ export async function tryHandle(
   return true;
 }
 
-// Ids of every puzzle resolvable below, built once for short-code inversion.
-// Keep the four registries in sync with puzzleByExactId().
-let allPuzzleIdsCache: string[] | null = null;
-function allPuzzleIds(): string[] {
-  if (!allPuzzleIdsCache) {
-    allPuzzleIdsCache = [
-      ...MINI_XIANGQI_PUZZLES,
-      ...FORTRESS_XIANGQI_PUZZLES,
-      ...JUNGLE_PUZZLES,
-      ...XIANGQI_PUZZLES,
-    ].map((puzzle) => puzzle.id);
-  }
-  return allPuzzleIdsCache;
-}
-
-function puzzleByExactId(id: string): PublicPuzzle | null {
-  return (
-    miniXiangqiPuzzleById(id) ??
-    fortressXiangqiPuzzleById(id) ??
-    junglePuzzleById(id) ??
-    standardXiangqiPuzzleById(id)
-  );
-}
-
 // Accepts either a full puzzle id (the URL slug today) or a lichess-style short
-// code (e.g. "bMpKA", shown in the puzzle info card). Full ids resolve directly;
+// code (e.g. "bMpKA", shown in the puzzle info card). Full ids resolve directly
+// against the store's id map (every stored puzzle, including hidden variants);
 // only when that misses do we invert a short code — resolvePuzzleShortCode
 // short-circuits on anything that is not code-shaped, so this stays cheap for
 // the common full-id path.
-function puzzleById(id: string): PublicPuzzle | null {
-  const direct = puzzleByExactId(id);
+async function puzzleById(id: string): Promise<PublicPuzzle | null> {
+  const store = await getPuzzleStore();
+  const direct = store.byId.get(id);
   if (direct) return direct;
-  const fullId = resolvePuzzleShortCode(id, allPuzzleIds());
-  return fullId ? puzzleByExactId(fullId) : null;
+  const fullId = resolvePuzzleShortCode(id, store.byId.keys());
+  return fullId ? (store.byId.get(fullId) ?? null) : null;
 }
 
 function puzzleSideToMove(puzzle: PublicPuzzle): ReturnType<typeof miniXiangqiPuzzleSideToMove> {

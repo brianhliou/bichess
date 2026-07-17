@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./puzzle-seed": {
+      "types": "./dist/puzzle-seed.d.ts",
+      "default": "./dist/puzzle-seed.js"
     }
   },
   "scripts": {

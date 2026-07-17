@@ -109,6 +109,74 @@ export function injectPageMeta(html: string, meta: PageMeta): string {
   return out;
 }
 
+// --- per-route modulepreload hints (issue #31) ---------------------------------
+// The SPA shell (dist/index.html) declares only the entry script, so a cold
+// navigation to a non-prerendered route loads entry -> route chunk -> data as a
+// serial staircase. The web build emits dist/route-preload-manifest.json
+// (apps/web/scripts/prerender-articles.mjs): route patterns mapped to the hashed
+// chunk + CSS files that route needs, generated from the Vite build manifest so
+// the hrefs always point at really-emitted files. When the server serves the
+// shell for a known route it injects those links into <head>, collapsing one
+// full round-trip layer off the cold-load critical path. Vite's runtime preload
+// helper dedupes by href, so nothing double-loads. A missing/older-build
+// manifest, an unmatched route, or a malformed file all degrade to the plain
+// shell.
+type RoutePreloadEntry = { pattern: string; css?: string[]; js?: string[] };
+
+export async function routePreloadLinksForPath(params: {
+  staticDir: string;
+  pathname: string;
+}): Promise<string | null> {
+  let routes: RoutePreloadEntry[];
+  try {
+    const raw = await fs.readFile(
+      resolve(params.staticDir, 'route-preload-manifest.json'),
+      'utf-8',
+    );
+    const parsed = JSON.parse(raw) as { routes?: RoutePreloadEntry[] };
+    if (!Array.isArray(parsed.routes)) return null;
+    routes = parsed.routes;
+  } catch {
+    return null;
+  }
+  // Same normalization as isClientRoute, so /watch/ matches ^/watch$.
+  const normalized = params.pathname.replace(/\/+$/, '') || '/';
+  for (const route of routes) {
+    if (typeof route?.pattern !== 'string') continue;
+    let matches = false;
+    try {
+      matches = new RegExp(route.pattern).test(normalized);
+    } catch {
+      continue; // one bad pattern must not take out the rest
+    }
+    if (!matches) continue;
+    const links = [
+      ...(route.css ?? []).map((file) => `<link rel="stylesheet" crossorigin href="/${file}">`),
+      ...(route.js ?? []).map((file) => `<link rel="modulepreload" crossorigin href="/${file}">`),
+    ];
+    return links.length > 0 ? links.join('') : null;
+  }
+  return null;
+}
+
+// Serves the SPA shell with the matched route's preload hints baked into <head>.
+// Returns false without touching the response when the route has no hints (or
+// the manifest is absent), so the caller can fall back to the plain static
+// shell exactly as before.
+export async function serveSpaShellWithRoutePreloads(params: {
+  response: ServerResponse;
+  staticDir: string;
+  pathname: string;
+}): Promise<boolean> {
+  const links = await routePreloadLinksForPath(params);
+  if (!links) return false;
+  const indexPath = resolve(params.staticDir, 'index.html');
+  const html = (await fs.readFile(indexPath, 'utf-8')).replace('</head>', `${links}</head>`);
+  params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.end(html);
+  return true;
+}
+
 export async function serveGamePage(params: {
   roomId: string;
   response: ServerResponse;
@@ -128,6 +196,14 @@ export async function serveGamePage(params: {
     const imageUrl = `${params.publicHost}/og/game/${encodeURIComponent(params.roomId)}.png?v=${GAME_OG_IMAGE_VERSION}`;
     html = injectPageMeta(html, { title, description, url, imageUrl });
   }
+
+  // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk
+  // preloads here too (the replay/board graph is the heaviest cold load).
+  const preloadLinks = await routePreloadLinksForPath({
+    staticDir: params.staticDir,
+    pathname: `/game/${encodeURIComponent(params.roomId)}`,
+  });
+  if (preloadLinks) html = html.replace('</head>', `${preloadLinks}</head>`);
 
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);

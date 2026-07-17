@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logger } from './obs.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -134,6 +135,20 @@ export class UciEnginePool {
         const idx = this.queue.findIndex((entry) => entry.reject === reject);
         if (idx >= 0) this.queue.splice(idx, 1);
         this.timedOut += 1;
+        // Saturation that actually shed load (#203): every queue-wait timeout is
+        // an engine request we dropped. /api/server-status only exposes the
+        // counters on demand; this makes each increment an alertable log line.
+        logger.warn(
+          {
+            kind: 'engine_pool_queue_timeout',
+            pool: this.config.name ?? 'unnamed',
+            active: this.active,
+            queue_depth: this.queue.length,
+            max_processes: this.maxProcesses(),
+            timed_out_total: this.timedOut,
+          },
+          'Engine pool queue-wait timed out; a request was shed (pool saturated)',
+        );
         reject(new Error(this.config.queueTimeoutMessage));
       }, this.queueTimeoutMs());
       timer.unref();
@@ -523,6 +538,235 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
 
     child.stdin.write(`${commands.join('\n')}\n`);
   });
+}
+
+// ── Persistent UCI session (one process per whole-game analysis sweep) ────────
+
+export type UciEngineSessionConfig = {
+  /** Absolute path to the engine binary. */
+  bin: string;
+  /** Written once at spawn: `uci`, setoptions, `ucinewgame`, `isready`. The session
+   *  is ready when the engine answers `readyok`. */
+  initCommands: readonly string[];
+  /** Timeout for the init handshake in ms (default 15_000). */
+  initTimeoutMs?: number;
+  /** Error-message prefix for session-level failures. */
+  name?: string;
+};
+
+type SessionConsumer = {
+  onLine(line: string): void;
+  reject(err: Error): void;
+};
+
+/**
+ * A persistent UCI engine subprocess for whole-game analysis sweeps: spawn +
+ * option setup + net load happen ONCE, then each position is an incremental
+ * `position …` + `go …` round-trip. The per-request spawn model (runUciEval)
+ * reloads the NNUE net on every ply, a 2-5x self-inflicted slowdown on sweeps
+ * (#168); this session kills that while keeping the same hard-timeout and
+ * SIGKILL-cleanup discipline. Requests are serialized internally (UCI engines
+ * answer one `go` at a time); callers still gate session concurrency through a
+ * UciEnginePool. Always `close()` in a finally.
+ */
+export class UciEngineSession {
+  private readonly child: ReturnType<typeof spawn>;
+  private buf = '';
+  private closed = false;
+  private exitError: Error | null = null;
+  private consumer: SessionConsumer | null = null;
+  private readonly advertisedOptions = new Set<string>();
+  private chain: Promise<unknown> = Promise.resolve();
+  private readonly readyPromise: Promise<void>;
+
+  constructor(private readonly config: UciEngineSessionConfig) {
+    this.child = spawn(config.bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    this.child.on('error', (err) => this.fail(err));
+    this.child.on('exit', (code) => {
+      if (!this.closed) this.fail(new Error(`${this.label()} exited with code ${code}`));
+    });
+    this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
+    this.readyPromise = this.enqueue(() => this.init());
+    // Callers await ready() (or their first eval); an unobserved duplicate
+    // rejection must not crash the process.
+    this.readyPromise.catch(() => {});
+  }
+
+  /** Resolves once the engine answered `readyok` and every configured option was
+   *  advertised; rejects on spawn failure, protocol error, or init timeout. */
+  ready(): Promise<void> {
+    return this.readyPromise;
+  }
+
+  /**
+   * Evaluate one position: write `positionCommand` + `goCommand`, keep the last
+   * `info … score` line, resolve on `bestmove`. Requests are serialized; each has
+   * its own hard timeout, after which the session is failed closed (the engine's
+   * state is unknown mid-search, so the whole session dies, not just the request).
+   */
+  evalPosition(args: {
+    positionCommand: string;
+    goCommand: string;
+    timeoutMs: number;
+    timeoutMessage: string;
+  }): Promise<UciEval> {
+    return this.enqueue(async () => {
+      await this.readyPromise;
+      return await new Promise<UciEval>((resolveEval, reject) => {
+        let latest: { depth: number; cp: number | null; mate: number | null } | null = null;
+        const timer = setTimeout(() => {
+          this.fail(new Error(args.timeoutMessage));
+        }, args.timeoutMs);
+        timer.unref();
+        this.consume({
+          onLine: (line) => {
+            const score = parseInfoScore(line);
+            if (score) latest = score;
+            const move = parseBestmoveLine(line);
+            if (move !== undefined) {
+              clearTimeout(timer);
+              this.consumer = null;
+              resolveEval({
+                best: move,
+                cp: latest?.cp ?? null,
+                mate: latest?.mate ?? null,
+                depth: latest?.depth ?? 0,
+              });
+            }
+          },
+          reject: (err) => {
+            clearTimeout(timer);
+            reject(err);
+          },
+        });
+        this.write(`${args.positionCommand}\n${args.goCommand}\n`);
+      });
+    });
+  }
+
+  /** SIGKILL the engine and reject any in-flight request. Idempotent. */
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    const pending = this.consumer;
+    this.consumer = null;
+    pending?.reject(new Error(`${this.label()} session closed`));
+    try {
+      this.child.kill('SIGKILL');
+    } catch {
+      /* already gone */
+    }
+  }
+
+  private label(): string {
+    return this.config.name ?? 'uci-engine-session';
+  }
+
+  // Serialize public operations: a UCI engine answers one command block at a time.
+  private enqueue<T>(op: () => Promise<T>): Promise<T> {
+    const next = this.chain.then(op, op);
+    this.chain = next.catch(() => {});
+    return next;
+  }
+
+  private init(): Promise<void> {
+    return new Promise<void>((resolveInit, reject) => {
+      if (this.exitError) {
+        reject(this.exitError);
+        return;
+      }
+      const timer = setTimeout(() => {
+        this.fail(new Error(`${this.label()} init timed out`));
+      }, this.config.initTimeoutMs ?? 15_000);
+      timer.unref();
+      this.consume({
+        onLine: (line) => {
+          if (line === 'readyok') {
+            clearTimeout(timer);
+            this.consumer = null;
+            const unsupported = configuredUciOptionNames(this.config.initCommands).filter(
+              (option) => !this.advertisedOptions.has(option),
+            );
+            if (unsupported.length > 0) {
+              this.fail(
+                new Error(
+                  `UCI engine does not advertise configured option(s): ${unsupported.join(', ')}`,
+                ),
+              );
+              reject(this.exitError ?? new Error('unsupported options'));
+              return;
+            }
+            resolveInit();
+          }
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      });
+      this.write(`${this.config.initCommands.join('\n')}\n`);
+    });
+  }
+
+  private consume(consumer: SessionConsumer): void {
+    if (this.exitError) {
+      consumer.reject(this.exitError);
+      return;
+    }
+    // A plain close() sets closed without an exitError. Requests registered
+    // after it must reject NOW: the child is dead (its guarded exit handler
+    // will not fire fail()), write() is a no-op, and the request timeout is
+    // unref'd, so nothing else would ever settle the promise once the event
+    // loop drains (CI: cancelledByParent).
+    if (this.closed) {
+      consumer.reject(new Error(`${this.label()} session closed`));
+      return;
+    }
+    this.consumer = consumer;
+  }
+
+  private write(payload: string): void {
+    if (this.closed) return;
+    try {
+      this.child.stdin?.write(payload);
+    } catch (err) {
+      this.fail(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
+  private onData(chunk: Buffer): void {
+    this.buf += chunk.toString('utf8');
+    let newline = this.buf.indexOf('\n');
+    while (newline >= 0) {
+      const line = this.buf.slice(0, newline).trim();
+      this.buf = this.buf.slice(newline + 1);
+      const option = parseUciOptionLine(line);
+      if (option) this.advertisedOptions.add(option);
+      const protocolError = uciProtocolError(line);
+      if (protocolError) {
+        this.fail(new Error(`UCI engine rejected command: ${protocolError}`));
+        return;
+      }
+      this.consumer?.onLine(line);
+      newline = this.buf.indexOf('\n');
+    }
+  }
+
+  // Terminal failure: kill the process and reject the in-flight consumer. The
+  // session cannot be reused after this (mid-search state is unknowable).
+  private fail(err: Error): void {
+    if (this.exitError) return;
+    this.exitError = err;
+    const pending = this.consumer;
+    this.consumer = null;
+    this.closed = true;
+    try {
+      this.child.kill('SIGKILL');
+    } catch {
+      /* already gone */
+    }
+    pending?.reject(err);
+  }
 }
 
 // ── Fairy-Stockfish layer (the perfect-info xiangqi + crossroads providers) ───

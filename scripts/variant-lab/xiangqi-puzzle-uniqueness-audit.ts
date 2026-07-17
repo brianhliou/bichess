@@ -1,19 +1,20 @@
 // Per-ply uniqueness audit for the live standard-xiangqi puzzle corpus.
 //
-// Independent re-verification of the gated miner (#180): for each solver ply it
-// re-searches the position with Pikafish MultiPV 2 at a depth floor and reports
-// whether the shipped move is the engine's best AND uniquely best by the SAME
-// winning-floor gate the miner uses (isXiangqiSolverMoveUnique — shared, so this
-// is apples-to-apples, not a second, drifting definition). It does not mutate
-// the corpus. NOTE: this tool loads each position via `position fen` (history-
-// free), while the miner searches via `position startpos moves` (full game
-// history); at near-equal plies those evals can differ, so an aligned position
-// path is the remaining half of the cross-check (#185).
+// Independent re-verification of the gated miner (#180): for each solver ply
+// it re-judges the position via the SHARED analyzeXiangqiSolverPly
+// (scripts/variant-lab/xiangqi-pikafish-uci.ts) — the same history-free
+// `position fen` load, the same MultiPV-2 search shape, the same score
+// normalization (xiangqiUciScoreToCp), and the same winning-floor gate
+// (isXiangqiSolverMoveUnique) the miner's verify pass enforces. Verdicts are
+// therefore definitionally consistent with the miner (#185); what this tool
+// adds is independence in TIME and BUDGET (it can re-run at a deeper depth
+// floor than the mine did) plus the shipped-move comparison. It does not
+// mutate the corpus.
 //
-// Scores are read from the side-to-move (solver) POV, so a positive gap means
-// the shipped move beats the runner-up. Mate scores map to a large synthetic cp.
-// A depth floor (not just a node cap) is used because too-low search mis-orders
-// best vs second and makes the gap lie.
+// Scores are reported from the side-to-move (solver) POV, so a positive gap
+// means the shipped move beats the runner-up. Mate scores fold onto the cp
+// axis near XIANGQI_MATE_SCORE_CP. A depth floor (not just a node cap) is used
+// because too-low search mis-orders best vs second and makes the gap lie.
 //
 // Run (needs the local Pikafish binary + NNUE net; auto-resolved via
 // xiangqi-pikafish-engine.ts, or set MISTBOARD_PIKAFISH_XIANGQI_PATH/_NET):
@@ -22,7 +23,6 @@
 //   # quick smoke on a handful first:
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-uniqueness-audit.ts --limit 3 --depth 16
 
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -32,16 +32,18 @@ import {
 } from '../../apps/server/src/xiangqi-pikafish-engine.ts';
 import {
   applyStandardXiangqiMove,
-  isXiangqiSolverMoveUnique,
   pikafishUciToXiangqiSquares,
-  standardXiangqiEngineFen,
   XIANGQI_PUZZLES,
   type XiangqiGameState,
   type XiangqiMove,
   type XiangqiPuzzle,
-  type XiangqiVerifyLine,
   xiangqiWinRate,
 } from '../../packages/game/src/index.ts';
+import {
+  analyzeXiangqiSolverPly,
+  PikafishEngine,
+  XIANGQI_SOLVER_GATE_DEFAULTS,
+} from './xiangqi-pikafish-uci.ts';
 
 type CliOptions = {
   depth: number;
@@ -59,11 +61,15 @@ function parseOptions(): CliOptions {
     options: {
       depth: { type: 'string', default: '22' },
       nodes: { type: 'string' },
-      // Same winning-floor gate the miner uses (isXiangqiSolverMoveUnique), so
-      // this audit is an apples-to-apples re-verification of the mined corpus.
-      'win-hi': { type: 'string', default: '0.80' },
-      'win-lo': { type: 'string', default: '0.60' },
-      'material-gap-cp': { type: 'string', default: '250' },
+      // Winning-floor gate knobs: defaults come from the module shared with
+      // the miner, so this audit stays an apples-to-apples re-verification of
+      // the mined corpus rather than a second, drifting definition.
+      'win-hi': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi) },
+      'win-lo': { type: 'string', default: String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo) },
+      'material-gap-cp': {
+        type: 'string',
+        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp),
+      },
       limit: { type: 'string', default: '0' },
       ids: { type: 'string' },
       out: { type: 'string' },
@@ -72,9 +78,12 @@ function parseOptions(): CliOptions {
   return {
     depth: parsePositiveInt(values.depth, 22),
     nodes: values.nodes ? parsePositiveInt(values.nodes, 0) || null : null,
-    winHi: Number.parseFloat(values['win-hi'] ?? '0.80'),
-    winLo: Number.parseFloat(values['win-lo'] ?? '0.60'),
-    materialGapCp: parsePositiveInt(values['material-gap-cp'], 250),
+    winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
+    winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
+    materialGapCp: parsePositiveInt(
+      values['material-gap-cp'],
+      XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp,
+    ),
     limit: parsePositiveInt(values.limit, 0),
     ids: values.ids
       ? new Set(
@@ -93,134 +102,6 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-// A mate is treated as a decisive cp so gap math and win% stay monotone. Closer
-// mates score higher, so the runner-up (slower mate / non-mate) trails.
-const MATE_CP = 30_000;
-function scoreToCp(kind: 'cp' | 'mate', raw: number): number {
-  if (kind === 'cp') return raw;
-  return raw >= 0 ? MATE_CP - raw : -MATE_CP - raw;
-}
-
-type ScoredLine = { rank: number; cp: number; mate: number | null; moveUci: string };
-
-const ANALYZE_TIMEOUT_MS = 240_000;
-const MULTIPV_RE = /\bmultipv (\d+)\b/;
-const SCORE_RE = /\bscore (cp|mate) (-?\d+)\b/;
-const PV_RE = /\bpv (\S+)/;
-
-class PikafishEngine {
-  #proc: ChildProcessWithoutNullStreams;
-  #buf = '';
-  #waiter: {
-    pred: (line: string) => boolean;
-    resolve: (lines: string[]) => void;
-    reject: (err: Error) => void;
-    timer: NodeJS.Timeout;
-    lines: string[];
-  } | null = null;
-  #multipv = 1;
-  net: string;
-
-  constructor(binary: string, net: string) {
-    this.#proc = spawn(binary, [], { stdio: ['pipe', 'pipe', 'ignore'] });
-    this.#proc.stdout.setEncoding('utf8');
-    this.#proc.stdout.on('data', (chunk: string) => this.#onData(chunk));
-    this.net = net;
-  }
-
-  #onData(chunk: string): void {
-    this.#buf += chunk;
-    let nl = this.#buf.indexOf('\n');
-    while (nl >= 0) {
-      const line = this.#buf.slice(0, nl).trim();
-      this.#buf = this.#buf.slice(nl + 1);
-      const w = this.#waiter;
-      if (w) {
-        w.lines.push(line);
-        if (w.pred(line)) {
-          clearTimeout(w.timer);
-          this.#waiter = null;
-          w.resolve(w.lines);
-        }
-      }
-      nl = this.#buf.indexOf('\n');
-    }
-  }
-
-  #request(cmds: string[], pred: (line: string) => boolean): Promise<string[]> {
-    return new Promise((res, rej) => {
-      const timer = setTimeout(() => {
-        this.#waiter = null;
-        rej(new Error(`pikafish request timed out: ${cmds[cmds.length - 1]}`));
-      }, ANALYZE_TIMEOUT_MS);
-      timer.unref();
-      this.#waiter = { pred, resolve: res, reject: rej, timer, lines: [] };
-      for (const cmd of cmds) this.#proc.stdin.write(`${cmd}\n`);
-    });
-  }
-
-  async init(): Promise<void> {
-    await this.#request(['uci'], (l) => l === 'uciok');
-    await this.#request([`setoption name EvalFile value ${this.net}`, 'isready'], (l) =>
-      l.startsWith('readyok'),
-    );
-  }
-
-  async newGame(): Promise<void> {
-    await this.#request(['ucinewgame', 'isready'], (l) => l.startsWith('readyok'));
-  }
-
-  // Analyze a raw FEN (puzzles start mid-game, so `position fen` is the natural
-  // entry — no game-length move list to replay). `go depth` is the primary knob;
-  // an optional node cap bounds pathological positions.
-  async analyzeFen(
-    fen: string,
-    depth: number,
-    nodes: number | null,
-    multipv: number,
-  ): Promise<ScoredLine[]> {
-    const cmds: string[] = [];
-    if (multipv !== this.#multipv) {
-      cmds.push(`setoption name MultiPV value ${multipv}`);
-      this.#multipv = multipv;
-    }
-    const go = nodes ? `go depth ${depth} nodes ${nodes}` : `go depth ${depth}`;
-    cmds.push(`position fen ${fen}`, go);
-    const lines = await this.#request(cmds, (l) => l.startsWith('bestmove'));
-    return parseScoredLines(lines);
-  }
-
-  quit(): void {
-    if (this.#waiter) {
-      clearTimeout(this.#waiter.timer);
-      this.#waiter = null;
-    }
-    this.#proc.stdin.write('quit\n');
-    this.#proc.stdin.end();
-  }
-}
-
-// Keep only the last `info` line per multipv rank (the deepest completed one).
-function parseScoredLines(lines: string[]): ScoredLine[] {
-  const byRank = new Map<number, ScoredLine>();
-  for (const line of lines) {
-    if (!line.startsWith('info ')) continue;
-    const score = SCORE_RE.exec(line);
-    const pv = PV_RE.exec(line);
-    if (!score || !pv) continue;
-    const rank = Number(MULTIPV_RE.exec(line)?.[1] ?? '1');
-    const kind = score[1] as 'cp' | 'mate';
-    const raw = Number(score[2]);
-    byRank.set(rank, {
-      rank,
-      cp: scoreToCp(kind, raw),
-      mate: kind === 'mate' ? raw : null,
-      moveUci: pv[1] as string,
-    });
-  }
-  return [...byRank.values()].sort((a, b) => a.rank - b.rank);
-}
-
 type SolverPlyReport = {
   solutionPly: number;
   shippedMove: string;
@@ -234,10 +115,6 @@ type SolverPlyReport = {
   gapWinrate: number | null;
   unique: boolean;
 };
-
-function toVerifyLine(line: ScoredLine | null | undefined): XiangqiVerifyLine | undefined {
-  return line ? { scoreCp: line.cp, mate: line.mate } : undefined;
-}
 
 type PuzzleReport = {
   id: string;
@@ -258,23 +135,26 @@ async function auditPuzzle(
   puzzle: XiangqiPuzzle,
   opts: CliOptions,
 ): Promise<PuzzleReport> {
+  const gate = { winHi: opts.winHi, winLo: opts.winLo, materialGapCp: opts.materialGapCp };
+  const limits = { depth: opts.depth, ...(opts.nodes ? { nodes: opts.nodes } : {}) };
   const plies: SolverPlyReport[] = [];
   let state: XiangqiGameState = puzzle.initial;
   await engine.newGame();
   for (let ply = 0; ply < puzzle.solution.length; ply += 1) {
     const move = puzzle.solution[ply] as XiangqiMove;
     if (ply % 2 === 0 && state.status.type === 'playing') {
-      const fen = standardXiangqiEngineFen(state);
-      const lines = await engine.analyzeFen(fen, opts.depth, opts.nodes, 2);
-      const best = lines[0];
-      const second = lines[1] ?? null;
-      const engineBest = best ? pikafishUciToXiangqiSquares(best.moveUci) : null;
-      const engineBestMove = engineBest
-        ? `${engineBest.from}-${engineBest.to}`
-        : (best?.moveUci ?? '?');
+      const { lines, best, second, unique } = await analyzeXiangqiSolverPly(
+        engine,
+        state,
+        limits,
+        gate,
+      );
+      const bestTok = lines[0]?.pvUci[0];
+      const engineBest = bestTok ? pikafishUciToXiangqiSquares(bestTok) : null;
+      const engineBestMove = engineBest ? `${engineBest.from}-${engineBest.to}` : (bestTok ?? '?');
       const matchesShipped = engineBest?.from === move.from && engineBest?.to === move.to;
-      const bestCp = best?.cp ?? 0;
-      const secondCp = second?.cp ?? null;
+      const bestCp = best?.scoreCp ?? 0;
+      const secondCp = second?.scoreCp ?? null;
       const gapCp = secondCp === null ? null : bestCp - secondCp;
       const gapWinrate =
         secondCp === null ? null : xiangqiWinRate(bestCp) - xiangqiWinRate(secondCp);
@@ -289,11 +169,7 @@ async function auditPuzzle(
         secondMate: second?.mate ?? null,
         gapCp,
         gapWinrate,
-        unique: isXiangqiSolverMoveUnique(toVerifyLine(best), toVerifyLine(second), {
-          winHi: opts.winHi,
-          winLo: opts.winLo,
-          materialGapCp: opts.materialGapCp,
-        }),
+        unique,
       });
     }
     if (state.status.type !== 'playing') break;

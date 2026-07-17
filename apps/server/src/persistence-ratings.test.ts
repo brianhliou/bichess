@@ -12,7 +12,7 @@ import {
   recordGameEnd,
   recordGameStart,
 } from './persistence.js';
-import type { ProfileBucketRating } from './persistence-accounts.js';
+import type { ProfileBucketRating } from './persistence-profiles.js';
 import {
   assert,
   definePersistenceTests,

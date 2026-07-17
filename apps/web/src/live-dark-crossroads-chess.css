@@ -34,6 +34,13 @@
   background: color-mix(in srgb, currentColor 16%, transparent);
 }
 
+/* Zero visible plies (fog): a dimmed placeholder row so the list never looks
+   broken before the viewer has seen a move. */
+.ddchess-move-placeholder {
+  color: var(--muted);
+  padding: 1px 6px;
+}
+
 /* Pending-Try banner: shown to the racer while their King sits on the far rank
    awaiting the opponent's one reply. Loud (the game is one move from resolving),
    themed so it reads in light + dark. */

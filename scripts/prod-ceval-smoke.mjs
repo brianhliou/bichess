@@ -22,6 +22,8 @@
 // Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|misty|all]
 // Defaults to prod + all backends; point MISTBOARD_WEB_URL at a local build to
 // smoke locally. MISTBOARD_CEVAL_SMOKE_BACKEND is the env equivalent.
+import { readFileSync } from 'node:fs';
+
 import { chromium } from '@playwright/test';
 
 const options = parseArgs(process.argv.slice(2));
@@ -141,11 +143,26 @@ async function discoverFinishedBanqiGame() {
   return game?.roomId ?? null;
 }
 
-// Version-agnostic asset paths (the ?v= cache-buster in misty-ceval.ts serves
-// the same files): worker script must be JS with a COEP the isolated review
-// document accepts; the wasm must serve as application/wasm.
+// Preflight the exact versioned URLs the client fetches (?v= from
+// MISTY_ASSET_VERSION in misty-ceval.ts, read from source so it always matches
+// the deployed revision). The bare path is a DIFFERENT edge-cache key and can
+// hold a stale header-less copy long after a fix deploys, which is exactly the
+// false signal this smoke exists to prevent: worker script must be JS with a
+// COEP the isolated review document accepts; the wasm must serve as
+// application/wasm.
+function mistyAssetVersion() {
+  const source = readFileSync(
+    new URL('../apps/web/src/review/engine/misty-ceval.ts', import.meta.url),
+    'utf8',
+  );
+  const match = source.match(/MISTY_ASSET_VERSION = '([^']+)'/);
+  if (!match) throw new Error('MISTY_ASSET_VERSION not found in misty-ceval.ts');
+  return match[1];
+}
+
 async function assertMistyAssetHeaders() {
-  const workerUrl = `${baseUrl}/engine/misty-banqi/worker.js`;
+  const v = encodeURIComponent(mistyAssetVersion());
+  const workerUrl = `${baseUrl}/engine/misty-banqi/worker.js?v=${v}`;
   const worker = await fetch(workerUrl);
   if (!worker.ok) throw new Error(`${workerUrl} returned HTTP ${worker.status}`);
   const workerType = worker.headers.get('content-type') ?? '';
@@ -161,7 +178,7 @@ async function assertMistyAssetHeaders() {
     );
   }
 
-  const wasmUrl = `${baseUrl}/engine/misty-banqi/banqi_wasm_bg.wasm`;
+  const wasmUrl = `${baseUrl}/engine/misty-banqi/banqi_wasm_bg.wasm?v=${v}`;
   const wasm = await fetch(wasmUrl, { method: 'HEAD' });
   if (!wasm.ok) throw new Error(`${wasmUrl} returned HTTP ${wasm.status}`);
   const wasmType = wasm.headers.get('content-type') ?? '';

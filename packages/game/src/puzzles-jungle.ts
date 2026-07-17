@@ -11,12 +11,14 @@
 // A puzzle is a legal position with the solver to move and a forced-win solution
 // line; solver plies are the even indices (0, 2, 4, ...), defender replies the
 // odd ones. The generator lives in scripts/variant-lab/jungle-puzzle-miner.ts.
+//
+// Since #183 the SERVED corpus lives in the committed seed assets
+// (packages/game/seed/puzzles/jungle.json + seed/source-games/jungle.json) and
+// in the server's `puzzles` table; the JUNGLE_PUZZLES / JUNGLE_SOURCE_GAMES
+// arrays below are small TEST fixture sets, not the serving set.
 
 import type { JUNGLE_SPEC_ID } from './game-specs.js';
-import { MATERIAL_JUNGLE_PUZZLES } from './puzzles-jungle-material.js';
-import { MINED_JUNGLE_PUZZLES } from './puzzles-jungle-mined.js';
-import { TACTIC_SOURCE_GAMES } from './puzzles-jungle-source-games.js';
-import { TACTIC_JUNGLE_PUZZLES } from './puzzles-jungle-tactics.js';
+import { FIXTURE_JUNGLE_PUZZLES, FIXTURE_JUNGLE_SOURCE_GAMES } from './puzzles-jungle-fixtures.js';
 import {
   applyJungleMove,
   createInitialJungleState,
@@ -149,17 +151,14 @@ export type JungleWinInOneCandidate = {
   winner: JungleColor;
 };
 
-export const JUNGLE_PUZZLES: readonly JunglePuzzle[] = [
-  ...MINED_JUNGLE_PUZZLES,
-  ...TACTIC_JUNGLE_PUZZLES,
-  ...MATERIAL_JUNGLE_PUZZLES,
-];
+// TEST fixture registry, NOT the serving set (see the module header).
+export const JUNGLE_PUZZLES: readonly JunglePuzzle[] = [...FIXTURE_JUNGLE_PUZZLES];
 
 export function junglePuzzleById(id: string): JunglePuzzle | null {
   return JUNGLE_PUZZLES.find((puzzle) => puzzle.id === id) ?? null;
 }
 
-export const JUNGLE_SOURCE_GAMES: readonly JungleSourceGame[] = TACTIC_SOURCE_GAMES;
+export const JUNGLE_SOURCE_GAMES: readonly JungleSourceGame[] = FIXTURE_JUNGLE_SOURCE_GAMES;
 
 export function jungleSourceGameById(id: string): JungleSourceGame | null {
   return JUNGLE_SOURCE_GAMES.find((game) => game.id === id) ?? null;

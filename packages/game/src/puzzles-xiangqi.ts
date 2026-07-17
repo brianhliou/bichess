@@ -7,13 +7,17 @@
 //
 // Unlike the Mini/Fortress registries (hand-built + engine self-play), the
 // standard-xiangqi corpus is mined from REAL historical games by the
-// lichess-style miner in scripts/variant-lab/xiangqi-puzzle-miner.ts, which
-// overwrites puzzles-xiangqi-mined.ts. Curated hand-picked puzzles can be
-// added to CURATED_XIANGQI_PUZZLES below (use ids with the `xiangqi-` prefix;
-// mined ids use `xq-mined-`; both stay prefix-disjoint from the other puzzle
-// registries so the server's id resolution can try each in turn).
+// lichess-style miner in scripts/variant-lab/xiangqi-puzzle-miner.ts. Since
+// #183 the SERVED corpus lives in the committed seed assets
+// (packages/game/seed/puzzles/xiangqi.json, updated by the miner's
+// `--emit-seed` mode) and in the server's `puzzles` table; the XIANGQI_PUZZLES
+// array below is a small TEST fixture set, not the serving set. Curated
+// hand-picked puzzles can be added to CURATED_XIANGQI_PUZZLES below (use ids
+// with the `xiangqi-` prefix; mined ids use `xq-mined-`; both stay
+// prefix-disjoint from the other puzzle registries so the server's id
+// resolution can try each in turn).
 //
-// Source games are NOT embedded as a module (unlike Jungle/Fortress self-play):
+// Source games are NOT embedded in the seed (unlike Jungle/Fortress self-play):
 // a mined puzzle's sourceGame.gameId points at a historical_xiangqi_games row
 // (db mode) or an input file (dir mode).
 //
@@ -25,7 +29,7 @@
 //     both 'checkmate' and 'stalemate' finish reasons (困毙 counts as mate).
 
 import { type GameSpecId, XIANGQI_SPEC_ID } from './game-specs.js';
-import { MINED_XIANGQI_PUZZLES } from './puzzles-xiangqi-mined.js';
+import { FIXTURE_XIANGQI_PUZZLES } from './puzzles-xiangqi-fixtures.js';
 import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import type {
   XiangqiColor,
@@ -168,38 +172,16 @@ export function trimXiangqiWinningAdvantageTail(puzzle: XiangqiPuzzle): XiangqiP
   return { ...puzzle, solution: trimmed };
 }
 
-// A handful of mined puzzles whose flagged solver ply has a near-tied second
-// move (two winning moves within a small eval gap), so the "one right answer"
-// is not robust — the independent audit rejects them even though the gated
-// miner accepted them (search nondeterminism between the two engine processes
-// flips a small gap). Held back until the #185 follow-up lands (verify-hash
-// determinism + a slightly higher material-gap so a future re-mine never
-// produces them); then this set and the filter below are removed.
-const AUDIT_FLAGGED_XIANGQI_PUZZLE_IDS: ReadonlySet<string> = new Set([
-  'xq-mined-hxq_2b2b6b6d803b6f4bbd3a12d5-58',
-  'xq-mined-hxq_3087b9e177dc6e0a08d2872a-65',
-  'xq-mined-hxq_4a41e15e9d8a17414cf249ee-42',
-  'xq-mined-hxq_5299fe14e58a6acd13d8dd33-101',
-]);
-
-// Assembled by a named builder behind a @__PURE__ annotation (instead of inline
-// module-scope filter/map calls) so bundlers can prove the initializer is
-// side-effect-free and drop the mined corpus from chunks that never read it:
-// the raw module-scope transforms defeated tree-shaking and shipped the mined
-// data in the web entry chunk.
+// TEST fixture registry, NOT the serving set (see the module header): the
+// served corpus is the seed asset + `puzzles` table since #183. Assembled by a
+// named builder behind a @__PURE__ annotation so bundlers can prove the
+// initializer is side-effect-free and drop the fixtures from chunks that never
+// read them. The historical audit-flag filter (near-tied second moves, #185)
+// is baked into the seed now: the flagged puzzles were simply never exported.
 export const XIANGQI_PUZZLES: readonly XiangqiPuzzle[] = /* @__PURE__ */ buildXiangqiPuzzles();
 
 function buildXiangqiPuzzles(): readonly XiangqiPuzzle[] {
-  return [
-    ...CURATED_XIANGQI_PUZZLES,
-    // The mined corpus is gated at mine time — every solver ply is verified
-    // uniquely correct by the extend-while-unique miner from the standalone FEN
-    // (#180/#185) — minus the few audit-flagged near-tied cases above. The
-    // quiet-tail trim stays a defensive, idempotent normalization.
-    ...MINED_XIANGQI_PUZZLES.filter(
-      (puzzle) => !AUDIT_FLAGGED_XIANGQI_PUZZLE_IDS.has(puzzle.id),
-    ).map(trimXiangqiWinningAdvantageTail),
-  ];
+  return [...CURATED_XIANGQI_PUZZLES, ...FIXTURE_XIANGQI_PUZZLES];
 }
 
 export function standardXiangqiPuzzleById(id: string): XiangqiPuzzle | null {

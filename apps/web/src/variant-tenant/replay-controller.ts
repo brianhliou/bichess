@@ -17,6 +17,19 @@ export type TenantReplaySnapshot<View> = { ply: number; view: View };
 export type TenantReplayController<View> = {
   reset(): void;
   push(snapshot: TenantReplaySnapshot<View>): void;
+  /**
+   * Replace the whole snapshot history (a tenant rebuilt per-ply views from
+   * the event log after mount/reconnect). A live client stays live; a
+   * scrubbed client re-anchors to the same ply in the new history (back to
+   * live when the ply no longer exists).
+   */
+  replaceHistory(snapshots: readonly TenantReplaySnapshot<View>[]): void;
+  /**
+   * Scrub straight to a ply (clickable move-list jump). Jumping to the latest
+   * ply, or past it, returns to live. Records the transition for the one-shot
+   * animation channel like every other control.
+   */
+  jumpToPly(ply: number): void;
   historyLength(): number;
   latestPly(): number;
   isLive(): boolean;
@@ -59,6 +72,36 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
 
   function push(snapshot: TenantReplaySnapshot<View>): void {
     history.push(snapshot);
+  }
+
+  function replaceHistory(snapshots: readonly TenantReplaySnapshot<View>[]): void {
+    const scrubbedPly = replayIndex === null ? null : (history[replayIndex]?.ply ?? null);
+    history = [...snapshots];
+    if (scrubbedPly === null) {
+      replayIndex = null;
+      return;
+    }
+    // Snapshots are ply-ascending: re-anchor to the first snapshot at or past
+    // the old scrub position; a position at (or beyond) the new tip is live.
+    const index = history.findIndex((snapshot) => snapshot.ply >= scrubbedPly);
+    replayIndex = index === -1 || index >= history.length - 1 ? null : index;
+  }
+
+  function jumpToPly(ply: number): void {
+    const fromPly = currentPly();
+    applyJump(ply);
+    const toPly = currentPly();
+    lastStep = fromPly === toPly ? lastStep : { fromPly, toPly };
+  }
+
+  function applyJump(ply: number): void {
+    if (history.length === 0) {
+      replayIndex = null;
+      return;
+    }
+    let index = history.findIndex((snapshot) => snapshot.ply >= ply);
+    if (index === -1) index = history.length - 1;
+    replayIndex = index >= history.length - 1 ? null : index;
   }
 
   function historyLength(): number {
@@ -166,6 +209,8 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
   return {
     reset,
     push,
+    replaceHistory,
+    jumpToPly,
     historyLength,
     latestPly,
     isLive,

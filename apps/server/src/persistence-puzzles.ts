@@ -1,22 +1,24 @@
 import { createHash } from 'node:crypto';
 import {
+  DROP_MINI_XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
-  fortressXiangqiPuzzleById,
+  MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
-  miniXiangqiPuzzleById,
-  standardXiangqiPuzzleById,
-  XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import type pg from 'pg';
 import { getPool, isInitialized } from './persistence-db.js';
+import { getPuzzleStore, type PuzzleStoreSnapshot } from './puzzle-store.js';
 
 export const DAILY_PUZZLE_HOMEPAGE_SLOT = 'homepage';
 
-// A daily puzzle can be drawn from any surfaced variant; Fortress and standard
-// xiangqi are surfaced (see DAILY_PUZZLE_PROVIDERS). Ids are prefix-disjoint
-// across the registries, so resolution dispatches on the stored variant.
+// A daily puzzle can be drawn from any surfaced variant; the candidate content
+// comes from the puzzle store (#183: the `puzzles` table backed by the
+// committed seed, or the seed alone when persistence is off). Ids are
+// prefix-disjoint across the registries, so resolution dispatches on the
+// stored variant.
 type DailyPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | XiangqiPuzzle;
 
 export type DailyPuzzleSlot = typeof DAILY_PUZZLE_HOMEPAGE_SLOT;
@@ -33,11 +35,6 @@ export type DailyPuzzleSelection = {
 
 export type DailyPuzzleResult = DailyPuzzleSelection & {
   puzzle: DailyPuzzle;
-};
-
-type DailyPuzzleProvider = {
-  candidates: () => readonly DailyPuzzle[];
-  variant: string;
 };
 
 type DailyPuzzleSelectionRow = {
@@ -59,27 +56,30 @@ type Queryable = {
 // The daily rotation draws from standard xiangqi. Fortress is hidden while the
 // variant is demoted and its puzzles await a re-mine with the per-ply
 // uniqueness gate (they ship the engine's top PV verbatim, so some "solutions"
-// are unforced). Restore the Fortress provider when the re-mined corpus lands.
-// Add more providers here to broaden it; a provider whose registry is empty
-// simply contributes nothing.
-const DAILY_PUZZLE_PROVIDERS: readonly DailyPuzzleProvider[] = [
-  {
-    variant: XIANGQI_SPEC_ID,
-    candidates: () => XIANGQI_PUZZLES,
-  },
-];
+// are unforced). Restore the Fortress variant here when the re-mined corpus
+// lands. Add more variants to broaden the rotation; a variant with no stored
+// puzzles simply contributes nothing.
+const DAILY_PUZZLE_VARIANTS: readonly string[] = [XIANGQI_SPEC_ID];
+
+// Variants a persisted daily row may resolve against. Broader than the current
+// rotation on purpose: Mini/Drop rows predate the standard-xiangqi rotation
+// and stay resolvable even though they are no longer offered (Jungle was never
+// a daily variant, so it stays out — matching the pre-#183 resolution).
+const DAILY_RESOLVABLE_VARIANTS: ReadonlySet<string> = new Set([
+  FORTRESS_XIANGQI_SPEC_ID,
+  XIANGQI_SPEC_ID,
+  MINI_XIANGQI_SPEC_ID,
+  DROP_MINI_XIANGQI_SPEC_ID,
+]);
 
 function isCurrentDailyVariant(variant: string): boolean {
-  return DAILY_PUZZLE_PROVIDERS.some((provider) => provider.variant === variant);
+  return DAILY_PUZZLE_VARIANTS.includes(variant);
 }
 
-// Ids are prefix-disjoint across the registries, so try Fortress first, then
-// standard xiangqi, then Mini/Drop (the latter keeps older persisted daily
-// rows resolvable even though they are no longer offered).
-function dailyPuzzleById(id: string): DailyPuzzle | null {
-  return (
-    fortressXiangqiPuzzleById(id) ?? standardXiangqiPuzzleById(id) ?? miniXiangqiPuzzleById(id)
-  );
+function dailyPuzzleById(store: PuzzleStoreSnapshot, id: string): DailyPuzzle | null {
+  const puzzle = store.byId.get(id);
+  if (!puzzle || !DAILY_RESOLVABLE_VARIANTS.has(puzzle.variant)) return null;
+  return puzzle as DailyPuzzle;
 }
 
 export function currentDailyPuzzleDay(now = new Date()): string {
@@ -97,7 +97,8 @@ export async function getOrCreateDailyPuzzleSelection(
   day: string,
   slot: DailyPuzzleSlot,
 ): Promise<DailyPuzzleResult> {
-  if (!isInitialized()) return ephemeralDailyPuzzleSelection(day, slot);
+  const store = await getPuzzleStore();
+  if (!isInitialized()) return ephemeralDailyPuzzleSelection(store, day, slot);
 
   const pool = getPool();
   const existing = await readDailyPuzzleSelection(pool, day, slot);
@@ -105,24 +106,28 @@ export async function getOrCreateDailyPuzzleSelection(
   // a stale (now-hidden) daily is re-selected to the featured variant.
   const existingPuzzle =
     existing && isCurrentDailyVariant(existing.variant)
-      ? dailyPuzzleById(existing.puzzle_id)
+      ? dailyPuzzleById(store, existing.puzzle_id)
       : null;
   if (existing && existingPuzzle) return selectionResult(existing, existingPuzzle, true);
 
-  const candidate = selectDailyPuzzleCandidate(day, slot);
+  const candidate = selectDailyPuzzleCandidate(store, day, slot);
   const source = existing ? 'auto-recovered' : 'auto';
   const row = existing
     ? await updateDailyPuzzleSelection(pool, day, slot, candidate, source)
     : await insertDailyPuzzleSelection(pool, day, slot, candidate, source);
-  const puzzle = dailyPuzzleById(row.puzzle_id);
+  const puzzle = dailyPuzzleById(store, row.puzzle_id);
   if (!puzzle) {
     throw new Error(`daily puzzle selection points at missing puzzle ${row.puzzle_id}`);
   }
   return selectionResult(row, puzzle, true);
 }
 
-function ephemeralDailyPuzzleSelection(day: string, slot: DailyPuzzleSlot): DailyPuzzleResult {
-  const candidate = selectDailyPuzzleCandidate(day, slot);
+function ephemeralDailyPuzzleSelection(
+  store: PuzzleStoreSnapshot,
+  day: string,
+  slot: DailyPuzzleSlot,
+): DailyPuzzleResult {
+  const candidate = selectDailyPuzzleCandidate(store, day, slot);
   return {
     day,
     persisted: false,
@@ -135,16 +140,18 @@ function ephemeralDailyPuzzleSelection(day: string, slot: DailyPuzzleSlot): Dail
   };
 }
 
-function selectDailyPuzzleCandidate(day: string, slot: DailyPuzzleSlot): DailyPuzzle {
-  const candidates = DAILY_PUZZLE_PROVIDERS.flatMap((provider) =>
-    provider.candidates().map((puzzle) => ({ provider, puzzle })),
-  )
-    .filter(({ puzzle, provider }) => puzzle.variant === provider.variant)
-    .sort((left, right) => left.puzzle.id.localeCompare(right.puzzle.id));
+function selectDailyPuzzleCandidate(
+  store: PuzzleStoreSnapshot,
+  day: string,
+  slot: DailyPuzzleSlot,
+): DailyPuzzle {
+  const candidates = store.puzzles
+    .filter((puzzle) => isCurrentDailyVariant(puzzle.variant))
+    .sort((left, right) => left.id.localeCompare(right.id));
   if (candidates.length === 0) throw new Error('no daily puzzle candidates available');
   const seed = createHash('sha256').update(`${day}|${slot}|daily-puzzle-v1`).digest();
   const index = seed.readUInt32BE(0) % candidates.length;
-  return candidates[index]!.puzzle;
+  return candidates[index] as DailyPuzzle;
 }
 
 async function readDailyPuzzleSelection(
@@ -178,7 +185,7 @@ async function insertDailyPuzzleSelection(
   if (inserted.rows[0]) return inserted.rows[0];
 
   const existing = await readDailyPuzzleSelection(db, day, slot);
-  if (existing && dailyPuzzleById(existing.puzzle_id)) return existing;
+  if (existing && dailyPuzzleById(await getPuzzleStore(), existing.puzzle_id)) return existing;
   return updateDailyPuzzleSelection(db, day, slot, puzzle, 'auto-recovered');
 }
 

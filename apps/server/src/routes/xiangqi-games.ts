@@ -8,10 +8,9 @@ import {
   type XiangqiMove,
   xiangqiMoveToPikafishUci,
 } from '@mistboard/game';
-import { currentAccountUser } from './../account-session.js';
 import { xiangqiEnabled } from './../feature-flags.js';
+import { liveAnalysisProgressStore, resolveCachedComputation } from './../game-analysis-kernel.js';
 import { isVacuousAnalysis, VacuousAnalysisError } from './../game-analysis-sweep.js';
-import { logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
 import {
@@ -27,6 +26,7 @@ import {
 import { xiangqiRooms } from './../xiangqi-registration.js';
 import type { XiangqiEvent, XiangqiRuntimeRoom } from './../xiangqi-runtime.js';
 import { xiangqiTenant } from './../xiangqi-tenant.js';
+import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
 
 type XiangqiPostgameSnapshot = {
@@ -62,6 +62,24 @@ const livePersistence: XiangqiPostgamePersistence = {
   loadRoomEvents: (roomId) => persistence.loadRoomEvents<XiangqiEvent>(roomId),
 };
 
+// Computer analysis: eval every ply with Pikafish (P3). Reuses the postgame loader
+// (finished-games-only) to get the moves, then runs the whole-game job. The account
+// gate on POST is the expensive-path gate (a whole-game Pikafish sweep); GET stays
+// open so the cached result auto-loads for anyone opening the page. Gates/envelopes:
+// the shared factory. No engineBinary gate — Pikafish resolution happens lazily
+// inside the eval itself (pikafishXiangqiPath throws into the request).
+const handleAnalysisRoutes = createGameAnalysisRoutes({
+  routeId: 'xiangqi',
+  logPrefix: 'xiangqi',
+  variantLabel: 'Xiangqi',
+  enabled: xiangqiEnabled,
+  requiresPersistence: false,
+  loadInputs: (roomId) => xiangqiPostgameForApi(roomId, livePersistence),
+  countPlies: (payload) => payload.timeline.filter((entry) => entry.type === 'move-played').length,
+  resolveAnalysis: (roomId, payload, computeIfMissing) =>
+    resolveXiangqiAnalysis(roomId, payload, liveAnalysisCache, undefined, computeIfMissing),
+});
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -69,67 +87,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
-  // Computer analysis: eval every ply with Pikafish (P3). Reuses the postgame
-  // loader (finished-games-only) to get the moves, then runs the whole-game job.
-  // GET returns the cached result only (204 on a miss — never triggers a compute,
-  // so the client can auto-load on page open); POST computes on a miss.
-  const analysisMatch = pathname.match(/^\/api\/xiangqi\/games\/([^/]+)\/analysis$/);
-  if (analysisMatch) {
-    const method = request.method ?? 'GET';
-    if (method !== 'GET' && method !== 'POST') {
-      writeJson(response, 405, { error: 'method_not_allowed' });
-      return true;
-    }
-    if (!xiangqiEnabled()) {
-      writeJson(response, 404, { error: 'not_found' });
-      return true;
-    }
-    // Requesting a fresh server-side engine pass (POST) is account-gated — it is
-    // the expensive path (a whole-game Pikafish sweep). GET stays open so the
-    // cached result auto-loads for anyone opening the page.
-    if (method === 'POST') {
-      const user = await currentAccountUser(request);
-      if (!user) {
-        writeJson(response, 401, { error: 'not_signed_in' });
-        return true;
-      }
-    }
-    const roomId = decodeURIComponent(analysisMatch[1]!);
-    const payload = await xiangqiPostgameForApi(roomId, livePersistence);
-    if (!payload) {
-      writeJson(response, 404, { error: 'not_found' });
-      return true;
-    }
-    let analysis: XiangqiGameAnalysis | null;
-    try {
-      analysis = await resolveXiangqiAnalysis(
-        roomId,
-        payload,
-        liveAnalysisCache,
-        undefined,
-        method === 'POST',
-      );
-    } catch (err) {
-      // A scoreless sweep (engine emitted moves but no evals) fails closed like a
-      // missing binary: 503, nothing cached, rather than a bogus flawless-game result.
-      if (err instanceof VacuousAnalysisError) {
-        logger.error(
-          { kind: 'xiangqi_analysis_engine_vacuous', room_id: roomId },
-          'Xiangqi analysis produced no evals (engine emitted no score); failing closed',
-        );
-        writeJson(response, 503, { error: 'analysis_engine_unavailable' });
-        return true;
-      }
-      throw err;
-    }
-    if (!analysis) {
-      // GET cache miss: not computed yet. 204 = "nothing cached", client shows the button.
-      response.writeHead(204).end();
-      return true;
-    }
-    writeJson(response, 200, analysis);
-    return true;
-  }
+  if (await handleAnalysisRoutes(request, response, pathname)) return true;
 
   const postgameMatch = pathname.match(/^\/api\/xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
@@ -150,9 +108,10 @@ export async function tryHandle(
   return true;
 }
 
-// Depth for a synchronous request-analysis pass — lower than the deep-study
-// XIANGQI_ANALYSIS_DEPTH so ~30 plies return in ~10s over one HTTP call. Prod
-// should move to async + poll (and cache) for a deeper pass.
+// Nominal cache dimension for the (room, engine, depth) key. The sweep's real
+// strength dial is the NODE budget (XIANGQI_ANALYSIS_NODES, encoded in the
+// versioned engine id — the sibling-variant pattern); `depth` only has to be
+// STABLE, so it stays at the family default.
 export const XIANGQI_ANALYSIS_REQUEST_DEPTH = 12;
 
 export type XiangqiGameAnalysis = {
@@ -163,12 +122,12 @@ export type XiangqiGameAnalysis = {
 
 /**
  * Build the eval series for a finished game from its postgame payload. `analyze`
- * is injectable for tests; it defaults to the real Pikafish whole-game job.
+ * is injectable for tests; it defaults to the real Pikafish whole-game job (one
+ * persistent engine process per sweep at the analysis node budget, #168).
  */
 export async function analyzeXiangqiPostgame(
   payload: { timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }> },
-  analyze: (movesUci: string[]) => Promise<PlyEval[]> = (movesUci) =>
-    analyzeXiangqiGame(movesUci, { depth: XIANGQI_ANALYSIS_REQUEST_DEPTH }),
+  analyze: (movesUci: string[]) => Promise<PlyEval[]> = (movesUci) => analyzeXiangqiGame(movesUci),
 ): Promise<XiangqiGameAnalysis> {
   const movesUci = payload.timeline
     .filter((entry): entry is { type: 'move-played'; move: XiangqiMove } =>
@@ -206,18 +165,14 @@ const liveAnalysisCache: XiangqiAnalysisCache = {
     persistence.saveGameAnalysis(roomId, engineId, depth, plies),
 };
 
-// One in-flight compute per (room, engine, depth) so a double-click or two
-// viewers of the same game don't run the whole-game engine pass twice. Cleared
-// in `finally`, so a failed compute doesn't wedge the key.
-const inflightAnalysis = new Map<string, Promise<XiangqiGameAnalysis>>();
-
 /**
- * Cache-first, coalesced whole-game analysis. A finished game's eval series is
- * immutable given (room, engine, depth): serve a stored result immediately, else
- * compute once (sharing one in-flight promise across concurrent callers), persist
- * it, and return. This keeps the ~10s engine pass off the hot path for every
- * request after the first and prevents duplicate passes. `cache`/`analyze` are
- * injectable for tests.
+ * Cache-first, coalesced whole-game analysis (shared skeleton: game-analysis-kernel).
+ * A finished game's eval series is immutable given (room, engine, depth): serve a
+ * stored result immediately, else compute once (sharing one in-flight promise across
+ * concurrent callers), persist it, and return. This keeps the engine pass off the hot
+ * path for every request after the first and prevents duplicate passes. A scoreless
+ * (all-null) sweep throws VacuousAnalysisError and is never cached; the route maps it
+ * to 503 analysis_engine_unavailable. `cache`/`analyze` are injectable for tests.
  */
 export async function resolveXiangqiAnalysis(
   roomId: string,
@@ -228,30 +183,29 @@ export async function resolveXiangqiAnalysis(
 ): Promise<XiangqiGameAnalysis | null> {
   const engineId = XIANGQI_ANALYSIS_ENGINE_ID;
   const depth = XIANGQI_ANALYSIS_REQUEST_DEPTH;
-
-  const cached = await cache.get(roomId, engineId, depth);
-  if (cached) return { engineId, depth, plies: cached };
-  if (!computeIfMissing) return null;
-
-  const key = `${roomId}\0${engineId}\0${depth}`;
-  const existing = inflightAnalysis.get(key);
-  if (existing) return existing;
-
-  const compute = (async () => {
-    const analysis = await analyzeXiangqiPostgame(payload, analyze);
-    // Fail closed on a scoreless sweep: never cache a vacuous (all-null) series, it
-    // would render as a flawless game forever. Throwing keeps the key uncached so a
-    // fixed engine recomputes; the route maps this to 503 analysis_engine_unavailable.
-    if (isVacuousAnalysis(analysis.plies)) throw new VacuousAnalysisError('xiangqi');
-    await cache.save(roomId, engineId, depth, analysis.plies);
-    return analysis;
-  })();
-  inflightAnalysis.set(key, compute);
-  try {
-    return await compute;
-  } finally {
-    inflightAnalysis.delete(key);
-  }
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze ? null : liveAnalysisProgressStore<PlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<PlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () =>
+      (
+        await analyzeXiangqiPostgame(
+          payload,
+          analyze ??
+            ((movesUci) => analyzeXiangqiGame(movesUci, { progress: progress ?? undefined })),
+        )
+      ).plies,
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('xiangqi');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 export async function xiangqiPostgameForApi(

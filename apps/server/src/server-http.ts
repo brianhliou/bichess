@@ -15,6 +15,7 @@ import {
   servePrerenderedPage,
   serveRulesIndexPage,
   serveSitemap,
+  serveSpaShellWithRoutePreloads,
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
 
@@ -348,8 +349,18 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (isClientRoute(pathname)) {
-      request.url = '/';
-      void serveHandler(request, response, { public: options.staticDir });
+      // Known client route: serve the SPA shell with the route's chunk preloads
+      // baked into <head> (issue #31) so a cold load fetches the route graph in
+      // parallel with the entry instead of one round-trip after it. Routes
+      // without a manifest entry (and older builds without the manifest file)
+      // fall back to the plain static shell exactly as before.
+      void serveSpaShellWithRoutePreloads({ response, staticDir: options.staticDir, pathname })
+        .catch(() => false)
+        .then((served) => {
+          if (served) return;
+          request.url = '/';
+          void serveHandler(request, response, { public: options.staticDir });
+        });
       return;
     }
 

@@ -95,10 +95,11 @@
 }
 
 .home-puzzle-box {
-  /* Square sized to the center block's height (set by landing.ts) so the box is
-     flush top and bottom at every width. Falls back to the full rail width for
-     first paint / prerender before the observer runs. */
-  width: var(--home-puzzle-box-size, 100%);
+  /* Stacked bands: full rail width, capped to match the stacked viewer board.
+     In the desktop band (min-width 1241px) the grid-line-sharing block below
+     overrides this with the shared feed-row square, so the box is flush with
+     the center feed top and bottom by construction (issue #120). */
+  width: min(100%, 534px);
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: stretch;
@@ -704,11 +705,12 @@
 }
 
 .landing-board-column #landing-replay {
-  /* Track the shared band box (feed height, capped at the rail; set by the
-     ResizeObserver in landing.ts) so the viewer board is the SAME square as the
-     daily-puzzle box and both align flush with the center column top-and-bottom.
-     Fallback keeps the prerender / no-JS render sane. */
-  --showcase-widget-size: var(--home-puzzle-box-size, min(100cqw - 26px, calc(100dvh - 240px)));
+  /* Stacked-band board size: container width (minus the seat inset), capped for
+     very tall screens. In the desktop band (min-width 1241px) the grid-line-
+     sharing block below overrides this with the shared feed-row square so the
+     viewer board is the SAME square as the daily-puzzle box and both align
+     flush with the center column top-and-bottom (issue #120). */
+  --showcase-widget-size: min(100cqw - 26px, 534px, calc(100dvh - 240px));
 }
 
 /* The viewer now lives in a narrow side rail, so keep the seat name + clock
@@ -1614,12 +1616,47 @@
    framed, seats-inside layout.
    Align the BOARD (not the whole widget) top-and-bottom with the center column,
    mirroring the daily-puzzle box on the right rail. The board is a square that
-   tracks the feed height (--home-puzzle-box-size, shared with the puzzle) and
+   tracks the feed-row size (grid-line sharing below, shared with the puzzle) and
    hugs the inner (right) edge; the two name/clock seats sit OUTSIDE the box
    (absolute, above and below) like the puzzle captions, so the board itself is
    what lands flush. Scoped to .landing-board-column so the dev variant sheet
    (bare .showcase-widget) keeps its in-flow seats-inside layout. Covers both
    renderers: the chessground single pane and the tenant .replay-layout-solo. */
+
+  /* ── Grid-line sharing (issue #120) ─────────────────────────────────────────
+   The side board boxes read the feed row's size from CSS instead of the old
+   landing.ts ResizeObserver. Both rail columns are absolutely positioned INTO
+   their named grid areas: an absolutely positioned grid child is placed in its
+   grid area but no longer contributes to track sizing, so the feed row's height
+   is defined by the center feed (.landing-center-below) alone and the rails
+   share its row lines by construction. Each rail column is a size query
+   container, so min(100cqw, 100cqh) = min(rail width, feed height): the same
+   shared square the observer used to compute. The two rail tracks share one
+   minmax() and resolve to equal widths, so the squares stay symmetric.
+   NOTE: the cq units resolve at the CONSUMING element, so every consumer of
+   --showcase-widget-size must not sit inside a nested query container (today
+   none does; .landing-board-column is inline-size, so 100cqh skips it and
+   resolves against the viewer column). */
+  .landing-demo {
+    /* Establishes the containing block so the absolutely positioned rail
+       columns resolve against their grid areas rather than the viewport. */
+    position: relative;
+  }
+
+  .landing-viewer-column,
+  .landing-puzzle-column {
+    position: absolute;
+    inset: 0;
+    container-type: size;
+  }
+
+  .landing-board-column #landing-replay {
+    --showcase-widget-size: min(100cqw, 100cqh);
+  }
+
+  .home-puzzle-box {
+    width: min(100cqw, 100cqh);
+  }
 
   /* Frameless viewer: drop the .showcase-widget panel chrome on the homepage so the
    board reads as a bare box matching the puzzle (the dev sheet keeps its frame). */
@@ -1870,14 +1907,6 @@
   .landing-news-column {
     width: 100%;
     margin-inline: auto;
-  }
-}
-
-/* Below the desktop band the viewer stacks, so the board no longer tracks the
-   feed height — fall back to the container/viewport-capped size. */
-@media (max-width: 1240px) {
-  .landing-board-column #landing-replay {
-    --showcase-widget-size: min(100cqw - 26px, 534px, calc(100dvh - 240px));
   }
 }
 

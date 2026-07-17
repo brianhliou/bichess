@@ -31,11 +31,13 @@ const server = await createServer({
 });
 
 try {
-  const [{ APP_I18N_DOMAINS }, { SUPPORTED_LOCALES }] = await Promise.all([
+  const [{ loadAppI18nDomains }, { SUPPORTED_LOCALES }] = await Promise.all([
     server.ssrLoadModule('/src/i18n/catalog.ts'),
     server.ssrLoadModule('/src/i18n/locale.ts'),
   ]);
-  const report = buildI18nReport(APP_I18N_DOMAINS, SUPPORTED_LOCALES);
+  // The zh catalogs are lazy per-locale chunks; loadAppI18nDomains awaits them
+  // and returns the fully populated domain shape the report builder expects.
+  const report = buildI18nReport(await loadAppI18nDomains(), SUPPORTED_LOCALES);
   console.log(args.has('--json') ? JSON.stringify(report, null, 2) : formatI18nReport(report));
   if (!report.ok) process.exitCode = 1;
 } finally {
