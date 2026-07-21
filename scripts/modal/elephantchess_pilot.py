@@ -104,6 +104,10 @@ if modal.is_local():
             ignore=SOURCE_IGNORES,
         )
         .run_commands(f"cd {REMOTE_ROOT} && npm ci --ignore-scripts")
+        .run_commands(
+            f"cd {REMOTE_ROOT} && npm run build --workspace @mistboard/game",
+            f"cd {REMOTE_ROOT} && npm run build --workspace @mistboard/board-render",
+        )
         .add_local_file(LOCAL_BINARY, str(REMOTE_BINARY), copy=True)
         .add_local_file(LOCAL_NETWORK, str(REMOTE_NETWORK), copy=True)
         .run_commands(f"chmod 0555 {REMOTE_BINARY}")
@@ -151,6 +155,16 @@ def _run_command(command: list[str]) -> dict[str, Any]:
     return last_json
 
 
+def _require_built_workspaces() -> None:
+    required = [
+        REMOTE_ROOT / "packages" / "game" / "dist" / "index.js",
+        REMOTE_ROOT / "packages" / "board-render" / "dist" / "index.js",
+    ]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise RuntimeError(f"Modal image is missing built workspaces: {', '.join(missing)}")
+
+
 def _write_manifest(manifest_text: str) -> str:
     descriptor, path = tempfile.mkstemp(prefix="elephantchess-pilot-", suffix=".json")
     with os.fdopen(descriptor, "w", encoding="utf-8") as manifest_file:
@@ -192,6 +206,7 @@ def _initialization_command(manifest_path: str, *, verify_only: bool) -> list[st
 
 @verify_app.function(image=image, cpu=1.0, memory=1024, timeout=600)
 def verify_image(manifest_text: str) -> dict[str, Any]:
+    _require_built_workspaces()
     manifest_path = _write_manifest(manifest_text)
     try:
         return _run_command(_initialization_command(manifest_path, verify_only=True))
@@ -201,6 +216,7 @@ def verify_image(manifest_text: str) -> dict[str, Any]:
 
 @app.function(image=image, secrets=[database_secret], cpu=1.0, memory=1024, timeout=600)
 def initialize_run(manifest_text: str) -> dict[str, Any]:
+    _require_built_workspaces()
     manifest_path = _write_manifest(manifest_text)
     try:
         return _run_command(_initialization_command(manifest_path, verify_only=False))
@@ -219,6 +235,7 @@ def initialize_run(manifest_text: str) -> dict[str, Any]:
     scaledown_window=60,
 )
 def scan_shard(run_id: str, task_index: int, lease_ms: int) -> dict[str, Any]:
+    _require_built_workspaces()
     task_id = os.environ.get("MODAL_TASK_ID", "unknown")
     return _run_command(
         [
@@ -253,6 +270,7 @@ def scan_shard(run_id: str, task_index: int, lease_ms: int) -> dict[str, Any]:
     scaledown_window=60,
 )
 def audit_candidate(run_id: str, task_index: int, lease_ms: int) -> dict[str, Any]:
+    _require_built_workspaces()
     task_id = os.environ.get("MODAL_TASK_ID", "unknown")
     return _run_command(
         [
