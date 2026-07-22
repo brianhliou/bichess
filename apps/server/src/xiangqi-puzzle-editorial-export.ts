@@ -7,6 +7,7 @@ import {
   listXiangqiPuzzleEditorialCandidates,
   type XiangqiPuzzleMiningCandidateStatus,
 } from './persistence-xiangqi-puzzle-mining.js';
+import { renderXiangqiEditorialMotifReviewHtml } from './xiangqi-puzzle-editorial-html.js';
 import {
   buildXiangqiEditorialReviewPacket,
   type XiangqiEditorialCandidateSignals,
@@ -56,6 +57,7 @@ const { values } = parseArgs({
     statuses: { type: 'string', default: 'review' },
     'limit-per-lens': { type: 'string', default: '25' },
     out: { type: 'string' },
+    'motif-html-out': { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
 });
@@ -63,7 +65,8 @@ const { values } = parseArgs({
 if (values.help) {
   process.stdout.write(
     'Usage: npm run pilot:elephantchess-review:export -- --run-id RUN_ID ' +
-      '[--statuses review,approved] [--limit-per-lens 25] [--out packet.json]\n',
+      '[--statuses review,approved] [--limit-per-lens 25] [--out packet.json]\n' +
+      '       Add [--motif-html-out review.html] for one visual representative per motif.\n',
   );
   process.exit(0);
 }
@@ -158,15 +161,29 @@ try {
     candidates: Array<{ signals: XiangqiEditorialCandidateSignals }>;
   };
   const serialized = `${JSON.stringify(output, null, 2)}\n`;
+  let outPath: string | null = null;
+  let motifHtmlOutPath: string | null = null;
   if (values.out) {
-    const outPath = resolve(values.out);
+    outPath = resolve(values.out);
     await mkdir(dirname(outPath), { recursive: true });
     await writeFile(outPath, serialized, 'utf8');
+  }
+  if (values['motif-html-out']) {
+    motifHtmlOutPath = resolve(values['motif-html-out']);
+    await mkdir(dirname(motifHtmlOutPath), { recursive: true });
+    await writeFile(
+      motifHtmlOutPath,
+      renderXiangqiEditorialMotifReviewHtml(packet, { runId }),
+      'utf8',
+    );
+  }
+  if (outPath || motifHtmlOutPath) {
     process.stdout.write(
       `${JSON.stringify({
         kind: output.kind,
         runId,
         out: outPath,
+        motifHtmlOut: motifHtmlOutPath,
         summary: output.summary,
       })}\n`,
     );
