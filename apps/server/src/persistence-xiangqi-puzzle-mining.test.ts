@@ -13,6 +13,7 @@ import {
   getXiangqiPuzzleMiningRun,
   heartbeatXiangqiPuzzleMiningShard,
   initializeXiangqiPuzzleMiningRun,
+  listXiangqiPuzzleEditorialCandidates,
   recordXiangqiPuzzleEditorialReview,
   recordXiangqiPuzzleMiningCandidate,
   recordXiangqiPuzzleMiningJudgment,
@@ -404,6 +405,16 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       }),
       verification,
     );
+    const editorialQueue = await listXiangqiPuzzleEditorialCandidates(getPool(), {
+      runId: run.id,
+    });
+    assert.equal(editorialQueue.length, 1);
+    assert.equal(editorialQueue[0]?.candidate.id, candidate.id);
+    assert.equal(editorialQueue[0]?.selectionIndex, 0);
+    assert.equal(editorialQueue[0]?.verifyJudgment?.verdict, 'pass');
+    assert.equal(editorialQueue[0]?.auditJudgment?.verdict, 'pass');
+    assert.equal(editorialQueue[0]?.latestReview?.verdict, 'approve');
+    assert.equal(editorialQueue[0]?.positionDuplicateCount, 1);
 
     const rejectedCandidate = await recordXiangqiPuzzleMiningCandidate({
       ...candidateInput,

@@ -93,6 +93,7 @@
     "pilot:elephantchess-worker": "tsx scripts/variant-lab/elephantchess-pilot-worker.ts",
     "pilot:elephantchess-audit": "tsx scripts/variant-lab/elephantchess-pilot-audit-worker.ts",
     "pilot:elephantchess-status": "npm run pilot:elephantchess-status --workspace @mistboard/server --",
+    "pilot:elephantchess-review:export": "npm run pilot:elephantchess-review:export --workspace @mistboard/server --",
     "release:local-smoke": "node scripts/release-local-smoke.mjs",
     "release:prod": "node scripts/release-prod.mjs",
     "deploy:engine-worker": "node scripts/deploy-engine-worker.mjs",

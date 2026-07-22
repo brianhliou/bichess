@@ -455,6 +455,7 @@ export {
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
 export type {
+  XiangqiPuzzleEditorialCandidate,
   XiangqiPuzzleEditorialReason,
   XiangqiPuzzleEditorialReview,
   XiangqiPuzzleEditorialVerdict,
@@ -484,6 +485,7 @@ export {
   heartbeatXiangqiPuzzleMiningShard,
   initializeXiangqiPuzzleMiningRun,
   listClaimedXiangqiPuzzleMiningShardGames,
+  listXiangqiPuzzleEditorialCandidates,
   recordXiangqiPuzzleEditorialReview,
   recordXiangqiPuzzleMiningCandidate,
   recordXiangqiPuzzleMiningJudgment,
@@ -495,5 +497,16 @@ export type {
   XiangqiPuzzleAuditWorkVerdict,
 } from './xiangqi-puzzle-audit-worker.js';
 export { processNextXiangqiPuzzleAuditCandidate } from './xiangqi-puzzle-audit-worker.js';
+export type {
+  XiangqiEditorialCandidateSignals,
+  XiangqiEditorialMaterialSignals,
+  XiangqiEditorialRankingLens,
+  XiangqiEditorialReviewPacket,
+} from './xiangqi-puzzle-editorial-ranking.js';
+export {
+  buildXiangqiEditorialReviewPacket,
+  XIANGQI_EDITORIAL_RANKING_VERSION,
+  xiangqiEditorialCandidateSignals,
+} from './xiangqi-puzzle-editorial-ranking.js';
 export type { XiangqiPuzzleMiningShardWorkResult } from './xiangqi-puzzle-mining-worker.js';
 export { processNextXiangqiPuzzleMiningShard } from './xiangqi-puzzle-mining-worker.js';

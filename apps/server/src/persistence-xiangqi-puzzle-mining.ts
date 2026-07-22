@@ -125,6 +125,17 @@ export type XiangqiPuzzleEditorialReview = {
   reviewedAt: Date;
 };
 
+export type XiangqiPuzzleEditorialCandidate = {
+  candidate: XiangqiPuzzleMiningCandidate;
+  selectionIndex: number;
+  cohort: 'representative-live' | 'coverage-live' | 'correspondence';
+  selectionEvidence: Record<string, unknown>;
+  verifyJudgment: XiangqiPuzzleMiningJudgment | null;
+  auditJudgment: XiangqiPuzzleMiningJudgment | null;
+  latestReview: XiangqiPuzzleEditorialReview | null;
+  positionDuplicateCount: number;
+};
+
 type RunRow = {
   id: string;
   import_batch_id: string;
@@ -200,6 +211,40 @@ type EditorialReviewRow = {
   reason: XiangqiPuzzleEditorialReason;
   notes: string | null;
   reviewed_at: Date;
+};
+
+type EditorialCandidateRow = CandidateRow & {
+  selection_index: number;
+  cohort: XiangqiPuzzleEditorialCandidate['cohort'];
+  selection_evidence: Record<string, unknown>;
+  position_duplicate_count: number;
+  verify_id: string | null;
+  verify_candidate_id: string | null;
+  verify_stage: XiangqiPuzzleMiningJudgmentStage | null;
+  verify_profile_version: string | null;
+  verify_verdict: XiangqiPuzzleMiningJudgmentVerdict | null;
+  verify_reason: string | null;
+  verify_engine_profile: Record<string, unknown> | null;
+  verify_evidence: Record<string, unknown> | null;
+  verify_artifact_sha256: string | null;
+  verify_created_at: Date | null;
+  audit_id: string | null;
+  audit_candidate_id: string | null;
+  audit_stage: XiangqiPuzzleMiningJudgmentStage | null;
+  audit_profile_version: string | null;
+  audit_verdict: XiangqiPuzzleMiningJudgmentVerdict | null;
+  audit_reason: string | null;
+  audit_engine_profile: Record<string, unknown> | null;
+  audit_evidence: Record<string, unknown> | null;
+  audit_artifact_sha256: string | null;
+  audit_created_at: Date | null;
+  review_id: string | null;
+  review_candidate_id: string | null;
+  reviewer_user_id: string | null;
+  review_verdict: XiangqiPuzzleEditorialVerdict | null;
+  review_reason: XiangqiPuzzleEditorialReason | null;
+  review_notes: string | null;
+  reviewed_at: Date | null;
 };
 
 type Queryable = Pick<pg.Pool | pg.PoolClient, 'query'>;
@@ -291,6 +336,73 @@ function mapEditorialReview(row: EditorialReviewRow): XiangqiPuzzleEditorialRevi
     reason: row.reason,
     notes: row.notes,
     reviewedAt: row.reviewed_at,
+  };
+}
+
+function mapOptionalEditorialJudgment(
+  row: EditorialCandidateRow,
+  prefix: 'verify' | 'audit',
+): XiangqiPuzzleMiningJudgment | null {
+  const id = row[`${prefix}_id`];
+  const candidateId = row[`${prefix}_candidate_id`];
+  const stage = row[`${prefix}_stage`];
+  const profileVersion = row[`${prefix}_profile_version`];
+  const verdict = row[`${prefix}_verdict`];
+  const engineProfile = row[`${prefix}_engine_profile`];
+  const evidence = row[`${prefix}_evidence`];
+  const createdAt = row[`${prefix}_created_at`];
+  if (
+    id === null ||
+    candidateId === null ||
+    stage === null ||
+    profileVersion === null ||
+    verdict === null ||
+    engineProfile === null ||
+    evidence === null ||
+    createdAt === null
+  ) {
+    return null;
+  }
+  return {
+    id,
+    candidateId,
+    stage,
+    profileVersion,
+    verdict,
+    reason: row[`${prefix}_reason`],
+    engineProfile,
+    evidence,
+    artifactSha256: row[`${prefix}_artifact_sha256`],
+    createdAt,
+  };
+}
+
+function mapEditorialCandidate(row: EditorialCandidateRow): XiangqiPuzzleEditorialCandidate {
+  const latestReview =
+    row.review_id === null ||
+    row.review_candidate_id === null ||
+    row.review_verdict === null ||
+    row.review_reason === null ||
+    row.reviewed_at === null
+      ? null
+      : mapEditorialReview({
+          id: row.review_id,
+          candidate_id: row.review_candidate_id,
+          reviewer_user_id: row.reviewer_user_id,
+          verdict: row.review_verdict,
+          reason: row.review_reason,
+          notes: row.review_notes,
+          reviewed_at: row.reviewed_at,
+        });
+  return {
+    candidate: mapCandidate(row),
+    selectionIndex: row.selection_index,
+    cohort: row.cohort,
+    selectionEvidence: row.selection_evidence,
+    verifyJudgment: mapOptionalEditorialJudgment(row, 'verify'),
+    auditJudgment: mapOptionalEditorialJudgment(row, 'audit'),
+    latestReview,
+    positionDuplicateCount: row.position_duplicate_count,
   };
 }
 
@@ -765,6 +877,81 @@ export async function getXiangqiPuzzleMiningCandidate(
   );
   if (!rows[0]) throw new Error(`mining candidate ${candidateId} not found`);
   return mapCandidate(rows[0]);
+}
+
+export async function listXiangqiPuzzleEditorialCandidates(
+  db: Queryable,
+  input: {
+    runId: string;
+    statuses?: readonly XiangqiPuzzleMiningCandidateStatus[];
+  },
+): Promise<XiangqiPuzzleEditorialCandidate[]> {
+  const statuses = input.statuses ?? ['review', 'approved'];
+  if (!input.runId.trim()) throw new Error('runId is required');
+  if (statuses.length === 0) return [];
+
+  const { rows } = await db.query<EditorialCandidateRow>(
+    `SELECT candidate.*,
+            game.selection_index, game.cohort, game.selection_evidence,
+            count(*) OVER (PARTITION BY candidate.position_key)::int
+              AS position_duplicate_count,
+            verify.id AS verify_id,
+            verify.candidate_id AS verify_candidate_id,
+            verify.stage AS verify_stage,
+            verify.profile_version AS verify_profile_version,
+            verify.verdict AS verify_verdict,
+            verify.reason AS verify_reason,
+            verify.engine_profile AS verify_engine_profile,
+            verify.evidence AS verify_evidence,
+            verify.artifact_sha256 AS verify_artifact_sha256,
+            verify.created_at AS verify_created_at,
+            audit.id AS audit_id,
+            audit.candidate_id AS audit_candidate_id,
+            audit.stage AS audit_stage,
+            audit.profile_version AS audit_profile_version,
+            audit.verdict AS audit_verdict,
+            audit.reason AS audit_reason,
+            audit.engine_profile AS audit_engine_profile,
+            audit.evidence AS audit_evidence,
+            audit.artifact_sha256 AS audit_artifact_sha256,
+            audit.created_at AS audit_created_at,
+            review.id AS review_id,
+            review.candidate_id AS review_candidate_id,
+            review.reviewer_user_id,
+            review.verdict AS review_verdict,
+            review.reason AS review_reason,
+            review.notes AS review_notes,
+            review.reviewed_at
+     FROM xiangqi_puzzle_mining_candidates candidate
+     JOIN xiangqi_puzzle_mining_games game
+       ON game.run_id = candidate.run_id
+      AND game.historical_game_id = candidate.historical_game_id
+     LEFT JOIN LATERAL (
+       SELECT judgment.*
+       FROM xiangqi_puzzle_mining_judgments judgment
+       WHERE judgment.candidate_id = candidate.id AND judgment.stage = 'verify'
+       ORDER BY judgment.created_at DESC, judgment.id DESC
+       LIMIT 1
+     ) verify ON true
+     LEFT JOIN LATERAL (
+       SELECT judgment.*
+       FROM xiangqi_puzzle_mining_judgments judgment
+       WHERE judgment.candidate_id = candidate.id AND judgment.stage = 'audit'
+       ORDER BY judgment.created_at DESC, judgment.id DESC
+       LIMIT 1
+     ) audit ON true
+     LEFT JOIN LATERAL (
+       SELECT editorial.*
+       FROM xiangqi_puzzle_editorial_reviews editorial
+       WHERE editorial.candidate_id = candidate.id
+       ORDER BY editorial.reviewed_at DESC, editorial.id DESC
+       LIMIT 1
+     ) review ON true
+     WHERE candidate.run_id = $1 AND candidate.status = ANY($2::text[])
+     ORDER BY game.selection_index, candidate.post_blunder_ply, candidate.id`,
+    [input.runId, statuses],
+  );
+  return rows.map(mapEditorialCandidate);
 }
 
 export async function claimNextXiangqiPuzzleMiningAuditCandidate(input: {
