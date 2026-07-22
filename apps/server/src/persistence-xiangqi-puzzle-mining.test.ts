@@ -1,3 +1,4 @@
+import { XIANGQI_SPEC_ID, type XiangqiPuzzle } from '@mistboard/game';
 import type { ElephantChessPilotGame } from './elephantchess-pilot-manifest.js';
 import { buildElephantChessPilotManifest } from './elephantchess-pilot-manifest.js';
 import { getPool } from './persistence-db.js';
@@ -21,6 +22,10 @@ import {
 } from './persistence-xiangqi-puzzle-mining.js';
 import { processNextXiangqiPuzzleAuditCandidate } from './xiangqi-puzzle-audit-worker.js';
 import { processNextXiangqiPuzzleMiningShard } from './xiangqi-puzzle-mining-worker.js';
+import {
+  planXiangqiPuzzlePublication,
+  publishXiangqiPuzzlePublication,
+} from './xiangqi-puzzle-publication.js';
 
 const SOURCE_ID = 'source-elephant-pilot-test';
 const BATCH_ID = 'batch-elephant-pilot-test';
@@ -73,6 +78,31 @@ async function seedEligibleGames(games: readonly ElephantChessPilotGame[]): Prom
       ],
     );
   }
+}
+
+function publishablePuzzle(id: string, gameId: string, ply: number): XiangqiPuzzle {
+  return {
+    id,
+    variant: XIANGQI_SPEC_ID,
+    title: 'Red mate in 1',
+    initial: {
+      id,
+      board: {
+        d1: { color: 'red', role: 'general' },
+        a9: { color: 'red', role: 'chariot' },
+        h8: { color: 'red', role: 'chariot' },
+        e10: { color: 'black', role: 'general' },
+      },
+      status: { type: 'playing', turn: 'red' },
+      moveNumber: 1,
+      progressClock: 0,
+      positionCounts: {},
+    },
+    solution: [{ from: 'h8', to: 'h10' }],
+    goal: { type: 'checkmate', winner: 'red' },
+    themes: ['checkmate', 'matein1', 'endgame'],
+    sourceGame: { gameId, ply },
+  };
 }
 
 definePersistenceTests('xiangqi puzzle mining', () => {
@@ -661,5 +691,167 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       'audit-failed',
     );
     assert.equal((await getXiangqiPuzzleMiningRun(getPool(), run.id)).status, 'review');
+  });
+
+  test('publication atomically promotes every audited survivor and reruns without writes', async () => {
+    const games = Array.from({ length: 8 }, (_, index) => pilotGame(index));
+    await seedEligibleGames(games);
+    const manifest = buildElephantChessPilotManifest(games, {
+      importBatchId: BATCH_ID,
+      seed: 'publication-pilot-v1',
+      targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
+    });
+    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+    const historicalGameId = manifest.games[0]?.historicalGameId as string;
+    const postBlunderPly = 17;
+    const candidate = await recordXiangqiPuzzleMiningCandidate({
+      runId: run.id,
+      historicalGameId,
+      postBlunderPly,
+      positionKey: 'xiangqi-publication-position-key',
+      trigger: 'eval-swing',
+      scanEvidence: { beforeCp: 420, afterCp: 80, scanNodes: 60_000 },
+    });
+    const puzzle = publishablePuzzle(
+      `xq-mined-publication-${candidate.id}`,
+      historicalGameId,
+      postBlunderPly,
+    );
+    const engineProfile = { engine: 'pikafish-test', binarySha256: 'd'.repeat(64) };
+    await recordXiangqiPuzzleMiningJudgment({
+      candidateId: candidate.id,
+      stage: 'verify',
+      profileVersion: 'verify-v1',
+      verdict: 'pass',
+      engineProfile,
+      evidence: { depth: 20, bestCp: 510, secondCp: 120 },
+      puzzleData: puzzle,
+    });
+    await getPool().query(
+      `UPDATE xiangqi_puzzle_mining_runs SET status = 'verifying' WHERE id = $1`,
+      [run.id],
+    );
+    const auditClaim = await claimNextXiangqiPuzzleMiningAuditCandidate({
+      runId: run.id,
+      workerId: 'publication-audit-worker',
+      claimToken: 'publication-audit-claim',
+    });
+    assert.equal(auditClaim?.candidate.id, candidate.id);
+    await recordXiangqiPuzzleMiningJudgment({
+      candidateId: candidate.id,
+      stage: 'audit',
+      profileVersion: 'audit-v1',
+      verdict: 'pass',
+      engineProfile,
+      evidence: { depth: 22, stable: true },
+      claimToken: 'publication-audit-claim',
+    });
+    await getPool().query(`UPDATE xiangqi_puzzle_mining_runs SET status = 'review' WHERE id = $1`, [
+      run.id,
+    ]);
+
+    const before = await planXiangqiPuzzlePublication(getPool(), run.id);
+    assert.equal(before.totalCandidates, 1);
+    assert.equal(before.eligibleCandidates, 1);
+    assert.equal(before.alreadyPublished, 0);
+    assert.equal(before.sourceLicenseStatus, 'cleared');
+    assert.match(before.publicationSha256, /^[0-9a-f]{64}$/);
+
+    await assert.rejects(
+      publishXiangqiPuzzlePublication({
+        runId: run.id,
+        expectedTotal: 1,
+        expectedPublicationSha256: '0'.repeat(64),
+        operatorNote: 'A stale plan must never publish.',
+      }),
+      /publication sha changed/,
+    );
+    assert.equal(
+      (
+        await getPool().query<{ count: number }>(
+          `SELECT count(*)::int AS count FROM puzzles WHERE mining_candidate_id = $1`,
+          [candidate.id],
+        )
+      ).rows[0]?.count,
+      0,
+    );
+    assert.equal((await getXiangqiPuzzleMiningCandidate(getPool(), candidate.id)).status, 'review');
+
+    const published = await publishXiangqiPuzzlePublication({
+      runId: run.id,
+      expectedTotal: 1,
+      expectedPublicationSha256: before.publicationSha256,
+      operatorNote: 'Operator authorized publication of every audited survivor.',
+    });
+    assert.equal(published.publishedNow, 1);
+    assert.equal(published.alreadyPublished, 0);
+    assert.equal(published.totalPublished, 1);
+    assert.equal(published.firstSequence, before.nextSequence);
+    assert.equal(published.lastSequence, before.nextSequence);
+
+    const persisted = await getPool().query<{
+      id: string;
+      seq: number;
+      source_kind: string;
+      mining_candidate_id: string;
+      data: XiangqiPuzzle;
+    }>(
+      `SELECT id, seq, source_kind, mining_candidate_id, data
+       FROM puzzles WHERE mining_candidate_id = $1`,
+      [candidate.id],
+    );
+    assert.equal(persisted.rows[0]?.id, puzzle.id);
+    assert.equal(persisted.rows[0]?.seq, before.nextSequence);
+    assert.equal(persisted.rows[0]?.source_kind, 'mined');
+    assert.equal(persisted.rows[0]?.mining_candidate_id, candidate.id);
+    assert.deepEqual(persisted.rows[0]?.data, puzzle);
+    assert.equal(
+      (await getXiangqiPuzzleMiningCandidate(getPool(), candidate.id)).status,
+      'published',
+    );
+    assert.equal((await getXiangqiPuzzleMiningRun(getPool(), run.id)).status, 'completed');
+    const reviews = await getPool().query<{
+      verdict: string;
+      reason: string;
+      notes: string;
+    }>(
+      `SELECT verdict, reason, notes
+       FROM xiangqi_puzzle_editorial_reviews WHERE candidate_id = $1`,
+      [candidate.id],
+    );
+    assert.deepEqual(reviews.rows, [
+      {
+        verdict: 'approve',
+        reason: 'publishable',
+        notes: 'Operator authorized publication of every audited survivor.',
+      },
+    ]);
+
+    const after = await planXiangqiPuzzlePublication(getPool(), run.id);
+    assert.equal(after.totalCandidates, 1);
+    assert.equal(after.eligibleCandidates, 0);
+    assert.equal(after.alreadyPublished, 1);
+    assert.equal(after.publicationSha256, before.publicationSha256);
+    const rerun = await publishXiangqiPuzzlePublication({
+      runId: run.id,
+      expectedTotal: 1,
+      expectedPublicationSha256: after.publicationSha256,
+      operatorNote: 'This note is unused because publication is already complete.',
+    });
+    assert.equal(rerun.publishedNow, 0);
+    assert.equal(rerun.alreadyPublished, 1);
+    assert.equal(rerun.totalPublished, 1);
+    assert.equal(rerun.firstSequence, null);
+    assert.equal(rerun.lastSequence, null);
+    assert.equal(
+      (
+        await getPool().query<{ count: number }>(
+          `SELECT count(*)::int AS count
+           FROM xiangqi_puzzle_editorial_reviews WHERE candidate_id = $1`,
+          [candidate.id],
+        )
+      ).rows[0]?.count,
+      1,
+    );
   });
 });

@@ -511,3 +511,11 @@ export {
 } from './xiangqi-puzzle-editorial-ranking.js';
 export type { XiangqiPuzzleMiningShardWorkResult } from './xiangqi-puzzle-mining-worker.js';
 export { processNextXiangqiPuzzleMiningShard } from './xiangqi-puzzle-mining-worker.js';
+export type {
+  XiangqiPuzzlePublicationPlan,
+  XiangqiPuzzlePublicationResult,
+} from './xiangqi-puzzle-publication.js';
+export {
+  planXiangqiPuzzlePublication,
+  publishXiangqiPuzzlePublication,
+} from './xiangqi-puzzle-publication.js';
