@@ -100,7 +100,7 @@ try {
     rankingVersion: packet.rankingVersion,
     rankingDescriptions: {
       'material-concession':
-        'Sacrifice proxy: material conceded in the verified line, then depth and source swing.',
+        'Sacrifice proxy: worst local material-negative exchange in the verified line, then total concession, depth, and source swing.',
       'forcing-depth': 'Number of solver decisions, then eval swing and audit margin.',
       'source-swing':
         'Magnitude of the source-game mistake; mate-scale values are explicitly flagged.',
@@ -115,10 +115,17 @@ try {
       multiDecision: signals.filter((signal) => (signal.solverPlies ?? 0) > 1).length,
       materialConcession: signals.filter((signal) => (signal.material?.materialConcededCp ?? 0) > 0)
         .length,
-      nonImmediateMaterialConcession: signals.filter(
-        (signal) =>
-          (signal.material?.materialConcededCp ?? 0) > 0 && !signal.material?.immediateRecapture,
+      localMaterialConcession: signals.filter(
+        (signal) => (signal.material?.maxLocalConcessionCp ?? 0) > 0,
       ).length,
+      capturedJustMovedPiece: signals.filter((signal) =>
+        signal.material?.concessionEvents.some((event) => event.capturedJustMovedPiece),
+      ).length,
+      materialConcessionMotifs: new Set(
+        signals.flatMap((signal) =>
+          signal.materialConcessionMotifKey ? [signal.materialConcessionMotifKey] : [],
+        ),
+      ).size,
       negativeNetMaterialConcession: signals.filter(
         (signal) =>
           (signal.material?.materialConcededCp ?? 0) > 0 &&

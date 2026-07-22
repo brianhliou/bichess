@@ -8,7 +8,7 @@ import type {
 } from '@mistboard/game';
 import type { XiangqiPuzzleEditorialCandidate } from './persistence-xiangqi-puzzle-mining.js';
 
-export const XIANGQI_EDITORIAL_RANKING_VERSION = 'editorial-lenses-v1';
+export const XIANGQI_EDITORIAL_RANKING_VERSION = 'editorial-lenses-v2';
 
 const MATERIAL_CP: Readonly<Record<XiangqiPieceRole, number>> = {
   general: 20_000,
@@ -28,8 +28,24 @@ export type XiangqiEditorialMaterialSignals = {
   materialWonCp: number;
   netMaterialCp: number;
   maxMaterialDeficitCp: number;
+  maxLocalConcessionCp: number;
   concededRoles: XiangqiPieceRole[];
   wonRoles: XiangqiPieceRole[];
+  concessionEvents: XiangqiEditorialMaterialConcessionEvent[];
+};
+
+export type XiangqiEditorialMaterialConcessionEvent = {
+  solutionPly: number;
+  capturedRole: XiangqiPieceRole;
+  capturedValueCp: number;
+  capturedSquare: string;
+  capturedJustMovedPiece: boolean;
+  precedingSolverMove: XiangqiMove;
+  precedingSolverMoveQuiet: boolean;
+  precedingCapturedRole: XiangqiPieceRole | null;
+  precedingCapturedValueCp: number;
+  localExchangeCp: number;
+  localConcessionCp: number;
 };
 
 export type XiangqiEditorialCandidateSignals = {
@@ -51,6 +67,8 @@ export type XiangqiEditorialCandidateSignals = {
   goal: string | null;
   themes: string[];
   material: XiangqiEditorialMaterialSignals | null;
+  materialConcessionMotifKey: string | null;
+  materialConcessionMotifCount: number;
   latestReviewVerdict: string | null;
 };
 
@@ -109,12 +127,15 @@ function materialSignals(puzzle: XiangqiPuzzle): XiangqiEditorialMaterialSignals
   const board = { ...puzzle.initial.board } as XiangqiGameState['board'];
   const concededRoles: XiangqiPieceRole[] = [];
   const wonRoles: XiangqiPieceRole[] = [];
+  const concessionEvents: XiangqiEditorialMaterialConcessionEvent[] = [];
   let materialConcededCp = 0;
   let materialWonCp = 0;
   let runningNetCp = 0;
   let maxMaterialDeficitCp = 0;
   let quietFirstMove = true;
   let immediateRecapture = false;
+  let precedingSolverMove: XiangqiMove | null = null;
+  let precedingSolverCapture: XiangqiPiece | null = null;
 
   for (let ply = 0; ply < puzzle.solution.length; ply += 1) {
     const move = puzzle.solution[ply] as XiangqiMove;
@@ -128,7 +149,27 @@ function materialSignals(puzzle: XiangqiPuzzle): XiangqiEditorialMaterialSignals
         materialConcededCp += value;
         runningNetCp -= value;
         concededRoles.push(captured.role);
-        if (ply === 1 && move.to === puzzle.solution[0]?.to) immediateRecapture = true;
+        const capturedJustMovedPiece = move.to === precedingSolverMove?.to;
+        if (ply === 1 && capturedJustMovedPiece) immediateRecapture = true;
+        if (precedingSolverMove) {
+          const precedingCapturedValueCp = precedingSolverCapture
+            ? MATERIAL_CP[precedingSolverCapture.role]
+            : 0;
+          const localExchangeCp = precedingCapturedValueCp - value;
+          concessionEvents.push({
+            solutionPly: ply,
+            capturedRole: captured.role,
+            capturedValueCp: value,
+            capturedSquare: move.to,
+            capturedJustMovedPiece,
+            precedingSolverMove,
+            precedingSolverMoveQuiet: precedingSolverCapture === null,
+            precedingCapturedRole: precedingSolverCapture?.role ?? null,
+            precedingCapturedValueCp,
+            localExchangeCp,
+            localConcessionCp: Math.max(0, -localExchangeCp),
+          });
+        }
       } else {
         materialWonCp += value;
         runningNetCp += value;
@@ -138,6 +179,10 @@ function materialSignals(puzzle: XiangqiPuzzle): XiangqiEditorialMaterialSignals
     }
     delete board[move.from];
     board[move.to] = moving;
+    if (ply % 2 === 0) {
+      precedingSolverMove = move;
+      precedingSolverCapture = captured ?? null;
+    }
   }
 
   return {
@@ -148,9 +193,26 @@ function materialSignals(puzzle: XiangqiPuzzle): XiangqiEditorialMaterialSignals
     materialWonCp,
     netMaterialCp: materialWonCp - materialConcededCp,
     maxMaterialDeficitCp,
+    maxLocalConcessionCp: Math.max(0, ...concessionEvents.map((event) => event.localConcessionCp)),
     concededRoles,
     wonRoles,
+    concessionEvents,
   };
+}
+
+function materialConcessionMotifKey(
+  material: XiangqiEditorialMaterialSignals | null,
+  goal: string | null,
+  solverPlies: number | null,
+): string | null {
+  const events = material?.concessionEvents.filter((event) => event.localConcessionCp > 0) ?? [];
+  if (events.length === 0) return null;
+  const eventKeys = events.map(
+    (event) =>
+      `${event.precedingCapturedRole ?? 'quiet'}>${event.capturedRole}:` +
+      `${event.capturedJustMovedPiece ? 'offered' : 'other'}:${event.localConcessionCp}`,
+  );
+  return `${goal ?? 'unknown'}|solver-plies:${solverPlies ?? 'unknown'}|${eventKeys.join(',')}`;
 }
 
 export function xiangqiEditorialCandidateSignals(
@@ -166,6 +228,8 @@ export function xiangqiEditorialCandidateSignals(
       ? puzzle.goal.type
       : null;
   const themes = puzzle ? [...puzzle.themes] : [];
+  const solverPlies = solutionPlies === null ? null : Math.ceil(solutionPlies / 2);
+  const material = puzzle ? materialSignals(puzzle) : null;
   return {
     candidateId: entry.candidate.id,
     cohort: entry.cohort,
@@ -182,10 +246,12 @@ export function xiangqiEditorialCandidateSignals(
     auditMinGapWinrate: auditMinimum(entry.auditJudgment?.evidence, 'gapWinrate'),
     auditUniquenessReasons: auditReasons(entry.auditJudgment?.evidence),
     solutionPlies,
-    solverPlies: solutionPlies === null ? null : Math.ceil(solutionPlies / 2),
+    solverPlies,
     goal,
     themes,
-    material: puzzle ? materialSignals(puzzle) : null,
+    material,
+    materialConcessionMotifKey: materialConcessionMotifKey(material, goal, solverPlies),
+    materialConcessionMotifCount: 1,
     latestReviewVerdict: entry.latestReview?.verdict ?? null,
   };
 }
@@ -209,9 +275,8 @@ const LENS_COMPARATORS: Record<
   (left: XiangqiEditorialCandidateSignals, right: XiangqiEditorialCandidateSignals) => number
 > = {
   'material-concession': (left, right) =>
+    descending(left.material?.maxLocalConcessionCp, right.material?.maxLocalConcessionCp) ||
     descending(left.material?.materialConcededCp, right.material?.materialConcededCp) ||
-    Number(left.material?.immediateRecapture ?? false) -
-      Number(right.material?.immediateRecapture ?? false) ||
     descending(left.material?.maxMaterialDeficitCp, right.material?.maxMaterialDeficitCp) ||
     descending(left.solverPlies, right.solverPlies) ||
     descending(left.swingCp, right.swingCp) ||
@@ -235,9 +300,26 @@ const LENS_COMPARATORS: Record<
 export function buildXiangqiEditorialReviewPacket(
   entries: readonly XiangqiPuzzleEditorialCandidate[],
 ): XiangqiEditorialReviewPacket {
-  const enriched = entries.map((entry) => ({
+  const initial = entries.map((entry) => ({
     entry,
     signals: xiangqiEditorialCandidateSignals(entry),
+  }));
+  const motifCounts = new Map<string, number>();
+  for (const { signals } of initial) {
+    if (!signals.materialConcessionMotifKey) continue;
+    motifCounts.set(
+      signals.materialConcessionMotifKey,
+      (motifCounts.get(signals.materialConcessionMotifKey) ?? 0) + 1,
+    );
+  }
+  const enriched = initial.map(({ entry, signals }) => ({
+    entry,
+    signals: {
+      ...signals,
+      materialConcessionMotifCount: signals.materialConcessionMotifKey
+        ? (motifCounts.get(signals.materialConcessionMotifKey) ?? 1)
+        : 1,
+    },
   }));
   const lenses = Object.keys(LENS_COMPARATORS) as XiangqiEditorialRankingLens[];
   const rankings = Object.fromEntries(

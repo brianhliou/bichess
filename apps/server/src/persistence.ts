@@ -499,6 +499,7 @@ export type {
 export { processNextXiangqiPuzzleAuditCandidate } from './xiangqi-puzzle-audit-worker.js';
 export type {
   XiangqiEditorialCandidateSignals,
+  XiangqiEditorialMaterialConcessionEvent,
   XiangqiEditorialMaterialSignals,
   XiangqiEditorialRankingLens,
   XiangqiEditorialReviewPacket,

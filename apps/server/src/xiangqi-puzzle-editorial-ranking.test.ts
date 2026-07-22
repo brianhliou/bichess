@@ -117,9 +117,29 @@ test('extracts transparent material and audit signals from a verified line', () 
     materialWonCp: 550,
     netMaterialCp: -350,
     maxMaterialDeficitCp: 800,
+    maxLocalConcessionCp: 800,
     concededRoles: ['chariot'],
     wonRoles: ['soldier', 'cannon'],
+    concessionEvents: [
+      {
+        solutionPly: 1,
+        capturedRole: 'chariot',
+        capturedValueCp: 900,
+        capturedSquare: 'a2',
+        capturedJustMovedPiece: true,
+        precedingSolverMove: { from: 'a1', to: 'a2' },
+        precedingSolverMoveQuiet: false,
+        precedingCapturedRole: 'soldier',
+        precedingCapturedValueCp: 100,
+        localExchangeCp: -800,
+        localConcessionCp: 800,
+      },
+    ],
   });
+  assert.equal(
+    signals.materialConcessionMotifKey,
+    'winning-advantage|solver-plies:2|soldier>chariot:offered:800',
+  );
 });
 
 test('builds distinct deterministic ranking lenses without collapsing interestingness', () => {
@@ -147,5 +167,23 @@ test('builds distinct deterministic ranking lenses without collapsing interestin
   assert.equal(
     packet.candidates.find(({ candidate }) => candidate.id === 'swing')?.ranks['source-swing'],
     1,
+  );
+});
+
+test('counts recurring material-concession motifs without treating them as duplicate positions', () => {
+  const line = [
+    { from: 'a1', to: 'a2' },
+    { from: 'b2', to: 'a2' },
+    { from: 'c1', to: 'c2' },
+  ] as XiangqiPuzzle['solution'];
+  const packet = buildXiangqiEditorialReviewPacket([
+    entry('motif-a', puzzle('motif-a', line), 600),
+    entry('motif-b', puzzle('motif-b', line), 500),
+  ]);
+  assert.equal(packet.candidates[0]?.signals.materialConcessionMotifCount, 2);
+  assert.equal(packet.candidates[1]?.signals.materialConcessionMotifCount, 2);
+  assert.notEqual(
+    packet.candidates[0]?.candidate.positionKey,
+    packet.candidates[1]?.candidate.positionKey,
   );
 });
