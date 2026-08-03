@@ -1763,10 +1763,10 @@
    compact chess rules above on the homepage AND matches the dev sheet's
    .showcase-widget cells. (The legacy compact chess block above is now superseded.) */
 :is(#landing-replay.replay-compact, .showcase-widget)
-  :is(
-    .replay-layout-single-white .replay-pane-white,
-    .replay-layout-single-black .replay-pane-black
-  ) {
+:is(
+  .replay-layout-single-white .replay-pane-white,
+  .replay-layout-single-black .replay-pane-black
+) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1888,7 +1888,8 @@
    .landing-page + pane classes push this above the dark-theme rule
    (:root[…] .landing-page #landing-replay .replay-clock-row.active) so no
    !important is needed. */
-.landing-page :is(#landing-replay.replay-compact, .showcase-widget)
+.landing-page
+  :is(#landing-replay.replay-compact, .showcase-widget)
   :is(
     .replay-layout-single-white .replay-pane-white,
     .replay-layout-single-black .replay-pane-black
@@ -2028,8 +2029,7 @@
    home-viewer padding rule above so it actually wins). */
   .landing-page:not(.watch-route):not(.game-route):not(.about-route):not(.learn-route):not(
     .account-route
-  ):not(.profile-route):not(.source-route)
-  #landing-replay {
+  ):not(.profile-route):not(.source-route) #landing-replay {
     padding: 0;
     gap: 0;
   }
@@ -2042,7 +2042,8 @@
   }
 
   /* Chess (chessground single visible pane) */
-  .landing-page .landing-board-column
+  .landing-page
+    .landing-board-column
     #landing-replay
     :is(.replay-layout-single-white, .replay-layout-single-black) {
     align-items: flex-end; /* hug the pane to the inner (right) edge */
@@ -2063,7 +2064,8 @@
   }
 
   /* Top seat (opponent) above the box; bottom seat (POV) below it. */
-  .landing-page .landing-board-column
+  .landing-page
+    .landing-board-column
     #landing-replay
     :is(
       .replay-layout-single-white .replay-pane-white,
@@ -2101,7 +2103,8 @@
 
   /* The middle child (board pane, or the reserve-flanked board row) fills the box;
    the seats are pulled out of flow so it alone defines the flush height. */
-  .landing-page .landing-board-column
+  .landing-page
+    .landing-board-column
     #landing-replay
     .replay-layout-solo
     > :is(.replay-pane, .showcase-board-row) {

@@ -970,13 +970,13 @@
    token-based in articles.css and flip per theme on their own. */
 
 :root[data-effective-theme="dark"]
-  :is(
-    .action-notice.danger,
-    .game-controls button.danger,
-    .confirm-dialog-actions button.danger,
-    .room-actions button.danger,
-    .info-notice.danger
-  ) {
+:is(
+  .action-notice.danger,
+  .game-controls button.danger,
+  .confirm-dialog-actions button.danger,
+  .room-actions button.danger,
+  .info-notice.danger
+) {
   border-color: color-mix(in srgb, #d4645d 50%, var(--site-border));
   background: color-mix(in srgb, #d4645d 12%, var(--site-panel));
   color: #e48f89;

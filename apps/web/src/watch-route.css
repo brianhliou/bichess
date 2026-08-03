@@ -231,7 +231,8 @@
 }
 
 /* Red/White POV selected: show the white pane, hide truth. */
-.watch-board-box [data-watch-pov="white"]
+.watch-board-box
+  [data-watch-pov="white"]
   .replay-layout:not(.replay-layout-solo)
   .replay-pane-white {
   display: flex;
@@ -244,7 +245,8 @@
 }
 
 /* Black POV selected: show the black pane, hide truth. */
-.watch-board-box [data-watch-pov="black"]
+.watch-board-box
+  [data-watch-pov="black"]
   .replay-layout:not(.replay-layout-solo)
   .replay-pane-black {
   display: flex;
