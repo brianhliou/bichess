@@ -70,7 +70,7 @@
     "@mistboard/board-render": "0.0.0",
     "@mistboard/game": "0.0.0",
     "@resvg/resvg-js": "^2.6.2",
-    "jose": "^6.2.5",
+    "jose": "^6.2.8",
     "obscenity": "^0.4.6",
     "pg": "^8.22.0",
     "pino": "^10.3.1",
@@ -78,13 +78,13 @@
     "pinyin-pro": "^3.28.2",
     "serve-handler": "^6.1.7",
     "stripe": "^22.4.0",
-    "ws": "^8.21.1"
+    "ws": "^8.21.2"
   },
   "devDependencies": {
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.20.4",
     "@types/serve-handler": "^6.1.4",
     "@types/ws": "^8.5.13",
-    "tsx": "^4.23.1",
+    "tsx": "^4.23.9",
     "typescript": "^7.0.2"
   }
 }
