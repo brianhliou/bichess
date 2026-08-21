@@ -11,6 +11,7 @@ import type {
 } from '@mistboard/game';
 import type { Api } from 'chessground/api';
 import type { Config } from 'chessground/config';
+import type { DrawShape } from 'chessground/draw';
 import type * as cg from 'chessground/types';
 import { readAccountPreferences } from './account-preferences.js';
 import {
@@ -882,8 +883,32 @@ function renderBoard(view: PlayerView | null): void {
 
   ground = mountBoard(refs.board, config);
   liveState.ground = ground;
+  installInkPreservation();
   ensureDragGhostElement();
   maybePlayPremove();
+}
+
+// Chessground erases every drawn shape on the first left press of a move
+// (draw.clear, from drag.start). Its `eraseOnClick` flag only narrows that to
+// empty squares, so there is no config that turns it off outright — and we want
+// it off outright: a shape goes away when the player re-draws it, and not
+// because they played a move. So mirror the ink just before the press and put it
+// back straight after.
+//
+// pointerdown always precedes mousedown, and this mousedown listener sits on the
+// wrapper while chessground's sits on the inner <cg-board>, so ours runs after
+// its clear within the same event. Nothing paints in between, so there is no
+// flash.
+function installInkPreservation(): void {
+  let inkBeforePress: DrawShape[] = [];
+  refs.board.addEventListener('pointerdown', (event) => {
+    if (event.button === 0 && ground) inkBeforePress = [...ground.state.drawable.shapes];
+  });
+  refs.board.addEventListener('mousedown', () => {
+    if (!ground || inkBeforePress.length === 0) return;
+    if (ground.state.drawable.shapes.length === 0) ground.setShapes(inkBeforePress);
+    inkBeforePress = [];
+  });
 }
 
 /** Which game owns the board's right-click annotations: they are per-game
