@@ -1,9 +1,16 @@
 import { boardFen, hiddenSquareClasses } from '@mistboard/board-render/interactive';
 import type { Board, PlayerView, Square } from '@mistboard/game';
+import { configure } from 'chessground/config';
+import type { DrawShape } from 'chessground/draw';
+import { defaults } from 'chessground/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { boardHighlightClasses, boardResultClass, legalDests } from './live-board.js';
 import { shouldAutoScrollMoveList } from './live-move-list.js';
-import { shouldEnablePremoves, shouldShowPostGameRoomActions } from './live-render.js';
+import {
+  drawShapeGameOf,
+  shouldEnablePremoves,
+  shouldShowPostGameRoomActions,
+} from './live-render.js';
 import { liveState } from './live-state.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -208,6 +215,45 @@ describe('shouldEnablePremoves', () => {
     expect(shouldEnablePremoves({ ...eligible, hasSeat: false })).toBe(false);
     expect(shouldEnablePremoves({ ...eligible, canInteractWithOwnPieces: false })).toBe(false);
     expect(shouldEnablePremoves({ ...eligible, boardIsLive: true })).toBe(false);
+  });
+});
+
+describe('drawShapeGameOf', () => {
+  it('owns annotations for the duration of one playing game', () => {
+    // renderBoard keeps the shapes while this id is unchanged, so a turn change
+    // (or a reconnect render, which is not a move at all) carries them over.
+    expect(drawShapeGameOf(makeView({ id: 'game-1' }))).toBe('game-1');
+    expect(drawShapeGameOf(makeView({ id: 'game-2' }))).toBe('game-2');
+  });
+
+  it('disowns them once the game is over or absent', () => {
+    const finished = makeView({
+      status: { type: 'finished', winner: 'white', reason: 'checkmate' },
+    });
+    expect(drawShapeGameOf(finished)).toBeNull();
+    expect(drawShapeGameOf(null)).toBeNull();
+  });
+});
+
+// Pins the chessground behavior the fix rests on: a set() carrying a fen clears
+// state.drawable.shapes unless the same config hands them back. An upgrade that
+// changes either half silently un-fixes annotation persistence.
+describe('chessground drawable.shapes across a fen set', () => {
+  const shapes: DrawShape[] = [{ orig: 'e4', brush: 'green' }];
+  const emptyBoard = '8/8/8/8/8/8/8/8';
+
+  it('wipes shapes when the config omits them', () => {
+    const state = defaults();
+    state.drawable.shapes = [...shapes];
+    configure(state, { fen: emptyBoard });
+    expect(state.drawable.shapes).toEqual([]);
+  });
+
+  it('keeps shapes when the config hands them back', () => {
+    const state = defaults();
+    state.drawable.shapes = [...shapes];
+    configure(state, { fen: emptyBoard, drawable: { shapes: [...state.drawable.shapes] } });
+    expect(state.drawable.shapes).toEqual(shapes);
   });
 });
 

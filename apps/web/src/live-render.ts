@@ -85,6 +85,8 @@ let refs!: LiveRefs;
 let sendSocket: (payload: unknown) => boolean = () => false;
 let reconnectNow: () => void = () => {};
 let ground: Api | null = null;
+// Which game the board's current right-click annotations belong to.
+let drawShapeGameId: string | null = null;
 let pendingPromotion: PendingPromotion | null = null;
 let orientation: Color = 'white';
 let lifecycleEffects: LiveLifecycleEffects | null = null;
@@ -819,6 +821,12 @@ function renderBoard(view: PlayerView | null): void {
   const premovesEnabled = readAccountPreferences().premoves;
   if (!premovesEnabled) ground?.cancelPremove();
   const dests = view ? legalDests(view) : new Map<cg.Key, cg.Key[]>();
+  // Chessground wipes state.drawable.shapes on any set() carrying a fen, and this
+  // config always carries one, so the board must hand its own arrows/circles back
+  // or every render erases them. Client-only: nothing reaches the server.
+  const shapeGame = drawShapeGameOf(view);
+  const keepShapes = shapeGame !== null && shapeGame === drawShapeGameId;
+  drawShapeGameId = shapeGame;
   refs.board.classList.toggle('finished-board', view?.status.type === 'finished');
   refs.board.classList.toggle('paused-board', paused);
   renderPausedOverlay(paused);
@@ -830,6 +838,7 @@ function renderBoard(view: PlayerView | null): void {
     autoCastle: true,
     coordinates: false,
     coordinatesOnSquares: false,
+    drawable: { shapes: keepShapes && ground ? [...ground.state.drawable.shapes] : [] },
     fen: view ? boardFen(view.board) : '8/8/8/8/8/8/8/8',
     highlight: {
       custom: view ? boardHighlightClasses(view, orientation) : new Map(),
@@ -875,6 +884,13 @@ function renderBoard(view: PlayerView | null): void {
   liveState.ground = ground;
   ensureDragGhostElement();
   maybePlayPremove();
+}
+
+/** Which game owns the board's right-click annotations: they are per-game
+ *  working memory, kept across turns inside one playing game and dropped when it
+ *  ends or a rematch swaps in a new id. Null means nothing to carry. */
+export function drawShapeGameOf(view: PlayerView | null): string | null {
+  return view?.status.type === 'playing' ? view.id : null;
 }
 
 export function shouldEnablePremoves(input: {
@@ -1210,5 +1226,6 @@ function destroyChessBoardForAlternateRenderer(): void {
   if (!ground) return;
   ground.destroy();
   ground = null;
+  drawShapeGameId = null;
   liveState.ground = null;
 }
