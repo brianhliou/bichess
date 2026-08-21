@@ -42,6 +42,12 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
@@ -58,6 +64,8 @@ type DropMiniMoveEvent = TenantMovePlayed<MiniXiangqiColor, DropMiniXiangqiMove>
 // ── Drop Mini Xiangqi-owned interaction/render state ─────────────────────────
 
 let core: TenantLiveClientContext<MiniXiangqiColor, DropMiniXiangqiPlayerView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selectedSquare: MiniXiangqiSquare | null = null;
 let selectedDropRole: DropMiniXiangqiDropRole | null = null;
 let draggingFrom: MiniXiangqiSquare | null = null;
@@ -246,6 +254,7 @@ function renderBoard(liveRefs: LiveRefs, view: DropMiniXiangqiPlayerView | null)
     : selectedSquare
       ? dropMiniXiangqiBoardMoves(view, selectedSquare)
       : [];
+  const drawn = drawnBoardOverlays<MiniXiangqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderMiniXiangqiBoardSvg(
     dropMiniXiangqiBoardView(view, hints),
     perspective,
@@ -255,6 +264,8 @@ function renderBoard(liveRefs: LiveRefs, view: DropMiniXiangqiPlayerView | null)
       selectedSquare,
       legalMoves: hints,
       draggingFrom,
+      arrows: drawn.arrows,
+      markers: drawn.markers,
     },
   );
 }
@@ -281,6 +292,13 @@ function renderReserves(liveRefs: LiveRefs, view: DropMiniXiangqiPlayerView | nu
 // ── Interaction ──────────────────────────────────────────────────────────────
 
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: MINI_XIANGQI_PIECE_PX,

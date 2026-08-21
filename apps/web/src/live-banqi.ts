@@ -41,6 +41,12 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -80,6 +86,8 @@ type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;
 
 let core: TenantLiveClientContext<BanqiSeat, BanqiWireView> | null = null;
 let selectedSquare: BanqiSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: BanqiSquare | null = null;
@@ -243,7 +251,10 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
   }
 
   const perspective = orientationFor(view);
+  const drawn = drawnBoardOverlays<BanqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderBanqiBoardSvg(view, perspective, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     interactive: true,
     selectedSquare,
     draggingFrom,
@@ -280,6 +291,13 @@ function handleSquareClick(view: BanqiWireView, square: BanqiSquare): void {
 // lifts a revealed piece and drops it on a legal target. A tap that never crosses
 // the movement threshold falls through to the click handler.
 function installBanqiBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: BANQI_PIECE_PX,

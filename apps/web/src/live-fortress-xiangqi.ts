@@ -35,6 +35,12 @@ import {
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
@@ -52,6 +58,8 @@ type FortressMoveEvent = TenantMovePlayed<FortressXiangqiColor, FortressXiangqiM
 
 let core: TenantLiveClientContext<FortressXiangqiColor, FortressXiangqiPlayerView> | null = null;
 let selectedSquare: FortressXiangqiSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selectedDropRole: FortressXiangqiDropRole | null = null;
 let draggingFrom: FortressXiangqiSquare | null = null;
 // Snapshot extras that ride the frame (read by the chrome + play-again body).
@@ -263,7 +271,10 @@ function renderBoard(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null)
     : selectedSquare
       ? fortressXiangqiBoardMoves(view, selectedSquare).map((move) => move.to)
       : [];
+  const drawn = drawnBoardOverlays<FortressXiangqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderFortressXiangqiBoardSvg(view, perspective, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     interactive: true,
     selectedSquare,
     targets,
@@ -293,6 +304,13 @@ function renderReserves(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | nu
 // ── Interaction ──────────────────────────────────────────────────────────────
 
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: FORTRESS_XIANGQI_PIECE_PX,

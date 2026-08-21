@@ -36,6 +36,7 @@ import {
   shogiCoordOf,
   shogiSquareOf,
 } from '@mistboard/game';
+import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import {
   readStoredShogiBoardTheme,
   readStoredShogiPieceSet,
@@ -127,7 +128,7 @@ function shogiFogPatternDefs(id: string): string {
 </pattern>`;
 }
 
-export type ShogiRenderOptions = {
+export type ShogiRenderOptions = GridBoardOverlayOptions<ShogiSquare> & {
   // Whose side sits at the bottom. Defaults to the view's own perspective.
   perspective?: ShogiColor;
   // Draw the fog overlay over non-visible squares. Defaults to true.
@@ -178,7 +179,9 @@ export function renderShogiBoardSvg(
     id,
     flip: perspective === 'white',
     extraDefs: showFog ? shogiFogPatternDefs(id) : '',
-    renderPieces: (geom) => pieceLayer(view, geom, perspective, options.draggingFrom ?? null, set),
+    renderPieces: (geom) =>
+      pieceLayer(view, geom, perspective, options.draggingFrom ?? null, set) +
+      gridBoardOverlays(geom, coordOf, options),
     lastMove: lastCells,
     selected: options.selected ? coordOf(options.selected) : null,
     targets: (options.targets ?? []).map((sq) => ({ ...coordOf(sq), occupied: occupied.has(sq) })),

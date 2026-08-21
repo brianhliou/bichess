@@ -23,6 +23,8 @@ import type {
   XiangqiPieceRole,
   XiangqiSquare,
 } from '@mistboard/game';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
 import { tokenPieceSize } from './board-metrics.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
@@ -35,6 +37,12 @@ import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -85,6 +93,8 @@ const FOG_OVERLAP = 0.5;
 // ── Dark-Xiangqi-owned interaction/render state ──────────────────────────────
 
 let core: TenantLiveClientContext<XiangqiColor, DarkXiangqiWireView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
@@ -245,7 +255,12 @@ function renderBoard(liveRefs: LiveRefs, view: DarkXiangqiWireView | null): void
   }
 
   const perspective = core?.orientation() ?? view.perspective;
-  liveRefs.board.innerHTML = boardSvg(view, perspective, { interactive: true });
+  const drawn = drawnBoardOverlays<XiangqiSquare>(annotations?.shapes() ?? []);
+  liveRefs.board.innerHTML = boardSvg(view, perspective, {
+    interactive: true,
+    arrows: drawn.arrows,
+    markers: drawn.markers,
+  });
   // Click + drag are delegated to the persistent board container once at mount
   // (installDarkXiangqiBoardInteraction), so they survive these innerHTML re-renders.
 }
@@ -285,6 +300,8 @@ function boardSvg(
     // without disturbing the live board. `null` = explicitly nothing selected.
     selectedSquare?: XiangqiSquare | null;
     draggingFrom?: XiangqiSquare | null;
+    arrows?: readonly DarkXiangqiBoardArrow[];
+    markers?: readonly DarkXiangqiBoardMarker[];
   },
 ): string {
   const sel = options.selectedSquare !== undefined ? options.selectedSquare : selectedSquare;
@@ -309,6 +326,8 @@ function boardSvg(
       <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
       <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective, sel)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, drag)}</g>
+      <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => darkXiangqiMarkerSvg(marker, perspective)).join('')}</g>
+      <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map((arrow) => darkXiangqiArrowSvg(arrow, perspective)).join('')}</g>
       <g class="xq-live-clicks">${options.interactive ? clickLayer(view, perspective, sel) : ''}</g>
     </svg>
   `;
@@ -537,6 +556,13 @@ function darkXiangqiPieceGhostSvg(piece: XiangqiPiece): string {
 // one of your visible pieces and drops it on a legal target. A tap that never
 // crosses the movement threshold falls through to the click handler.
 function installDarkXiangqiBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: PIECE_SIZE,
@@ -665,6 +691,34 @@ function replayPositionKey(view: DarkXiangqiWireView): string {
 }
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
+
+export interface DarkXiangqiBoardArrow extends SvgBoardArrowStyle {
+  from: XiangqiSquare;
+  to: XiangqiSquare;
+}
+
+export interface DarkXiangqiBoardMarker extends SvgBoardMarkerStyle {
+  square: XiangqiSquare;
+  kind: 'circle';
+}
+
+function darkXiangqiArrowSvg(arrow: DarkXiangqiBoardArrow, perspective: XiangqiColor): string {
+  const from = coordOf(arrow.from);
+  const to = coordOf(arrow.to);
+  return svgBoardArrow(
+    arrow,
+    intersection(from.file, from.rank, perspective),
+    intersection(to.file, to.rank, perspective),
+    { baseClassName: 'xq-arrow' },
+  );
+}
+
+function darkXiangqiMarkerSvg(marker: DarkXiangqiBoardMarker, perspective: XiangqiColor): string {
+  const { file, rank } = coordOf(marker.square);
+  return svgBoardCircleMarker(marker, intersection(file, rank, perspective), 30, {
+    baseClassName: 'xq-marker engine-marker',
+  });
+}
 
 function intersection(
   file: number,

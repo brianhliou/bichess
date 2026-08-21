@@ -18,6 +18,7 @@ import {
   renderGridBoardSvg,
 } from '@mistboard/board-render';
 import type { Color, KriegspielPlayerView, Move, PieceRole, Square } from '@mistboard/game';
+import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import { type PieceSet, readStoredPieceSet } from './theme.js';
 
 const FILES = 8;
@@ -61,7 +62,7 @@ const KRIEGSPIEL_DESCRIPTOR: GridBoardDescriptor = {
   svgClass: 'kriegspiel-live-svg',
 };
 
-export type KriegspielRenderOptions = {
+export type KriegspielRenderOptions = GridBoardOverlayOptions<Square> & {
   // Whose side is at the bottom. Defaults to the view's own perspective.
   perspective?: Color;
   // Draw the fog overlay over non-visible squares. Defaults to true.
@@ -127,6 +128,7 @@ export function renderKriegspielBoardSvg(
       [
         pieceLayer(view, geom, options.draggingFrom ?? null, pieceSet),
         showFog ? fogLayer(visible, geom, id) : '',
+        gridBoardOverlays(geom, coordOf, options),
       ].join(''),
     extraDefs: showFog ? kriegspielFogPatternDefs(id) : '',
     lastMove: lastCells,

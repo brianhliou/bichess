@@ -28,6 +28,7 @@ import type {
   XiangqiColor,
   XiangqiPieceRole,
 } from '@mistboard/game';
+import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import { type PieceSet, readStoredPieceSet } from './theme.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -81,7 +82,7 @@ const CROSSROADS_APP_DESCRIPTOR = {
   palette: CROSSROADS_APP_PALETTE,
 };
 
-export type CrossroadsChessRenderOptions = {
+export type CrossroadsChessRenderOptions = GridBoardOverlayOptions<CrossroadsChessSquare> & {
   // Whose side is at the bottom. Defaults to the view's own perspective.
   perspective?: CrossroadsChessColor;
   // Draw the fog overlay over non-visible squares. Pass false for the
@@ -146,7 +147,7 @@ export function renderCrossroadsChessBoardSvg(
         chessPieceSet,
         xiangqiPieceSet,
         draggingFrom: options.draggingFrom ?? null,
-      }),
+      }) + gridBoardOverlays(geom, coordOf, options),
     lastMove: lastMove ? [coordOf(lastMove.from), coordOf(lastMove.to)] : null,
     selected: options.selected ? coordOf(options.selected) : null,
     highlights: (options.highlights ?? []).map(coordOf),

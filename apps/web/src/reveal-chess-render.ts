@@ -32,6 +32,7 @@ import type {
   RevealChessPlayerView,
   RevealChessSquare,
 } from '@mistboard/game';
+import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 
 const FILES = 8;
 const RANKS = 8;
@@ -57,7 +58,7 @@ const REVEAL_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   svgClass: 'reveal-chess-live-svg',
 };
 
-export type RevealChessRenderOptions = {
+export type RevealChessRenderOptions = GridBoardOverlayOptions<RevealChessSquare> & {
   // Whose side is at the bottom. Defaults to the view's own perspective.
   perspective?: RevealChessColor;
   lastMove?: { from: RevealChessSquare; to: RevealChessSquare } | null;
@@ -89,7 +90,9 @@ export function renderRevealChessBoardSvg(
   return renderGridBoardSvg(REVEAL_CHESS_DESCRIPTOR, {
     id,
     flip: perspective === 'black',
-    renderPieces: (geom) => pieceLayer(view, geom, options.draggingFrom ?? null),
+    renderPieces: (geom) =>
+      pieceLayer(view, geom, options.draggingFrom ?? null) +
+      gridBoardOverlays(geom, coordOf, options),
     lastMove: lastMove ? [coordOf(lastMove.from), coordOf(lastMove.to)] : null,
     selected: options.selected ? coordOf(options.selected) : null,
     highlights: (options.highlights ?? []).map(coordOf),

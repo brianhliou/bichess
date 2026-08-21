@@ -24,6 +24,9 @@ import { displayComment } from '../study-i18n.js';
 import { type AdvantageChart, createAdvantageChart } from './advantage-chart.js';
 import { createAnalysisSummary } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
+// Brush colours for the node's user-drawn shapes. Imported here, not only
+// from the editor: the board draws shapes on surfaces that hide the panel.
+import '../variant-tenant/board-annotations.css';
 import type { CevalLine, CevalVariant } from './engine/ceval.js';
 import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engine-arrow-pref.js';
 import { createEnginePanel } from './engine/engine-panel.js';

@@ -1,0 +1,17 @@
+/* Brush colours for user-drawn board shapes, shared by the live SVG boards and
+ * the review board. CSS beats the presentation attributes the arrow/marker
+ * renderers inline, so one rule recolours every variant's geometry. */
+.xq-arrow--draw.xq-shape--green,
+.xq-marker.xq-shape--green {
+  fill: #15803d;
+  stroke: #15803d;
+}
+.xq-arrow--draw.xq-shape--red,
+.xq-marker.xq-shape--red {
+  fill: #b91c1c;
+  stroke: #b91c1c;
+}
+.xq-marker.xq-shape--green,
+.xq-marker.xq-shape--red {
+  fill: none;
+}

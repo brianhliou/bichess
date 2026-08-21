@@ -25,6 +25,12 @@ import {
 } from './live-jungle-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -56,6 +62,8 @@ type JungleMoveEvent = TenantMovePlayed<JungleColor, JungleMove>;
 
 let core: TenantLiveClientContext<JungleColor, JungleWireView> | null = null;
 let selectedSquare: JungleSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let draggingFrom: JungleSquare | null = null;
 let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
@@ -218,7 +226,10 @@ function renderBoard(liveRefs: LiveRefs, view: JungleWireView | null): void {
   const targets = selectedSquare
     ? view.legalMoves.filter((m) => m.from === selectedSquare).map((m) => m.to)
     : [];
+  const drawn = drawnBoardOverlays<JungleSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderJungleBoardSvg(view.board, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     perspective: core?.orientation() ?? view.perspective,
     interactive: true,
     selected: selectedSquare,
@@ -231,6 +242,13 @@ function renderBoard(liveRefs: LiveRefs, view: JungleWireView | null): void {
 // Click is delegated to the persistent board container once at mount so it
 // survives every innerHTML re-render (closest [data-square] reads the cell).
 function installJungleBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     // The board scales well above its SVG units, so size the ghost to the on-screen cell.

@@ -10,6 +10,8 @@ import {
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -36,7 +38,19 @@ const FOG_OVERLAP = 0.5;
 // Monotonic source of unique fog-mask ids (see renderMiniXiangqiBoardSvg).
 let miniXqFogMaskCounter = 0;
 
+export interface MiniXiangqiBoardArrow extends SvgBoardArrowStyle {
+  from: MiniXiangqiSquare;
+  to: MiniXiangqiSquare;
+}
+
+export interface MiniXiangqiBoardMarker extends SvgBoardMarkerStyle {
+  square: MiniXiangqiSquare;
+  kind: 'circle';
+}
+
 export type MiniXiangqiBoardRenderOptions = {
+  arrows?: readonly MiniXiangqiBoardArrow[];
+  markers?: readonly MiniXiangqiBoardMarker[];
   interactive?: boolean;
   showFog?: boolean;
   selectedSquare?: MiniXiangqiSquare | null;
@@ -73,6 +87,8 @@ export function renderMiniXiangqiBoardSvg(
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, pieceSize)}
+      <g class="mini-xq-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => miniXiangqiMarkerSvg(marker, perspective)).join('')}</g>
+      <g class="mini-xq-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map((arrow) => miniXiangqiArrowSvg(arrow, perspective)).join('')}</g>
       ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
     </svg>
   `;
@@ -293,6 +309,30 @@ function lastMoveMarkers(view: MiniXiangqiPlayerView, perspective: MiniXiangqiCo
       return `<circle class="mini-xq-last" cx="${x}" cy="${y}" r="${RING_LAST}"/>`;
     })
     .join('');
+}
+
+export function miniXiangqiArrowSvg(
+  arrow: MiniXiangqiBoardArrow,
+  perspective: MiniXiangqiColor,
+): string {
+  const from = miniXiangqiCoordOf(arrow.from);
+  const to = miniXiangqiCoordOf(arrow.to);
+  return svgBoardArrow(
+    arrow,
+    intersection(from.file, from.rank, perspective),
+    intersection(to.file, to.rank, perspective),
+    { baseClassName: 'xq-arrow' },
+  );
+}
+
+export function miniXiangqiMarkerSvg(
+  marker: MiniXiangqiBoardMarker,
+  perspective: MiniXiangqiColor,
+): string {
+  const { file, rank } = miniXiangqiCoordOf(marker.square);
+  return svgBoardCircleMarker(marker, intersection(file, rank, perspective), CELL * 0.42, {
+    baseClassName: 'xq-marker engine-marker',
+  });
 }
 
 function hitLayer(
