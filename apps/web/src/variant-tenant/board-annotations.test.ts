@@ -85,18 +85,17 @@ describe('installBoardAnnotations', () => {
     ]);
   });
 
-  it('erases everything on a left-button press, the way the chess board does', () => {
+  it('keeps the ink through a left press, so playing a move does not erase it', () => {
+    // Re-drawing a shape is the ONLY way to remove one. Under fog the ink is the
+    // player's memory of pieces they can no longer see, and they must move every
+    // turn, so a move that wiped it would defeat the feature.
     const { board, cells, annotations, repaint } = setup();
     rightDraw(cells, 'a1', 'a2');
     repaint.mockClear();
     board.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
-    expect(annotations.shapes()).toEqual([]);
-    expect(repaint).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not repaint on a left-button press when there is nothing to erase', () => {
-    const { board, repaint } = setup();
-    board.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    cells.get('a1')?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    board.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(annotations.shapes()).toHaveLength(1);
     expect(repaint).not.toHaveBeenCalled();
   });
 

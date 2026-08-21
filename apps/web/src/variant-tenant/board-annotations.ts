@@ -8,6 +8,12 @@
 // board at all — so all fifteen tenants share one behaviour instead of fifteen
 // near-copies.
 //
+// Erasing is deliberate and per-shape: re-drawing a shape removes it, and
+// nothing else takes it away. Playing a move does not, which matters most under
+// fog, where the ink is the player's memory of pieces they can no longer see and
+// they are forced to move every turn. The set is dropped only when it stops
+// belonging to the game on the board (see annotationOwner).
+//
 // Shapes never leave the browser. They are not sent, stored, or replayed, so a
 // fog board cannot leak anything through them.
 
@@ -94,12 +100,6 @@ export function installBoardAnnotations(handlers: BoardAnnotationsHandlers): Boa
   let shapes: readonly BoardShape[] = [];
   let ownerGameId: string | null = null;
 
-  const clear = (): boolean => {
-    if (shapes.length === 0) return false;
-    shapes = [];
-    return true;
-  };
-
   installBoardDraw({
     board: handlers.board,
     enabled: handlers.enabled,
@@ -119,14 +119,6 @@ export function installBoardAnnotations(handlers: BoardAnnotationsHandlers): Boa
       ownerGameId = handlers.gameId();
       handlers.repaint();
     },
-  });
-
-  // Left-click wipes the board, the way chessground's eraseOnClick does on the
-  // chess room. Runs on pointerdown so the board is already clean by the time
-  // the click lands on a piece and the client re-renders for the selection.
-  handlers.board.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    if (clear()) handlers.repaint();
   });
 
   return {
