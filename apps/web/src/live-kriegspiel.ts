@@ -35,6 +35,12 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { boardAppearanceChangedEvent, setBoardFamily } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -75,6 +81,8 @@ const CHECK_LABELS: Record<KriegspielCheckType, string> = {
 // ── Kriegspiel-owned interaction/render state ────────────────────────────────
 
 let core: TenantLiveClientContext<Color, KriegspielPlayerView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selected: Square | null = null;
 let pendingPromotion: { from: Square; to: Square; roles: KriegspielPromotionRole[] } | null = null;
 // The from/to of a try the umpire refused (illegal). Cleared on the next action.
@@ -244,6 +252,13 @@ function playMoveSound(event: KriegspielMovePlayed): void {
 // picker). A tap that never crosses the movement threshold falls through to the
 // click handler.
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: KRIEGSPIEL_PIECE_PX,
@@ -396,7 +411,10 @@ function renderBoard(liveRefs: LiveRefs, view: KriegspielPlayerView | null): voi
   // When the opponent's move checked us, draw the squares the checker could be
   // on (the umpire's call, in board-space). Live position only.
   const threats = core?.replay.isLive() ? checkThreats(view) : [];
+  const drawn = drawnBoardOverlays<Square>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderKriegspielBoardSvg(view, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     perspective,
     showFog: true,
     selected: activeSelected,

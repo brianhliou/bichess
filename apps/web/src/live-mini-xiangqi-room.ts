@@ -29,6 +29,12 @@ import { liveState } from './live-state.js';
 import { rematchControls } from './rematch-controls.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import { createTenantReplayController } from './variant-tenant/replay-controller.js';
@@ -56,6 +62,8 @@ type MiniXiangqiMoveEvent = Extract<MiniXiangqiWireEvent, { type: 'move-played' 
 type MiniXiangqiVisibleMoveRow = { fullMove: number; red?: string; black?: string };
 
 let selectedSquare: MiniXiangqiSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 // Drag-and-drop state. Click-to-move stays the primary path; a real drag (moved
 // past a small threshold) commits on drop, via the shared installBoardDrag helper.
 let dragFrom: MiniXiangqiSquare | null = null;
@@ -195,6 +203,11 @@ export function renderDarkMiniXiangqiRoom(
   if (dragBoardEl !== refs.board) {
     uninstallClickAway?.();
     installMiniXiangqiBoardDrag(refs);
+    annotations = installBoardAnnotations({
+      board: refs.board,
+      gameId: () => annotationOwner(currentMiniView()),
+      repaint: () => renderBoard(refs, replay.currentView(currentMiniView())),
+    });
     uninstallClickAway = installSelectionClickAway({
       roots: () => [refs.board],
       hasSelection: () => selectedSquare !== null,
@@ -348,7 +361,10 @@ function renderBoard(refs: LiveRefs, view: MiniXiangqiPlayerView | null): void {
     isOpenMiniXiangqiLiveRoom() || viewerOwnsLastMove(view)
       ? view
       : { ...view, lastMove: undefined };
+  const drawn = drawnBoardOverlays<MiniXiangqiSquare>(annotations?.shapes() ?? []);
   refs.board.innerHTML = renderMiniXiangqiBoardSvg(renderView, perspective, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     interactive: true,
     showFog: !isOpenMiniXiangqiLiveRoom(),
     selectedSquare,

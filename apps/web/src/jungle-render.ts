@@ -52,6 +52,7 @@ import {
   jungleBareTrapSvg,
 } from './jungle-skins.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 
 const FILES = 7;
 const RANKS = 9;
@@ -106,6 +107,7 @@ export const JUNGLE_BOARD_VIEW = { cell: CELL, files: FILES, ranks: RANKS } as c
 
 export type JungleRenderOptions = {
   arrows?: readonly JungleBoardArrow[];
+  markers?: readonly JungleBoardMarker[];
   // Black sees the board flipped (its den at the bottom).
   perspective?: JungleColor;
   lastMove?: { from: JungleSquare; to: JungleSquare } | null;
@@ -127,6 +129,11 @@ export type JungleRenderOptions = {
 export interface JungleBoardArrow extends SvgBoardArrowStyle {
   from: JungleSquare;
   to: JungleSquare;
+}
+
+export interface JungleBoardMarker extends SvgBoardMarkerStyle {
+  square: JungleSquare;
+  kind: 'circle';
 }
 
 function cellRef(square: JungleSquare): GridCellRef {
@@ -323,6 +330,7 @@ export function renderJungleBoardSvg(
     renderPieces: (geom) =>
       furniture(geom, options.lastMove ?? null, boardSkin) +
       pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
+      `<g class="jungle-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jungleMarkerSvg(marker, geom)).join('')}</g>` +
       `<g class="jungle-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleArrowLayer(options.arrows ?? [], geom)}</g>`,
     // Last-move is drawn inside furniture (over the grass terrain); the core's own
     // last-move layer sits under renderPieces and would be hidden by the grass.
@@ -340,6 +348,13 @@ export function renderJungleBoardSvg(
 export function jungleArrowSvg(arrow: JungleBoardArrow, perspective: JungleColor): string {
   const geom = createGridGeometry(DESCRIPTOR, perspective === 'black');
   return jungleArrowSvgWithGeometry(arrow, geom);
+}
+
+export function jungleMarkerSvg(marker: JungleBoardMarker, geom: GridGeometry): string {
+  const { file, rank } = jungleCoordOf(marker.square);
+  return svgBoardCircleMarker(marker, geom.center(file, rank), geom.cell * 0.42, {
+    baseClassName: 'xq-marker engine-marker',
+  });
 }
 
 function jungleArrowLayer(arrows: readonly JungleBoardArrow[], geom: GridGeometry): string {

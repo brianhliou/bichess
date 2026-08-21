@@ -29,6 +29,7 @@ import {
   type PieceRole,
   type Square,
 } from '@mistboard/game';
+import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 
 const FILES = 8;
 const RANKS = 8;
@@ -61,7 +62,7 @@ const CRAZYHOUSE_DESCRIPTOR: GridBoardDescriptor = {
   svgClass: 'crazyhouse-live-svg',
 };
 
-export type CrazyhouseRenderOptions = {
+export type CrazyhouseRenderOptions = GridBoardOverlayOptions<Square> & {
   // Whose side is at the bottom. Defaults to the view's own perspective.
   perspective?: Color;
   // Draw the fog overlay over non-visible squares. Defaults to true.
@@ -113,6 +114,7 @@ export function renderCrazyhouseBoardSvg(
       [
         pieceLayer(view, geom, options.draggingFrom ?? null),
         showFog ? fogLayer(visible, geom) : '',
+        gridBoardOverlays(geom, coordOf, options),
       ].join(''),
     lastMove: lastCells,
     selected: options.selected ? coordOf(options.selected) : null,

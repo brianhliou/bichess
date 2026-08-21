@@ -1,6 +1,7 @@
 import type { JieqiColor, JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
@@ -28,6 +29,7 @@ const RIVER_BOTTOM = MARGIN + 5 * CELL;
 
 export type JieqiBoardRenderOptions = {
   arrows?: readonly JieqiBoardArrow[];
+  markers?: readonly JieqiBoardMarker[];
   interactive?: boolean;
   selectedSquare?: JieqiSquare | null;
   legalMoves?: readonly JieqiMove[];
@@ -39,6 +41,11 @@ export type JieqiBoardRenderOptions = {
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
   from: JieqiSquare;
   to: JieqiSquare;
+}
+
+export interface JieqiBoardMarker extends SvgBoardMarkerStyle {
+  square: JieqiSquare;
+  kind: 'circle';
 }
 
 function jieqiCoordOf(square: JieqiSquare): { file: number; rank: number } {
@@ -77,6 +84,7 @@ export function renderJieqiBoardSvg(
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null)}
+      <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
       ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
     </svg>
@@ -92,6 +100,13 @@ export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): 
     intersection(to.file, to.rank, perspective),
     { baseClassName: 'xq-arrow' },
   );
+}
+
+export function jieqiMarkerSvg(marker: JieqiBoardMarker, perspective: JieqiColor): string {
+  const { file, rank } = jieqiCoordOf(marker.square);
+  return svgBoardCircleMarker(marker, intersection(file, rank, perspective), RING_SELECTION, {
+    baseClassName: 'xq-marker engine-marker',
+  });
 }
 
 function jieqiArrowLayer(arrows: readonly JieqiBoardArrow[], perspective: JieqiColor): string {

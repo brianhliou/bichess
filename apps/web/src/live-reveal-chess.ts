@@ -46,6 +46,12 @@ import {
   revealChessPieceGhostSvg,
 } from './reveal-chess-render.js';
 import { boardAppearanceChangedEvent, setBoardFamily } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -83,6 +89,8 @@ type RevealChessLiveTimeControl = { initialMs: number; incrementMs: number };
 // ── Reveal-Chess-owned interaction/render state ──────────────────────────────
 
 let core: TenantLiveClientContext<RevealChessColor, RevealChessWireView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selectedSquare: RevealChessSquare | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
@@ -237,7 +245,10 @@ function renderBoard(liveRefs: LiveRefs, view: RevealChessWireView | null): void
   }
 
   const perspective = orientationFor(view);
+  const drawn = drawnBoardOverlays<RevealChessSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderRevealChessBoardSvg(view, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     perspective,
     interactive: (core?.replay.isLive() ?? false) && !pendingPromotion,
     selected: selectedSquare,
@@ -258,6 +269,13 @@ function renderBoard(liveRefs: LiveRefs, view: RevealChessWireView | null): void
 // A tap that never crosses the movement threshold falls through to the click
 // handler.
 function installRevealChessBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: REVEAL_CHESS_PIECE_PX,

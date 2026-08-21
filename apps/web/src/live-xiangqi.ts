@@ -31,6 +31,12 @@ import {
   resetXiangqiSoundState,
   soundForOwnXiangqiMove,
 } from './live-xiangqi-sound.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -66,6 +72,8 @@ let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
 let draggingFrom: XiangqiSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
@@ -228,10 +236,13 @@ function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null)
   }
 
   const perspective = core?.orientation() ?? view.perspective;
+  const drawn = drawnBoardOverlays<XiangqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = xiangqiBoardSvg(view, perspective, {
     interactive: true,
     selectedSquare,
     draggingFrom,
+    arrows: drawn.arrows,
+    markers: drawn.markers,
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installXiangqiBoardInteraction), so they survive these innerHTML re-renders.
@@ -262,6 +273,13 @@ function handleSquareClick(view: StandardXiangqiPlayerView, square: XiangqiSquar
 // one of your pieces and drops it on a legal target. A tap that never crosses the
 // movement threshold falls through to the click handler.
 function installXiangqiBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: XIANGQI_PIECE_SIZE,

@@ -38,6 +38,12 @@ import {
 } from './live-jungle-flip-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -73,6 +79,8 @@ type JungleFlipMoveEvent = TenantMovePlayed<JungleFlipSeat, JungleFlipMove>;
 
 let core: TenantLiveClientContext<JungleFlipSeat, JungleFlipWireView> | null = null;
 let selectedSquare: JungleFlipSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: JungleFlipSquare | null = null;
@@ -238,7 +246,10 @@ function renderBoard(liveRefs: LiveRefs, view: JungleFlipWireView | null): void 
   const targets = selectedSquare
     ? view.legalMoves.filter((m) => m.from === selectedSquare && m.to !== m.from).map((m) => m.to)
     : [];
+  const drawn = drawnBoardOverlays<JungleFlipSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     interactive: true,
     selected: selectedSquare,
     targets,
@@ -252,6 +263,13 @@ function renderBoard(liveRefs: LiveRefs, view: JungleFlipWireView | null): void 
 // Click + drag, delegated to the persistent board container once at mount so they
 // survive every innerHTML re-render.
 function installJungleFlipBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     // The board scales above its SVG units, so size the ghost to the on-screen cell.

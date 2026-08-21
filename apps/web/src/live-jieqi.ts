@@ -39,6 +39,12 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -77,6 +83,8 @@ type JieqiMoveEvent = TenantMovePlayed<JieqiColor, JieqiMove>;
 
 let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: JieqiSquare | null = null;
@@ -206,7 +214,10 @@ function renderBoard(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   }
 
   const perspective = orientationFor(view);
+  const drawn = drawnBoardOverlays<JieqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderJieqiBoardSvg(view, perspective, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     interactive: true,
     selectedSquare,
     draggingFrom,
@@ -241,6 +252,13 @@ function handleSquareClick(view: JieqiWireView, square: JieqiSquare): void {
 // one of your pieces (face-down or revealed) and drops it on a legal target. A tap
 // that never crosses the movement threshold falls through to the click handler.
 function installJieqiBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: JIEQI_PIECE_PX,

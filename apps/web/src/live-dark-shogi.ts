@@ -43,6 +43,12 @@ import {
   shogiPieceGhostSvg,
 } from './shogi-render.js';
 import { setBoardFamily, shogiAppearanceChangedEvent } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
@@ -61,6 +67,8 @@ type DarkShogiMovePlayed = TenantMovePlayed<ShogiColor, ShogiMove>;
 // ── Dark-Shogi-owned interaction/render state ────────────────────────────────
 
 let core: TenantLiveClientContext<ShogiColor, ShogiPlayerView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selected: ShogiSquare | null = null;
 let selectedDrop: ShogiHandRole | null = null;
 // The square a board piece is being dragged from (its koma is lifted off the
@@ -219,6 +227,13 @@ function onServerMessage(message: { type: string; [key: string]: unknown }): voi
 // A tap that never crosses the movement threshold falls through to the click
 // handler. Reserve drops use installHandInteraction below.
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: shogiDragPieceSizePx,
@@ -483,7 +498,10 @@ function renderBoard(liveRefs: LiveRefs, view: ShogiPlayerView | null): void {
     !!core && core.replay.isLive() && iAmPlayer() && isMyTurn(view) && !pendingPromotion;
   const activeSelected = interactive ? selected : null;
   const targets = interactive ? activeTargets(view) : [];
+  const drawn = drawnBoardOverlays<ShogiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderShogiBoardSvg(view, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     perspective,
     showFog: true,
     showCoords: false,

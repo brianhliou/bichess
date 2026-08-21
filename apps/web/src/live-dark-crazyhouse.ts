@@ -41,6 +41,12 @@ import {
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { boardAppearanceChangedEvent, setBoardFamily } from './theme.js';
+import {
+  annotationOwner,
+  type BoardAnnotations,
+  drawnBoardOverlays,
+  installBoardAnnotations,
+} from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installHandDrag } from './variant-tenant/hand-drag.js';
 import {
@@ -68,6 +74,8 @@ type DarkCrazyhouseMovePlayed = TenantMovePlayed<Color, CrazyhouseMove>;
 // ── Dark-Crazyhouse-owned interaction/render state ───────────────────────────
 
 let core: TenantLiveClientContext<Color, CrazyhousePlayerView> | null = null;
+// Right-click arrows/circles the player drew on this board.
+let annotations: BoardAnnotations | null = null;
 let selected: Square | null = null;
 let selectedDrop: CrazyhouseDropRole | null = null;
 // The square a board piece is being dragged from. The renderer keeps a dim
@@ -221,6 +229,13 @@ function onServerMessage(message: { type: string; [key: string]: unknown }): voi
 // target. A tap that never crosses the movement threshold falls through to click.
 // Reserve drops use installHandDragInteraction below.
 function installBoardDragInteraction(liveRefs: LiveRefs): void {
+  annotations = installBoardAnnotations({
+    board: liveRefs.board,
+    gameId: () => annotationOwner(core?.state.view),
+    repaint: () => {
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+  });
   installBoardDrag({
     board: liveRefs.board,
     ghostSizePx: CRAZYHOUSE_PIECE_PX,
@@ -464,7 +479,10 @@ function renderBoard(liveRefs: LiveRefs, view: CrazyhousePlayerView | null): voi
     !!core && core.replay.isLive() && iAmPlayer() && isMyTurn(view) && !pendingPromotion;
   const activeSelected = interactive ? selected : null;
   const targets = interactive ? activeTargets(view) : [];
+  const drawn = drawnBoardOverlays<Square>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = renderCrazyhouseBoardSvg(view, {
+    arrows: drawn.arrows,
+    markers: drawn.markers,
     perspective,
     showFog: true,
     selected: activeSelected,

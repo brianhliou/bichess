@@ -92,19 +92,5 @@
   border-color: var(--c-accent, #3893e8);
 }
 
-/* User-drawn board shapes: brush colours override the default engine-arrow ink.
- * (CSS beats the SVG presentation attributes the arrow/marker renderers inline.) */
-.xq-arrow--draw.xq-shape--green,
-.xq-marker.xq-shape--green {
-  fill: #15803d;
-  stroke: #15803d;
-}
-.xq-arrow--draw.xq-shape--red,
-.xq-marker.xq-shape--red {
-  fill: #b91c1c;
-  stroke: #b91c1c;
-}
-.xq-marker.xq-shape--green,
-.xq-marker.xq-shape--red {
-  fill: none;
-}
+/* User-drawn board shape brushes now live in
+ * variant-tenant/board-annotations.css, shared with the live SVG boards. */
