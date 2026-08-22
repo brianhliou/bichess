@@ -1829,7 +1829,7 @@ const ZH_HANT: Record<string, string> = {
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
     '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
-    'Mistboard 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。',
+    'Mistboard 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
     '覆盤用勝率來計分：它對你贏下這盤棋的把握給出 0 到 100 的估計。我的翻子總共比平均**好出 76 個百分點**。引擎的差了 12 個百分點。論決策我下得明顯更差。可我還是贏了。',
   'The flip that decided it, from the real game. One face-down tile on g3, twelve possible pieces. This article is about pricing that moment honestly.':
@@ -1841,10 +1841,10 @@ const ZH_HANT: Record<string, string> = {
   'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.':
     '照搬國際象棋的覆盤會給整步棋的勝率波動打分。翻開角落那枚棋，翻出對方的將，覆盤就記你一個漏著。可那是一枚壞棋子，不是一個壞決策。',
   'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.':
-    '這就是 這就是 Mistboard 的暗棋覆盤不顯示釐兵損失的原因：它沒法和翻出的棋子分開，放在那些可以分開的數字旁邊，就只是噪音。 的暗棋覆盤不顯示釐兵損失的原因：它沒法和翻出的棋子分開，放在那些可以分開的數字旁邊，就只是噪音。',
+    '這就是 Mistboard 的暗棋覆盤不顯示釐兵損失的原因：它沒法和翻出的棋子分開，放在那些可以分開的數字旁邊，就只是噪音。',
   'Backgammon solved this decades ago': '西洋雙陸棋幾十年前就解決了這件事',
   'Backgammon software prices every roll against the average roll and reports a luck-adjusted result, so a match report can tell you that you played better and lost. GnuBG and eXtreme Gammon both do it. Poker has the same idea in all-in EV.':
-    '西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。',
+    '西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。',
   'Chess never built any of this because chess has no dice. Banqi is a chess-family game with dice in it, and it inherited chess’s tools, which have no luck column.':
     '國際象棋從沒造過這些東西，因為它沒有骰子。暗棋是象棋家族裡帶骰子的一員，卻繼承了國際象棋的工具，而那些工具裡沒有運氣這一欄。',
   'The average tile in the bag': '剩下棋子裡的平均一枚',
@@ -1888,22 +1888,22 @@ const ZH_HANT: Record<string, string> = {
   'And accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it. The summary for this game reads exactly the way the story went: the bot played clean, I did not, and the result said otherwise.':
     '而準確率只按決策數字打分，翻得走運不會加分，翻得倒黴也不會扣分。這盤棋的總結和故事本身完全一致：引擎下得乾淨，我則不然，而結果卻說了反話。',
   'The same game’s luck-stripped summary. dev-testing is me, on my test account.':
-    '同一盤棋去除運氣後的總結。同一盤棋去除運氣後的總結。dev-testing 是我，用的是我的測試賬號。 是我，用的是我的測試賬號。',
+    '同一盤棋去除運氣後的總結。dev-testing 是我，用的是我的測試賬號。',
   'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, dev-testing 89% with nine inaccuracies, two mistakes, and two blunders.':
     '示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯著、兩次漏著。',
   'The receipts': '證據',
   'The win I opened with: 156 plies against the bot, and the graph tells on me. At ply 6 the 45% flip came up worth 82%. No decision in the game moved the needle that far.':
     '開頭那場勝利：對引擎的 156 個半回合，圖把我供了出來。第 6 個半回合，那次值 45% 的翻子翻出了 82%。整盤棋裡沒有任何一個決策能把指標撥得這麼遠。',
   'In total: my flips **plus 76**, the bot’s minus 12, and my flip decisions gave away 74 points against the bot’s zero. The dashed line has me losing most of the game. The solid line has me winning. The bag overruled the play. The whole game is [open on Mistboard](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9), replay below.':
-    '總賬：我的翻子**+76**，引擎的 −12；翻子決策上我送掉 74 個百分點，引擎送掉 0。虛線裡我大半盤都在輸。實線裡我贏了。棋子推翻了棋藝。整盤棋[在 總賬：我的翻子**+76**，引擎的 −12；翻子決策上我送掉 74 個百分點，引擎送掉 0。虛線裡我大半盤都在輸。實線裡我贏了。棋子推翻了棋藝。整盤棋[在 Mistboard 上公開](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9)，下方可以回放。 上公開](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9)，下方可以回放。',
+    '總賬：我的翻子**+76**，引擎的 −12；翻子決策上我送掉 74 個百分點，引擎送掉 0。虛線裡我大半盤都在輸。實線裡我贏了。棋子推翻了棋藝。整盤棋[在 Mistboard 上公開](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9)，下方可以回放。',
   'Step to ply 6: the flip worth 45% on average that came up worth 82%.':
     '走到第 6 個半回合：平均價值 45% 的那次翻子，翻出了 82%。',
   'It cuts the other way too. In [another game](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446) I lost, one flip at ply 19 cost 34 points of win chance on its own. My decisions that game were ordinary. The old review would have marked that flip as the losing blunder. The new one marks it as the moment the game was decided by something that was not a choice.':
     '反過來也一樣。在我輸掉的[另一盤棋](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446)裡，光是第 19 個半回合的一次翻子，就燒掉了 34 個百分點的勝率。那盤棋我的決策平平。舊式覆盤會把那次翻子記為致敗漏著。新的覆盤把它記為：勝負在此刻被一件不由你選擇的事定了下來。',
   'Fifty-two games of evidence': '五十二盤棋的證據',
   'We ran the decomposition over 52 recent human-versus-Misty banqi games from the site.':
-    '我們把這套拆分跑遍了站上最近 52 盤人類對 我們把這套拆分跑遍了站上最近 52 盤人類對 Misty 的暗棋。 的暗棋。',
-  'across 52 human vs Misty games': '52 盤人類對 52 盤人類對 Misty 的對局 的對局',
+    '我們把這套拆分跑遍了站上最近 52 盤人類對 Misty 的暗棋。',
+  'across 52 human vs Misty games': '52 盤人類對 Misty 的對局',
   value: '數值',
   'The bot is stronger, and beating it has usually taken help from the bag. If you have beaten it, the review will now tell you how much help you got.':
     '引擎更強，贏它通常都借了棋子的力。如果你贏過它，現在覆盤會告訴你借了多少。',
@@ -1924,7 +1924,7 @@ const ZH_HANT: Record<string, string> = {
     '還有一條誠實的邊界：逐點扣除運氣，等於把勝率當成線性的，而它並不是線性的。方向可信。小數點後第二位不可信。',
   'Try it on your own games': '拿你自己的棋試試',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
-    '在 在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。 開啟任何一盤下完的暗棋、揭棋或翻翻棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
+    '在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有時它承認你是被搶了。有時它把你的勝利收走。在對我舊棋的一輪掃描裡，這兩件事它都做了。',
   'Play Banqi': '下暗棋',

@@ -3,6 +3,7 @@ import {
   ARTICLE_LANGS,
   hasTranslation,
   TRANSLATED_ARTICLE_SLUGS,
+  translateArticleText,
   translationKeys,
 } from './article-i18n.js';
 import { articleProse, articleTranslationSourceStrings } from './article-prose.js';
@@ -41,6 +42,33 @@ describe('article translation coverage', () => {
     const slugs = new Set(published.map((a) => a.slug));
     const unknown = TRANSLATED_ARTICLE_SLUGS.filter((s) => !slugs.has(s));
     expect(unknown, `locked but not published: ${unknown.join(', ')}`).toEqual([]);
+  });
+
+  // zh-Hant values are derived from zh-Hans by script conversion, which is
+  // near length-preserving and never rewrites ASCII (names, numbers, links).
+  // A value that blows past its sibling's length, or whose ASCII token stream
+  // drifts, means the derivation tooling corrupted it (this shipped once:
+  // 2026-08-22, ASCII-token placeholders were restored as whole sentences and
+  // one zh-Hant paragraph rendered 42 copies of itself). Keys whose values are
+  // per-locale resources (locale-suffixed URLs/paths) are exempt from the
+  // ASCII comparison by design.
+  it('zh-Hant values stay parallel to their zh-Hans siblings', () => {
+    const asciiTokens = (s: string) => (s.match(/[A-Za-z0-9]+/g) ?? []).join('|');
+    const problems: string[] = [];
+    for (const key of translationKeys('zh-Hant')) {
+      if (!hasTranslation('zh-Hans', key)) continue;
+      const hans = translateArticleText('zh-Hans', key);
+      const hant = translateArticleText('zh-Hant', key);
+      const perLocaleResource = /zh-han/i.test(hans) || /zh-han/i.test(hant);
+      const slack = (n: number) => Math.max(n * 1.25, n + 8);
+      if (hant.length > slack(hans.length) || hans.length > slack(hant.length)) {
+        problems.push(`length ${hans.length} vs ${hant.length}: ${truncate(key)}`);
+      }
+      if (!perLocaleResource && asciiTokens(hans) !== asciiTokens(hant)) {
+        problems.push(`ascii drift: ${truncate(key)}`);
+      }
+    }
+    expect(problems, `corrupted zh values:\n${problems.join('\n')}`).toEqual([]);
   });
 
   it('dictionaries contain only strings used by current articles', () => {
