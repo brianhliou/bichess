@@ -325,7 +325,12 @@ export const banqiLuckArticle: Article = {
           kind: 'cta',
           buttons: [
             { label: 'Play Banqi', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
-            { label: 'Banqi rules', href: '/rules/banqi', emphasis: 'secondary' },
+            { label: 'Play Jieqi', href: '/?play=computer&gameSpecId=jieqi', emphasis: 'secondary' },
+            {
+              label: 'Play Jungle Flip',
+              href: '/?play=computer&gameSpecId=jungle-flip',
+              emphasis: 'secondary',
+            },
           ],
         } as ArticleBlock,
       ],
