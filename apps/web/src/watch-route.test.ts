@@ -19,6 +19,7 @@ import {
   renderWatchQueue,
   renderWatchReplaySkeleton,
   resultLabel,
+  seedWatchRail,
   shouldPlayWatchMoveSound,
   WATCH_FEED_CACHE_MS,
   watchFeedCacheIsFresh,
@@ -480,6 +481,40 @@ describe('buildWatchScrubber', () => {
 
     expect(scrubber.el).toBe(table.refs.replayControlsRoot);
     expect(jumps).toEqual([3, 12]);
+  });
+});
+
+describe('seedWatchRail', () => {
+  const fakeHandle = () => {
+    const jumps: number[] = [];
+    return {
+      jumps,
+      handle: { plyCount: () => 78, jumpToPly: (ply: number) => jumps.push(ply) },
+    };
+  };
+
+  it('seeds the rail with the ply it froze the board on', () => {
+    const { handle, jumps } = fakeHandle();
+    const bound: number[] = [];
+    seedWatchRail(handle, false, (ply) => bound.push(ply));
+    // The board is parked at the last ply, so the rail must be told the LAST
+    // ply. Told zero, |< and < come up disabled on a finished game.
+    expect(jumps).toEqual([78]);
+    expect(bound).toEqual([78]);
+  });
+
+  it('leaves an autoplaying board at the start and seeds the rail to match', () => {
+    const { handle, jumps } = fakeHandle();
+    const bound: number[] = [];
+    seedWatchRail(handle, true, (ply) => bound.push(ply));
+    expect(jumps).toEqual([]);
+    expect(bound).toEqual([0]);
+  });
+
+  it('seeds zero for a handle without ply support', () => {
+    const bound: number[] = [];
+    seedWatchRail({}, false, (ply) => bound.push(ply));
+    expect(bound).toEqual([0]);
   });
 });
 
