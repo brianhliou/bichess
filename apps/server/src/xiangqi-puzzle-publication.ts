@@ -166,6 +166,35 @@ export async function planXiangqiPuzzlePublication(
       ),
     );
     const byPuzzle = new Map(existingResult.rows.map((row) => [row.id, row]));
+
+    // positionDuplicateCount only partitions within this run, so it cannot see
+    // a position an EARLIER run already published. Without this check the same
+    // tactical position, reached in two different source games, ships twice as
+    // two unrelated puzzles. Mined puzzles carry their candidate, so the
+    // published position set is reachable without a new column.
+    const publishingKeys = new Map<string, string>();
+    for (const { entry } of items) {
+      if (entry.candidate.status === 'published') continue;
+      publishingKeys.set(entry.candidate.positionKey, entry.candidate.id);
+    }
+    if (publishingKeys.size > 0) {
+      const priorPositions = await db.query<{ position_key: string; puzzle_id: string }>(
+        `SELECT prior.position_key, puzzle.id AS puzzle_id
+           FROM puzzles puzzle
+           JOIN xiangqi_puzzle_mining_candidates prior
+             ON prior.id = puzzle.mining_candidate_id
+          WHERE prior.run_id <> $1
+            AND prior.position_key = ANY($2::text[])`,
+        [runId, [...publishingKeys.keys()]],
+      );
+      for (const row of priorPositions.rows) {
+        const candidateId = publishingKeys.get(row.position_key);
+        throw new Error(
+          `candidate ${candidateId} repeats a position already published as puzzle ${row.puzzle_id}`,
+        );
+      }
+    }
+
     for (const { entry, puzzle } of items) {
       const linked = byCandidate.get(entry.candidate.id);
       const sameId = byPuzzle.get(puzzle.id);

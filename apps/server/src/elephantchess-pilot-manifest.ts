@@ -95,11 +95,34 @@ export type ElephantChessPilotTargets = {
   correspondenceMax: number;
 };
 
-const DEFAULT_TARGETS: ElephantChessPilotTargets = {
+export const ELEPHANTCHESS_PILOT_DEFAULT_TARGETS: ElephantChessPilotTargets = {
   representativeLiveBase: 800,
   coverageLive: 100,
   correspondenceMax: 100,
 };
+
+// Targets that consume every eligible game instead of sampling 1,000 of them.
+// Used when mining the remainder of an already-piloted corpus: there is no
+// sampling decision left to make, so the cohorts only classify what is taken.
+// The coverage cohort keeps its editorial role and is clamped to what the live
+// population can spare.
+export function maximalElephantChessPilotTargets(
+  games: readonly ElephantChessPilotGame[],
+  options: { coverageLive?: number } = {},
+): ElephantChessPilotTargets {
+  const correspondenceMax = games.filter((game) =>
+    isCorrespondence(normalizedBucket(game.timeControlCategory)),
+  ).length;
+  const liveCount = games.length - correspondenceMax;
+  const requestedCoverage =
+    options.coverageLive ?? ELEPHANTCHESS_PILOT_DEFAULT_TARGETS.coverageLive;
+  const coverageLive = Math.max(0, Math.min(requestedCoverage, liveCount));
+  return {
+    representativeLiveBase: liveCount - coverageLive,
+    coverageLive,
+    correspondenceMax,
+  };
+}
 
 type EnrichedGame = ElephantChessPilotGame & {
   averageElo: number | null;
@@ -416,7 +439,7 @@ export function buildElephantChessPilotManifest(
   const seed = options.seed.trim();
   if (!seed) throw new Error('seed is required');
   assertEligibleGames(inputGames, options.importBatchId);
-  const targets = options.targets ?? DEFAULT_TARGETS;
+  const targets = options.targets ?? ELEPHANTCHESS_PILOT_DEFAULT_TARGETS;
   const totalTarget =
     targets.representativeLiveBase + targets.coverageLive + targets.correspondenceMax;
   if (inputGames.length < totalTarget) {

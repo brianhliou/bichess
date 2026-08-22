@@ -854,4 +854,87 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       1,
     );
   });
+
+  test('publication refuses a position an earlier run already published', async () => {
+    const games = Array.from({ length: 16 }, (_, index) => pilotGame(100 + index));
+    await seedEligibleGames(games);
+    const engineProfile = { engine: 'pikafish-test', binarySha256: 'e'.repeat(64) };
+    const sharedPositionKey = 'xiangqi-cross-run-shared-position';
+
+    const publishOneCandidate = async (seed: string, gameOffset: number): Promise<string> => {
+      const manifest = buildElephantChessPilotManifest(games.slice(gameOffset, gameOffset + 8), {
+        importBatchId: BATCH_ID,
+        seed,
+        targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
+      });
+      const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+      const historicalGameId = manifest.games[0]?.historicalGameId as string;
+      const postBlunderPly = 21;
+      const candidate = await recordXiangqiPuzzleMiningCandidate({
+        runId: run.id,
+        historicalGameId,
+        postBlunderPly,
+        positionKey: sharedPositionKey,
+        trigger: 'eval-swing',
+        scanEvidence: { beforeCp: 400, afterCp: 60, scanNodes: 60_000 },
+      });
+      await recordXiangqiPuzzleMiningJudgment({
+        candidateId: candidate.id,
+        stage: 'verify',
+        profileVersion: 'verify-v1',
+        verdict: 'pass',
+        engineProfile,
+        evidence: { depth: 20, bestCp: 520, secondCp: 110 },
+        puzzleData: publishablePuzzle(
+          `xq-mined-crossrun-${candidate.id}`,
+          historicalGameId,
+          postBlunderPly,
+        ),
+      });
+      await getPool().query(
+        `UPDATE xiangqi_puzzle_mining_runs SET status = 'verifying' WHERE id = $1`,
+        [run.id],
+      );
+      const claim = await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: `crossrun-audit-${seed}`,
+        claimToken: `crossrun-claim-${seed}`,
+      });
+      assert.equal(claim?.candidate.id, candidate.id);
+      await recordXiangqiPuzzleMiningJudgment({
+        candidateId: candidate.id,
+        stage: 'audit',
+        profileVersion: 'audit-v1',
+        verdict: 'pass',
+        engineProfile,
+        evidence: { depth: 22, stable: true },
+        claimToken: `crossrun-claim-${seed}`,
+      });
+      await getPool().query(
+        `UPDATE xiangqi_puzzle_mining_runs SET status = 'review' WHERE id = $1`,
+        [run.id],
+      );
+      return run.id;
+    };
+
+    const firstRunId = await publishOneCandidate('crossrun-first-v1', 0);
+    const firstPlan = await planXiangqiPuzzlePublication(getPool(), firstRunId);
+    assert.equal(firstPlan.eligibleCandidates, 1);
+    const firstPublished = await publishXiangqiPuzzlePublication({
+      runId: firstRunId,
+      expectedTotal: 1,
+      expectedPublicationSha256: firstPlan.publicationSha256,
+      operatorNote: 'First run publishes the position.',
+    });
+    assert.equal(firstPublished.publishedNow, 1);
+
+    // Same position, different source game, different run. Run-scoped
+    // positionDuplicateCount cannot see the first run, so only the cross-run
+    // guard stops this.
+    const secondRunId = await publishOneCandidate('crossrun-second-v1', 8);
+    await assert.rejects(
+      planXiangqiPuzzlePublication(getPool(), secondRunId),
+      /repeats a position already published as puzzle/,
+    );
+  });
 });
