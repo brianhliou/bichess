@@ -9,25 +9,71 @@
   pointer-events: none;
 }
 
-/* A judged move's advice row ("Blunder. h3-e3 was best."): full-width, coloured
-   by severity to match the inline glyph hooks in move-list.css. */
+/* Judgment palette, shared by the advice row and the refutation line that follows
+   it so the two halves of one verdict cannot drift apart. Same values as the
+   inline glyph hooks in move-list.css and the board badge. */
+.move-tree {
+  --judgment-inaccuracy: #b7950b;
+  --judgment-mistake: #d68910;
+  --judgment-blunder: #c0392b;
+}
+
+/* A judged move's advice row ("Blunder. h3-e3 was best."). lichess renders the
+   verdict and the line it recommends as ONE bracketed block: a severity-coloured
+   rule down the left edge, a wash of the same colour behind both, and the line
+   sitting directly under the sentence that introduces it. Ours used to be a bare
+   coloured sentence with an unrelated grey variation row under it, which read as
+   two separate annotations. */
 .move-tree__comment {
-  padding: 3px 8px 3px 12px;
+  margin-top: 2px;
+  padding: 4px 8px 4px 10px;
+  border-left: 3px solid currentcolor;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, currentcolor 7%, transparent);
   font-size: 12px;
+  font-weight: 600;
   line-height: 1.5;
   color: var(--site-muted);
 }
 .move-tree__comment--inaccuracy {
-  color: #b7950b;
+  color: var(--judgment-inaccuracy);
 }
 .move-tree__comment--mistake {
-  color: #d68910;
+  color: var(--judgment-mistake);
 }
 .move-tree__comment--blunder {
-  color: #c0392b;
+  color: var(--judgment-blunder);
 }
-/* Author-written study comments: body text, not advice colouring. */
+
+/* The refutation line directly under an advice row closes the block: it keeps the
+   rule and the wash, loses the rounded top, and drops the left margin that a
+   standalone variation carries. Only the ADJACENT line joins — a second, unrelated
+   variation on the same ply stays its own indented row. */
+.move-tree__comment + .move-tree__variation {
+  margin-top: 0;
+  margin-left: 0;
+  border-radius: 0 0 3px 3px;
+  border-left-width: 3px;
+  color: var(--site-text);
+}
+.move-tree__comment--inaccuracy + .move-tree__variation {
+  border-left-color: var(--judgment-inaccuracy);
+  background: color-mix(in srgb, var(--judgment-inaccuracy) 7%, transparent);
+}
+.move-tree__comment--mistake + .move-tree__variation {
+  border-left-color: var(--judgment-mistake);
+  background: color-mix(in srgb, var(--judgment-mistake) 7%, transparent);
+}
+.move-tree__comment--blunder + .move-tree__variation {
+  border-left-color: var(--judgment-blunder);
+  background: color-mix(in srgb, var(--judgment-blunder) 7%, transparent);
+}
+/* An authored study comment is body text, not a verdict: no severity colouring,
+   and it keeps neither the rule nor the wash. */
 .move-tree__comment--user {
+  border-left-color: var(--site-border);
+  background: transparent;
+  font-weight: 400;
   color: var(--site-text);
 }
 /* Comment flowing inside a variation line. */

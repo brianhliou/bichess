@@ -292,46 +292,9 @@
   stroke: #262626;
 }
 
-/* Move-judgment badge on the destination point (review board). The palette is
-   the SAME one the move list uses (review/move-list.css) on purpose: the board
-   and the list annotate the same move, so a disagreement in colour would read
-   as a disagreement in verdict. */
-.xq-marker--glyph .xq-marker__disc {
-  stroke: #fff;
-  stroke-width: 2;
-}
-
-.xq-marker--glyph .xq-marker__label {
-  fill: #fff;
-  font-family: inherit;
-  font-weight: 700;
-  /* The badge is decoration for a verdict already stated in words in the move
-     list and the advice line; letting it catch a drag would cost more than it
-     gives. */
-  pointer-events: none;
-}
-
-.xq-marker--blunder .xq-marker__disc {
-  fill: #c0392b;
-}
-
-.xq-marker--mistake .xq-marker__disc {
-  fill: #d68910;
-}
-
-.xq-marker--inaccuracy .xq-marker__disc {
-  fill: #b7950b;
-}
-
-/* User-authored NAGs (annotations editor). Good moves read green, the
-   speculative ones purple, so they never masquerade as an engine verdict. */
-.xq-marker--good .xq-marker__disc {
-  fill: #2e7d32;
-}
-
-.xq-marker--speculative .xq-marker__disc {
-  fill: #7b5ea7;
-}
+/* The move-judgment badge moved to board-glyph-marker.css (2026-08-22) when every
+   variant board gained one: the rules now ship with the renderer that draws the
+   badge instead of with one board's stylesheet. */
 
 .xq-live-selection-cell {
   fill: rgba(31, 111, 91, 0.32);

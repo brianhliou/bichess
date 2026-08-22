@@ -9,6 +9,9 @@
 // The render-only renderXiangqiBoardSvg (postgame / replay / broadcast reuse it)
 // also lives here; live-xiangqi.ts re-exports it for its existing importers.
 
+// This board builds the judgment badge in its own intersection geometry rather
+// than through svg-board-marker, so it imports the badge palette directly.
+import './board-glyph-marker.css';
 import type {
   StandardXiangqiPlayerView,
   XiangqiColor,

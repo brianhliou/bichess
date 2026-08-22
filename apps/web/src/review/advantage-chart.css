@@ -81,17 +81,28 @@
 :root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__zone--black {
   fill: color-mix(in srgb, #6b96c8 10%, transparent);
 }
+/* Accent for the eval curve + ply cursor. A saturated warm red reads over both
+   the red and black advantage fills and in both themes, which a --site-text
+   stroke did not: at 45% it sank into the fill it was supposed to trace. */
+.advantage-chart {
+  --advantage-accent: #e2523b;
+}
+:root[data-effective-theme="dark"] .advantage-chart {
+  --advantage-accent: #ff6b4a;
+}
 .advantage-chart__line {
   fill: none;
-  stroke: color-mix(in srgb, var(--site-text) 45%, transparent);
-  stroke-width: 1;
+  stroke: var(--advantage-accent);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 .advantage-chart__cursor {
-  stroke: var(--site-text);
-  stroke-width: 1;
+  stroke: var(--advantage-accent);
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
-  opacity: 0.55;
+  opacity: 0.9;
 }
 /* Decision-vs-luck overlay (jieqi): a dashed "if reveals ran average" line and the shaded band
    between it and the real line — the gap IS the cumulative luck. Neutral tone: it marks variance,
@@ -130,7 +141,8 @@
   border-top-style: solid;
 }
 .advantage-chart__legend-swatch--real {
-  border-top-color: color-mix(in srgb, var(--site-text) 55%, transparent);
+  /* Matches the curve, or the legend names a colour the chart no longer draws. */
+  border-top-color: var(--advantage-accent);
 }
 .advantage-chart__legend-swatch--ghost {
   border-top-style: dashed;

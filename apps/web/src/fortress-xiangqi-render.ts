@@ -9,7 +9,13 @@ import { fortressXiangqiCoordOf, fortressXiangqiSquareOf } from '@mistboard/game
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   animalTreasureMarks,
@@ -66,7 +72,9 @@ export interface FortressXiangqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface FortressXiangqiBoardMarker extends SvgBoardMarkerStyle {
   square: FortressXiangqiSquare;
-  kind: 'circle';
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
 }
 
 export const FORTRESS_XIANGQI_PIECE_PX = PIECE_SIZE;
@@ -101,12 +109,21 @@ export function fortressXiangqiMarkerSvg(
   perspective: FortressXiangqiColor,
 ): string {
   const coord = fortressXiangqiCoordOf(marker.square);
-  return svgBoardCircleMarker(
-    marker,
-    intersection(coord.file, coord.rank, perspective),
-    RING_LAST,
-    { baseClassName: 'xq-marker engine-marker' },
-  );
+  const center = intersection(coord.file, coord.rank, perspective);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      CELL * GLYPH_RADIUS_RATIO,
+      CELL * GLYPH_OFFSET_RATIO,
+      {
+        baseClassName: 'xq-marker',
+      },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, RING_LAST, {
+    baseClassName: 'xq-marker engine-marker',
+  });
 }
 
 function fortressXiangqiMarkerLayer(

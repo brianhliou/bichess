@@ -115,6 +115,14 @@ function makeJungleFlipPresentation(
       kind: 'circle',
       className: `xq-shape--${s.brush}`,
     }),
+    // Judgment badge on the square the move landed on, so the board states the
+    // same verdict the move list does (lila pins its glyphs the same way).
+    moveGlyphMarker: (move: JungleFlipMove, glyph): JungleFlipBoardMarker => ({
+      square: move.to,
+      kind: 'glyph',
+      text: glyph.text,
+      className: `xq-marker--${glyph.tone}`,
+    }),
   };
 }
 

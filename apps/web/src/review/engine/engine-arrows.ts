@@ -52,6 +52,12 @@ export const SHOW_PV1_REPLY_SEGMENT = false;
 /** The best line: fixed weight, always drawn. */
 const BEST_STYLE = { opacity: 0.4, width: 14 } as const;
 
+/** The best ACTION when it has no travel (a flip, a drop): a ring on one point.
+ *  It deliberately does NOT inherit BEST_STYLE's opacity. An arrow is 14 units
+ *  wide and can afford to be translucent; a 5-unit ring at 0.4 washed out against
+ *  the board and read as decoration rather than as the engine's pick. */
+const BEST_MARKER_STYLE = { opacity: 0.95, width: 8 } as const;
+
 /** Alternates: constant opacity, width from the win% gap (see ALT_WIDTH_*). */
 const ALT_OPACITY = 0.35;
 
@@ -119,8 +125,13 @@ export function engineOverlaysFromLinesWithParser<Square extends string>(
         kind: 'circle',
         className: style.className.replace('xq-arrow', 'engine-marker'),
         color: style.className === 'xq-arrow--alt' ? '#4a4a4a' : '#2b6cb8',
-        opacity: style.opacity,
-        width: Math.max(2, Math.round((style.width ?? 9) / 3)),
+        // A ring cannot carry an arrow's opacity: the arrow is a filled shape
+        // several times the ring's stroke width, so the same alpha that reads as
+        // "translucent arrow" reads as "barely there" on a thin outline. Lift the
+        // alpha and floor the stroke, keeping the rank ordering (PV1 heavier than
+        // its alternates) that the arrow widths encode.
+        opacity: Math.min(0.95, (style.opacity ?? 0.4) + 0.5),
+        width: Math.max(5, Math.round((style.width ?? 9) / 2)),
       });
     }
   };
@@ -200,8 +211,7 @@ export function bestMoveOverlaysWithParser<Square extends string>(
         kind: 'circle',
         className: 'engine-marker--best',
         color: '#2b6cb8',
-        opacity: BEST_STYLE.opacity,
-        width: 5,
+        ...BEST_MARKER_STYLE,
       },
     ],
   };

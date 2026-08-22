@@ -78,9 +78,9 @@ describe('jungle-flip decision overlay wiring', () => {
     expect(redBlock!.textContent).toContain('Mistake');
     expect(summary!.textContent).not.toContain('Non-reveal');
     expect(summary!.textContent).not.toContain('centipawn');
-    const caption = root.querySelector('.review-decision-summary__caption');
-    expect(caption).not.toBeNull();
-    expect(caption!.textContent).toContain('🎲');
+    // The luck caption was removed 2026-08-22: the summary carries the luck-free
+    // grade and the per-move 🎲 badges carry the luck, with no legend under them.
+    expect(root.querySelector('.review-decision-summary__caption')).toBeNull();
 
     expect(root.textContent).toContain('?');
 
@@ -130,8 +130,7 @@ describe('jungle-flip decision overlay wiring', () => {
 
     expect(ran).toBe(1);
     expect(root.textContent).not.toContain('Grading reveals');
-    const caption = root.querySelector('.review-decision-summary__caption');
-    expect(caption!.textContent).toContain('🎲');
+    expect(root.querySelector('.review-decision-summary__caption')).toBeNull();
     root.remove();
   });
 

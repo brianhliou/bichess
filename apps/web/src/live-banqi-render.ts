@@ -10,7 +10,13 @@ import {
 } from '@mistboard/game';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
@@ -63,7 +69,9 @@ export interface BanqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface BanqiBoardMarker extends SvgBoardMarkerStyle {
   square: BanqiSquare;
-  kind: 'circle';
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
 }
 
 // The standalone disc for the floating drag ghost (board-drag.ts mounts it in a
@@ -111,7 +119,19 @@ export function banqiArrowSvg(arrow: BanqiBoardArrow): string {
 }
 
 export function banqiMarkerSvg(marker: BanqiBoardMarker): string {
-  return svgBoardCircleMarker(marker, cellCenter(marker.square), LAST_MOVE_RING_RADIUS, {
+  const center = cellCenter(marker.square);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      CELL * GLYPH_RADIUS_RATIO,
+      CELL * GLYPH_OFFSET_RATIO,
+      {
+        baseClassName: 'xq-marker',
+      },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, LAST_MOVE_RING_RADIUS, {
     baseClassName: 'xq-marker engine-marker',
   });
 }
