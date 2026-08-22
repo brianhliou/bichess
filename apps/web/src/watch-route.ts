@@ -472,6 +472,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     moveList = null;
     watchPly = 0;
     watchMaxPly = 0;
+    // A different game's plies are not a continuation of this one's, so the
+    // next seed must not read as "one move later" and fire the move sound.
+    lastSoundPly = null;
     moveScrubber.setBounds(0, 0);
     stopClockTicker();
     clearClocks();
@@ -496,11 +499,11 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // watch renderers, but the methods are optional) hides the whole panel; a handle
   // with plyCount but no derivable move labels keeps the scrubber and drops the
   // list (empty move labels for that path).
-  const rebuildMoveList = (handle: ReplayHandle): void => {
+  const rebuildMoveList = (handle: ReplayHandle, startPly: number): void => {
     clearMoveList();
     if (!handle.jumpToPly || !handle.plyCount) return;
     watchMaxPly = handle.plyCount();
-    watchPly = 0;
+    watchPly = clampPly(startPly, watchMaxPly);
     const entries = handle.moveEntries?.() ?? [];
 
     if (entries.length > 0) {
@@ -540,7 +543,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       // reserves the right box instead of collapsing to a square and growing
       // again when the real board lands.
       renderWatchReplaySkeleton(watch.replayRoot, boardAspectForWatchGame(feed, roomId));
-      replayHandle = await mountWatchReplay(
+      const mounted = await mountWatchReplay(
         watch.replayRoot,
         roomId,
         metadataByRoomId,
@@ -550,17 +553,21 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
         syncMoveList,
         autoplay,
       );
+      replayHandle = mounted;
       replayHandleKind = kind;
       replayHandleAutoplay = autoplay;
-      if (!autoplay) replayHandle.jumpToPly?.(replayHandle.plyCount?.() ?? 0);
-      rebuildMoveList(replayHandle);
+      seedWatchRail(mounted, autoplay, (startPly) => {
+        rebuildMoveList(mounted, startPly);
+      });
       rebuildPovToggle(feed, roomId);
       return;
     }
     if (replayHandle.activeSampleId() !== roomId) {
-      await replayHandle.loadGame(roomId);
-      if (!autoplay) replayHandle.jumpToPly?.(replayHandle.plyCount?.() ?? 0);
-      rebuildMoveList(replayHandle);
+      const handle = replayHandle;
+      await handle.loadGame(roomId);
+      seedWatchRail(handle, autoplay, (startPly) => {
+        rebuildMoveList(handle, startPly);
+      });
       rebuildPovToggle(feed, roomId);
     }
   };
@@ -1273,6 +1280,23 @@ export function buildWatchScrubber(
       last.disabled = ply >= maxPly;
     },
   };
+}
+
+// Bind a freshly loaded game to the rail. A feed-driven board mounts FROZEN at
+// its last ply, so the rail has to be seeded with that ply, not zero: the
+// scrubber has no getter on the handle and derives prev/next/first/last purely
+// from the number it was last told. Seeded at zero against a board sitting at
+// the end, |< and < come up disabled on a finished game (you cannot rewind
+// without clicking a move) and > jumps to ply 1. The jump and the seed are done
+// together here so they cannot drift apart again.
+export function seedWatchRail(
+  handle: Pick<ReplayHandle, 'jumpToPly' | 'plyCount'>,
+  autoplay: boolean,
+  bind: (startPly: number) => void,
+): void {
+  const startPly = autoplay ? 0 : (handle.plyCount?.() ?? 0);
+  if (!autoplay) handle.jumpToPly?.(startPly);
+  bind(startPly);
 }
 
 function requiredWatchControl(root: HTMLElement, action: string): HTMLButtonElement {
