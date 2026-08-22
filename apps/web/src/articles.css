@@ -827,6 +827,13 @@
   gap: 8px;
 }
 
+.article-figure-image img {
+  max-width: min(100%, 560px);
+  height: auto;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+}
+
 .article-figure > svg {
   width: 100%;
   height: auto;

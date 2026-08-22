@@ -285,9 +285,21 @@ export type TableBlock = {
   highlightRows?: number[];
 };
 
+// A raster figure in an article body (product screenshots, photos). `src` is a
+// path under apps/web/public, same convention as ImageArticleThumbnail; the SVG
+// blocks stay the default for anything drawable.
+export type ImageFigureBlock = {
+  kind: 'image-figure';
+  src: string;
+  alt: string;
+  caption?: string;
+  className?: string;
+};
+
 export type ArticleBlock =
   | ParagraphBlock
   | TableBlock
+  | ImageFigureBlock
   | SubHeadingBlock
   | StaticBoardsBlock
   | InteractiveBlock

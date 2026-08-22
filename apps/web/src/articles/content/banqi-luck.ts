@@ -181,8 +181,27 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it.',
+            'The move list carries the split per move. Every flip gets a dice badge with its luck, next to the eval, and decisions are graded separately: move 3 below is the +37% flip, marked dubious as a choice even though it won me the game.',
         },
+        // Real product UI, captured from this exhibit game's review page (the
+        // local render of the same cached analysis prod serves).
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/skill-vs-luck-movelist.png',
+          alt: 'The review move list: each flip carries a dice badge with its luck percentage beside the eval, and move 3, the +37% flip, is graded ?! as a decision.',
+          caption: 'The exhibit game’s move list. Move 3 is the +37% flip, dubious as a decision.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text:
+            'And accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it. The summary for this game reads exactly the way the story went: the bot played clean, I did not, and the result said otherwise.',
+        },
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/skill-vs-luck-summary.png',
+          alt: 'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, brianhliou 89% with nine inaccuracies, two mistakes, and two blunders.',
+          caption: 'The same game’s luck-stripped summary.',
+        } as ArticleBlock,
       ],
     },
     {

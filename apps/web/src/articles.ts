@@ -46,6 +46,7 @@ import {
   type JungleReplayBlock,
   type LiveBoardsBlock,
   type MiniXiangqiReplayBlock,
+  type ImageFigureBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
   type ShogiReplayBlock,
@@ -1116,6 +1117,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
+  if (block.kind === 'image-figure') return renderImageFigureBlock(block);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
@@ -1546,6 +1548,24 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
       if (!text) return;
       node.textContent = translateArticleText(lang, text.trim());
     });
+}
+
+function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-image';
+  if (block.className) figure.classList.add(...block.className.split(/\s+/).filter(Boolean));
+  const img = document.createElement('img');
+  img.src = block.src;
+  img.alt = block.alt;
+  img.loading = 'lazy';
+  figure.append(img);
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  return figure;
 }
 
 function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement {
