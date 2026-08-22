@@ -1022,7 +1022,8 @@ const ZH_HANS: Record<string, string> = {
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有时它承认你是被抢了。有时它把你的胜利收走。在对我旧棋的一轮扫描里，这两件事它都做了。',
   'Play Banqi': '下暗棋',
-  'Banqi rules': '暗棋规则',
+  'Play Jieqi': '下揭棋',
+  'Play Jungle Flip': '下翻翻棋',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -1928,7 +1929,8 @@ const ZH_HANT: Record<string, string> = {
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有時它承認你是被搶了。有時它把你的勝利收走。在對我舊棋的一輪掃描裡，這兩件事它都做了。',
   'Play Banqi': '下暗棋',
-  'Banqi rules': '暗棋規則',
+  'Play Jieqi': '下揭棋',
+  'Play Jungle Flip': '下翻翻棋',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
