@@ -788,23 +788,22 @@
   }
 
   /* Banqi's 8×4 board is intentionally short, so the board-bottom lock above
-     would leave only ~130px for chat on a 1440×900 display. Its rail opts out:
-     it hugs its content from the top of the grid row instead of stretching to
-     the row's full height. The rail must NOT flex-fill here. With a stretched
-     rail every group grows, and the meta group (whose card keeps its natural
-     height) opened a ~300px hole between the card and the spectator room.
-     Because the rail is now content-height, the chat needs a definite height:
-     left to flex-fill it collapses to nothing when empty and grows unbounded
-     (scrolling the page) once the feed has lines. A manually resized chat keeps
-     its stored preference. */
-  .banqi-review .review-shell__left {
-    align-self: start;
-    height: auto;
-  }
+     would leave only ~130px for chat on a 1440×900 display. Its rail opts out
+     and stretches to the grid row instead. The generic group rules above then
+     apply unchanged, which is the point: only the LAST group grows. A blanket
+     `flex: 1 1 auto` on every group here grew the meta group too, and because
+     its card keeps its natural height that opened a ~300px hole between the
+     card and the spectator room.
 
-  .banqi-review .review-shell__left > .review-rail-group,
-  .banqi-review .review-shell__left > .review-rail-group:last-child {
-    flex: 0 0 auto;
+     The chat then takes a compact default height rather than filling the whole
+     stretched group, which would render a ~600px empty panel beside a 308px
+     board. Size the CHAT, never the group: chat-resize.ts derives the drag
+     handle's ceiling from the panel's PARENT, so a group that is content-sized
+     around the panel makes that ceiling track the panel itself. The handle then
+     ratchets shut, one-way: every shrink lowers the ceiling to the new height
+     and the panel can never grow back. Whatever sizes this chat, the group it
+     sits in has to keep a height of its own. */
+  .banqi-review .review-shell__left {
     height: auto;
   }
 

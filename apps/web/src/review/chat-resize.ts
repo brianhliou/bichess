@@ -27,6 +27,12 @@ export function attachChatResize(panel: HTMLElement): HTMLElement {
   let dragStartY = 0;
   let dragStartHeight = 0;
 
+  // The ceiling is whatever the panel's PARENT has left over. That makes the
+  // parent's height a contract: it must be sized by the rail, not by the panel.
+  // A rail group that content-sizes around this panel (no siblings, no height of
+  // its own) turns the ceiling into a mirror of the current height, and the
+  // handle ratchets shut — each shrink lowers the ceiling to match, and nothing
+  // can grow back. Give the CHAT a height in that case, never the group.
   const maxHeight = (): number => {
     const parent = panel.parentElement;
     if (!parent) return Math.max(MIN_HEIGHT, window.innerHeight - 120);
