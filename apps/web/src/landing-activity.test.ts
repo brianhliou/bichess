@@ -30,6 +30,10 @@ describe('landing activity', () => {
     const links = [...activity.querySelectorAll<HTMLAnchorElement>('.landing-activity-link')];
     expect(links.map((link) => link.textContent)).toEqual(['575games played (261 this month)']);
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/stats']);
+    // "this month" is a rolling 30-day window server-side; the tooltip says so.
+    expect(activity.querySelector('.landing-activity-label')?.getAttribute('title')).toBe(
+      'Completed games in the last 30 days',
+    );
     // Players-online is dropped; only games-in-play remains on the live line.
     expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('0 games in play');
   });

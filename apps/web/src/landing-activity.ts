@@ -26,7 +26,9 @@ export function buildLandingActivity(options: { hydrate?: boolean } = {}): HTMLE
 }
 
 // The durable total is the headline; the month count rides along in a
-// parenthetical rather than as its own stat line.
+// parenthetical rather than as its own stat line. "this month" is the server's
+// rolling 30-day window (persistence-site-stats.ts), so the label carries a
+// title tooltip spelling that out.
 function gamesPlayedLabel(monthCount: number): string {
   return t('home.gamesPlayedMonth', { count: formatCount(monthCount) });
 }
@@ -46,6 +48,7 @@ async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Prom
           formatCount(totals.totalCompletedGames),
           gamesPlayedLabel(totals.last30dCompletedGames),
           '/stats',
+          t('home.gamesPlayedMonthTitle'),
         ),
       ]),
     );
@@ -70,7 +73,12 @@ function activityPrimary(metrics: HTMLElement[]): HTMLElement {
   return primary;
 }
 
-function activityMetric(value: string, label: string, href?: string): HTMLElement {
+function activityMetric(
+  value: string,
+  label: string,
+  href?: string,
+  labelTitle?: string,
+): HTMLElement {
   const row = href ? document.createElement('a') : document.createElement('div');
   row.className = href
     ? 'landing-activity-metric landing-activity-link'
@@ -82,6 +90,7 @@ function activityMetric(value: string, label: string, href?: string): HTMLElemen
   const labelEl = document.createElement('span');
   labelEl.className = 'landing-activity-label';
   labelEl.textContent = label;
+  if (labelTitle) labelEl.setAttribute('title', labelTitle);
   row.append(valueEl, labelEl);
   return row;
 }

@@ -45,6 +45,10 @@ export const EN_SHELL = {
   'home.gamesPlayed': 'games played',
   // The durable total is the headline; the month count rides along inline.
   'home.gamesPlayedMonth': 'games played ({count} this month)',
+  // Server-side that count is a rolling 30-day window, not a calendar
+  // month. The tooltip says so without forcing a zh retranslation of the
+  // visible copy (non-critical keys fall back to English).
+  'home.gamesPlayedMonthTitle': 'Completed games in the last 30 days',
   'home.gameInPlay': 'game in play',
   'home.gamesInPlay': 'games in play',
   'site.more': 'More »',
