@@ -40,6 +40,7 @@ import {
   type DropMiniXiangqiReplayBlock,
   type FortressXiangqiReplayBlock,
   findArticle,
+  type ImageFigureBlock,
   type InteractiveBlock,
   type JieqiReplayBlock,
   type JungleFlipReplayBlock,
@@ -365,7 +366,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // index (and each variant's card marker), not in this homepage row, so this
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
-const HOME_ARTICLE_SLUGS = ['misty', 'mistybanqi', 'server-enforced-fog'] as const;
+const HOME_ARTICLE_SLUGS = ['skill-vs-luck', 'misty', 'mistybanqi', 'server-enforced-fog'] as const;
 
 type HomeCardItem =
   | {
@@ -1116,6 +1117,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
+  if (block.kind === 'image-figure') return renderImageFigureBlock(block);
   if (block.kind === 'raw-svg') return renderRawSvgBlock(block, lang);
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
@@ -1546,6 +1548,24 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
       if (!text) return;
       node.textContent = translateArticleText(lang, text.trim());
     });
+}
+
+function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-image';
+  if (block.className) figure.classList.add(...block.className.split(/\s+/).filter(Boolean));
+  const img = document.createElement('img');
+  img.src = block.src;
+  img.alt = block.alt;
+  img.loading = 'lazy';
+  figure.append(img);
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
+  return figure;
 }
 
 function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement {

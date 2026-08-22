@@ -21,21 +21,23 @@ import {
 import type { Article, ArticleBlock } from '../types.js';
 
 export const darkChessConceptsArticle: Article = {
-    slug: 'dark-chess-concepts',
+    slug: 'fog-chess-concepts',
     kind: 'article',
     publisher: 'mistboard',
-    title: 'Dark Chess Concepts',
+    title: 'Fog Chess Concepts',
+    // "Fog Chess" is our name; "fog of war chess" is what players search.
+    seoTitle: 'Fog of War Chess Strategy: Reading the Fog and Thinking in Worlds',
     summary:
-      'Strategy concepts for dark chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
+      'Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
     status: 'draft',
     audience:
-      'Players who know the dark chess rules and want to start making better decisions under fog.',
+      'Players who know the Fog Chess rules and want to start making better decisions under fog.',
     thumbnail: ARTICLE_OG_POSITIONS['dark-chess-concepts'],
     intro: [
       {
         kind: 'paragraph',
         text:
-          'Dark chess is not only about the pieces you see. Fogged squares, missing destinations, and vanished pieces are information too. This concepts series starts with the most useful habit: reading what the fog is telling you.',
+          'Fog chess is played on the squares you cannot see as much as the ones you can. Fogged squares, missing destinations, and vanished pieces are all information. The most useful habit in the game is reading what the fog is telling you; the second is deciding well under what it still hides.',
       },
     ],
     sections: [
@@ -45,12 +47,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "You can read the darkness to deduce what's happening on the board.",
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'The goal is not perfect certainty. A good dark chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.',
+              'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.',
           },
         ],
       },
@@ -142,7 +139,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "In regular chess, castling choices are judged in public. In dark chess, your opponent often does not know where your king is unless a scout has seen it, a move has revealed it, or castling itself gives the position away.",
+              "In regular chess, castling choices are judged in public. In fog chess, your opponent often does not know where your king is unless a scout has seen it, a move has revealed it, or castling itself gives the position away.",
           },
           {
             kind: 'paragraph',
@@ -201,7 +198,7 @@ export const darkChessConceptsArticle: Article = {
           },
           {
             kind: 'sub-heading',
-            text: 'How big is the cloud?',
+            text: 'The cloud has a size',
           },
           {
             kind: 'paragraph',
@@ -241,7 +238,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "Cluster by what would change your decision, not by what is merely different. Two worlds that point to the same best move are one world for your purposes, so collapse them. Two that demand opposite moves are the split worth naming. Most of dark chess is this: reducing a cloud you cannot count to the two or three buckets you can actually plan against.",
+              "Cluster by what would change your decision, not by what is merely different. Two worlds that point to the same best move are one world for your purposes, so collapse them. Two that demand opposite moves are the split worth naming. Most of fog chess is this: reducing a cloud you cannot count to the two or three buckets you can actually plan against.",
           },
         ],
       },

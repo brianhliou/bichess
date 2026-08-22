@@ -38,6 +38,7 @@ import {
   variantForId,
 } from '@mistboard/game';
 import { Resvg } from '@resvg/resvg-js';
+import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import * as persistence from './persistence.js';
 
 const OG_WIDTH = 1200;
@@ -220,6 +221,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   (title: string, ctx: ArticleOgContext) => Promise<string> | string
 > = {
   'server-enforced-fog': renderServerFogOgSvg,
+  'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
   misty: renderMistyOgSvg,
   xiangqi: (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'full', false),
@@ -718,6 +720,41 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
     `<clipPath id="misty-art"><rect x="${artX}" y="${artY}" width="${artSize}" height="${artSize}" rx="10"/></clipPath>`,
     `<image href="${uri}" x="${artX}" y="${artY}" width="${artSize}" height="${artSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#misty-art)"/>`,
     ogFooterLine(title, artY + artSize + 48),
+    `</svg>`,
+  ].join('');
+}
+
+// The skill-vs-luck card is the article's thesis in one image: the exhibit
+// game as played against the same game with every flip at its average tile.
+// Series are generated from the mined game (banqi-luck-og-data.ts).
+function renderSkillVsLuckOgSvg(title: string): string {
+  const { win, ghost } = SKILL_VS_LUCK_OG_SERIES;
+  const plotX = 80;
+  const plotY = 120;
+  const plotW = OG_WIDTH - plotX * 2;
+  const plotH = 360;
+  const x = (i: number) => plotX + (i / (win.length - 1)) * plotW;
+  const y = (w: number) => plotY + ((100 - w) / 100) * plotH;
+  const pts = (series: number[]) =>
+    series.map((w, i) => `${x(i).toFixed(1)},${y(w).toFixed(1)}`).join(' ');
+  const band = `${pts(win)} ${[...ghost.keys()]
+    .reverse()
+    .map((i) => `${x(i).toFixed(1)},${y(ghost[i]!).toFixed(1)}`)
+    .join(' ')}`;
+  const SOLID = '#5da271';
+  const GHOST = '#e1e6da';
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<line x1="${plotX}" y1="68" x2="${plotX + 44}" y2="68" stroke="${SOLID}" stroke-width="6"/>`,
+    `<text x="${plotX + 56}" y="76" font-family="${FONT}" font-size="26" fill="${SOLID}" font-weight="700">THE GAME AS PLAYED</text>`,
+    `<line x1="${plotX + 360}" y1="68" x2="${plotX + 404}" y2="68" stroke="#9ca3af" stroke-width="5" stroke-dasharray="14 10"/>`,
+    `<text x="${plotX + 416}" y="76" font-family="${FONT}" font-size="26" fill="#9ca3af" font-weight="600">IF EVERY FLIP RAN AVERAGE</text>`,
+    `<line x1="${plotX}" y1="${y(50).toFixed(1)}" x2="${plotX + plotW}" y2="${y(50).toFixed(1)}" stroke="#3a4048" stroke-width="2"/>`,
+    `<polygon points="${band}" fill="${SOLID}" fill-opacity="0.16"/>`,
+    `<polyline points="${pts(ghost)}" fill="none" stroke="${GHOST}" stroke-opacity="0.55" stroke-width="4" stroke-dasharray="14 10"/>`,
+    `<polyline points="${pts(win)}" fill="none" stroke="${SOLID}" stroke-width="6"/>`,
+    ogFooterLine(title, plotY + plotH + 74),
     `</svg>`,
   ].join('');
 }

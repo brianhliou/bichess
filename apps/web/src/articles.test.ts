@@ -79,11 +79,12 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      '/blog/skill-vs-luck',
       '/blog/fog-openings',
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
-      '/blog/dark-chess-concepts',
+      '/blog/fog-chess-concepts',
     ]);
   });
 
@@ -219,7 +220,12 @@ describe('article public listing gates', () => {
 
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
-    expect(hrefs).toEqual(['/blog/misty', '/blog/mistybanqi', '/blog/server-enforced-fog']);
+    expect(hrefs).toEqual([
+      '/blog/skill-vs-luck',
+      '/blog/misty',
+      '/blog/mistybanqi',
+      '/blog/server-enforced-fog',
+    ]);
   });
 
   it('keeps parked chess variant rules out of the homepage widget and rules rail', () => {
@@ -691,7 +697,7 @@ describe('rules variant sidebar', () => {
   });
 
   it('omits the variant sidebar on non-rules articles', () => {
-    const page = buildArticlePage('dark-chess-concepts');
+    const page = buildArticlePage('fog-chess-concepts');
     expect(page.querySelector('.article-variant-sidebar')).toBeNull();
   });
 

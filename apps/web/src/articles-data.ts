@@ -10,10 +10,11 @@ import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';
 import { banqiArticle } from './articles/content/banqi.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
+import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { chessArticle } from './articles/content/chess.js';
 import { crossroadsChessArticle } from './articles/content/crossroads-chess.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
-import { darkChessConceptsArticle } from './articles/content/dark-chess-concepts.js';
+import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
 import { darkCrossroadsChessArticle } from './articles/content/dark-crossroads-chess.js';
@@ -60,12 +61,14 @@ export const articles: Article[] = [
   jungleFlipArticle,
   banqiArticle,
   banqiEngineArticle,
+  banqiLuckArticle,
   revealChessArticle,
   darkCrossroadsChessArticle,
   crossroadsChessArticle,
 ];
 
 const ARTICLE_SLUG_ALIASES: Record<string, string> = {
+  'dark-chess-concepts': 'fog-chess-concepts',
   'flip-xiangqi': 'banqi',
   'dark-chess': 'fog-chess',
   'dark-xiangqi': 'fog-xiangqi',
