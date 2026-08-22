@@ -20,7 +20,7 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
-  'dark-chess-concepts',
+  'fog-chess-concepts',
   'shogi',
   'skill-vs-luck',
 ]);
@@ -49,11 +49,11 @@ export const ARTICLE_META: Record<
     description:
       'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.',
   },
-  'dark-chess-concepts': {
-    title: 'Dark Chess Concepts',
+  'fog-chess-concepts': {
+    title: 'Fog Chess Concepts',
     kind: 'article',
     description:
-      'Strategy concepts for dark chess: how to read fogged squares, pawn signals, vanished moves, and capture clues after you know the rules.',
+      'Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

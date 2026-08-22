@@ -534,7 +534,7 @@ const ZH_HANS: Record<string, string> = {
     '想看棋子在实战中如何协同，可以逐步重演 2014 年索契世界冠军赛的第 11 局。执白的马格努斯·卡尔森在柏林防御残局中逐步磨垮维斯瓦纳坦·阿南德，锁定冠军；阿南德在第 45 回合认输。',
   'Where to next': '接下来去哪',
   'All rules': '全部规则',
-  'Dark Chess Concepts': '迷雾国际象棋概念',
+  'Fog Chess Concepts': '迷雾国际象棋概念',
   // section headings
   'The starting position': '开局局面',
   'What you see': '你能看到什么',
@@ -549,8 +549,6 @@ const ZH_HANS: Record<string, string> = {
   'En passant': '吃过路兵',
   'Pawn moves': '兵的走动',
   Captures: '吃子',
-  'Dark chess is not only about the pieces you see. Fogged squares, missing destinations, and vanished pieces are information too. This concepts series starts with the most useful habit: reading what the fog is telling you.':
-    '迷雾国际象棋不只关乎你看得见的棋子。被迷雾遮住的格子、消失的目的地和不见的棋子本身也是信息。这个概念系列从最有用的习惯开始：读懂迷雾正在告诉你的事。',
   'Each side sees the squares its own pieces could legally move to (under [regular chess rules](https://en.wikipedia.org/wiki/Rules_of_chess)), plus the squares they stand on. Everything else is fog.':
     '每一方能看到己方棋子（按[普通国际象棋规则](https://zh.wikipedia.org/zh-hans/国际象棋规则)）可以合法走到的格子，以及棋子当前所在的格子。其余一切都笼罩在迷雾之中。',
   "Here's the same rule, piece by piece.": '同一条规则，逐子来看。',
@@ -570,9 +568,7 @@ const ZH_HANS: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵挡住了这些推进，所以它们不是合法走法。有些规则会显示被阻挡的兵推进格；Mistboard 不会。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃过路兵是国际象棋中最奇特的一步，因此我们的视野规则为它破了个例：执行吃子的兵能看到相邻格子上那个将被吃掉的对方兵。这个窗口只持续一步。若放弃这次吃子，机会便不复存在。',
-  "You can read the darkness to deduce what's happening on the board.":
-    '你可以通过解读这片黑暗，推断棋盘上正在发生什么。',
-  'The goal is not perfect certainty. A good dark chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目标不是获得完美确定性。优秀的迷雾棋手会判断哪些隐藏局面危险到必须尊重，然后选择在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推进到的格子。若推进格被迷雾遮住，就说明那里有对方的棋子或兵挡着。',
@@ -1351,7 +1347,7 @@ const ZH_HANT: Record<string, string> = {
     '想看棋子在實戰中如何協同，可以逐步重演 2014 年索契世界冠軍賽的第 11 局。執白的馬格努斯·卡爾森在柏林防禦殘局中逐步磨垮維斯瓦納坦·阿南德，鎖定冠軍；阿南德在第 45 回合認輸。',
   'Where to next': '接下來去哪',
   'All rules': '全部規則',
-  'Dark Chess Concepts': '迷霧國際象棋概念',
+  'Fog Chess Concepts': '迷霧國際象棋概念',
   'The starting position': '開局局面',
   'What you see': '你能看到什麼',
   'Win condition: king capture': '勝負條件：吃王',
@@ -1364,8 +1360,6 @@ const ZH_HANT: Record<string, string> = {
   'En passant': '吃過路兵',
   'Pawn moves': '兵的走動',
   Captures: '吃子',
-  'Dark chess is not only about the pieces you see. Fogged squares, missing destinations, and vanished pieces are information too. This concepts series starts with the most useful habit: reading what the fog is telling you.':
-    '迷霧國際象棋不只關乎你看得見的棋子。被迷霧遮住的格子、消失的目的地和不見的棋子本身也是資訊。這個概念系列從最有用的習慣開始：讀懂迷霧正在告訴你的事。',
   'Each side sees the squares its own pieces could legally move to (under [regular chess rules](https://en.wikipedia.org/wiki/Rules_of_chess)), plus the squares they stand on. Everything else is fog.':
     '每一方能看到己方棋子（按[普通國際象棋規則](https://zh.wikipedia.org/zh-hant/国际象棋规则)）可以合法走到的格子，以及棋子當前所在的格子。其餘一切都籠罩在迷霧之中。',
   "Here's the same rule, piece by piece.": '同一條規則，逐子來看。',
@@ -1385,9 +1379,7 @@ const ZH_HANT: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵擋住了這些推進，所以它們不是合法走法。有些規則會顯示被阻擋的兵推進格；Mistboard 不會。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃過路兵是國際象棋中最奇特的一步，因此我們的視野規則為它破了個例：執行吃子的兵能看到相鄰格子上那個將被吃掉的對方兵。這個窗口只持續一步。若放棄這次吃子，機會便不復存在。',
-  "You can read the darkness to deduce what's happening on the board.":
-    '你可以透過解讀這片黑暗，推斷棋盤上正在發生什麼。',
-  'The goal is not perfect certainty. A good dark chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目標不是獲得完美確定性。優秀的迷霧棋手會判斷哪些隱藏局面危險到必須尊重，然後選擇在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推進到的格子。若推進格被迷霧遮住，就說明那裡有對方的棋子或兵擋著。',

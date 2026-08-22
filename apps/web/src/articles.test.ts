@@ -84,7 +84,7 @@ describe('article public listing gates', () => {
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
-      '/blog/dark-chess-concepts',
+      '/blog/fog-chess-concepts',
     ]);
   });
 
@@ -692,7 +692,7 @@ describe('rules variant sidebar', () => {
   });
 
   it('omits the variant sidebar on non-rules articles', () => {
-    const page = buildArticlePage('dark-chess-concepts');
+    const page = buildArticlePage('fog-chess-concepts');
     expect(page.querySelector('.article-variant-sidebar')).toBeNull();
   });
 
