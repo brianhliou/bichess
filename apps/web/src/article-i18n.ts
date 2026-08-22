@@ -883,7 +883,7 @@ const ZH_HANS: Record<string, string> = {
   'Separating Skill from Luck in Flip Games':
     '把翻子棋的实力和运气分开',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气怪到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们的：谁的胜利是真本事。',
+    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的对局复盘现在会把每次翻子拆成两部分：你做的决策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的旧棋。它翻出了我两个月前赢自家引擎的一盘暗棋，然后把功劳记在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -905,11 +905,11 @@ const ZH_HANS: Record<string, string> = {
   'Backgammon software prices every roll against the average roll and reports a luck-adjusted result, so a match report can tell you that you played better and lost. GnuBG and eXtreme Gammon both do it. Poker has the same idea in all-in EV.':
     '西洋双陆棋的软件会把每次掷骰和平均掷骰作比较，报告一个剔除运气后的结果，所以一份战报可以告诉你：你下得更好，但你输了。GnuBG 和 eXtreme Gammon 都这么做。扑克里的 all-in EV 是同一个思路。',
   'Chess never built any of this because chess has no dice. Banqi is a chess-family game with dice in it, and it inherited chess’s tools, which have no luck column.':
-    '国际象棋从没造过这些东西，因为它没有骰子。暗棋是一款带骰子的棋类，却继承了国际象棋的工具，而那些工具里没有运气这一栏。',
+    '国际象棋从没造过这些东西，因为它没有骰子。暗棋是象棋家族里带骰子的一员，却继承了国际象棋的工具，而那些工具里没有运气这一栏。',
   'The average tile in the bag':
     '剩下棋子里的平均一枚',
   'Banqi’s chance is countable. Both players can see which tiles are still face down, and the full set of pieces is known, so at any flip you can list every tile that square could be. That makes the honest baseline computable:':
-    '暗棋的随机是数得清的。双方都看得到哪些棋子还背面朝下，整副棋的构成也是公开的，所以任何一次翻子，你都能列出那个格子可能是的每一枚棋。这让诚实的基准变得可以计算：',
+    '暗棋的随机性是数得清的。双方都看得到哪些棋子还背面朝下，整副棋的构成也是公开的，所以任何一次翻子，你都能列出那个格子上可能翻出的每一枚棋。这让诚实的基准变得可以计算：',
   'That average is what your decision was worth **before the dice**. Three numbers per flip:':
     '这个平均值，就是你的决策在**掷骰之前**的价值。每次翻子三个数字：',
   'per flip':
@@ -917,7 +917,7 @@ const ZH_HANS: Record<string, string> = {
   'meaning':
     '含义',
   'Zero luck is exactly the average tile in the bag, by construction, not by an engine’s opinion.':
-    '运气为零，恰好就是剩下棋子里的平均一枚。这是构造出来的事实，不是引擎的看法。',
+    '运气为零，恰好就是翻出剩下棋子里的平均一枚。这是由构造保证的事实，不是引擎的看法。',
   'The flip from the intro, enumerated':
     '开头那次翻子，逐一枚举',
   'Ply 6 of the game this article opens with: I turn the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game.':
@@ -931,7 +931,7 @@ const ZH_HANS: Record<string, string> = {
   'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%. **That number is the decision**, and it is what accuracy grades.':
     '同一次翻子的价值从 13%（翻出我自己的将，深陷争夺之地）到 82%（我自己的兵，在那里既安全又有用）不等。加权平均是 45%。**这个数字才是决策本身**，准确率打分打的就是它。',
   'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.':
-    '高亮那一行就是实际翻出的结果。实际 82，决策 45，运气 +37，而这份运气没有一点是我挣来的。',
+    '高亮的那一行就是实际翻出的结果。实际 82，决策 45，运气 +37，而这份运气没有一点是我挣来的。',
   'Engines are biased about their own dice':
     '引擎对自己的骰子有偏心',
   'The obvious shortcut is to ask the engine what a flip move is worth and call the difference luck. Our jieqi engine showed why not: it over-values its reveals and plays greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.':
@@ -939,7 +939,7 @@ const ZH_HANS: Record<string, string> = {
   'The flip that deals you your color':
     '决定你执哪色的那次翻子',
   'The first flip of the game decides which color you play: whatever ink comes up, that side is yours. The counterfactuals for that flip vary your own army, so the decomposition prices "which side did I get" as luck. That sounds wrong for about ten seconds, and then it sounds exactly right.':
-    '开局第一次翻子决定你执哪种颜色：翻出什么色，你就执什么色。这次翻子的反事实会改变你自己的整支军队，所以这套拆分把"我分到哪一边"也计成运气。这听上去有大约十秒钟不对劲，然后就完全对了。',
+    '开局第一次翻子决定你执哪种颜色：翻出什么色，你就执什么色。这次翻子的反事实会改变你自己的整支军队，所以这套拆分把"我分到哪一边"也计成运气。乍听之下不太对劲，想上十来秒就完全对了。',
   'What the review draws':
     '复盘画出什么',
   'The game from the intro. Solid: the game as played, from Red’s side. Dashed: the same game with every flip at its average. The gap is the luck.':
@@ -949,17 +949,17 @@ const ZH_HANS: Record<string, string> = {
   'That is why the dashed line here runs one way while the solid line swings. My luck kept landing in the same direction, flip after flip, so the gap only grew. Scored on decisions alone the bot was winning nearly throughout, and once the dashed line says the game should be completely won it pins at the top.':
     '这也是为什么图里的虚线一路朝一个方向走，而实线上下翻腾。我的运气一次又一次落在同一侧，差距只增不减。只看决策的话，引擎几乎全程占优；一旦虚线认定这盘棋照理已经完胜，它就顶在最上沿不动了。',
   'The move list carries the split per move. Every flip gets a dice badge with its luck, next to the eval, and decisions are graded separately: move 3 below is the +37% flip, marked dubious as a choice even though it won me the game.':
-    '着法列表把这份拆分标到每一步上。每次翻子都带一个骰子标记，写着它的运气，就在评估值旁边；决策则单独打分：下图第 3 步就是那次 +37% 的翻子，虽然它帮我赢了棋，作为选择却被标为存疑。',
+    '着法列表把这份拆分标到每一步上。每次翻子都带一个骰子标记，写着它的运气，就在评估值旁边；决策则单独打分：下图第 3 步就是那次 +37% 的翻子，虽然它帮我赢了棋，作为选择却被标为可疑。',
   'The exhibit game’s move list. Move 3 is the +37% flip, dubious as a decision.':
-    '示例对局的着法列表。第 3 步是那次 +37% 的翻子，作为决策被标为存疑。',
+    '示例对局的着法列表。第 3 步是那次 +37% 的翻子，作为决策被标为可疑。',
   'The review move list: each flip carries a dice badge with its luck percentage beside the eval, and move 3, the +37% flip, is graded ?! as a decision.':
     '复盘着法列表：每次翻子的评估值旁都有骰子标记标出运气百分比；第 3 步即 +37% 的那次翻子，作为决策被标为 ?!。',
   'And accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it. The summary for this game reads exactly the way the story went: the bot played clean, I did not, and the result said otherwise.':
-    '而准确率只按决策数字打分，翻得走运不会加分，翻得倒霉也不会扣分。这盘棋的总结和故事本身完全一致：引擎下得干净，我没有，而结果却说了反话。',
+    '而准确率只按决策数字打分，翻得走运不会加分，翻得倒霉也不会扣分。这盘棋的总结和故事本身完全一致：引擎下得干净，我则不然，而结果却说了反话。',
   'The same game’s luck-stripped summary. dev-testing is me, on my test account.':
     '同一盘棋去除运气后的总结。dev-testing 是我，用的是我的测试账号。',
   'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, dev-testing 89% with nine inaccuracies, two mistakes, and two blunders.':
-    '示例对局去除运气后的准确率总结：MistyBanqi 准确率 95%，零失误；dev-testing 89%，九次失准、两次错误、两次漏着。',
+    '示例对局去除运气后的准确率总结：MistyBanqi 准确率 95%，零失误；dev-testing 89%，九次失准、两次错着、两次漏着。',
   'The receipts':
     '证据',
   'The win I opened with: 156 plies against the bot, and the graph tells on me. At ply 6 the 45% flip came up worth 82%. No decision in the game moved the needle that far.':
@@ -969,7 +969,7 @@ const ZH_HANS: Record<string, string> = {
   'Step to ply 6: the flip worth 45% on average that came up worth 82%.':
     '走到第 6 个半回合：平均价值 45% 的那次翻子，翻出了 82%。',
   'It cuts the other way too. In [another game](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446) I lost, one flip at ply 19 cost 34 points of win chance on its own. My decisions that game were ordinary. The old review would have marked that flip as the losing blunder. The new one marks it as the moment the game was decided by something that was not a choice.':
-    '反过来也一样。在我输掉的[另一盘棋](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446)里，第 19 个半回合的一次翻子独自烧掉了 34 个百分点的胜率。那盘棋我的决策平平。旧式复盘会把那次翻子记为致败漏着。新的复盘把它记为：胜负在此刻被一件不由选择决定的事定了下来。',
+    '反过来也一样。在我输掉的[另一盘棋](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446)里，光是第 19 个半回合的一次翻子，就烧掉了 34 个百分点的胜率。那盘棋我的决策平平。旧式复盘会把那次翻子记为致败漏着。新的复盘把它记为：胜负在此刻被一件不由你选择的事定了下来。',
   'Fifty-two games of evidence':
     '五十二盘棋的证据',
   'We ran the decomposition over 52 recent human-versus-Misty banqi games from the site.':
@@ -987,17 +987,17 @@ const ZH_HANS: Record<string, string> = {
   'For the builders':
     '写给实现者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
-    '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从兵改标成炮，你就悄悄往棋局里加了一门炮、拿走了一个兵，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
+    '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从兵改标成炮，你就悄悄往棋局里加了一枚炮、拿走了一枚兵，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
   'Second, **one bounded scale**. Everything is win chance from the flipping player’s side: it adds up across a game, a flip that ends the game scores exactly 100, 50, or 0, and a flip that walks into mate has no centipawn value anyway. Search budgets are node counts rather than time, so the same game grades identically on any machine.':
     '第二，**一把有界的尺子**。一切都用翻子一方视角的胜率来计：它可以在整盘棋上累加；直接终局的翻子恰好计 100、50 或 0；而一步翻进杀局的棋本来就没有厘兵值可言。搜索预算按节点数而非时间计，同一盘棋在任何机器上打出的分都一样。',
   'Third, **under-count on purpose**. The decision ceiling considers only the engine’s top move, so a better move the engine ranked second is missed and decision loss is only ever understated. The review can fail to flag a mistake. It cannot invent one.':
-    '第三，**故意往少里算**。决策上限只考虑引擎的第一选择，被引擎排在第二的更好着法会被漏掉，所以决策损失只会被低估。复盘可能漏报一个失误。它不会捏造一个。',
+    '第三，**故意往少里算**。决策上限只考虑引擎的第一选择，被引擎排在第二的更好着法会被漏掉，所以决策损失只会被低估。复盘可能漏报一个失误，但绝不会凭空捏造一个。',
   'Where the numbers stop':
     '数字到哪里为止',
   'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem.':
-    '这些胜率出自我们的暗棋引擎在固定搜索预算下的评估，而这台引擎同时也是这些对局里的对手，所以它自己的翻子被打成近乎完美，部分原因只是它同意它自己。看"引擎零损失"时请带着这一点。人类一侧的数字没有这个问题。',
+    '这些胜率出自我们的暗棋引擎在固定搜索预算下的评估，而这个引擎同时也是这些对局里的对手，所以它自己的翻子被打成近乎完美，部分原因不过是它在认同自己的选择。看到"引擎零损失"时，请记住这一点。人类一侧的数字没有这个问题。',
   'One more honest limit: subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.':
-    '还有一条诚实的边界：逐点扣除运气等于把胜率当成线性的，而它并不是。方向可信。小数点后第二位不可信。',
+    '还有一条诚实的边界：逐点扣除运气，等于把胜率当成线性的，而它并不是线性的。方向可信。小数点后第二位不可信。',
   'Try it on your own games':
     '拿你自己的棋试试',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
@@ -1775,7 +1775,7 @@ const ZH_HANT: Record<string, string> = {
   'Separating Skill from Luck in Flip Games':
     '把翻子棋的實力和運氣分開',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣怪到你頭上。暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣怪到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們的：誰的勝利是真本事。 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們的：誰的勝利是真本事。',
+    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -1797,11 +1797,11 @@ const ZH_HANT: Record<string, string> = {
   'Backgammon software prices every roll against the average roll and reports a luck-adjusted result, so a match report can tell you that you played better and lost. GnuBG and eXtreme Gammon both do it. Poker has the same idea in all-in EV.':
     '西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。 都這麼做。撲克裡的 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。西洋雙陸棋的軟體會把每次擲骰和平均擲骰作比較，報告一個剔除運氣後的結果，所以一份戰報可以告訴你：你下得更好，但你輸了。GnuBG 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 和 eXtreme Gammon 都這麼做。撲克裡的 all-in EV 是同一個思路。 都這麼做。撲克裡的 all-in EV 是同一個思路。 是同一個思路。',
   'Chess never built any of this because chess has no dice. Banqi is a chess-family game with dice in it, and it inherited chess’s tools, which have no luck column.':
-    '國際象棋從沒造過這些東西，因為它沒有骰子。暗棋是一款帶骰子的棋類，卻繼承了國際象棋的工具，而那些工具裡沒有運氣這一欄。',
+    '國際象棋從沒造過這些東西，因為它沒有骰子。暗棋是象棋家族裡帶骰子的一員，卻繼承了國際象棋的工具，而那些工具裡沒有運氣這一欄。',
   'The average tile in the bag':
     '剩下棋子裡的平均一枚',
   'Banqi’s chance is countable. Both players can see which tiles are still face down, and the full set of pieces is known, so at any flip you can list every tile that square could be. That makes the honest baseline computable:':
-    '暗棋的隨機是數得清的。雙方都看得到哪些棋子還背面朝下，整副棋的構成也是公開的，所以任何一次翻子，你都能列出那個格子可能是的每一枚棋。這讓誠實的基準變得可以計算：',
+    '暗棋的隨機性是數得清的。雙方都看得到哪些棋子還背面朝下，整副棋的構成也是公開的，所以任何一次翻子，你都能列出那個格子上可能翻出的每一枚棋。這讓誠實的基準變得可以計算：',
   'That average is what your decision was worth **before the dice**. Three numbers per flip:':
     '這個平均值，就是你的決策在**擲骰之前**的價值。每次翻子三個數字：',
   'per flip':
@@ -1809,7 +1809,7 @@ const ZH_HANT: Record<string, string> = {
   'meaning':
     '含義',
   'Zero luck is exactly the average tile in the bag, by construction, not by an engine’s opinion.':
-    '運氣為零，恰好就是剩下棋子裡的平均一枚。這是構造出來的事實，不是引擎的看法。',
+    '運氣為零，恰好就是翻出剩下棋子裡的平均一枚。這是由構造保證的事實，不是引擎的看法。',
   'The flip from the intro, enumerated':
     '開頭那次翻子，逐一列舉',
   'Ply 6 of the game this article opens with: I turn the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game.':
@@ -1823,7 +1823,7 @@ const ZH_HANT: Record<string, string> = {
   'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%. **That number is the decision**, and it is what accuracy grades.':
     '同一次翻子的價值從 13%（翻出我自己的將，深陷爭奪之地）到 82%（我自己的兵，在那裡既安全又有用）不等。加權平均是 45%。**這個數字才是決策本身**，準確率打分打的就是它。',
   'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.':
-    '高亮那一行就是實際翻出的結果。實際 82，決策 45，運氣 +37，而這份運氣沒有一點是我掙來的。',
+    '高亮的那一行就是實際翻出的結果。實際 82，決策 45，運氣 +37，而這份運氣沒有一點是我掙來的。',
   'Engines are biased about their own dice':
     '引擎對自己的骰子有偏心',
   'The obvious shortcut is to ask the engine what a flip move is worth and call the difference luck. Our jieqi engine showed why not: it over-values its reveals and plays greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.':
@@ -1831,7 +1831,7 @@ const ZH_HANT: Record<string, string> = {
   'The flip that deals you your color':
     '決定你執哪色的那次翻子',
   'The first flip of the game decides which color you play: whatever ink comes up, that side is yours. The counterfactuals for that flip vary your own army, so the decomposition prices "which side did I get" as luck. That sounds wrong for about ten seconds, and then it sounds exactly right.':
-    '開局第一次翻子決定你執哪種顏色：翻出什麼色，你就執什麼色。這次翻子的反事實會改變你自己的整支軍隊，所以這套拆分把"我分到哪一邊"也計成運氣。這聽上去有大約十秒鐘不對勁，然後就完全對了。',
+    '開局第一次翻子決定你執哪種顏色：翻出什麼色，你就執什麼色。這次翻子的反事實會改變你自己的整支軍隊，所以這套拆分把"我分到哪一邊"也計成運氣。乍聽之下不太對勁，想上十來秒就完全對了。',
   'What the review draws':
     '覆盤畫出什麼',
   'The game from the intro. Solid: the game as played, from Red’s side. Dashed: the same game with every flip at its average. The gap is the luck.':
@@ -1841,17 +1841,17 @@ const ZH_HANT: Record<string, string> = {
   'That is why the dashed line here runs one way while the solid line swings. My luck kept landing in the same direction, flip after flip, so the gap only grew. Scored on decisions alone the bot was winning nearly throughout, and once the dashed line says the game should be completely won it pins at the top.':
     '這也是為什麼圖裡的虛線一路朝一個方向走，而實線上下翻騰。我的運氣一次又一次落在同一側，差距只增不減。只看決策的話，引擎幾乎全程佔優；一旦虛線認定這盤棋照理已經完勝，它就頂在最上沿不動了。',
   'The move list carries the split per move. Every flip gets a dice badge with its luck, next to the eval, and decisions are graded separately: move 3 below is the +37% flip, marked dubious as a choice even though it won me the game.':
-    '著法列表把這份拆分標到每一步上。每次翻子都帶一個骰子標記，寫著它的運氣，就在評估值旁邊；決策則單獨打分：下圖第 3 步就是那次 +37% 的翻子，雖然它幫我贏了棋，作為選擇卻被標為存疑。',
+    '著法列表把這份拆分標到每一步上。每次翻子都帶一個骰子標記，寫著它的運氣，就在評估值旁邊；決策則單獨打分：下圖第 3 步就是那次 +37% 的翻子，雖然它幫我贏了棋，作為選擇卻被標為可疑。',
   'The exhibit game’s move list. Move 3 is the +37% flip, dubious as a decision.':
-    '示例對局的著法列表。第 3 步是那次 +37% 的翻子，作為決策被標為存疑。',
+    '示例對局的著法列表。第 3 步是那次 +37% 的翻子，作為決策被標為可疑。',
   'The review move list: each flip carries a dice badge with its luck percentage beside the eval, and move 3, the +37% flip, is graded ?! as a decision.':
     '覆盤著法列表：每次翻子的評估值旁都有骰子標記標出運氣百分比；第 3 步即 +37% 的那次翻子，作為決策被標為 ?!。',
   'And accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it. The summary for this game reads exactly the way the story went: the bot played clean, I did not, and the result said otherwise.':
-    '而準確率只按決策數字打分，翻得走運不會加分，翻得倒黴也不會扣分。這盤棋的總結和故事本身完全一致：引擎下得乾淨，我沒有，而結果卻說了反話。',
+    '而準確率只按決策數字打分，翻得走運不會加分，翻得倒黴也不會扣分。這盤棋的總結和故事本身完全一致：引擎下得乾淨，我則不然，而結果卻說了反話。',
   'The same game’s luck-stripped summary. dev-testing is me, on my test account.':
     '同一盤棋去除運氣後的總結。同一盤棋去除運氣後的總結。dev-testing 是我，用的是我的測試賬號。 是我，用的是我的測試賬號。',
   'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, dev-testing 89% with nine inaccuracies, two mistakes, and two blunders.':
-    '示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。Banqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。Banqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 89%，九次失準、兩次錯誤、兩次漏著。Banqi 準確率 95%，零失誤；示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。Banqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。Banqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯誤、兩次漏著。 89%，九次失準、兩次錯誤、兩次漏著。',
+    '示例對局去除運氣後的準確率總結：MistyBanqi 準確率 95%，零失誤；dev-testing 89%，九次失準、兩次錯著、兩次漏著。',
   'The receipts':
     '證據',
   'The win I opened with: 156 plies against the bot, and the graph tells on me. At ply 6 the 45% flip came up worth 82%. No decision in the game moved the needle that far.':
@@ -1861,7 +1861,7 @@ const ZH_HANT: Record<string, string> = {
   'Step to ply 6: the flip worth 45% on average that came up worth 82%.':
     '走到第 6 個半回合：平均價值 45% 的那次翻子，翻出了 82%。',
   'It cuts the other way too. In [another game](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446) I lost, one flip at ply 19 cost 34 points of win chance on its own. My decisions that game were ordinary. The old review would have marked that flip as the losing blunder. The new one marks it as the moment the game was decided by something that was not a choice.':
-    '反過來也一樣。在我輸掉的[另一盤棋](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446)裡，第 19 個半回合的一次翻子獨自燒掉了 34 個百分點的勝率。那盤棋我的決策平平。舊式覆盤會把那次翻子記為致敗漏著。新的覆盤把它記為：勝負在此刻被一件不由選擇決定的事定了下來。',
+    '反過來也一樣。在我輸掉的[另一盤棋](/banqi/game/bq_123a6232-6f9f-4677-90ae-a75d5700a446)裡，光是第 19 個半回合的一次翻子，就燒掉了 34 個百分點的勝率。那盤棋我的決策平平。舊式覆盤會把那次翻子記為致敗漏著。新的覆盤把它記為：勝負在此刻被一件不由你選擇的事定了下來。',
   'Fifty-two games of evidence':
     '五十二盤棋的證據',
   'We ran the decomposition over 52 recent human-versus-Misty banqi games from the site.':
@@ -1879,17 +1879,17 @@ const ZH_HANT: Record<string, string> = {
   'For the builders':
     '寫給實現者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
-    '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從兵改標成炮，你就悄悄往棋局裡加了一門炮、拿走了一個兵，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
+    '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從兵改標成炮，你就悄悄往棋局裡加了一枚炮、拿走了一枚兵，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
   'Second, **one bounded scale**. Everything is win chance from the flipping player’s side: it adds up across a game, a flip that ends the game scores exactly 100, 50, or 0, and a flip that walks into mate has no centipawn value anyway. Search budgets are node counts rather than time, so the same game grades identically on any machine.':
     '第二，**一把有界的尺子**。一切都用翻子一方視角的勝率來計：它可以在整盤棋上累加；直接終局的翻子恰好計 100、50 或 0；而一步翻進殺局的棋本來就沒有釐兵值可言。搜尋預算按節點數而非時間計，同一盤棋在任何機器上打出的分都一樣。',
   'Third, **under-count on purpose**. The decision ceiling considers only the engine’s top move, so a better move the engine ranked second is missed and decision loss is only ever understated. The review can fail to flag a mistake. It cannot invent one.':
-    '第三，**故意往少裡算**。決策上限只考慮引擎的第一選擇，被引擎排在第二的更好著法會被漏掉，所以決策損失只會被低估。覆盤可能漏報一個失誤。它不會捏造一個。',
+    '第三，**故意往少裡算**。決策上限只考慮引擎的第一選擇，被引擎排在第二的更好著法會被漏掉，所以決策損失只會被低估。覆盤可能漏報一個失誤，但絕不會憑空捏造一個。',
   'Where the numbers stop':
     '數字到哪裡為止',
   'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem.':
-    '這些勝率出自我們的暗棋引擎在固定搜尋預算下的評估，而這臺引擎同時也是這些對局裡的對手，所以它自己的翻子被打成近乎完美，部分原因只是它同意它自己。看"引擎零損失"時請帶著這一點。人類一側的數字沒有這個問題。',
+    '這些勝率出自我們的暗棋引擎在固定搜尋預算下的評估，而這個引擎同時也是這些對局裡的對手，所以它自己的翻子被打成近乎完美，部分原因不過是它在認同自己的選擇。看到"引擎零損失"時，請記住這一點。人類一側的數字沒有這個問題。',
   'One more honest limit: subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.':
-    '還有一條誠實的邊界：逐點扣除運氣等於把勝率當成線性的，而它並不是。方向可信。小數點後第二位不可信。',
+    '還有一條誠實的邊界：逐點扣除運氣，等於把勝率當成線性的，而它並不是線性的。方向可信。小數點後第二位不可信。',
   'Try it on your own games':
     '拿你自己的棋試試',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
