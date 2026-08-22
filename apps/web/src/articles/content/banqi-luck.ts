@@ -199,8 +199,8 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/skill-vs-luck-summary.png',
-          alt: 'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, brianhliou 89% with nine inaccuracies, two mistakes, and two blunders.',
-          caption: 'The same game’s luck-stripped summary.',
+          alt: 'The luck-stripped accuracy summary for the exhibit game: MistyBanqi 95% accuracy with no mistakes, dev-testing 89% with nine inaccuracies, two mistakes, and two blunders.',
+          caption: 'The same game’s luck-stripped summary. dev-testing is me, on my test account.',
         } as ArticleBlock,
       ],
     },
