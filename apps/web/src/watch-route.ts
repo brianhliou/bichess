@@ -8,6 +8,7 @@ import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
+import { boardAspectForSpec } from './watch-board-aspect.js';
 import './watch-route.css';
 import {
   displayLiveName,
@@ -96,6 +97,17 @@ export function watchRendererKindForGame(feed: WatchFeed, roomId: string): Watch
   return showcaseRendererKindForSpec(channel?.gameSpecIds[0] ?? null);
 }
 
+// The board aspect ratio to reserve for a game while its renderer mounts. Same
+// resolution order as watchRendererKindForGame: the game's own spec, falling
+// back to the channel's primary spec (Featured/Engines carry none, so a
+// cross-variant channel lands on the neutral square until the game is known).
+export function boardAspectForWatchGame(feed: WatchFeed, roomId: string): number {
+  const game = feed.unlocked.find((entry) => entry.roomId === roomId);
+  if (game) return boardAspectForSpec(specIdForShowcaseVariant(game.variant));
+  const channel = feed.channels.find((entry) => entry.id === feed.activeChannel);
+  return boardAspectForSpec(channel?.gameSpecIds[0] ?? null);
+}
+
 const WATCH_ACTIVE_POLL_MS = 15_000;
 const WATCH_IDLE_POLL_MS = 60_000;
 // Featured live-follow poll: matches the homepage viewer's cadence so both
@@ -129,6 +141,40 @@ function liveFirstColor(featured: LiveFeatured): 'red' | 'black' | null {
 
 export function shouldPlayWatchMoveSound(previousPly: number | null, nextPly: number): boolean {
   return previousPly !== null && nextPly === previousPly + 1;
+}
+
+// Ordering guard for user-initiated channel/game switches.
+//
+// Feed + replay chains resolve OUT OF ORDER: a channel seeded by initialReplay
+// settles ~200ms sooner than one that has to fetch its own game payload. Without
+// a guard an EARLIER click can therefore commit AFTER a later one and strand the
+// user on the channel they just left. Reproduced deterministically on prod:
+// Xiangqi then Fog Chess 130ms apart landed on xiangqi.
+//
+// `begin()` takes the newest token; `isCurrent(token)` is false once any later
+// switch has begun. Every await inside a switch is followed by that check, and a
+// superseded switch drops its result instead of painting or committing it.
+export type WatchSwitchGuard = {
+  begin: () => number;
+  isCurrent: (token: number) => boolean;
+};
+
+export function createWatchSwitchGuard(): WatchSwitchGuard {
+  // Tokens start at 1 so the counter's initial value is not a valid token: a
+  // caller holding an unset/zeroed token must read as superseded, never as the
+  // current switch.
+  let latest = 0;
+  return {
+    begin: () => ++latest,
+    isCurrent: (token: number) => token > 0 && token === latest,
+  };
+}
+
+// Whether a cached channel feed is still reusable. Split out so the TTL rule is
+// testable without a fetch: a feed exactly at the TTL boundary is stale, so the
+// cache can never serve something older than the poll cadence.
+export function watchFeedCacheIsFresh(cachedAt: number, now: number, ttlMs: number): boolean {
+  return now - cachedAt < ttlMs;
 }
 
 // Queue thumbnails are secondary content. In particular, Jieqi postgames are
@@ -215,6 +261,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   let replayHandleAutoplay = false;
   let pollTimer: number | null = null;
   let refreshInFlight = false;
+  // Orders user-initiated switches so a slower earlier click can't win. See
+  // createWatchSwitchGuard.
+  const switchGuard = createWatchSwitchGuard();
   // Right-rail interactive move list + shared game-table controls. The move list
   // is rebuilt whenever the active game changes. `watchPly` / `watchMaxPly` track
   // the board's ply so the controls'
@@ -487,7 +536,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       replayHandle?.destroy();
       replayHandle = null;
       replayHandleKind = null;
-      renderWatchReplaySkeleton(watch.replayRoot);
+      // Size the skeleton to the board that is about to mount, so the slot
+      // reserves the right box instead of collapsing to a square and growing
+      // again when the real board lands.
+      renderWatchReplaySkeleton(watch.replayRoot, boardAspectForWatchGame(feed, roomId));
       replayHandle = await mountWatchReplay(
         watch.replayRoot,
         roomId,
@@ -517,8 +569,14 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     nextFeed: WatchFeed | null,
     previousFeed: WatchFeed | null,
     animateNewRows: boolean,
-    options: { urlMode?: 'push' | 'replace' | false } = {},
+    options: { urlMode?: 'push' | 'replace' | false; switchToken?: number } = {},
   ): Promise<void> => {
+    // A user-initiated switch passes its token; if a newer switch started while
+    // this one was awaiting, this render is stale and must not touch the DOM.
+    // The background poll passes none — it always renders the current channel.
+    const superseded = (): boolean =>
+      options.switchToken !== undefined && !switchGuard.isCurrent(options.switchToken);
+    if (superseded()) return;
     const previousRoomIds =
       animateNewRows && previousFeed
         ? new Set(previousFeed.unlocked.map((game) => game.roomId))
@@ -565,11 +623,22 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
     try {
       await loadWatchMainBeforePreviews(
-        () => ensureReplay(nextFeed, nextRoomId, nextFeed.initialReplay, false),
-        () => renderQueue(nextFeed, activeRoomId, previousRoomIds),
+        async () => {
+          // Re-checked here because the channel list + meta card above paint
+          // synchronously, but the mount is the expensive await: a switch that
+          // was superseded during its feed fetch must not also pay for a board
+          // nobody asked for.
+          if (superseded()) return;
+          await ensureReplay(nextFeed, nextRoomId, nextFeed.initialReplay, false);
+        },
+        () => {
+          if (superseded()) return;
+          renderQueue(nextFeed, activeRoomId, previousRoomIds);
+        },
       );
     } catch (err) {
       console.warn(err);
+      if (superseded()) return;
       activeRoomId = priorRoomId;
       if (!replayHandle) renderWatchEmptyState(watch.replayRoot, null);
       renderWatchActiveGame(watch, nextFeed, activeRoomId);
@@ -577,6 +646,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       return;
     }
 
+    // The commit point. A superseded switch stops here rather than writing its
+    // channel into currentFeed + the URL, which is the bug users saw: click B,
+    // wait, land back on A because A's slower chain finished last.
+    if (superseded()) return;
     currentFeed = nextFeed;
     if (options.urlMode) {
       syncWatchUrl(options.urlMode, nextFeed.activeChannel, activeRoomId);
@@ -596,7 +669,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (refreshInFlight) return;
     refreshInFlight = true;
     try {
-      const nextFeed = await fetchWatchFeed();
+      // The poll is the cache's refresh mechanism, so it always goes to the
+      // network — serving it from the cache would freeze the rail at whatever
+      // the last click fetched.
+      const nextFeed = await fetchWatchFeed(undefined, { force: true });
       const previousFeed = currentFeed;
       await renderFeed(nextFeed, previousFeed, true);
     } catch (err) {
@@ -635,13 +711,29 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (roomId) void switchWatchGame(roomId, 'push');
   };
 
+  // Warm the feed cache on press, before the click resolves. The feed fetch is
+  // the first hop of the switch chain and the only one that can start without
+  // knowing anything else, so paying it ~100ms early (the press-to-release gap)
+  // takes a whole round trip off the visible switch. Cache-only: it never
+  // renders, so a press the user aborts costs one request and no UI change.
+  const handleNavigationPrefetch = (event: Event): void => {
+    const target = event.target as Element | null;
+    const link = target?.closest<HTMLAnchorElement>('a.watch-channel-link');
+    if (!link) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin || url.pathname !== '/watch') return;
+    void prefetchWatchFeed(url.searchParams.get('channel'));
+  };
+
   const switchWatchChannel = async (
     channelId: string | null,
     urlMode: 'push' | 'replace',
   ): Promise<void> => {
+    const token = switchGuard.begin();
     try {
       const nextFeed = await fetchWatchFeed(channelId);
-      await renderFeed(nextFeed, currentFeed, true, { urlMode });
+      if (!switchGuard.isCurrent(token)) return;
+      await renderFeed(nextFeed, currentFeed, true, { urlMode, switchToken: token });
     } catch (err) {
       console.warn(err);
     }
@@ -657,6 +749,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       syncWatchUrl(urlMode, feed.activeChannel, activeRoomId);
       return;
     }
+    // Shares the channel switch's ordering token: a queue-row click and a
+    // channel click compete for the same board, so the newest press wins
+    // regardless of which kind it was.
+    const token = switchGuard.begin();
     const previousRoomId = activeRoomId;
     activeRoomId = roomId;
     selectedRoomByChannel.set(feed.activeChannel, roomId);
@@ -664,14 +760,22 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     try {
       // User-initiated: play the clicked game once (VOD semantics, not broadcast).
       await loadWatchMainBeforePreviews(
-        () => ensureReplay(feed, roomId, feed.initialReplay, true),
+        async () => {
+          if (!switchGuard.isCurrent(token)) return;
+          await ensureReplay(feed, roomId, feed.initialReplay, true);
+        },
         // The rail swaps rather than restyles after the center board is ready:
         // the promoted game leaves it and the outgoing one takes a slot.
-        () => renderQueue(feed, activeRoomId, null),
+        () => {
+          if (!switchGuard.isCurrent(token)) return;
+          renderQueue(feed, activeRoomId, null);
+        },
       );
+      if (!switchGuard.isCurrent(token)) return;
       syncWatchUrl(urlMode, feed.activeChannel, activeRoomId);
     } catch (err) {
       console.warn(err);
+      if (!switchGuard.isCurrent(token)) return;
       activeRoomId = previousRoomId;
       renderWatchActiveGame(watch, feed, activeRoomId);
       renderQueue(feed, activeRoomId, null);
@@ -843,6 +947,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   });
   window.addEventListener('popstate', handlePopState, { signal: abortController.signal });
   watch.el.addEventListener('click', handleNavigationClick, { signal: abortController.signal });
+  // pointerdown (not mouseenter): hover-prefetching ten rail channels would fire
+  // ten feed requests for a cursor crossing the rail. A press is an actual
+  // intent signal and still lands ~100ms before the click.
+  watch.el.addEventListener('pointerdown', handleNavigationPrefetch, {
+    signal: abortController.signal,
+  });
   abortController.signal.addEventListener('abort', () => {
     if (livePollTimer !== null) window.clearTimeout(livePollTimer);
     dropLiveBoard();
@@ -971,12 +1081,76 @@ function makeWatchEventLoader(seed?: WatchInitialReplay): (roomId: string) => Pr
   };
 }
 
-async function fetchWatchFeed(channelOverride?: string | null): Promise<WatchFeed> {
-  const channel = channelOverride ?? watchChannelFromLocation();
+// How long a fetched channel feed stays reusable. Sized under the ACTIVE poll
+// (15s) so a cached feed can never be older than the refresh cadence the page
+// already accepts, and long enough that browsing the rail — the click-through
+// pattern this cache exists for — reuses rather than refetches. Completed-game
+// feeds are the only thing cached; the live board has its own 4s poll and never
+// reads this.
+export const WATCH_FEED_CACHE_MS = 12_000;
+
+type CachedWatchFeed = { at: number; feed: WatchFeed };
+
+// Per-channel feed cache + in-flight dedupe, keyed by the resolved channel id.
+// The dedupe half matters as much as the cache: a pointerdown prefetch and the
+// click it precedes would otherwise fire the same request twice.
+const watchFeedCache = new Map<string, CachedWatchFeed>();
+const watchFeedInFlight = new Map<string, Promise<WatchFeed>>();
+
+function watchFeedCacheKey(channel: string | null): string {
+  return channel ?? '';
+}
+
+// Exported for tests and for the poll, which must always hit the network.
+export function invalidateWatchFeedCache(): void {
+  watchFeedCache.clear();
+}
+
+async function requestWatchFeed(channel: string | null): Promise<WatchFeed> {
   const url = channel ? `/api/watch?channel=${encodeURIComponent(channel)}` : '/api/watch';
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`failed to load watch feed: ${resp.status}`);
   return (await resp.json()) as WatchFeed;
+}
+
+// One fetch per (channel, in-flight window), with the result cached for
+// WATCH_FEED_CACHE_MS. `force` bypasses the cache but still joins an in-flight
+// request — the poll uses it so a refresh is never served a stale body.
+async function fetchWatchFeed(
+  channelOverride?: string | null,
+  options: { force?: boolean } = {},
+): Promise<WatchFeed> {
+  const channel = channelOverride ?? watchChannelFromLocation();
+  const key = watchFeedCacheKey(channel);
+  const now = Date.now();
+  if (!options.force) {
+    const cached = watchFeedCache.get(key);
+    if (cached && now - cached.at < WATCH_FEED_CACHE_MS) return cached.feed;
+  }
+  const inFlight = watchFeedInFlight.get(key);
+  if (inFlight) return await inFlight;
+
+  const pending = requestWatchFeed(channel)
+    .then((feed) => {
+      watchFeedCache.set(key, { at: Date.now(), feed });
+      return feed;
+    })
+    .finally(() => {
+      watchFeedInFlight.delete(key);
+    });
+  watchFeedInFlight.set(key, pending);
+  return await pending;
+}
+
+// Warm the cache without rendering. Errors are swallowed: a failed prefetch must
+// be indistinguishable from never having prefetched, and the click that follows
+// will surface the real failure through its own path.
+async function prefetchWatchFeed(channelOverride?: string | null): Promise<void> {
+  try {
+    await fetchWatchFeed(channelOverride);
+  } catch {
+    // Prefetch is best-effort by design.
+  }
 }
 
 async function apiEventLoader(roomId: string): Promise<GameEvent[]> {

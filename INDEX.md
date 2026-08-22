@@ -254,6 +254,7 @@ Edit task → find file → open only that file.
 | `room-lifecycle-audit.ts` | Lifecycle audit/event helpers |
 | `seat-auth.ts` | Seat-authority verification helpers shared by chess and non-chess room flows |
 | `watch-channels.ts` | Public watch-channel definitions and lookup |
+| `watch-rail-cache.ts` | Short-lived process-local cache for the `/watch` channel rail (per-channel counts + headline player), so a channel click recomputes only the ACTIVE channel instead of every registered channel. The active row is always merged in fresh |
 | `watch-live.ts` | Mistboard TV live election: scans live room maps for open-visibility playing games, elects a featured game per channel + cross-channel `top` (PvP over PvE, hysteresis), and serves each tenant's registered live payload builder. Fail-closed on fog/hidden-identity and on channels without a builder |
 | `dark-chess-tenant.ts` | Dark chess `VariantTenant` (flagship rules + Model A visibility on the Layer-3 contract). UNREGISTERED for live rooms (legacy UUID rooms stay on `room-manager`); visibility DELEGATES to `payloads.ts` so Model A keeps one redaction point. Equivalence pinned by `dark-chess-tenant.test.ts` + `dark-chess-golden-wire.test.ts` |
 | `dark-chess-golden-wire.test.ts` | Golden wire-parity suite pinning dark-chess tenant per-seat snapshot/event payloads vs the legacy live stack. Regenerate only for intentional wire changes (`MISTBOARD_GOLDEN_RECORD=1`) |
@@ -552,6 +553,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `home-puzzle-widget.ts` | Homepage daily-puzzle widget: renders the server-selected daily Mini/Drop Mini Xiangqi puzzle as a small interactive board on the landing page |
 | `landing-showcase.ts` | Homepage replay showcase catalog and hero POV selection for the landing replay loop |
 | `watch-route.ts` | `/watch` route mount: watch feed fetch/polling, replay mounting, status/empty state, channel links, and replay queue rendering. Prioritizes the center replay before starting its two queue previews. Loads `watch-route.css` |
+| `watch-board-aspect.ts` | Per-variant board display ratios used to pre-size the renderer-swap skeleton, so a `/watch` channel switch reserves the incoming board's box instead of shifting layout twice. Cosmetic only; unknown specs fall back to a neutral square |
 | `watch-route.css` | `/watch` route styles, including watch replay sizing, status, channel links, empty state, queue, and responsive route layout |
 | `xiangqi-broadcast.ts` | Public xiangqi tournament broadcast routes: index, tour, round, and board replay pages fed by `/api/xiangqi/broadcasts/*`; subscribes to SSE snapshot streams for round/board live updates |
 | `xiangqi-broadcast.css` | Xiangqi broadcast route layout: tournament index/status rows, round rows, board replay controls, move list, and responsive viewer polish |
