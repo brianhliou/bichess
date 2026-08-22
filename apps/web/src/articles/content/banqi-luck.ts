@@ -2,9 +2,11 @@ import type { Article, ArticleBlock } from '../types.js';
 import { BANQI_LUCK_CHART_SVG, BANQI_LUCK_THUMBNAIL_SVG } from './banqi-luck-chart.js';
 import { BANQI_LUCK_FLIP_POOL, BANQI_LUCK_GAME } from './banqi-luck-game.js';
 
-// The worked-example table: every tile the ply-6 flip could have been. Rows are
-// generated (win% at decision budget, sorted best-first); the actual tile row
-// gets highlighted.
+// The decision-vs-luck methodology essay. Every measured number in the prose
+// comes from the offline mining run recorded in docs-private/luck-article/
+// (FINDINGS.md holds the per-game data; the chart + exhibit game files beside
+// this one are generated from the same run). Exhibit games are real prod games
+// on brianhliou's accounts.
 const FLIP_POOL_ROWS = BANQI_LUCK_FLIP_POOL.rows.map((row) => [
   `${row.color} ${row.role}`,
   `×${row.count}`,
@@ -12,11 +14,6 @@ const FLIP_POOL_ROWS = BANQI_LUCK_FLIP_POOL.rows.map((row) => [
 ]);
 const FLIP_POOL_ACTUAL_ROW = BANQI_LUCK_FLIP_POOL.rows.findIndex((row) => row.actual);
 
-// The decision-vs-luck methodology essay. Every measured number in the prose
-// comes from the offline mining run recorded in docs-private/luck-article/
-// (FINDINGS.md holds the per-game data; the chart + exhibit game files beside
-// this one are generated from the same run). Exhibit games are real prod games
-// on brianhliou's accounts.
 export const banqiLuckArticle: Article = {
   slug: 'banqi-luck',
   kind: 'article',
@@ -34,7 +31,12 @@ export const banqiLuckArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'I beat my own bot at banqi and felt good about it for roughly a minute, which is how long it took to open the game review. The review splits every flip into the decision I made and the tile I got, and it says the tiles did the work. Across the game my flips came out 76 points of win chance better than average. The bot’s came out 12 points worse. I also made the worse decisions, by a wide margin. I won anyway.',
+        'I beat my own bot at banqi and felt good about it for roughly a minute, which is how long it took to open the game review. The review splits every flip into the decision I made and the tile I got, and it says the tiles did the work.',
+    },
+    {
+      kind: 'paragraph',
+      text:
+        'My flips came out **76 points of win chance better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.',
     },
     {
       kind: 'paragraph',
@@ -48,12 +50,17 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. A chess-style review grades the swing of the whole move, so when you flip the corner tile and it comes up the enemy general, the review calls it a blunder. It was a bad tile, not a bad decision. Grading the two together tells you nothing about your play.',
+            'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is.',
         },
         {
           kind: 'paragraph',
           text:
-            'This is why banqi reviews on Mistboard show no centipawn loss. Average centipawn loss cannot be separated from the tiles, so next to numbers that can be, it reads as noise.',
+            'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.',
         },
       ],
     },
@@ -63,7 +70,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Backgammon software prices every roll against the average roll and reports a luck-adjusted result, so a match report can tell you that you played better and lost. GnuBG and eXtreme Gammon both do it; serious players treat the luck-adjusted number as the real score. Poker has the same idea in all-in EV. Chess never built any of this because chess has no dice. Banqi is a chess-family game with dice in it, and it inherited chess’s tools, which have no luck column.',
+            'Backgammon software prices every roll against the average roll and reports a luck-adjusted result, so a match report can tell you that you played better and lost. GnuBG and eXtreme Gammon both do it. Poker has the same idea in all-in EV.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Chess never built any of this because chess has no dice. Banqi is a chess-family game with dice in it, and it inherited chess’s tools, which have no luck column.',
         },
       ],
     },
@@ -73,7 +85,17 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Banqi’s chance is countable. Both players can see which tiles are still face down, and the full set of pieces is known, so at any flip you can list every tile that square could be. That makes the honest baseline computable: take the flip you played, substitute each possible tile in turn, play the position out, and average the results weighted by count. That average is what your decision was worth before the dice, and it splits each flip into three numbers.',
+            'Banqi’s chance is countable. Both players can see which tiles are still face down, and the full set of pieces is known, so at any flip you can list every tile that square could be. That makes the honest baseline computable:',
+        },
+        {
+          kind: 'code',
+          text:
+            'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'That average is what your decision was worth **before the dice**. Three numbers per flip:',
         },
         {
           kind: 'table',
@@ -85,14 +107,20 @@ export const banqiLuckArticle: Article = {
           ],
         },
         {
-          kind: 'paragraph',
+          kind: 'code',
           text:
-            'Decision loss is best minus played. Luck is realized minus played. Zero luck is exactly the average tile in the bag, by construction, not by an engine’s opinion.',
+            'decision loss = best - played      (skill, always >= 0)\nluck          = realized - played  (the dice, signed)',
         },
         {
           kind: 'paragraph',
           text:
-            'Here is that computation for one real flip, ply 6 of the game this article opens with. Black turns the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game:',
+            'Zero luck is exactly the average tile in the bag, by construction, not by an engine’s opinion.',
+        },
+        { kind: 'sub-heading', text: 'The flip from the intro, enumerated' },
+        {
+          kind: 'paragraph',
+          text:
+            'Ply 6 of the game this article opens with: Black turns the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game.',
         },
         {
           kind: 'table',
@@ -103,17 +131,24 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The same flip is worth anywhere from 13% (turning up my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%: that number is the decision, and it is what accuracy grades. The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.',
+            'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is **45%: that number is the decision**, and it is what accuracy grades.',
         },
+        {
+          kind: 'paragraph',
+          text:
+            'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.',
+        },
+        { kind: 'sub-heading', text: 'Why not just ask the engine' },
         {
           kind: 'paragraph',
           text:
             'The obvious shortcut is to ask the engine what the flip move is worth and call the difference luck, but engines are biased about their own dice. Our jieqi engine over-values its reveals, which makes it play greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.',
         },
+        { kind: 'sub-heading', text: 'The flip that deals you your color' },
         {
           kind: 'paragraph',
           text:
-            'Banqi adds one strange case. The first flip of the game decides which color you play: whatever ink comes up, that side is yours. The counterfactuals for that flip vary your own army, so the decomposition prices "which side did I get" as luck. That sounds wrong for about ten seconds, and then it sounds exactly right.',
+            'The first flip of the game decides which color you play: whatever ink comes up, that side is yours. The counterfactuals for that flip vary your own army, so the decomposition prices "which side did I get" as luck. That sounds wrong for about ten seconds, and then it sounds exactly right.',
         },
       ],
     },
@@ -129,7 +164,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The advantage graph gets a second line. The solid line is the game as it happened. The dashed line subtracts your accumulated luck: the trajectory if every flip had come out average. The shaded band between them is the luck, building up or draining away as the game runs. Accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it.',
+            'The advantage graph gets a second line. The solid line is the game as it happened. The dashed line subtracts your accumulated luck: the trajectory if every flip had come out average. The shaded band between them is the luck, building up or draining away as the game runs.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Accuracy is graded on the decision numbers only, so a lucky flip does not improve it and an unlucky one does not hurt it.',
         },
       ],
     },
@@ -139,7 +179,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The win I opened with: 156 plies against the bot, and the graph tells on me. At ply 6 I flipped a tile worth 45% on average and it came up worth 82%. No decision in the game moved the needle that far. My flips ran plus 76 in total, the bot’s minus 12, and my flip decisions gave away 74 points against the bot’s zero. The dashed line has me losing most of the game. The solid line has me winning. The bag overruled the play. The whole game is [open on Mistboard](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9), replay below.',
+            'The win I opened with: 156 plies against the bot, and the graph tells on me. At ply 6 the 45% flip came up worth 82%. No decision in the game moved the needle that far.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'In total: my flips **plus 76**, the bot’s minus 12, and my flip decisions gave away 74 points against the bot’s zero. The dashed line has me losing most of the game. The solid line has me winning. The bag overruled the play. The whole game is [open on Mistboard](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9), replay below.',
         },
         {
           kind: 'banqi-replay',
@@ -168,7 +213,22 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'We ran the decomposition over 52 recent human-versus-Misty banqi games from the site: humans 14 wins, 33 losses, 5 draws. In the wins, net luck ran plus 28 points toward the human on average. In the losses, minus 9. The bot is stronger, and beating it has usually taken help from the bag. If you have beaten it, the review will now tell you how much help you got.',
+            'We ran the decomposition over 52 recent human-versus-Misty banqi games from the site.',
+        },
+        {
+          kind: 'table',
+          headers: ['across 52 human vs Misty games', 'value'],
+          rows: [
+            ['human record', '14 wins, 33 losses, 5 draws'],
+            ['net luck toward the human, in the wins', '+28 points on average'],
+            ['net luck toward the human, in the losses', '−9 points on average'],
+          ],
+          highlightRows: [1],
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The bot is stronger, and beating it has usually taken help from the bag. If you have beaten it, the review will now tell you how much help you got.',
         },
       ],
     },
@@ -198,7 +258,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Search budgets are node counts, not time, so the same game grades identically on a fast laptop and a loaded server, and the realized value is one term of the same averaged search rather than a separate deeper query, so a flip is never graded by two numbers from different depths. The decision ceiling considers only the engine’s top move, on purpose: a better move the engine ranked second is missed, which means decision loss is only ever under-counted. The review can fail to flag a mistake. It cannot invent one.',
+            'Search budgets are node counts, not time, so the same game grades identically on a fast laptop and a loaded server. The realized value is one term of the same averaged search rather than a separate deeper query, so a flip is never graded by two numbers from different depths.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The decision ceiling considers only the engine’s top move, on purpose: a better move the engine ranked second is missed, which means decision loss is only ever under-counted. The review can fail to flag a mistake. It cannot invent one.',
         },
       ],
     },
@@ -208,7 +273,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem. One more honest limit: subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.',
+            'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'One more honest limit: subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.',
         },
       ],
     },
@@ -218,7 +288,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you. Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in one afternoon.',
+            'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in one afternoon.',
         },
         {
           kind: 'cta',
