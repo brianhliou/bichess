@@ -18,11 +18,7 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 // if a non-published article is missing here or a published one is still
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
-const UNPUBLISHED_ARTICLE_SLUGS = new Set([
-  'fog-openings',
-  'fog-chess-concepts',
-  'shogi',
-]);
+const UNPUBLISHED_ARTICLE_SLUGS = new Set(['fog-openings', 'fog-chess-concepts', 'shogi']);
 
 export function articleIsUnpublished(slug: string): boolean {
   return UNPUBLISHED_ARTICLE_SLUGS.has(slug);

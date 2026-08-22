@@ -38,8 +38,8 @@ import {
   variantForId,
 } from '@mistboard/game';
 import { Resvg } from '@resvg/resvg-js';
-import * as persistence from './persistence.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
+import * as persistence from './persistence.js';
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
@@ -723,7 +723,6 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
     `</svg>`,
   ].join('');
 }
-
 
 // The skill-vs-luck card is the article's thesis in one image: the exhibit
 // game as played against the same game with every flip at its average tile.
