@@ -881,6 +881,43 @@ const ZH_HANS: Record<string, string> = {
     '作为目标时，炮排在这里：马以上可吃，卒不可吃。',
   'CAPTURE RANK LADDER': '吃子等级序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
+  'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
+    '对这个格子可能是的每一枚棋：\n    把那枚棋放到格子下\n    走这步翻子\n    评估局面\n按数量加权，取平均',
+  'decision loss = best - played      (skill, always >= 0)\nluck          = realized - played  (the dice, signed)':
+    '决策损失 decision loss = best - played      （实力，恒 >= 0）\n运气　　 luck          = realized - played  （骰子，带符号）',
+  'BEFORE: THE G3 TILE, FACE DOWN': '翻子前：g3 背面朝下',
+  'AFTER: MY OWN SOLDIER': '翻子后：我自己的卒',
+  'as played': '实际对局',
+  'if every flip ran average': '每次翻子按平均',
+  'accumulated luck': '累积运气',
+  'the +37 flip': '+37 的那次翻子',
+  'Red better': '红优',
+  'Black better': '黑优',
+  'the average value of the flip you chose': '你所选翻子的平均价值',
+  'the same average for the best move available': '当前最佳着法的同一种平均',
+  'what your actual tile produced': '实际翻出的棋子带来的结果',
+  'black soldier': '黑卒',
+  'red soldier': '红卒',
+  'red chariot': '红车',
+  'red elephant': '红象',
+  'red advisor': '红士',
+  'red cannon': '红炮',
+  'black horse': '黑马',
+  'black chariot': '黑车',
+  'black elephant': '黑象',
+  'black advisor': '黑士',
+  'black cannon': '黑炮',
+  'black general': '黑将',
+  'human record': '人类战绩',
+  '14 wins, 33 losses, 5 draws': '14 胜 33 负 5 和',
+  'net luck toward the human, in the wins': '胜局中偏向人类的净运气',
+  '+28 points on average': '平均 +28 个百分点',
+  'net luck toward the human, in the losses': '负局中偏向人类的净运气',
+  '−9 points on average': '平均 −9 个百分点',
+  'The game from the intro, live on Mistboard': '开头那盘棋，在 Mistboard 上公开',
+  'Black wins · 156 plies · net luck +88 to Black': '黑胜 · 156 个半回合 · 净运气 +88 偏向黑方',
+  'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
+    '红方无棋可走，黑方获胜。决策数字说红方下出的棋更好；棋子们说了反话，从第 6 个半回合的那次翻子开始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的实力和运气分开',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
     '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
@@ -919,7 +956,7 @@ const ZH_HANS: Record<string, string> = {
   count: '数量',
   'win% for Black': '黑方胜率',
   'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%. **That number is the decision**, and it is what accuracy grades.':
-    '同一次翻子的价值从 13%（翻出我自己的将，深陷争夺之地）到 82%（我自己的兵，在那里既安全又有用）不等。加权平均是 45%。**这个数字才是决策本身**，准确率打分打的就是它。',
+    '同一次翻子的价值从 13%（翻出我自己的将，深陷争夺之地）到 82%（我自己的卒，在那里既安全又有用）不等。加权平均是 45%。**这个数字才是决策本身**，准确率打分打的就是它。',
   'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.':
     '高亮的那一行就是实际翻出的结果。实际 82，决策 45，运气 +37，而这份运气没有一点是我挣来的。',
   'Engines are biased about their own dice': '引擎对自己的骰子有偏心',
@@ -968,7 +1005,7 @@ const ZH_HANS: Record<string, string> = {
     '揭棋用同一套办法，只是抽取的范围不同。揭棋的揭子从你自己剩余的暗子里抽，所以你知道颜色，不知道身份。暗棋的棋子对双方都是暗的，连颜色也是。范围不同，算法相同，斗兽棋的翻棋版本（翻翻棋）是第三家。它们每一个都有那条虚线。',
   'For the builders': '写给实现者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
-    '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从兵改标成炮，你就悄悄往棋局里加了一枚炮、拿走了一枚兵，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
+    '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从卒改标成炮，你就悄悄往棋局里加了一枚炮、拿走了一枚卒，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
   'Second, **one bounded scale**. Everything is win chance from the flipping player’s side: it adds up across a game, a flip that ends the game scores exactly 100, 50, or 0, and a flip that walks into mate has no centipawn value anyway. Search budgets are node counts rather than time, so the same game grades identically on any machine.':
     '第二，**一把有界的尺子**。一切都用翻子一方视角的胜率来计：它可以在整盘棋上累加；直接终局的翻子恰好计 100、50 或 0；而一步翻进杀局的棋本来就没有厘兵值可言。搜索预算按节点数而非时间计，同一盘棋在任何机器上打出的分都一样。',
   'Third, **under-count on purpose**. The decision ceiling considers only the engine’s top move, so a better move the engine ranked second is missed and decision loss is only ever understated. The review can fail to flag a mistake. It cannot invent one.':
@@ -1749,6 +1786,43 @@ const ZH_HANT: Record<string, string> = {
     '作為目標時，砲排在這裡：馬以上可吃，卒不可吃。',
   'CAPTURE RANK LADDER': '吃子等級序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
+  'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
+    '對這個格子可能是的每一枚棋：\n    把那枚棋放到格子下\n    走這步翻子\n    評估局面\n按數量加權，取平均',
+  'decision loss = best - played      (skill, always >= 0)\nluck          = realized - played  (the dice, signed)':
+    '決策損失 decision loss = best - played      （實力，恆 >= 0）\n運氣　　 luck          = realized - played  （骰子，帶符號）',
+  'BEFORE: THE G3 TILE, FACE DOWN': '翻子前：g3 背面朝下',
+  'AFTER: MY OWN SOLDIER': '翻子後：我自己的卒',
+  'as played': '實際對局',
+  'if every flip ran average': '每次翻子按平均',
+  'accumulated luck': '累積運氣',
+  'the +37 flip': '+37 的那次翻子',
+  'Red better': '紅優',
+  'Black better': '黑優',
+  'the average value of the flip you chose': '你所選翻子的平均價值',
+  'the same average for the best move available': '當前最佳著法的同一種平均',
+  'what your actual tile produced': '實際翻出的棋子帶來的結果',
+  'black soldier': '黑卒',
+  'red soldier': '紅卒',
+  'red chariot': '紅車',
+  'red elephant': '紅象',
+  'red advisor': '紅士',
+  'red cannon': '紅炮',
+  'black horse': '黑馬',
+  'black chariot': '黑車',
+  'black elephant': '黑象',
+  'black advisor': '黑士',
+  'black cannon': '黑炮',
+  'black general': '黑將',
+  'human record': '人類戰績',
+  '14 wins, 33 losses, 5 draws': '14 勝 33 負 5 和',
+  'net luck toward the human, in the wins': '勝局中偏向人類的淨運氣',
+  '+28 points on average': '平均 +28 個百分點',
+  'net luck toward the human, in the losses': '負局中偏向人類的淨運氣',
+  '−9 points on average': '平均 −9 個百分點',
+  'The game from the intro, live on Mistboard': '開頭那盤棋，在 Mistboard 上公開',
+  'Black wins · 156 plies · net luck +88 to Black': '黑勝 · 156 個半回合 · 淨運氣 +88 偏向黑方',
+  'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
+    '紅方無棋可走，黑方獲勝。決策數字說紅方下出的棋更好；棋子們說了反話，從第 6 個半回合的那次翻子開始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的實力和運氣分開',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
     '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
@@ -1787,7 +1861,7 @@ const ZH_HANT: Record<string, string> = {
   count: '數量',
   'win% for Black': '黑方勝率',
   'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%. **That number is the decision**, and it is what accuracy grades.':
-    '同一次翻子的價值從 13%（翻出我自己的將，深陷爭奪之地）到 82%（我自己的兵，在那裡既安全又有用）不等。加權平均是 45%。**這個數字才是決策本身**，準確率打分打的就是它。',
+    '同一次翻子的價值從 13%（翻出我自己的將，深陷爭奪之地）到 82%（我自己的卒，在那裡既安全又有用）不等。加權平均是 45%。**這個數字才是決策本身**，準確率打分打的就是它。',
   'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.':
     '高亮的那一行就是實際翻出的結果。實際 82，決策 45，運氣 +37，而這份運氣沒有一點是我掙來的。',
   'Engines are biased about their own dice': '引擎對自己的骰子有偏心',
@@ -1836,7 +1910,7 @@ const ZH_HANT: Record<string, string> = {
     '揭棋用同一套辦法，只是抽取的範圍不同。揭棋的揭子從你自己剩餘的暗子裡抽，所以你知道顏色，不知道身份。暗棋的棋子對雙方都是暗的，連顏色也是。範圍不同，演算法相同，鬥獸棋的翻棋版本（翻翻棋）是第三家。它們每一個都有那條虛線。',
   'For the builders': '寫給實現者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
-    '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從兵改標成炮，你就悄悄往棋局裡加了一枚炮、拿走了一枚兵，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
+    '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從卒改標成炮，你就悄悄往棋局裡加了一枚炮、拿走了一枚卒，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
   'Second, **one bounded scale**. Everything is win chance from the flipping player’s side: it adds up across a game, a flip that ends the game scores exactly 100, 50, or 0, and a flip that walks into mate has no centipawn value anyway. Search budgets are node counts rather than time, so the same game grades identically on any machine.':
     '第二，**一把有界的尺子**。一切都用翻子一方視角的勝率來計：它可以在整盤棋上累加；直接終局的翻子恰好計 100、50 或 0；而一步翻進殺局的棋本來就沒有釐兵值可言。搜尋預算按節點數而非時間計，同一盤棋在任何機器上打出的分都一樣。',
   'Third, **under-count on purpose**. The decision ceiling considers only the engine’s top move, so a better move the engine ranked second is missed and decision loss is only ever understated. The review can fail to flag a mistake. It cannot invent one.':
