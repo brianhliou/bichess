@@ -1,4 +1,5 @@
 import type { Article, ArticleBlock } from '../types.js';
+import { BANQI_LUCK_FLIP_AFTER, BANQI_LUCK_FLIP_BEFORE } from '../banqi-luck-diagrams.js';
 import { BANQI_LUCK_CHART_SVG, BANQI_LUCK_THUMBNAIL_SVG } from './banqi-luck-chart.js';
 import { BANQI_LUCK_FLIP_POOL, BANQI_LUCK_GAME } from './banqi-luck-game.js';
 
@@ -15,13 +16,13 @@ const FLIP_POOL_ROWS = BANQI_LUCK_FLIP_POOL.rows.map((row) => [
 const FLIP_POOL_ACTUAL_ROW = BANQI_LUCK_FLIP_POOL.rows.findIndex((row) => row.actual);
 
 export const banqiLuckArticle: Article = {
-  slug: 'banqi-luck',
+  slug: 'skill-vs-luck',
   kind: 'article',
   publisher: 'mistboard',
-  title: 'Separating Skill from Luck in Banqi',
-  seoTitle: 'Banqi (Chinese Dark Chess) Game Review: Separating Skill from Luck',
+  title: 'Separating Skill from Luck in Flip Games',
+  seoTitle: 'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck',
   summary:
-    'Half the moves in a banqi game are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
+    'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
   status: 'draft',
   publishedAt: '2026-08-21',
   audience:
@@ -36,8 +37,14 @@ export const banqiLuckArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'My flips came out **76 points of win chance better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.',
+        'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.',
     },
+    {
+      kind: 'svg-row',
+      items: [{ svg: BANQI_LUCK_FLIP_BEFORE }, { svg: BANQI_LUCK_FLIP_AFTER }],
+      caption:
+        'The flip that decided it, from the real game. One face-down tile on g3, twelve possible pieces. This article is about pricing that moment honestly.',
+    } as ArticleBlock,
     {
       kind: 'paragraph',
       text: 'Most game review tools cannot say any of that.',
@@ -50,7 +57,7 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is.',
+            'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. Jieqi’s reveals and flip jungle’s flips are the same problem wearing different pieces; banqi is the worked example throughout because its bag is the purest.',
         },
         {
           kind: 'paragraph',
@@ -164,7 +171,12 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The advantage graph gets a second line. Solid is the game as it happened. Dashed subtracts your accumulated luck: the trajectory if every flip had come out average. Between them, shaded, is the luck itself, building up or draining away as the game runs.',
+            'The advantage graph gets a second line. Solid is the game as it happened. Dashed is the same game with every flip scored at its average tile. Between flips the two lines move together, because ordinary moves affect both versions equally. At each flip the gap changes by exactly that flip’s luck, so by the end the gap is the whole game’s luck added up.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'That is why the dashed line here runs one way while the solid line swings. My luck kept landing in the same direction, flip after flip, so the gap only grew. Scored on decisions alone the bot was winning nearly throughout, and once the dashed line says the game should be completely won it pins at the top.',
         },
         {
           kind: 'paragraph',
@@ -248,22 +260,17 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The subtle bug in this construction is the counterfactual itself. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier: the global piece counts change, the position rebalances by about two pieces, and the pool average inflates. The implementation swaps instead. The counterfactual tile trades places with a face-down square that really holds one, so the hidden multiset stays exactly the game’s multiset and only the location moves.',
+            'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.',
         },
         {
           kind: 'paragraph',
           text:
-            'Everything is win% from the flipping player’s point of view. A post-flip position has the opponent to move, so the engine’s side-to-move score gets negated, and a flip that ends the game outright scores exactly 100, 50, or 0 with no engine call. Win% rather than centipawns because luck has to be summable across a whole game and bounded at both ends, and because a flip that walks into mate has no sensible centipawn value.',
+            'Second, **one bounded scale**. Everything is win chance from the flipping player’s side: it adds up across a game, a flip that ends the game scores exactly 100, 50, or 0, and a flip that walks into mate has no centipawn value anyway. Search budgets are node counts rather than time, so the same game grades identically on any machine.',
         },
         {
           kind: 'paragraph',
           text:
-            'Search budgets are node counts, not time, so the same game grades identically on a fast laptop and a loaded server. The realized value is one term of the same averaged search rather than a separate deeper query, so a flip is never graded by two numbers from different depths.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The decision ceiling considers only the engine’s top move, on purpose: a better move the engine ranked second is missed, which means decision loss is only ever under-counted. The review can fail to flag a mistake. It cannot invent one.',
+            'Third, **under-count on purpose**. The decision ceiling considers only the engine’s top move, so a better move the engine ranked second is missed and decision loss is only ever understated. The review can fail to flag a mistake. It cannot invent one.',
         },
       ],
     },

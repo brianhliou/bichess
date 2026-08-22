@@ -22,7 +22,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'dark-chess-concepts',
   'shogi',
-  'banqi-luck',
+  'skill-vs-luck',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -175,11 +175,11 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
   },
-  'banqi-luck': {
-    title: 'Separating Skill from Luck in Banqi',
+  'skill-vs-luck': {
+    title: 'Separating Skill from Luck in Flip Games',
     kind: 'article',
     description:
-      'Half the moves in a banqi game are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
+      'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
   },
   jungle: {
     title: 'Jungle Chess Rules (Dou Shou Qi, Animal Chess)',

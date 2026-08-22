@@ -2855,7 +2855,7 @@ function banqiMoveFromToken(token: string): BanqiMove | null {
   return { from: match[1] as BanqiSquare, to: match[2] as BanqiSquare };
 }
 
-function banqiReplayViewAt(deal: BanqiDeal, moves: string, ply: number): BanqiPlayerView {
+export function banqiReplayViewAt(deal: BanqiDeal, moves: string, ply: number): BanqiPlayerView {
   let state = createInitialBanqiState('banqi-engine-thumbnail', deal);
   const parsedMoves = moves.trim().split(/\s+/).map(banqiMoveFromToken);
   for (const move of parsedMoves.slice(0, ply)) {
@@ -2864,7 +2864,7 @@ function banqiReplayViewAt(deal: BanqiDeal, moves: string, ply: number): BanqiPl
   return getBanqiPlayerView(state, 'red');
 }
 
-function banqiPiecesFromView(view: BanqiPlayerView, x0: number, y0: number): string {
+export function banqiPiecesFromView(view: BanqiPlayerView, x0: number, y0: number): string {
   return Object.entries(view.board)
     .map(([square, entry]) => {
       if (!entry) return '';
