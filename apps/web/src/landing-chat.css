@@ -81,27 +81,27 @@
   scrollbar-width: thin;
 }
 
+/* Block flow: timestamp and handle are inline prefixes, so a wrapped message
+   takes the full row width from its second line. position: relative anchors
+   the hover-revealed admin controls. */
 .landing-chat-line {
-  display: flex;
-  gap: 5px;
-  align-items: baseline;
+  position: relative;
   color: var(--landing-chat-text);
   font-size: 12px;
-  line-height: 1.22;
+  line-height: 1.3;
 }
 
 .landing-chat-timestamp {
-  flex: 0 0 66px;
+  margin-right: 5px;
   color: color-mix(in srgb, var(--landing-chat-handle) 74%, transparent);
   font-size: 9px;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
-  text-align: right;
   white-space: nowrap;
 }
 
 .landing-chat-handle {
-  flex-shrink: 0;
+  margin-right: 5px;
   font-weight: 700;
   color: var(--landing-chat-handle);
   text-decoration: none;
@@ -120,21 +120,54 @@
 
 .landing-chat-token {
   color: var(--landing-chat-token);
+  text-decoration: none;
 }
 
+a.landing-chat-token:hover,
+a.landing-chat-token:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+/* Hover-revealed controls sit over the row's top-right corner; the opaque
+   background keeps them legible when a full-width line runs beneath them. */
 .landing-chat-admin {
-  margin-left: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
   gap: 3px;
+  padding-left: 6px;
+  background: var(--landing-chat-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+/* The report button sits directly on the row (no wrapper): give it the same
+   top-right hover-reveal so it never reads as trailing punctuation. */
+.landing-chat-line > .landing-chat-report-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding-left: 6px;
+  background: var(--landing-chat-bg);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
 
 .landing-chat-line:hover .landing-chat-admin,
-.landing-chat-line:focus-within .landing-chat-admin {
+.landing-chat-line:focus-within .landing-chat-admin,
+.landing-chat-line:hover > .landing-chat-report-action,
+.landing-chat-line:focus-within > .landing-chat-report-action {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* A completed report stays visible: it is the sender's confirmation. */
+.landing-chat-line > .landing-chat-report-action.is-reported {
+  opacity: 1;
 }
 
 .landing-chat-admin-action {

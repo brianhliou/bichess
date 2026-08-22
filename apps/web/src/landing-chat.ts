@@ -242,14 +242,15 @@ export function createLandingChatFeed(options: {
   };
 
   function render(): void {
-    store = visibleChatWindow(store, clock());
+    const now = clock();
+    store = visibleChatWindow(store, now);
     const key = store.map((line) => line.id).join('\n');
     if (key === renderedKey) return;
     renderedKey = key;
     feed.replaceChildren();
     for (const line of store) {
       feed.append(
-        buildLineRow(line, options.state, options.locale, options.mode, reported, handle),
+        buildLineRow(line, options.state, options.locale, options.mode, reported, handle, now),
       );
     }
     feed.scrollTop = feed.scrollHeight;
@@ -335,14 +336,18 @@ function buildLineRow(
   mode: LandingChatMode,
   reported: Set<string>,
   feed: Pick<LandingChatFeed, 'remove'>,
+  now: number,
 ): HTMLElement {
+  // Block flow, not flex: timestamp and handle are inline prefixes, so a long
+  // message wraps to the full row width from its second line instead of
+  // staying in a narrow column beside them.
   const row = document.createElement('div');
   row.className = 'landing-chat-line';
   const who = document.createElement('a');
   who.className = 'landing-chat-handle';
   who.href = line.handle ? `/@/${encodeURIComponent(line.handle)}` : '#';
   who.textContent = line.handle ?? t('chat.deletedAccount', {}, locale);
-  const timestamp = buildChatTimestamp(line.createdAt, locale);
+  const timestamp = buildChatTimestamp(line.createdAt, locale, now);
   const text = document.createElement('span');
   text.className = 'landing-chat-text';
   appendChatText(text, line.text);
@@ -355,13 +360,21 @@ function buildLineRow(
   return row;
 }
 
-function buildChatTimestamp(createdAt: string, locale: Locale): HTMLTimeElement {
+function buildChatTimestamp(createdAt: string, locale: Locale, now: number): HTMLTimeElement {
   const date = new Date(createdAt);
+  const nowDate = new Date(now);
+  // Same-day lines show time only; the weekday earns its width only once a
+  // line is a day old (the seven-day window makes that common). The full date
+  // stays one hover away in the title either way.
+  const sameDay =
+    date.getFullYear() === nowDate.getFullYear() &&
+    date.getMonth() === nowDate.getMonth() &&
+    date.getDate() === nowDate.getDate();
   const timestamp = document.createElement('time');
   timestamp.className = 'landing-chat-timestamp';
   timestamp.dateTime = createdAt;
   timestamp.textContent = new Intl.DateTimeFormat(locale, {
-    weekday: 'short',
+    ...(sameDay ? {} : { weekday: 'short' as const }),
     hour: 'numeric',
     minute: '2-digit',
   }).format(date);
@@ -483,6 +496,25 @@ function buildComposer(
   input.placeholder = t('chat.placeholder', {}, locale);
   input.className = 'landing-chat-input';
 
+  // input[type=text] drops pasted newlines outright, gluing the surrounding
+  // words together ("easyhttps://..."). Re-insert the paste with newlines
+  // collapsed to single spaces instead.
+  input.addEventListener('paste', (event) => {
+    const pasted = event.clipboardData?.getData('text/plain');
+    if (!pasted || !/[\r\n]/.test(pasted)) return;
+    event.preventDefault();
+    const normalized = pasted.replace(/\s*[\r\n]+\s*/g, ' ');
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const next = (input.value.slice(0, start) + normalized + input.value.slice(end)).slice(
+      0,
+      input.maxLength,
+    );
+    input.value = next;
+    const caret = Math.min(start + normalized.length, next.length);
+    input.setSelectionRange(caret, caret);
+  });
+
   const status = document.createElement('span');
   status.className = 'landing-chat-status';
   status.hidden = true;
@@ -534,15 +566,52 @@ function postErrorCopy(error: string | undefined, locale: Locale): string {
 
 const TOKEN_PATTERN = /(@[a-z0-9_-]+|(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?)/gi;
 
-function appendChatText(container: HTMLElement, text: string): void {
+const INTERNAL_LINK_HOSTS = new Set(['mistboard.com', 'www.mistboard.com']);
+
+// URL and @mention tokens render as real anchors. Mistboard links become
+// path-relative same-tab hrefs (so they also resolve on dev/preview hosts);
+// external links open in a new tab with the full ugc/noopener rel set. The
+// label is always textContent, and only the tokenizer's https?/bare-domain
+// shapes reach here, so no other scheme can end up in an href.
+export function chatTokenElement(token: string): HTMLElement {
+  if (token.startsWith('@')) {
+    const mention = document.createElement('a');
+    mention.className = 'landing-chat-token';
+    mention.href = `/@/${encodeURIComponent(token.slice(1))}`;
+    mention.textContent = token;
+    return mention;
+  }
+  let url: URL | null = null;
+  try {
+    url = new URL(/^https?:\/\//i.test(token) ? token : `https://${token}`);
+  } catch {
+    url = null;
+  }
+  if (!url) {
+    const span = document.createElement('span');
+    span.className = 'landing-chat-token';
+    span.textContent = token;
+    return span;
+  }
+  const anchor = document.createElement('a');
+  anchor.className = 'landing-chat-token';
+  anchor.textContent = token;
+  if (INTERNAL_LINK_HOSTS.has(url.hostname.toLowerCase())) {
+    anchor.href = `${url.pathname}${url.search}${url.hash}`;
+  } else {
+    anchor.href = url.href;
+    anchor.target = '_blank';
+    anchor.rel = 'ugc nofollow noopener noreferrer';
+  }
+  return anchor;
+}
+
+export function appendChatText(container: HTMLElement, text: string): void {
   let cursor = 0;
   for (const match of text.matchAll(TOKEN_PATTERN)) {
     const index = match.index ?? cursor;
     if (index > cursor) container.append(document.createTextNode(text.slice(cursor, index)));
-    const token = document.createElement('span');
-    token.className = 'landing-chat-token';
-    token.textContent = match[0];
-    container.append(token);
+    container.append(chatTokenElement(match[0]));
     cursor = index + match[0].length;
   }
   if (cursor < text.length) container.append(document.createTextNode(text.slice(cursor)));
@@ -612,6 +681,18 @@ function mockChatState(): ChatState {
         handle: 'Top2Always',
         text: 'Good Afternoon Everyone And Good Afternoon @sdrf_tajik',
         createdAt: new Date(now - 2 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'mock_chat_4',
+        handle: 'brianhliou-dev',
+        text: 'Wow! Congrats to whoever beat Pikafish at jieqi! Not easy https://mistboard.com/jieqi/game/jq_4a66de18-697f-48ed-a2b6-9725a0fdc65e',
+        createdAt: new Date(now - 60 * 1000).toISOString(),
+      },
+      {
+        id: 'mock_chat_5',
+        handle: 'sdrf_tajik',
+        text: 'yesterday I said this would happen',
+        createdAt: new Date(now - 26 * 60 * 60 * 1000).toISOString(),
       },
     ],
   };

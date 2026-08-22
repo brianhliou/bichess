@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  appendChatText,
   buildLandingChat,
   CHAT_VISIBLE_LINES,
   CHAT_WINDOW_MS,
   type ChatLine,
+  chatTokenElement,
   createLandingChatFeed,
   readStoredChatMuted,
   visibleChatWindow,
@@ -80,15 +82,18 @@ describe('createLandingChatFeed', () => {
     expect(feed.visibleIds()).toEqual(['a', 'b']);
   });
 
-  it('renders a localized timestamp for every visible line', () => {
+  it('renders a time-only timestamp for same-day lines, weekday for older ones', () => {
     const { feed } = feedWithClock();
-    const message = line('timestamped', 60_000);
-    feed.ingest([message]);
+    const today = line('today', 60_000);
+    const yesterday = line('yesterday', 26 * 60 * 60 * 1000);
+    feed.ingest([yesterday, today]);
 
-    const timestamp = feed.element.querySelector<HTMLTimeElement>('.landing-chat-timestamp');
-    expect(timestamp?.dateTime).toBe(message.createdAt);
-    expect(timestamp?.textContent).toMatch(/Fri.*(AM|PM)/);
-    expect(timestamp?.title).toContain('2026');
+    const stamps = [...feed.element.querySelectorAll<HTMLTimeElement>('.landing-chat-timestamp')];
+    expect(stamps.map((el) => el.dateTime)).toEqual([yesterday.createdAt, today.createdAt]);
+    expect(stamps[0]?.textContent).toMatch(/Thu.*(AM|PM)/);
+    expect(stamps[1]?.textContent).toMatch(/(AM|PM)/);
+    expect(stamps[1]?.textContent).not.toContain('Fri');
+    expect(stamps[1]?.title).toContain('2026');
   });
 
   it('does not resurrect expired lines when a new message is ingested', () => {
@@ -152,6 +157,85 @@ describe('createLandingChatFeed', () => {
     expect(renderedIds(feed)).toEqual(['b']);
     feed.expireTick();
     expect(renderedIds(feed)).toEqual(['b']);
+  });
+});
+
+describe('chat text linkify', () => {
+  it('renders a mistboard URL as a same-tab path-relative anchor', () => {
+    const el = chatTokenElement('https://mistboard.com/jieqi/game/jq_abc?x=1#m4');
+    expect(el.tagName).toBe('A');
+    expect(el.getAttribute('href')).toBe('/jieqi/game/jq_abc?x=1#m4');
+    expect(el.getAttribute('target')).toBeNull();
+    expect(el.textContent).toBe('https://mistboard.com/jieqi/game/jq_abc?x=1#m4');
+  });
+
+  it('renders an external URL as a new-tab anchor with the ugc rel set', () => {
+    const el = chatTokenElement('https://lichess.org/abc');
+    expect(el.tagName).toBe('A');
+    expect(el.getAttribute('href')).toBe('https://lichess.org/abc');
+    expect(el.getAttribute('target')).toBe('_blank');
+    expect(el.getAttribute('rel')).toBe('ugc nofollow noopener noreferrer');
+  });
+
+  it('assumes https for a bare-domain token', () => {
+    const external = chatTokenElement('example.com/path');
+    expect(external.getAttribute('href')).toBe('https://example.com/path');
+    const internal = chatTokenElement('mistboard.com/watch');
+    expect(internal.getAttribute('href')).toBe('/watch');
+  });
+
+  it('renders an @mention as a profile link', () => {
+    const el = chatTokenElement('@sdrf_tajik');
+    expect(el.tagName).toBe('A');
+    expect(el.getAttribute('href')).toBe('/@/sdrf_tajik');
+    expect(el.textContent).toBe('@sdrf_tajik');
+  });
+
+  it('keeps surrounding plain text as text nodes around anchor tokens', () => {
+    const container = document.createElement('span');
+    appendChatText(container, 'see https://mistboard.com/watch now');
+    expect(container.textContent).toBe('see https://mistboard.com/watch now');
+    expect(container.querySelectorAll('a')).toHaveLength(1);
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/watch');
+  });
+});
+
+describe('composer paste normalization', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  it('collapses pasted newlines to single spaces', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          lines: [line('a', 1000, Date.now())],
+          canPost: true,
+          canReport: false,
+          viewerHandle: 'you',
+          isAdmin: false,
+        }),
+      })),
+    );
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    const input = await vi.waitFor(() => {
+      const found = mount.querySelector<HTMLInputElement>('.landing-chat-input');
+      expect(found).toBeTruthy();
+      return found as HTMLInputElement;
+    });
+
+    const paste = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, 'clipboardData', {
+      value: { getData: () => 'Not easy\nhttps://mistboard.com/watch' },
+    });
+    input.dispatchEvent(paste);
+    expect(paste.defaultPrevented).toBe(true);
+    expect(input.value).toBe('Not easy https://mistboard.com/watch');
   });
 });
 
