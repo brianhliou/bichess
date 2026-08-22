@@ -18,7 +18,12 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 // if a non-published article is missing here or a published one is still
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
-const UNPUBLISHED_ARTICLE_SLUGS = new Set(['fog-openings', 'dark-chess-concepts', 'shogi']);
+const UNPUBLISHED_ARTICLE_SLUGS = new Set([
+  'fog-openings',
+  'dark-chess-concepts',
+  'shogi',
+  'banqi-luck',
+]);
 
 export function articleIsUnpublished(slug: string): boolean {
   return UNPUBLISHED_ARTICLE_SLUGS.has(slug);
@@ -169,6 +174,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
+  },
+  'banqi-luck': {
+    title: 'Separating Skill from Luck in Banqi',
+    kind: 'article',
+    description:
+      'Half the moves in a banqi game are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
   },
   jungle: {
     title: 'Jungle Chess Rules (Dou Shou Qi, Animal Chess)',

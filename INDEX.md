@@ -1016,3 +1016,10 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 - **One source for time controls** → `packages/game/src/time-controls.ts`.
 - **`.env` files are off-limits** to Claude — touching them leaks via auto-include. Use Node `--env-file` or provider dashboards.
 - **Lesson trailers** on commits that teach a transferable rule (see `~/projects/CLAUDE.md`).
+
+## Unindexed (auto-added by `index:fix`, needs a description)
+
+| File | Owns |
+|------|------|
+| `apps/web/src/grid-board-overlays.ts` | _needs a one-line description_ |
+| `apps/web/src/variant-tenant/board-annotations.ts` | _needs a one-line description_ |

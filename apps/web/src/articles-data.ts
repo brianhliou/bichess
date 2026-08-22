@@ -10,6 +10,7 @@ import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';
 import { banqiArticle } from './articles/content/banqi.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
+import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { chessArticle } from './articles/content/chess.js';
 import { crossroadsChessArticle } from './articles/content/crossroads-chess.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
@@ -60,6 +61,7 @@ export const articles: Article[] = [
   jungleFlipArticle,
   banqiArticle,
   banqiEngineArticle,
+  banqiLuckArticle,
   revealChessArticle,
   darkCrossroadsChessArticle,
   crossroadsChessArticle,
