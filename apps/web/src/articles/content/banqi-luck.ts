@@ -31,7 +31,7 @@ export const banqiLuckArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'I beat my own bot at banqi and felt good about it for roughly a minute, which is how long it took to open the game review. The review splits every flip into the decision I made and the tile I got, and it says the tiles did the work.',
+        'I beat my own bot at banqi and felt good about it for about a minute, which is how long it took to open the game review. The review splits every flip into the decision I made and the tile I got, and it says the tiles did the work.',
     },
     {
       kind: 'paragraph',
@@ -120,7 +120,7 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Ply 6 of the game this article opens with: Black turns the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game.',
+            'Ply 6 of the game this article opens with: I turn the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game.',
         },
         {
           kind: 'table',
@@ -131,18 +131,18 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is **45%: that number is the decision**, and it is what accuracy grades.',
+            'The same flip is worth anywhere from 13% (my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%. **That number is the decision**, and it is what accuracy grades.',
         },
         {
           kind: 'paragraph',
           text:
             'The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.',
         },
-        { kind: 'sub-heading', text: 'Why not just ask the engine' },
+        { kind: 'sub-heading', text: 'Engines are biased about their own dice' },
         {
           kind: 'paragraph',
           text:
-            'The obvious shortcut is to ask the engine what the flip move is worth and call the difference luck, but engines are biased about their own dice. Our jieqi engine over-values its reveals, which makes it play greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.',
+            'The obvious shortcut is to ask the engine what a flip move is worth and call the difference luck. Our jieqi engine showed why not: it over-values its reveals and plays greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.',
         },
         { kind: 'sub-heading', text: 'The flip that deals you your color' },
         {
@@ -159,12 +159,12 @@ export const banqiLuckArticle: Article = {
           kind: 'raw-svg',
           svg: BANQI_LUCK_CHART_SVG,
           caption:
-            'The exhibit game below. Solid: the game as played, from Red’s side. Dashed: the same game with every flip at its average. The gap is the luck.',
+            'The game from the intro. Solid: the game as played, from Red’s side. Dashed: the same game with every flip at its average. The gap is the luck.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'The advantage graph gets a second line. The solid line is the game as it happened. The dashed line subtracts your accumulated luck: the trajectory if every flip had come out average. The shaded band between them is the luck, building up or draining away as the game runs.',
+            'The advantage graph gets a second line. Solid is the game as it happened. Dashed subtracts your accumulated luck: the trajectory if every flip had come out average. Between them, shaded, is the luck itself, building up or draining away as the game runs.',
         },
         {
           kind: 'paragraph',
@@ -191,7 +191,7 @@ export const banqiLuckArticle: Article = {
           spec: {
             red: 'MistyBanqi',
             black: 'brianhliou',
-            event: 'The exhibit game, live on Mistboard',
+            event: 'The game from the intro, live on Mistboard',
             outcome: 'Black wins · 156 plies · net luck +88 to Black',
             resultText:
               'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.',
