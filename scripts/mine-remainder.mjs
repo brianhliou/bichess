@@ -17,7 +17,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -106,10 +106,19 @@ function railwayShell(innerCommand) {
   return capture('railway', ['run', '-s', 'Postgres', '--', 'sh', '-c', innerCommand]);
 }
 
+// The snippet goes to a FILE, never through `node -e` inside `sh -c`. Passing
+// JavaScript as a shell argument hands the shell its backticks to command-
+// substitute and mangles its newlines. The file also lives under node_modules
+// so a bare `require('pg')` resolves against the repo's own dependencies.
 function queryProduction(snippet) {
-  const result = railwayShell(
-    `DATABASE_URL="$DATABASE_PUBLIC_URL" node -e ${JSON.stringify(snippet)}`,
-  );
+  const queryFile = join(REPO_ROOT, 'node_modules', '.mistboard-mining-query.cjs');
+  writeFileSync(queryFile, snippet, 'utf8');
+  let result;
+  try {
+    result = railwayShell(`DATABASE_URL="$DATABASE_PUBLIC_URL" node "${queryFile}"`);
+  } finally {
+    rmSync(queryFile, { force: true });
+  }
   if (result.status !== 0) {
     fail(
       `Could not reach production Postgres through Railway.\n${result.stderr || result.stdout}\n\n` +
@@ -238,8 +247,8 @@ function generateManifest(corpus, existingSeed) {
   const out = join(STATE_DIR, `${seed}.json`);
   const result = railwayShell(
     `DATABASE_URL="$DATABASE_PUBLIC_URL" npm run --silent pilot:elephantchess-manifest ` +
-      `--workspace @mistboard/server -- --import-batch-id ${corpus.importBatchId} ` +
-      `--seed ${seed} --exclude-mined --fill-remaining --out ${out}`,
+      `--workspace @mistboard/server -- --import-batch-id "${corpus.importBatchId}" ` +
+      `--seed "${seed}" --exclude-mined --fill-remaining --out "${out}"`,
   );
   if (result.status !== 0) {
     fail(`Manifest generation failed:\n${result.stderr || result.stdout}`);
