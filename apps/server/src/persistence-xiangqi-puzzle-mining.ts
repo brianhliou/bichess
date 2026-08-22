@@ -641,22 +641,30 @@ export async function initializeXiangqiPuzzleMiningRun(input: {
   });
 }
 
+// Counted with scalar subqueries, NOT joins. Joining a run to BOTH its games
+// and its shards multiplies them: games x shards. The pilot's 1,000 games and
+// 40 shards made 40k rows and nobody noticed; 9,469 games and 379 shards make
+// 3.6M, and count(DISTINCT ...) sorts all of them carrying the run's three
+// JSONB profile columns. That spilled 45GB of temp files and filled the
+// production volume on 2026-08-22. The DISTINCT kept the counts correct
+// throughout, which is why no correctness test ever caught it.
+//
+// Exported so the plan-shape regression test explains THIS query rather than
+// its own copy of it.
+export const XIANGQI_PUZZLE_MINING_RUN_QUERY = `SELECT run.id, run.import_batch_id, run.manifest_sha256, run.execution_sha256, run.status,
+            run.engine_profile, run.scan_profile, run.audit_profile, run.created_at,
+            (SELECT count(*)::int FROM xiangqi_puzzle_mining_games game
+              WHERE game.run_id = run.id) AS selected_games,
+            (SELECT count(*)::int FROM xiangqi_puzzle_mining_shards shard
+              WHERE shard.run_id = run.id) AS shards
+     FROM xiangqi_puzzle_mining_runs run
+     WHERE run.id = $1`;
+
 export async function getXiangqiPuzzleMiningRun(
   db: Queryable,
   runId: string,
 ): Promise<XiangqiPuzzleMiningRun> {
-  const { rows } = await db.query<RunRow>(
-    `SELECT run.id, run.import_batch_id, run.manifest_sha256, run.execution_sha256, run.status,
-            run.engine_profile, run.scan_profile, run.audit_profile, run.created_at,
-            count(DISTINCT game.historical_game_id)::int AS selected_games,
-            count(DISTINCT shard.shard_index)::int AS shards
-     FROM xiangqi_puzzle_mining_runs run
-     LEFT JOIN xiangqi_puzzle_mining_games game ON game.run_id = run.id
-     LEFT JOIN xiangqi_puzzle_mining_shards shard ON shard.run_id = run.id
-     WHERE run.id = $1
-     GROUP BY run.id`,
-    [runId],
-  );
+  const { rows } = await db.query<RunRow>(XIANGQI_PUZZLE_MINING_RUN_QUERY, [runId]);
   if (!rows[0]) throw new Error(`mining run ${runId} not found`);
   return mapRun(rows[0]);
 }

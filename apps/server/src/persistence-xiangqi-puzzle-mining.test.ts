@@ -18,6 +18,7 @@ import {
   recordXiangqiPuzzleEditorialReview,
   recordXiangqiPuzzleMiningCandidate,
   recordXiangqiPuzzleMiningJudgment,
+  XIANGQI_PUZZLE_MINING_RUN_QUERY,
   type XiangqiPuzzleMiningCandidate,
 } from './persistence-xiangqi-puzzle-mining.js';
 import { processNextXiangqiPuzzleAuditCandidate } from './xiangqi-puzzle-audit-worker.js';
@@ -935,6 +936,54 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     await assert.rejects(
       planXiangqiPuzzlePublication(getPool(), secondRunId),
       /repeats a position already published as puzzle/,
+    );
+  });
+
+  test('the run loader never multiplies games by shards', async () => {
+    // A correctness assertion cannot catch this. The original loader joined a
+    // run to BOTH its games and its shards and de-duplicated with
+    // count(DISTINCT ...), so the counts were always right while the row set
+    // underneath was games x shards. At pilot scale that was 40k rows and
+    // invisible; at 9,469 games it was 3.6M and filled the production disk.
+    // So assert the PLAN: no node may see more rows than the larger child.
+    const games = Array.from({ length: 12 }, (_, index) => pilotGame(300 + index));
+    await seedEligibleGames(games);
+    const manifest = buildElephantChessPilotManifest(games, {
+      importBatchId: BATCH_ID,
+      seed: 'fanout-guard-v1',
+      targets: { representativeLiveBase: 8, coverageLive: 4, correspondenceMax: 0 },
+    });
+    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+
+    const loaded = await getXiangqiPuzzleMiningRun(getPool(), run.id);
+    assert.equal(loaded.selectedGames, 12);
+    assert.equal(loaded.shards, 4);
+
+    const explained = await getPool().query<{ 'QUERY PLAN': unknown }>(
+      `EXPLAIN (ANALYZE, FORMAT JSON) ${XIANGQI_PUZZLE_MINING_RUN_QUERY}`,
+      [run.id],
+    );
+    const explainRoot = explained.rows[0]?.['QUERY PLAN'] as
+      | [{ Plan: Record<string, unknown> }]
+      | undefined;
+    const plan = explainRoot?.[0]?.Plan;
+    assert.ok(plan, 'EXPLAIN returned no plan');
+    const rowCounts: number[] = [];
+    const walk = (node: Record<string, unknown>): void => {
+      const actual = node['Actual Rows'];
+      const loops = node['Actual Loops'];
+      if (typeof actual === 'number' && typeof loops === 'number') {
+        rowCounts.push(actual * loops);
+      }
+      for (const child of (node.Plans as Record<string, unknown>[]) ?? []) walk(child);
+    };
+    walk(plan);
+
+    // 12 games and 4 shards: a fan-out plan would surface a 48-row node.
+    const widest = Math.max(...rowCounts);
+    assert.ok(
+      widest <= 12,
+      `run loader plan touched ${widest} rows for 12 games and 4 shards; it is multiplying children`,
     );
   });
 });
