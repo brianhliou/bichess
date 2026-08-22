@@ -32,7 +32,7 @@ export const banqiLuckArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'I beat my own bot at banqi and felt good about it for about a minute, which is how long it took to open the game review. The review splits every flip into the decision I made and the tile I got, and it says the tiles did the work.',
+        'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.',
     },
     {
       kind: 'paragraph',
@@ -319,7 +319,7 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in one afternoon.',
+            'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.',
         },
         {
           kind: 'cta',
