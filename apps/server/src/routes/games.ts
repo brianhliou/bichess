@@ -13,7 +13,7 @@ import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
 import { eventReplayResponse, parsePositiveInteger } from './../server-policy.js';
-import { listWatchChannels, watchChannelForId } from './../watch-channels.js';
+import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
 import {
   collectLiveTvCandidates,
   electLiveTvFeatured,
@@ -21,6 +21,12 @@ import {
   LIVE_TV_TOP_CHANNEL_ID,
   liveWatchPayloadForFeatured,
 } from './../watch-live.js';
+import {
+  cachedWatchRail,
+  storeWatchRail,
+  type WatchRailRow,
+  withFreshRow,
+} from './../watch-rail-cache.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
@@ -219,28 +225,56 @@ export async function tryHandle(
       return true;
     }
     const now = new Date();
-    const channelResults = await Promise.all(
-      listWatchChannels().map(async (candidate) => {
-        const [sealedCount, unlocked] = await Promise.all([
-          persistence.countWatchSealedGames({
-            activeWindowMs: WATCH_SEALED_ACTIVITY_WINDOW_MS,
-            modes: candidate.modes,
-            now,
-            variants: candidate.legacyVariants,
-          }),
-          persistence.listWatchUnlockedGames({
-            // Featured only: the curated cut that matches the homepage board.
-            curated: candidate.curated,
-            limit: WATCH_REPLAY_LIMIT,
-            modes: candidate.modes,
-            now,
-            variants: candidate.legacyVariants,
-          }),
-        ]);
-        return { channel: candidate, sealedCount, topPlayer: channelTopPlayer(unlocked), unlocked };
-      }),
-    );
-    const active = channelResults.find((result) => result.channel.id === channel.id)!;
+    const loadChannel = async (candidate: WatchChannel) => {
+      const [sealedCount, unlocked] = await Promise.all([
+        persistence.countWatchSealedGames({
+          activeWindowMs: WATCH_SEALED_ACTIVITY_WINDOW_MS,
+          modes: candidate.modes,
+          now,
+          variants: candidate.legacyVariants,
+        }),
+        persistence.listWatchUnlockedGames({
+          // Featured only: the curated cut that matches the homepage board.
+          curated: candidate.curated,
+          limit: WATCH_REPLAY_LIMIT,
+          modes: candidate.modes,
+          now,
+          variants: candidate.legacyVariants,
+        }),
+      ]);
+      return { channel: candidate, sealedCount, topPlayer: channelTopPlayer(unlocked), unlocked };
+    };
+    const railRow = (result: Awaited<ReturnType<typeof loadChannel>>): WatchRailRow => ({
+      family: result.channel.family,
+      gameSpecIds: result.channel.gameSpecIds,
+      id: result.channel.id,
+      label: result.channel.label,
+      sealedCount: result.sealedCount,
+      unlockedCount: result.unlocked.length,
+      topPlayer: result.topPlayer,
+    });
+
+    // The active channel is ALWAYS computed live — it owns the response's game
+    // list and must not be served from a cache. The rest of the rail is the same
+    // for every channel, so it comes from the short-lived rail cache when warm:
+    // 2 queries instead of 20 on a click-through, which is the whole browsing
+    // pattern this surface is for.
+    const active = await loadChannel(channel);
+    const cachedRail = cachedWatchRail(now.getTime());
+    let rail: readonly WatchRailRow[];
+    if (cachedRail) {
+      rail = withFreshRow(cachedRail, railRow(active));
+    } else {
+      const others = await Promise.all(
+        listWatchChannels()
+          .filter((candidate) => candidate.id !== channel.id)
+          .map(loadChannel),
+      );
+      // Rebuilt in canonical rail order, not completion order.
+      const byId = new Map([active, ...others].map((result) => [result.channel.id, result]));
+      rail = listWatchChannels().map((candidate) => railRow(byId.get(candidate.id)!));
+      storeWatchRail(rail, now.getTime());
+    }
     // Flip-variant results are seat-keyed; attach each flip game's derived firstColor
     // so the queue can label them by ink AND paint the seat rows' discs with the
     // colour actually on the board. Only the active channel's list is sent.
@@ -252,15 +286,7 @@ export async function tryHandle(
     const initialReplay = await watchInitialReplay(ctx, active.unlocked);
     writeJson(response, 200, {
       activeChannel: channel.id,
-      channels: channelResults.map((result) => ({
-        family: result.channel.family,
-        gameSpecIds: result.channel.gameSpecIds,
-        id: result.channel.id,
-        label: result.channel.label,
-        sealedCount: result.sealedCount,
-        unlockedCount: result.unlocked.length,
-        topPlayer: result.topPlayer,
-      })),
+      channels: rail,
       now: now.toISOString(),
       sealedActivityWindowMs: WATCH_SEALED_ACTIVITY_WINDOW_MS,
       unlockLimit: WATCH_REPLAY_LIMIT,

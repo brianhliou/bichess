@@ -10,6 +10,7 @@ import type { FeaturedGame } from './game-display.js';
 import { createGameTable } from './game-table.js';
 import {
   buildWatchScrubber,
+  createWatchSwitchGuard,
   formatWatchScope,
   loadWatchMainBeforePreviews,
   renderWatchChannelList,
@@ -19,6 +20,8 @@ import {
   renderWatchReplaySkeleton,
   resultLabel,
   shouldPlayWatchMoveSound,
+  WATCH_FEED_CACHE_MS,
+  watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
   watchPovToggleApplies,
@@ -327,6 +330,98 @@ describe('renderWatchReplaySkeleton', () => {
     // It replaces prior content rather than appending to it.
     expect(root.querySelector('span')).toBeNull();
     expect(root.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it("reserves the board box at the incoming variant's ratio", () => {
+    // Banqi is 8x4 and xiangqi is 9x10. A square placeholder for either one
+    // shifts layout when the real board lands, which is what the measured
+    // CLS 0.137 on a channel switch was.
+    // jsdom normalizes the shorthand ("2" becomes "2 / 1"), so compare the
+    // ratio it represents rather than the string.
+    const ratioOf = (el: HTMLElement | null | undefined): number => {
+      const [w = '', h = '1'] = (el?.style.aspectRatio ?? '').split('/');
+      return Number(w.trim()) / Number(h.trim());
+    };
+    const banqi = document.createElement('div');
+    renderWatchReplaySkeleton(banqi, 8 / 4);
+    const banqiBoard = banqi.querySelector<HTMLElement>('.watch-replay-skeleton-board');
+    expect(ratioOf(banqiBoard)).toBeCloseTo(2);
+    // The container's square min-height floor is lifted, or it would out-tall
+    // the wide placeholder it now wraps.
+    expect(banqi.firstElementChild?.classList.contains('watch-replay-skeleton--sized')).toBe(true);
+
+    const xiangqi = document.createElement('div');
+    renderWatchReplaySkeleton(xiangqi, 9 / 10);
+    expect(ratioOf(xiangqi.querySelector<HTMLElement>('.watch-replay-skeleton-board'))).toBeCloseTo(
+      0.9,
+    );
+  });
+
+  it('keeps the stylesheet square when no ratio is known', () => {
+    // The homepage showcase and cross-variant channels pass nothing; an inline
+    // ratio of 0/NaN must never be written.
+    for (const ratio of [undefined, 0, Number.NaN, -1]) {
+      const root = document.createElement('div');
+      renderWatchReplaySkeleton(root, ratio);
+      const board = root.querySelector<HTMLElement>('.watch-replay-skeleton-board');
+      expect(board?.style.aspectRatio).toBe('');
+      expect(root.firstElementChild?.classList.contains('watch-replay-skeleton--sized')).toBe(
+        false,
+      );
+    }
+  });
+});
+
+describe('createWatchSwitchGuard', () => {
+  it('lets a later switch supersede an earlier one that is still in flight', () => {
+    // The prod bug: Xiangqi clicked, then Fog Chess 130ms later. Fog Chess's
+    // chain finished FIRST (it is seeded by initialReplay), then Xiangqi's
+    // slower chain landed and committed, putting the user back on xiangqi.
+    const guard = createWatchSwitchGuard();
+    const xiangqi = guard.begin();
+    const fogChess = guard.begin();
+
+    // Fog Chess resolves first and is still the newest intent: it commits.
+    expect(guard.isCurrent(fogChess)).toBe(true);
+    // Xiangqi resolves second but was superseded: it must drop its result.
+    expect(guard.isCurrent(xiangqi)).toBe(false);
+  });
+
+  it('keeps a lone switch current across its whole chain', () => {
+    const guard = createWatchSwitchGuard();
+    const token = guard.begin();
+    expect(guard.isCurrent(token)).toBe(true);
+    // Re-checked after every await in the switch; nothing else began.
+    expect(guard.isCurrent(token)).toBe(true);
+  });
+
+  it('treats the never-begun token as superseded', () => {
+    // Guards against an off-by-one where token 0 (the initial counter value)
+    // would read as current and let a stale render commit.
+    const guard = createWatchSwitchGuard();
+    expect(guard.isCurrent(0)).toBe(false);
+    guard.begin();
+    expect(guard.isCurrent(0)).toBe(false);
+  });
+});
+
+describe('watchFeedCacheIsFresh', () => {
+  it('reuses a feed inside the TTL and refetches at or past it', () => {
+    expect(watchFeedCacheIsFresh(1_000, 1_000, WATCH_FEED_CACHE_MS)).toBe(true);
+    expect(watchFeedCacheIsFresh(1_000, 1_000 + WATCH_FEED_CACHE_MS - 1, WATCH_FEED_CACHE_MS)).toBe(
+      true,
+    );
+    // Exactly at the boundary is stale, so a cached feed can never be older
+    // than the TTL.
+    expect(watchFeedCacheIsFresh(1_000, 1_000 + WATCH_FEED_CACHE_MS, WATCH_FEED_CACHE_MS)).toBe(
+      false,
+    );
+  });
+
+  it('stays under the active poll cadence', () => {
+    // The cache may not outlive the refresh interval the page already runs on,
+    // or the rail could show data older than the poll would ever allow.
+    expect(WATCH_FEED_CACHE_MS).toBeLessThan(15_000);
   });
 });
 
