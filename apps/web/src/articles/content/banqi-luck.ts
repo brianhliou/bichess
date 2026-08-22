@@ -1,6 +1,16 @@
 import type { Article, ArticleBlock } from '../types.js';
 import { BANQI_LUCK_CHART_SVG, BANQI_LUCK_THUMBNAIL_SVG } from './banqi-luck-chart.js';
-import { BANQI_LUCK_GAME } from './banqi-luck-game.js';
+import { BANQI_LUCK_FLIP_POOL, BANQI_LUCK_GAME } from './banqi-luck-game.js';
+
+// The worked-example table: every tile the ply-6 flip could have been. Rows are
+// generated (win% at decision budget, sorted best-first); the actual tile row
+// gets highlighted.
+const FLIP_POOL_ROWS = BANQI_LUCK_FLIP_POOL.rows.map((row) => [
+  `${row.color} ${row.role}`,
+  `×${row.count}`,
+  `${row.win.toFixed(0)}%`,
+]);
+const FLIP_POOL_ACTUAL_ROW = BANQI_LUCK_FLIP_POOL.rows.findIndex((row) => row.actual);
 
 // The decision-vs-luck methodology essay. Every measured number in the prose
 // comes from the offline mining run recorded in docs-private/luck-article/
@@ -82,6 +92,22 @@ export const banqiLuckArticle: Article = {
         {
           kind: 'paragraph',
           text:
+            'Here is that computation for one real flip, ply 6 of the game this article opens with. Black turns the tile on g3. Twenty-seven tiles are still face down, twelve kinds, and each one leads to a different game:',
+        },
+        {
+          kind: 'table',
+          headers: ['what the g3 tile could be', 'count', 'win% for Black'],
+          rows: FLIP_POOL_ROWS,
+          highlightRows: [FLIP_POOL_ACTUAL_ROW],
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The same flip is worth anywhere from 13% (turning up my own general, deep in contested ground) to 82% (my own soldier, safe and useful there). The weighted average is 45%: that number is the decision, and it is what accuracy grades. The highlighted row is what the bag actually handed me. Realized 82, played 45, luck plus 37, and none of it to my credit.',
+        },
+        {
+          kind: 'paragraph',
+          text:
             'The obvious shortcut is to ask the engine what the flip move is worth and call the difference luck, but engines are biased about their own dice. Our jieqi engine over-values its reveals, which makes it play greedy, gambling lines. Averaging fixed positions, each with the tile already decided, keeps the chance node out of the search entirely, so the bias has nowhere to live.',
         },
         {
@@ -157,12 +183,32 @@ export const banqiLuckArticle: Article = {
       ],
     },
     {
+      heading: 'For the builders',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'The subtle bug in this construction is the counterfactual itself. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier: the global piece counts change, the position rebalances by about two pieces, and the pool average inflates. The implementation swaps instead. The counterfactual tile trades places with a face-down square that really holds one, so the hidden multiset stays exactly the game’s multiset and only the location moves.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Everything is win% from the flipping player’s point of view. A post-flip position has the opponent to move, so the engine’s side-to-move score gets negated, and a flip that ends the game outright scores exactly 100, 50, or 0 with no engine call. Win% rather than centipawns because luck has to be summable across a whole game and bounded at both ends, and because a flip that walks into mate has no sensible centipawn value.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Search budgets are node counts, not time, so the same game grades identically on a fast laptop and a loaded server, and the realized value is one term of the same averaged search rather than a separate deeper query, so a flip is never graded by two numbers from different depths. The decision ceiling considers only the engine’s top move, on purpose: a better move the engine ranked second is missed, which means decision loss is only ever under-counted. The review can fail to flag a mistake. It cannot invent one.',
+        },
+      ],
+    },
+    {
       heading: 'Where the numbers stop',
       blocks: [
         {
           kind: 'paragraph',
           text:
-            'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem. Two more honest limits: the best-move ceiling only considers the engine’s top choice, so decision loss can only be under-counted, and subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.',
+            'The win percentages come from our banqi engine at a fixed search budget, and that engine is also the opponent in these games, so its own flips grade as near-perfect partly because it agrees with itself. Read "the bot lost zero points" with that in mind. The human numbers have no such problem. One more honest limit: subtracting luck point-by-point treats win chance as linear, which it is not. The directions are trustworthy. The second decimal is not.',
         },
       ],
     },
