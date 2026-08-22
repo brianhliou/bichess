@@ -31,6 +31,7 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  'skill-vs-luck',
   'fog-chess',
   'fog-xiangqi',
   'chess',

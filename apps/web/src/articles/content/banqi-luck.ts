@@ -23,8 +23,8 @@ export const banqiLuckArticle: Article = {
   seoTitle: 'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck',
   summary:
     'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.',
-  status: 'draft',
-  publishedAt: '2026-08-21',
+  status: 'published',
+  publishedAt: '2026-08-22',
   audience:
     'Banqi, jieqi, and jungle players who want an honest review of their games, and anyone curious how you grade a move that includes a dice roll.',
   thumbnail: { kind: 'svg', svg: BANQI_LUCK_THUMBNAIL_SVG },

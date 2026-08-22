@@ -22,7 +22,6 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
-  'skill-vs-luck',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
