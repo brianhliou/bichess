@@ -370,6 +370,19 @@ export const EN_REVIEW = {
   // All three rendered hardcoded English on the study and analysis boards long
   // after the chrome around them was translated, because none of them ever
   // called t() — the catalog read complete while the surface did not.
+  'summary.inaccuracyOne': 'Inaccuracy',
+  'summary.inaccuracyMany': 'Inaccuracies',
+  'summary.mistakeOne': 'Mistake',
+  'summary.mistakeMany': 'Mistakes',
+  'summary.blunderOne': 'Blunder',
+  'summary.blunderMany': 'Blunders',
+  'summary.acpl': 'Average centipawn loss',
+  'summary.accuracy': 'Accuracy',
+  'summary.opening': 'Opening',
+  'summary.middlegame': 'Middlegame',
+  'summary.endgame': 'Endgame',
+  'summary.red': 'Red',
+  'summary.black': 'Black',
   'underboard.computerAnalysis': 'Computer analysis',
   'underboard.explorer': 'Opening explorer',
   'underboard.gameInfo': 'Game info',

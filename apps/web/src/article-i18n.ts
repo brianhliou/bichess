@@ -881,6 +881,7 @@ const ZH_HANS: Record<string, string> = {
     '作为目标时，炮排在这里：马以上可吃，卒不可吃。',
   'CAPTURE RANK LADDER': '吃子等级序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
+  '/article-thumbs/skill-vs-luck-summary.png': '/article-thumbs/skill-vs-luck-summary.zh-hans.png',
   'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
     '对这个格子可能是的每一枚棋：\n    把那枚棋放到格子下\n    走这步翻子\n    评估局面\n按数量加权，取平均',
   'decision loss = best - played      (skill, always >= 0)\nluck          = realized - played  (the dice, signed)':
@@ -1786,6 +1787,7 @@ const ZH_HANT: Record<string, string> = {
     '作為目標時，砲排在這裡：馬以上可吃，卒不可吃。',
   'CAPTURE RANK LADDER': '吃子等級序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
+  '/article-thumbs/skill-vs-luck-summary.png': '/article-thumbs/skill-vs-luck-summary.zh-hant.png',
   'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
     '對這個格子可能是的每一枚棋：\n    把那枚棋放到格子下\n    走這步翻子\n    評估局面\n按數量加權，取平均',
   'decision loss = best - played      (skill, always >= 0)\nluck          = realized - played  (the dice, signed)':

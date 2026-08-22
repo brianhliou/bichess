@@ -4,6 +4,7 @@
 // (Opening / Middlegame / Endgame) on the right, tone-coloured by value. Anonymous
 // games have no names, so sides are labelled Red / Black.
 import './analysis-summary.css';
+import { t } from '../i18n/catalog.js';
 import {
   type GameAnalysis,
   type GamePhases,
@@ -61,7 +62,7 @@ export function createAnalysisSummary(
 }
 
 function colorLabel(color: 'red' | 'black'): string {
-  return color === 'red' ? 'Red' : 'Black';
+  return color === 'red' ? t('summary.red') : t('summary.black');
 }
 
 function playerBlock(
@@ -89,32 +90,32 @@ function playerBlock(
   stats.append(
     statRow(
       String(player.inaccuracies),
-      plural(player.inaccuracies, 'Inaccuracy', 'Inaccuracies'),
+      plural(player.inaccuracies, t('summary.inaccuracyOne'), t('summary.inaccuracyMany')),
       player.inaccuracies > 0 ? 'inaccuracy' : null,
     ),
     statRow(
       String(player.mistakes),
-      plural(player.mistakes, 'Mistake', 'Mistakes'),
+      plural(player.mistakes, t('summary.mistakeOne'), t('summary.mistakeMany')),
       player.mistakes > 0 ? 'mistake' : null,
     ),
     statRow(
       String(player.blunders),
-      plural(player.blunders, 'Blunder', 'Blunders'),
+      plural(player.blunders, t('summary.blunderOne'), t('summary.blunderMany')),
       player.blunders > 0 ? 'blunder' : null,
     ),
   );
   if (!hideAcpl) {
-    stats.append(statRow(String(player.acpl), 'Average centipawn loss', null));
+    stats.append(statRow(String(player.acpl), t('summary.acpl'), null));
   }
 
   // Right column: headline accuracy over the per-phase accuracies.
   const acc = document.createElement('div');
   acc.className = 'analysis-summary__phases';
-  acc.append(phaseRow(player.accuracy, 'Accuracy', true));
+  acc.append(phaseRow(player.accuracy, t('summary.accuracy'), true));
   const phaseEntries: Array<[number | undefined, string]> = [
-    [phases.opening, 'Opening'],
-    [phases.middlegame, 'Middlegame'],
-    [phases.endgame, 'Endgame'],
+    [phases.opening, t('summary.opening')],
+    [phases.middlegame, t('summary.middlegame')],
+    [phases.endgame, t('summary.endgame')],
   ];
   for (const [value, phaseLabel] of phaseEntries) {
     if (value !== undefined) acc.append(phaseRow(value, phaseLabel, false));

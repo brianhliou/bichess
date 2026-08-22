@@ -125,6 +125,7 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       'annotate',
       'engine',
       'review',
+      'summary',
     ],
     english: EN_REVIEW,
     critical: CRITICAL_REVIEW_I18N_KEYS,
