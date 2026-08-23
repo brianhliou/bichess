@@ -39,6 +39,7 @@ import {
 import {
   getPuzzleRating,
   getUserPuzzleRating,
+  listAttemptedPuzzleIds,
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
@@ -121,6 +122,11 @@ export async function tryHandle(
       ? discoverable.filter((puzzle) => puzzle.variant === variant)
       : discoverable;
     const ratings = await listPuzzleRatingSummaries(puzzles.map((puzzle) => puzzle.id));
+    // Signed-in visitors also get what they have already finished, so rotation
+    // survives a cleared browser or a second device. Anonymous visitors get an
+    // empty list and fall back to the localStorage seen-set alone.
+    const user = await currentAccountUser(request);
+    const attemptedIds = user ? await listAttemptedPuzzleIds(user.id, variant ?? undefined) : [];
     writeJson(response, 200, {
       puzzles: puzzles.map((puzzle) =>
         puzzleSummary(
@@ -128,6 +134,7 @@ export async function tryHandle(
           ratings.get(puzzle.id) ?? seededPuzzleRatingSummary(puzzle.solution.length),
         ),
       ),
+      attemptedIds,
     });
     return true;
   }

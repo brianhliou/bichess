@@ -117,6 +117,25 @@ export async function listPuzzleRatingSummaries(
   );
 }
 
+// Puzzles this user has already finished. Rotation is otherwise driven by a
+// localStorage seen-set, which does not survive a cleared browser, a second
+// device, or a reinstall -- and puzzle_attempts has held the answer the whole
+// time without anything reading it. Signed-in visitors should not be handed a
+// puzzle they have already solved just because they switched machines.
+export async function listAttemptedPuzzleIds(
+  userId: string,
+  variant?: string,
+): Promise<readonly string[]> {
+  if (!isInitialized()) return [];
+  const { rows } = await getPool().query<{ puzzle_id: string }>(
+    variant
+      ? `SELECT puzzle_id FROM puzzle_attempts WHERE user_id = $1 AND variant = $2`
+      : `SELECT puzzle_id FROM puzzle_attempts WHERE user_id = $1`,
+    variant ? [userId, variant] : [userId],
+  );
+  return rows.map((row) => row.puzzle_id);
+}
+
 // Record a user's first outcome for a puzzle and, if rated, apply the Glicko-2
 // update to both sides. Idempotent: a repeat attempt returns firstAttempt=false
 // and changes nothing. Returns null if persistence is disabled.

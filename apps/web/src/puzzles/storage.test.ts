@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PuzzleSummary } from './adapter.js';
-import { rotatePuzzleOrder } from './storage.js';
+import { loadSeenPuzzles, rotatePuzzleOrder, saveSeenPuzzles } from './storage.js';
 
 function puzzle(id: string, rating: number, theme: string): PuzzleSummary {
   return {
@@ -42,5 +42,35 @@ describe('adaptive puzzle rotation', () => {
     expect(ordered[0]?.id).toBe('nearer');
     expect(ordered.slice(0, 5).map(({ id }) => id)).toContain('explore');
     expect(ordered.slice(-2).map(({ id }) => id)).toEqual(['seen-old', 'seen-new']);
+  });
+});
+
+describe('seen-set capacity', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('remembers more puzzles than the served corpus so rotation does not recycle', () => {
+    // The cap bounds localStorage, but if it falls below the corpus then
+    // eviction re-serves puzzles the visitor has already seen while genuinely
+    // unseen ones wait. At 200 against a 1,605-puzzle corpus that happened
+    // after 200 puzzles with ~1,400 untouched.
+    const store = new Map<string, string>();
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+      },
+    });
+
+    const CORPUS = 1_605;
+    const seen = new Map<string, number>();
+    for (let index = 0; index < CORPUS; index += 1) seen.set(`puzzle-${index}`, index);
+    saveSeenPuzzles(seen);
+
+    const reloaded = loadSeenPuzzles();
+    expect(reloaded.size).toBe(CORPUS);
+    // The oldest entry must survive: it is the one eviction drops first, and
+    // dropping it is what makes an already-seen puzzle look unseen.
+    expect(reloaded.has('puzzle-0')).toBe(true);
+    expect(reloaded.has(`puzzle-${CORPUS - 1}`)).toBe(true);
   });
 });

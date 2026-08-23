@@ -59,10 +59,29 @@ export function reportAttemptRating(rating: PuzzleAttemptRating): void {
 }
 
 export async function fetchPuzzleList(): Promise<PuzzleSummary[]> {
+  return (await fetchPuzzleListWithAttempts()).puzzles;
+}
+
+// `attemptedIds` is what the SERVER knows this account has already finished.
+// The localStorage seen-set does not survive a cleared browser, a second
+// device, or a reinstall, so without this a signed-in visitor restarts the
+// rotation from the top of the pool. Empty for anonymous visitors.
+export async function fetchPuzzleListWithAttempts(): Promise<{
+  puzzles: PuzzleSummary[];
+  attemptedIds: string[];
+}> {
   const response = await fetch('/api/puzzles');
   if (!response.ok) throw new Error(`Puzzle list failed: ${response.status}`);
-  const body = (await response.json()) as { puzzles?: PuzzleSummary[] };
-  return Array.isArray(body.puzzles) ? body.puzzles : [];
+  const body = (await response.json()) as {
+    puzzles?: PuzzleSummary[];
+    attemptedIds?: unknown;
+  };
+  return {
+    puzzles: Array.isArray(body.puzzles) ? body.puzzles : [],
+    attemptedIds: Array.isArray(body.attemptedIds)
+      ? body.attemptedIds.filter((id): id is string => typeof id === 'string')
+      : [],
+  };
 }
 
 export async function fetchPuzzleDetail(id: string): Promise<PuzzleDetail | null> {

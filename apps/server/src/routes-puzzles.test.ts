@@ -600,3 +600,16 @@ test('reveal endpoint rejects non-POST methods', async () => {
   assert.equal(response.status, 405);
   assert.deepEqual(JSON.parse(response.body), { error: 'method_not_allowed' });
 });
+
+test('puzzle list carries attemptedIds, empty without a session', async () => {
+  // Anonymous visitors have no server-side history, so the field must still be
+  // present and empty rather than absent: the client merges it into its
+  // seen-set unconditionally, and a missing field would silently disable
+  // cross-device rotation for everyone if this ever regressed.
+  const response = await route('/api/puzzles');
+  const body = JSON.parse(response.body) as { attemptedIds?: unknown };
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(body.attemptedIds), 'attemptedIds should always be an array');
+  assert.deepEqual(body.attemptedIds, []);
+});

@@ -10,9 +10,17 @@ const SOLVED_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:solved';
 const SEEN_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:seen';
 const AUTO_NEXT_STORAGE_KEY = 'mistboard:puzzles:auto-next';
 const RATED_STORAGE_KEY = 'mistboard:puzzles:rated';
-// Rotation only needs "have I seen this lately," so cap the persisted seen-set
-// to the most-recently-seen ids rather than growing an unbounded history.
-const SEEN_PUZZLES_CAP = 200;
+// The cap bounds localStorage growth, but it MUST stay ahead of the served
+// corpus or rotation quietly breaks: once eviction starts, "unseen first"
+// re-serves evicted puzzles while genuinely unseen ones are still waiting. At
+// 200 against 430 puzzles that was survivable; the corpus reached 1,605 on
+// 2026-08-23 and the cap covered 12% of it, so a visitor hit repeats after 200
+// puzzles with ~1,400 untouched.
+//
+// Each entry is an id plus a timestamp, roughly 55 bytes of JSON, so 5,000
+// entries is about 275KB against a 5MB origin budget. Revisit if the corpus
+// approaches this number; the full cleared corpus tops out near 3,700 puzzles.
+const SEEN_PUZZLES_CAP = 5_000;
 
 export function loadSolvedPuzzleIds(): Set<string> {
   try {

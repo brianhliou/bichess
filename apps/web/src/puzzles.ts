@@ -29,7 +29,7 @@ import {
 import {
   fetchPuzzleDetail,
   fetchPuzzleHint,
-  fetchPuzzleList,
+  fetchPuzzleListWithAttempts,
   fetchPuzzleSolution,
   fetchUserPuzzleRating,
   reportAttemptRating,
@@ -305,7 +305,15 @@ export async function mountPuzzles(
 
   renderStatus(controls, t('puzzle.loading'));
   renderStatus(detail, t('puzzle.loading'));
-  summaries = await fetchPuzzleList();
+  const puzzleList = await fetchPuzzleListWithAttempts();
+  summaries = puzzleList.puzzles;
+  // Merge the server's record of finished puzzles into the local seen-set
+  // before rotating. Timestamp 0 sorts them behind anything seen in this
+  // browser, so a cross-device visitor sees unseen material first and their
+  // most recent local history stays ordered underneath it.
+  for (const id of puzzleList.attemptedIds) {
+    if (!seenPuzzles.has(id)) seenPuzzles.set(id, 0);
+  }
   const targetRatings = new Map<string, number>();
   await Promise.all(
     [...new Set(summaries.map((puzzle) => puzzle.variant))].map(async (variant) => {
