@@ -9,7 +9,15 @@ import {
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
-import { XQ_BOARD_H, XQ_BOARD_W, xqBoardSvg, xqSvg } from './diagrams.js';
+import {
+  XQ_BOARD_H,
+  XQ_BOARD_W,
+  xqBoardGrid,
+  xqBoardSvg,
+  xqMoveDots,
+  xqPiecesLayer,
+  xqSvg,
+} from './diagrams.js';
 
 function play(id: string, tokens: string[]): XiangqiGameState {
   let s = createInitialXiangqiState(id);
@@ -239,3 +247,35 @@ export const RB_CHARIOT_DOWN = () =>
       ],
     }),
   );
+
+// Article-card thumbnail: the thesis position cropped to a landscape 8:5 band.
+// Black's army above, the landed cannon on the riverbank below, the five
+// firing points dotted and the five targets ringed. Rendered as a thunk so the
+// card tracks the xiangqi piece-set picker like every other diagram.
+export const RB_THUMBNAIL = () => {
+  const x0 = 18;
+  const y0 = 6;
+  const body = [
+    '<rect x="0" y="0" width="320" height="200" class="xq-diagram-bg"/>',
+    xqBoardGrid(x0, y0, 'red'),
+    xqMoveDots(
+      [
+        { square: 'a5' as XiangqiSquare },
+        { square: 'c5' as XiangqiSquare },
+        { square: 'e5' as XiangqiSquare },
+        { square: 'g5' as XiangqiSquare },
+        { square: 'i5' as XiangqiSquare },
+        { square: 'a10' as XiangqiSquare, capture: true },
+        { square: 'c10' as XiangqiSquare, capture: true },
+        { square: 'e10' as XiangqiSquare, capture: true },
+        { square: 'g10' as XiangqiSquare, capture: true },
+        { square: 'i10' as XiangqiSquare, capture: true },
+      ],
+      x0,
+      y0,
+      'red',
+    ),
+    xqPiecesLayer(ARRIVED, null, x0, y0, 'red'),
+  ].join('');
+  return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">${body}</svg>`;
+};

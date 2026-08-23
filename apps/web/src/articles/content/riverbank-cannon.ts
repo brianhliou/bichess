@@ -8,6 +8,7 @@ import {
   RB_SEAL_COVER,
   RB_SHELTER,
   RB_STEALTH_PAIR,
+  RB_THUMBNAIL,
   RB_TRIPWIRE_PAIR,
 } from '../riverbank-cannon-diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
@@ -27,6 +28,7 @@ export const riverbankCannonArticle: Article = {
   summary:
     'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
   status: 'published',
+  thumbnail: { kind: 'svg', svg: RB_THUMBNAIL },
   publishedAt: '2026-08-23',
   audience:
     'Fog xiangqi players, xiangqi players curious about the fog variant, and anyone who wants to see how a hidden-information opening gets analyzed honestly.',
