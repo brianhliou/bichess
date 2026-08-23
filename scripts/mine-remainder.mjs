@@ -434,13 +434,38 @@ async function main() {
     saveState(state);
   }
 
-  const pendingShards = (progress.shards.pending ?? 0) + (progress.shards.claimed ?? 0);
-  if (pendingShards > 0) {
-    step(`Scanning ${pendingShards} remaining shard(s)`);
-    log('  The long phase. Safe to interrupt: leases expire and re-running resumes.\n');
+  // Shard statuses are pending | running | completed | failed. Counting a
+  // status that does not exist reads as zero, which is how an earlier version
+  // of this loop treated "4 shards still running" as "scan finished" and moved
+  // to audit while the run was still `scanning`. Audit claims require the run
+  // to have advanced past scanning, so all 882 audit workers claimed nothing
+  // and exited, and the batch sat still for fifteen minutes looking busy.
+  //
+  // A `running` shard whose lease has expired is an abandoned worker; a fresh
+  // scan pass reclaims it. So unfinished means anything not completed.
+  const unfinishedShards = (shards) =>
+    (shards.pending ?? 0) + (shards.running ?? 0) + (shards.failed ?? 0);
+
+  for (let pass = 0; ; pass += 1) {
+    const remaining = unfinishedShards(progress.shards);
+    if (remaining === 0) break;
+    if (pass >= 6) {
+      fail(
+        `Scan is not converging: ${remaining} shard(s) unfinished after ${pass} passes.\n` +
+          `  shards ${JSON.stringify(progress.shards)}\n` +
+          'Re-running reclaims expired leases, so shards that survive this many\n' +
+          'passes are failing for a reason that repeating will not fix.',
+      );
+    }
+    step(
+      pass === 0 ? `Scanning ${remaining} shard(s)` : `Reclaiming ${remaining} stalled shard(s)`,
+    );
+    if (pass === 0) {
+      log('  The long phase. Safe to interrupt: leases expire and re-running resumes.\n');
+    }
     await modalRun(
       'scan',
-      ['--run-id', state.runId, '--tasks', String(Math.min(pendingShards, TASK_CAP))],
+      ['--run-id', state.runId, '--tasks', String(Math.min(remaining, TASK_CAP))],
       state.manifestPath,
     );
     progress = queryProduction(progressSnippet(state.runId));
@@ -452,17 +477,29 @@ async function main() {
   saveState(state);
 
   // The Modal map caps at 1,000 inputs, and a large batch produces more
-  // verified candidates than that, so drain the queue in passes.
+  // verified candidates than that, so drain the queue in passes. Guard against
+  // spinning: if a pass audits nothing, workers cannot claim and repeating is
+  // pointless.
   for (;;) {
     progress = queryProduction(progressSnippet(state.runId));
     const verified = progress.candidates.verified ?? 0;
     if (verified === 0) break;
-    step(`Auditing ${verified} verified candidate(s)`);
+    step(`Auditing ${verified} verified candidate(s)  [run status: ${progress.runStatus}]`);
     await modalRun(
       'audit',
       ['--run-id', state.runId, '--tasks', String(Math.min(verified, TASK_CAP))],
       state.manifestPath,
     );
+    const after = queryProduction(progressSnippet(state.runId));
+    if ((after.candidates.verified ?? 0) >= verified) {
+      fail(
+        `An audit pass resolved nothing: still ${after.candidates.verified} verified.\n` +
+          `  run status ${after.runStatus}\n` +
+          `  candidates ${JSON.stringify(after.candidates)}\n\n` +
+          'Audit workers claim only once the run has advanced past scanning.\n' +
+          'Check for unfinished shards holding the run in `scanning`.',
+      );
+    }
   }
 
   progress = queryProduction(progressSnippet(state.runId));

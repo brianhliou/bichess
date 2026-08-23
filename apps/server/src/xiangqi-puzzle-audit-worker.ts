@@ -76,13 +76,19 @@ export async function processNextXiangqiPuzzleAuditCandidate(input: {
     const runAdvancedToReview = await advanceXiangqiPuzzleMiningRunAfterAudit(input.runId);
     return { candidateId: claim.candidate.id, verdict: result.verdict, runAdvancedToReview };
   } catch (error) {
-    await failXiangqiPuzzleMiningAuditCandidate({
+    const outcome = await failXiangqiPuzzleMiningAuditCandidate({
       ...identity,
       failure: {
         code: 'audit-processing-failed',
         message: error instanceof Error ? error.message : String(error),
       },
-    }).catch(() => undefined);
+    }).catch(() => null);
+    // Parking the last unresolvable candidate is what finally lets a run leave
+    // `verifying`, so advance here rather than waiting for a later worker to
+    // happen upon an empty queue.
+    if (outcome?.parked) {
+      await advanceXiangqiPuzzleMiningRunAfterAudit(input.runId).catch(() => undefined);
+    }
     throw error;
   } finally {
     clearInterval(heartbeat);

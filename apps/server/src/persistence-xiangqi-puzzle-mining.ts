@@ -1028,22 +1028,46 @@ export async function heartbeatXiangqiPuzzleMiningAuditCandidate(input: {
   return mapAuditClaim(rows[0]);
 }
 
+// A released candidate returns to `verified` and gets claimed again, which is
+// right for a transient failure (a preempted container, a dropped connection)
+// and wrong for a deterministic one. advanceXiangqiPuzzleMiningRunAfterAudit
+// refuses to advance while ANY candidate is `verified`, so with no ceiling a
+// single always-failing candidate pins the entire run in `verifying` forever.
+// On 2026-08-23 one position whose depth-22 search could not finish inside the
+// engine timeout did exactly that to a 2,500-game batch, after 850 of its 902
+// siblings had already passed.
+//
+// Parking as `audit-failed` is fail-closed: publication requires a PASSING
+// audit judgment, so a candidate we could not audit can never reach players.
+//
+// Five, not three: an interruption, a stale lease, and a fencing reclaim are
+// each legitimate transient retries and can consume three attempts between
+// them without anything being wrong. The ceiling has to sit above ordinary
+// retry churn or it parks healthy candidates.
+export const MAX_XIANGQI_PUZZLE_AUDIT_ATTEMPTS = 5;
+
 export async function failXiangqiPuzzleMiningAuditCandidate(input: {
   candidateId: string;
   claimToken: string;
   failure: Record<string, unknown>;
-}): Promise<void> {
-  const { rows } = await getPool().query<{ id: string }>(
+  maxAttempts?: number;
+}): Promise<{ parked: boolean; attempts: number }> {
+  const maxAttempts = input.maxAttempts ?? MAX_XIANGQI_PUZZLE_AUDIT_ATTEMPTS;
+  const { rows } = await getPool().query<{ status: string; audit_attempt_count: number }>(
     `UPDATE xiangqi_puzzle_mining_candidates
      SET audit_worker_id = NULL, audit_claim_token = NULL,
          audit_lease_expires_at = NULL, audit_last_heartbeat_at = now(),
-         audit_failure = $3::jsonb, updated_at = now()
+         audit_failure = $3::jsonb,
+         status = CASE WHEN audit_attempt_count >= $4 THEN 'audit-failed' ELSE status END,
+         updated_at = now()
      WHERE id = $1 AND status = 'verified' AND audit_claim_token = $2
        AND audit_lease_expires_at > now()
-     RETURNING id`,
-    [input.candidateId, input.claimToken, JSON.stringify(input.failure)],
+     RETURNING status, audit_attempt_count`,
+    [input.candidateId, input.claimToken, JSON.stringify(input.failure), maxAttempts],
   );
-  if (!rows[0]) throw new Error(`audit candidate ${input.candidateId} is not claimed`);
+  const row = rows[0];
+  if (!row) throw new Error(`audit candidate ${input.candidateId} is not claimed`);
+  return { parked: row.status === 'audit-failed', attempts: row.audit_attempt_count };
 }
 
 export async function advanceXiangqiPuzzleMiningRunAfterAudit(runId: string): Promise<boolean> {

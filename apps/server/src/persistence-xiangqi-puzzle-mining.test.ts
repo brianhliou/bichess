@@ -4,6 +4,7 @@ import { buildElephantChessPilotManifest } from './elephantchess-pilot-manifest.
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import {
+  advanceXiangqiPuzzleMiningRunAfterAudit,
   checkpointXiangqiPuzzleMiningShard,
   claimNextXiangqiPuzzleMiningAuditCandidate,
   claimNextXiangqiPuzzleMiningShard,
@@ -984,6 +985,83 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     assert.ok(
       widest <= 12,
       `run loader plan touched ${widest} rows for 12 games and 4 shards; it is multiplying children`,
+    );
+  });
+
+  test('a candidate that always fails audit parks instead of blocking the run', async () => {
+    const games = Array.from({ length: 8 }, (_, index) => pilotGame(500 + index));
+    await seedEligibleGames(games);
+    const manifest = buildElephantChessPilotManifest(games, {
+      importBatchId: BATCH_ID,
+      seed: 'poison-pill-v1',
+      targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
+    });
+    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+    const historicalGameId = manifest.games[0]?.historicalGameId as string;
+    const candidate = await recordXiangqiPuzzleMiningCandidate({
+      runId: run.id,
+      historicalGameId,
+      postBlunderPly: 22,
+      positionKey: 'xiangqi-poison-pill-position',
+      trigger: 'eval-swing',
+      scanEvidence: { beforeCp: 400, afterCp: 40, scanNodes: 60_000 },
+    });
+    await recordXiangqiPuzzleMiningJudgment({
+      candidateId: candidate.id,
+      stage: 'verify',
+      profileVersion: 'verify-v1',
+      verdict: 'pass',
+      engineProfile: { engine: 'pikafish-test', binarySha256: 'f'.repeat(64) },
+      evidence: { depth: 20 },
+      puzzleData: publishablePuzzle(`xq-mined-poison-${candidate.id}`, historicalGameId, 22),
+    });
+    await getPool().query(
+      `UPDATE xiangqi_puzzle_mining_runs SET status = 'verifying' WHERE id = $1`,
+      [run.id],
+    );
+
+    // Five claim/fail cycles, as a deterministic engine timeout would produce.
+    const outcomes: { parked: boolean; attempts: number }[] = [];
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const claim = await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: `poison-worker-${attempt}`,
+        claimToken: `poison-claim-${attempt}`,
+      });
+      assert.equal(
+        claim?.candidate.id,
+        candidate.id,
+        `attempt ${attempt} should still be claimable`,
+      );
+      outcomes.push(
+        await failXiangqiPuzzleMiningAuditCandidate({
+          candidateId: candidate.id,
+          claimToken: `poison-claim-${attempt}`,
+          failure: { code: 'audit-processing-failed', message: 'pikafish request timed out' },
+        }),
+      );
+    }
+
+    // The first four release it for another try; the fifth parks it.
+    assert.deepEqual(
+      outcomes.map((outcome) => outcome.parked),
+      [false, false, false, false, true],
+    );
+    assert.equal(
+      (await getXiangqiPuzzleMiningCandidate(getPool(), candidate.id)).status,
+      'audit-failed',
+    );
+
+    // Parked, not verified: the run is free to advance and nothing can claim it.
+    assert.equal(await advanceXiangqiPuzzleMiningRunAfterAudit(run.id), true);
+    assert.equal((await getXiangqiPuzzleMiningRun(getPool(), run.id)).status, 'review');
+    assert.equal(
+      await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: 'poison-worker-after',
+        claimToken: 'poison-claim-after',
+      }),
+      null,
     );
   });
 });
