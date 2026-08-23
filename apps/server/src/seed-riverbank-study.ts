@@ -196,6 +196,29 @@ async function main(): Promise<void> {
   }
   console.log(`${chapters.length} chapters prepared (all mainlines fog-kernel verified)`);
 
+  // Write exactly what would be POSTed, without posting. Lets a client that
+  // already holds a session (a signed-in browser) do the posting itself.
+  const emitPath = typeof args.emit === 'string' ? args.emit : null;
+  if (emitPath) {
+    const [firstChapter, ...restChapters] = chapters;
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      emitPath,
+      JSON.stringify({
+        study: {
+          name: 'The Riverbank Cannon',
+          description:
+            'Companion study to the article of the same name: the verified theory lines of fog xiangqi\u2019s opening cannon rush, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, eight scheme-test games, and sixteen free self-play games, all in full. Article: /blog/riverbank-cannon',
+          visibility,
+          chapter: firstChapter,
+        },
+        chapters: restChapters,
+      }),
+    );
+    console.log(`wrote ${chapters.length} chapter payloads to ${emitPath}`);
+    return;
+  }
+
   const suppliedCookie = process.env.MISTBOARD_SESSION_COOKIE?.trim();
   if (!suppliedCookie && !email) {
     console.error('--email required (dev server), or set MISTBOARD_SESSION_COOKIE');

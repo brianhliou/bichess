@@ -198,8 +198,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            // LOCAL study id: reseed on prod at publish time (apps/server/src/seed-riverbank-study.ts) and update this link.
-            'All the games behind this article are in the [companion study](/study/KMssjbOV): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
+            'All the games behind this article are in the [companion study](/study/3LGIVr59): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
         },
         {
           kind: 'paragraph',
@@ -255,7 +254,7 @@ export const riverbankCannonArticle: Article = {
         'Every line and every game in this article is in the companion study, on a board you can flip to either side\u2019s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
       // LOCAL study id: reseed on prod at publish (seed-riverbank-study.ts) and update.
       playLabel: 'Open the companion study',
-      playHref: '/study/KMssjbOV',
+      playHref: '/study/3LGIVr59',
       secondary: [
         {
           label: 'Play vs computer',
