@@ -13,6 +13,12 @@ let pool: pg.Pool | null = null;
 export type PoolSessionGuards = {
   statementTimeoutMs?: number;
   tempFileLimitKb?: number;
+  // Pool ceiling per process. The default suits one long-lived server; a fleet
+  // of N short-lived workers multiplies it by N against a fixed
+  // max_connections that the LIVE site also draws from. A worker that processes
+  // its unit sequentially needs one or two, so scaling the fleet safely means
+  // shrinking this first.
+  maxPoolConnections?: number;
 };
 
 export function init(connectionString: string, guards?: PoolSessionGuards): void {
@@ -34,7 +40,7 @@ export function init(connectionString: string, guards?: PoolSessionGuards): void
   }
   pool = new pg.Pool({
     connectionString,
-    max: 10,
+    max: guards?.maxPoolConnections ?? 10,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
     idleTimeoutMillis: 30_000,

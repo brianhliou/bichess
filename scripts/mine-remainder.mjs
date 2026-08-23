@@ -271,13 +271,18 @@ function generateManifest(corpus, existingSeed) {
     `elephantchess-remainder-${new Date().toISOString().slice(0, 10)}-${corpus.mined}`;
   const out = join(STATE_DIR, `${seed}.json`);
   // Batch, not the whole remainder. Every batch is a checkpoint: a bad one
-  // costs a batch instead of the corpus, and 1,000 games in the pilot's
-  // 800/100/100 shape is the only size this pipeline has ever completed.
-  // --all opts into the entire remainder for whoever wants it later.
+  // costs a batch instead of the corpus. Targets keep the pilot's 80/10/10
+  // shape. --all opts into the entire remainder.
+  //
+  // Size against what is actually LEFT, not the requested batch: the builder
+  // demands exactly as many eligible games as the targets add up to, so a fixed
+  // 2,500 would fail outright on a final batch of 969 rather than mining it.
+  const effectiveBatch = Math.min(batchSize, corpus.remaining);
   const batchFlags = values.all
     ? '--fill-remaining'
-    : `--representative ${Math.round(batchSize * 0.8)} --coverage ${Math.round(batchSize * 0.1)} ` +
-      `--correspondence ${Math.round(batchSize * 0.1)}`;
+    : `--representative ${Math.round(effectiveBatch * 0.8)} ` +
+      `--coverage ${Math.round(effectiveBatch * 0.1)} ` +
+      `--correspondence ${effectiveBatch - Math.round(effectiveBatch * 0.8) - Math.round(effectiveBatch * 0.1)}`;
   const result = railwayShell(
     `DATABASE_URL="$DATABASE_PUBLIC_URL" npm run --silent pilot:elephantchess-manifest ` +
       `--workspace @mistboard/server -- --import-batch-id "${corpus.importBatchId}" ` +

@@ -85,6 +85,11 @@ if (!Number.isSafeInteger(maxCandidates) || maxCandidates <= 0) {
 const MINING_SESSION_GUARDS = {
   statementTimeoutMs: 5 * 60_000,
   tempFileLimitKb: 2 * 1024 * 1024,
+  // One worker drains its unit sequentially, so two connections is generous.
+  // The default of ten is sized for a single long-lived server; multiplied by a
+  // 32-worker fleet it would reserve 320 of production's 500 max_connections,
+  // starving the live site to no benefit.
+  maxPoolConnections: 2,
 };
 
 init(databaseUrl, MINING_SESSION_GUARDS);
