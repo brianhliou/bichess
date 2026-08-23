@@ -117,7 +117,8 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_variant' });
       return true;
     }
-    const discoverable = discoverablePuzzles(await getPuzzleStore());
+    const store = await getPuzzleStore();
+    const discoverable = discoverablePuzzles(store);
     const puzzles = variant
       ? discoverable.filter((puzzle) => puzzle.variant === variant)
       : discoverable;
@@ -131,7 +132,8 @@ export async function tryHandle(
       puzzles: puzzles.map((puzzle) =>
         puzzleSummary(
           puzzle,
-          ratings.get(puzzle.id) ?? seededPuzzleRatingSummary(puzzle.solution.length),
+          ratings.get(puzzle.id) ??
+            seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
         ),
       ),
       attemptedIds,
@@ -445,7 +447,10 @@ async function recordOutcomeRating(
     variant: puzzle.variant,
     solved,
     rated,
-    seedRating: seedPuzzleRating(puzzle.solution.length),
+    seedRating: seedPuzzleRating(
+      puzzle.solution.length,
+      (await getPuzzleStore()).difficultyById.get(puzzle.id),
+    ),
   });
   if (!result) return null;
   return {
@@ -495,7 +500,10 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
       puzzle,
       stored
         ? { rating: stored.rating, provisional: stored.provisional }
-        : seededPuzzleRatingSummary(puzzle.solution.length),
+        : seededPuzzleRatingSummary(
+            puzzle.solution.length,
+            (await getPuzzleStore()).difficultyById.get(puzzle.id),
+          ),
     ),
     initial: puzzle.initial,
     ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
@@ -504,11 +512,17 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
   };
 }
 
-function seededPuzzleRatingSummary(solutionPlyCount: number): {
+function seededPuzzleRatingSummary(
+  solutionPlyCount: number,
+  derivedDifficulty?: number,
+): {
   rating: number;
   provisional: boolean;
 } {
-  return { rating: Math.round(seedPuzzleRating(solutionPlyCount).rating), provisional: true };
+  return {
+    rating: Math.round(seedPuzzleRating(solutionPlyCount, derivedDifficulty).rating),
+    provisional: true,
+  };
 }
 
 function parseOptionalQualitySessionId(value: unknown): string | null | 'invalid' {

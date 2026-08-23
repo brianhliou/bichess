@@ -613,3 +613,41 @@ test('puzzle list carries attemptedIds, empty without a session', async () => {
   assert.ok(Array.isArray(body.attemptedIds), 'attemptedIds should always be an array');
   assert.deepEqual(body.attemptedIds, []);
 });
+
+test('mined xiangqi puzzles are seeded from the derived prior, not four depth buckets', async () => {
+  // seedPuzzleRating on mate depth alone yields four values corpus-wide, and
+  // 943 of 1,605 production puzzles land on the same one. Selection scores on
+  // |rating - target|, so hundreds of identical ratings make ranking a coin
+  // flip. Assert the SPREAD, not any single number: the point is that puzzles
+  // of equal mate depth are no longer indistinguishable.
+  const response = await route('/api/puzzles?variant=xiangqi');
+  const body = JSON.parse(response.body) as {
+    puzzles: Array<{ id: string; rating: number; solutionPlyCount: number }>;
+  };
+  assert.equal(response.status, 200);
+
+  const byDepth = new Map<number, Set<number>>();
+  for (const puzzle of body.puzzles) {
+    const set = byDepth.get(puzzle.solutionPlyCount) ?? new Set<number>();
+    set.add(puzzle.rating);
+    byDepth.set(puzzle.solutionPlyCount, set);
+  }
+
+  // At least one depth group must carry more than one rating. With the
+  // depth-only seed every group collapses to exactly one.
+  const spread = [...byDepth.entries()].filter(([, ratings]) => ratings.size > 1);
+  assert.ok(
+    spread.length > 0,
+    `expected at least one mate-depth group to hold several ratings, got ${JSON.stringify(
+      [...byDepth.entries()].map(([depth, ratings]) => [depth, ratings.size]),
+    )}`,
+  );
+
+  // Ratings must stay inside the difficulty range the derivation clamps to.
+  for (const puzzle of body.puzzles) {
+    assert.ok(
+      puzzle.rating >= 1000 && puzzle.rating <= 2600,
+      `puzzle ${puzzle.id} rated ${puzzle.rating} outside the derived range`,
+    );
+  }
+});

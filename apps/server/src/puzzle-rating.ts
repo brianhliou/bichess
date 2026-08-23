@@ -16,7 +16,22 @@ const SEED_BASE = 1500;
 const SEED_STEP = 300;
 const SEED_MAX = 2400;
 
-export function seedPuzzleRating(solutionPlyCount: number): Glicko2 {
+// `derivedDifficulty` is the offline prior from deriveXiangqiPuzzleDifficulty:
+// mate depth plus whether the key move is quiet, material conceded and not
+// recovered, and how many replies the defence has. Mate depth alone gives four
+// values across the whole corpus -- 943 of 1,605 puzzles seeded to exactly the
+// same number -- which makes rating-adaptive selection a coin flip among
+// hundreds of ties. The derived prior gives 402. Passed through unclamped by
+// SEED_MAX, which exists to stop the crude depth extrapolation running away and
+// has no business truncating a measured value.
+export function seedPuzzleRating(solutionPlyCount: number, derivedDifficulty?: number): Glicko2 {
+  if (derivedDifficulty !== undefined && Number.isFinite(derivedDifficulty)) {
+    return {
+      rating: Math.round(derivedDifficulty),
+      rd: DEFAULT_RD,
+      volatility: DEFAULT_VOLATILITY,
+    };
+  }
   const mateDepth = Math.max(1, Math.ceil(solutionPlyCount / 2));
   const seeded = SEED_BY_MATE_DEPTH[mateDepth] ?? SEED_BASE + (mateDepth - 1) * SEED_STEP;
   return {
