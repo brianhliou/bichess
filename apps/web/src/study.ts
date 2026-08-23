@@ -456,6 +456,10 @@ function renderStudy(
   };
 
   function renderActive(): void {
+    // Captured before the rebuild tears the old rail out of the DOM, so a
+    // chapter switch keeps the reader's place in a long chapter list.
+    const previousListScrollTop =
+      root.querySelector<HTMLElement>('.study-chapters__list')?.scrollTop ?? null;
     const chapter = chapters.find((entry) => entry.id === activeId) ?? chapters[0];
     // Fail-closed: a chapter whose variant has no board on this client (an older
     // client, or a variant retired from the study catalog) reports unsupported
@@ -470,6 +474,7 @@ function renderStudy(
     const gamebookable = studyVariantSupportsGamebook(variant);
     const rail = (status: HTMLElement): HTMLElement =>
       buildStudyRail(study, chapters, activeId, status, {
+        previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
         chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),

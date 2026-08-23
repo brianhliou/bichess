@@ -170,6 +170,12 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
   },
+  'riverbank-cannon': {
+    title: 'The Riverbank Cannon Problem',
+    kind: 'article',
+    description:
+      'Red\u2019s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
+  },
   'skill-vs-luck': {
     title: 'Separating Skill from Luck in Flip Games',
     kind: 'article',

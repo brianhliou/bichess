@@ -29,6 +29,10 @@ export type StudyRailActions = {
   onToggleFeatured(featured: boolean): Promise<string | null>;
   onOpenStudySettings(): void;
   onOpenChapterSettings(chapter: ChapterControlModel): void;
+  // Scroll offset of the previous rail's chapter list, captured by the caller
+  // before the old rail left the DOM. Null/absent on first mount, where the
+  // active chapter is centered instead.
+  previousListScrollTop?: number | null;
 };
 
 export function buildStudyRail(
@@ -239,10 +243,24 @@ export function buildStudyRail(
     panel.append(add);
   }
 
-  requestAnimationFrame(() => {
+  // Restore the reader's place across the rail rebuild a chapter switch
+  // performs; center the active chapter only on first mount (deep links into
+  // long studies). The rail can attach after an async board import, so wait
+  // until the list is connected and laid out before touching scrollTop.
+  let scrollAttempts = 0;
+  const placeChapterList = (): void => {
+    if (!list.isConnected || list.clientHeight === 0) {
+      if (scrollAttempts++ < 20) requestAnimationFrame(placeChapterList);
+      return;
+    }
+    if (actions.previousListScrollTop != null) {
+      list.scrollTop = actions.previousListScrollTop;
+      return;
+    }
     const active = list.querySelector<HTMLElement>('.is-active');
     if (active) list.scrollTop = Math.max(0, active.offsetTop - list.clientHeight / 2);
-  });
+  };
+  requestAnimationFrame(placeChapterList);
   return panel;
 }
 
