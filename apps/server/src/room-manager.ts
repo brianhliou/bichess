@@ -17,6 +17,7 @@ import {
   unfreezeClock,
   variantForId,
 } from '@mistboard/game';
+import { sendEngineAlertNotification } from './engine-alert-email.js';
 import { engineVersionDisplayName, loadEngine } from './engine-registry.js';
 import { firstPartyBotForEngine, firstPartyBotForId } from './first-party-bots.js';
 import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS } from './lifecycle-windows.js';
@@ -814,6 +815,7 @@ export async function forfeitEngineOnFailure(
   ctx: RoomManagerContext,
   room: Room,
   at: number,
+  reason?: string,
 ): Promise<void> {
   if (room.projection.state.status.type !== 'playing') return;
   if (room.projection.paused) return;
@@ -828,6 +830,30 @@ export async function forfeitEngineOnFailure(
     color: engineSeat,
     ...(frozenClock ? { clock: frozenClock } : {}),
   });
+  // An engine losing its seat is a page, not a stat: the 12c8ff99 forfeit was
+  // reconstructible only via a replay rig because nothing here said WHY. The
+  // cause stays out of the seat-forfeited event (schema untouched); it lives
+  // in this log line + alert, joined to the event by room_id/at.
+  logger.error(
+    {
+      kind: 'engine_seat_forfeited',
+      room_id: room.id,
+      color: engineSeat,
+      engine_id: room.pveEngineId ?? null,
+      reason: reason ?? null,
+      at,
+    },
+    'engine seat forfeited',
+  );
+  void sendEngineAlertNotification({
+    severity: 'critical',
+    alert_kind: 'engine_seat_forfeited',
+    variant: room.projection.variant,
+    room_id: room.id,
+    color: engineSeat,
+    engine_id: room.pveEngineId ?? undefined,
+    reason: reason ?? undefined,
+  }).catch(() => {});
 }
 
 // Append a resume event for a paused room. Clears the pauseGraceTimer if set.
@@ -1131,6 +1157,43 @@ async function recordLiveEngineDecisionArtifact(
   }
 }
 
+// The decision artifact above is success-only: a FAILED engine turn (pool
+// timeout, worker ok:false) used to leave ZERO rows in game_debug_artifacts,
+// so a forfeited game's entire forensic trail was ephemeral stdout — game
+// 12c8ff99 needed an offline replay rig to reconstruct. Persist the failure
+// next to the decisions it interrupts.
+async function recordLiveEngineFailureArtifact(
+  room: Room,
+  input: { error: string; engineId: string | null; at: number },
+): Promise<void> {
+  if (!persistence.isInitialized()) return;
+  try {
+    const ply = room.events.filter((e) => e.type === 'move-played').length;
+    await persistence.recordGameDebugArtifact({
+      gameId: room.id,
+      ply,
+      engineColor: engineSeatFor(room) ?? 'black',
+      artifactType: 'live-engine-failure',
+      payload: {
+        engine_id: input.engineId,
+        error: input.error,
+        at: input.at,
+      },
+    });
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        kind: 'live_engine_artifact_persistence_failed',
+        roomId: room.id,
+        artifactType: 'live-engine-failure',
+        error: (err as Error).message,
+        at: Date.now(),
+      }),
+    );
+  }
+}
+
 export async function playRandomEngineMoveIfReady(
   ctx: RoomManagerContext,
   room: Room,
@@ -1292,8 +1355,13 @@ export function scheduleRandomEngineMove(ctx: RoomManagerContext, room: Room): v
             },
             'engine move failure',
           );
+          void recordLiveEngineFailureArtifact(room, {
+            error: (err as Error).message,
+            engineId: room.pveEngineId ?? ctx.pveBuiltinEngineClientId,
+            at: failedAt,
+          });
           const failureSeq = room.events.length;
-          void forfeitEngineOnFailure(ctx, room, failedAt)
+          void forfeitEngineOnFailure(ctx, room, failedAt, (err as Error).message)
             .then(() => broadcastEventAppended(ctx, room, failureSeq))
             .catch((forfeitErr) => {
               if (forfeitErr instanceof PersistenceFailure) return;

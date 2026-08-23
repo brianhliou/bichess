@@ -9,6 +9,7 @@
 
 import { getLegalMoves as getXiangqiLegalMoves, type XiangqiColor } from '@mistboard/game';
 import type { DarkXiangqiEvent } from './dark-xiangqi-runtime.js';
+import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   buildEngineDecisionRecord,
   reportEngineMoveOk,
@@ -145,7 +146,7 @@ export async function playDarkXiangqiEngineMoveIfReady(
       'dxq engine request failed',
     );
     engineCounters.recordMove(true);
-    await forfeitDarkXiangqiEngine(ctx, room, seat);
+    await forfeitDarkXiangqiEngine(ctx, room, seat, (err as Error).message);
     return;
   }
 
@@ -160,7 +161,7 @@ export async function playDarkXiangqiEngineMoveIfReady(
         { kind: 'dxq_engine_no_legal_move', room_id: room.id, move: response.move },
         'dxq engine returned an illegal move and no legal fallback exists',
       );
-      await forfeitDarkXiangqiEngine(ctx, room, seat);
+      await forfeitDarkXiangqiEngine(ctx, room, seat, 'no legal fallback for illegal move');
       return;
     }
     // Fog: a move illegal in the TRUE position can be a legitimate consequence of
@@ -210,6 +211,7 @@ async function forfeitDarkXiangqiEngine(
   ctx: DarkXiangqiEngineContext,
   room: DarkXiangqiLiveRoom,
   seat: XiangqiColor,
+  reason?: string,
 ): Promise<void> {
   if (room.projection.state.status.type !== 'playing') return;
   const event: DarkXiangqiEvent = {
@@ -221,6 +223,26 @@ async function forfeitDarkXiangqiEngine(
   try {
     const seq = await ctx.appendEvent(room, event);
     ctx.broadcastEventAppended(room, event, seq);
+    // Page, don't just count: the forfeit's cause was previously only
+    // reconstructible by joining adjacent log lines by timestamp.
+    logger.error(
+      {
+        kind: 'engine_seat_forfeited',
+        variant: 'dark-xiangqi',
+        room_id: room.id,
+        color: seat,
+        reason: reason ?? null,
+      },
+      'engine seat forfeited',
+    );
+    void sendEngineAlertNotification({
+      severity: 'critical',
+      alert_kind: 'engine_seat_forfeited',
+      variant: 'dark-xiangqi',
+      room_id: room.id,
+      color: seat,
+      reason: reason ?? undefined,
+    }).catch(() => {});
   } catch (err) {
     logger.error(
       { kind: 'dxq_engine_forfeit_failed', room_id: room.id, error: (err as Error).message },

@@ -18,6 +18,7 @@
 
 import { getMiniXiangqiLegalMoves, type MiniXiangqiColor } from '@mistboard/game';
 import type { DarkMiniXiangqiEvent } from './dark-mini-xiangqi-runtime.js';
+import { sendEngineAlertNotification } from './engine-alert-email.js';
 import { reportEngineMoveOk } from './engine-move-guard.js';
 import { buildMiniXiangqiEngineTurnRequest } from './engine-protocol/build-mini-xiangqi.js';
 import { isDarkMiniXiangqiEngineClientId, loadEngine } from './engines/registry.js';
@@ -167,7 +168,7 @@ export async function playDarkMiniXiangqiEngineMoveIfReady(
       'dmx engine request failed',
     );
     engineCounters.recordMove(true);
-    await forfeitDarkMiniXiangqiEngine(ctx, room, seat);
+    await forfeitDarkMiniXiangqiEngine(ctx, room, seat, (err as Error).message);
     return;
   }
 
@@ -185,7 +186,7 @@ export async function playDarkMiniXiangqiEngineMoveIfReady(
       { kind: 'dmx_engine_illegal_move', room_id: room.id, move: response.move },
       'dmx engine returned a move illegal in the true position',
     );
-    await forfeitDarkMiniXiangqiEngine(ctx, room, seat);
+    await forfeitDarkMiniXiangqiEngine(ctx, room, seat, 'illegal move in true position');
     return;
   }
   reportEngineMoveOk();
@@ -205,6 +206,7 @@ async function forfeitDarkMiniXiangqiEngine(
   ctx: DarkMiniXiangqiEngineContext,
   room: DarkMiniXiangqiLiveRoom,
   seat: MiniXiangqiColor,
+  reason?: string,
 ): Promise<void> {
   if (room.projection.state.status.type !== 'playing') return;
   const event: DarkMiniXiangqiEvent = {
@@ -216,6 +218,26 @@ async function forfeitDarkMiniXiangqiEngine(
   try {
     const seq = await ctx.appendEvent(room, event);
     ctx.broadcastEventAppended(room, event, seq);
+    // Page, don't just count: the forfeit's cause was previously only
+    // reconstructible by joining adjacent log lines by timestamp.
+    logger.error(
+      {
+        kind: 'engine_seat_forfeited',
+        variant: 'dark-mini-xiangqi',
+        room_id: room.id,
+        color: seat,
+        reason: reason ?? null,
+      },
+      'engine seat forfeited',
+    );
+    void sendEngineAlertNotification({
+      severity: 'critical',
+      alert_kind: 'engine_seat_forfeited',
+      variant: 'dark-mini-xiangqi',
+      room_id: room.id,
+      color: seat,
+      reason: reason ?? undefined,
+    }).catch(() => {});
   } catch (err) {
     logger.error(
       { kind: 'dmx_engine_forfeit_failed', room_id: room.id, error: (err as Error).message },

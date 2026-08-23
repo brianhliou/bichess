@@ -257,6 +257,10 @@ class PoolWorker {
       const errMsg = msg.error ?? 'worker returned !ok';
       // The pool counts this as a retry (recovered) or, if attempts are
       // exhausted, as a terminal pool error — see handleRequestFailure.
+      // Full diagnostics, matching the completed/failed branches: an explicit
+      // worker refusal (e.g. the engine's fail-closed BeliefUpdateOverBudget)
+      // is the log line a forfeit post-mortem starts from.
+      const errDispatchedAt = this.current.dispatchedAt;
       logger.error(
         {
           kind: 'python_pool_worker_error',
@@ -264,6 +268,10 @@ class PoolWorker {
           engine_id: this.opts.engineId,
           request_id: msg.requestId,
           error: errMsg,
+          elapsed_ms: errDispatchedAt ? Date.now() - errDispatchedAt : null,
+          queue_wait_ms: errDispatchedAt ? errDispatchedAt - this.current.enqueuedAt : null,
+          timeout_ms: this.current.timeoutMs,
+          ...payloadDiagnostics(this.current.payload),
         },
         'worker returned !ok',
       );
