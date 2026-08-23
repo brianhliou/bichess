@@ -131,3 +131,51 @@ export const RB_TRIPWIRE_PAIR = () =>
       }),
     ].join(''),
   );
+
+// The thesis picture: the cannon on the riverbank, one slide from firing down
+// any of five files. Dots are the firing points, rings the targets.
+const ARRIVED = play('rb-arrived', ['b3b5']);
+
+export const RB_FIVE_FILES = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: ARRIVED,
+      x: 0,
+      y: 0,
+      label: 'ONE SLIDE FROM EVERYTHING',
+      perspective: 'red',
+      dots: [
+        { square: 'a5' as XiangqiSquare },
+        { square: 'c5' as XiangqiSquare },
+        { square: 'e5' as XiangqiSquare },
+        { square: 'g5' as XiangqiSquare },
+        { square: 'i5' as XiangqiSquare },
+      ],
+    }),
+  );
+
+// Black's complete three-move answer: edge soldier, central elephant, far horse.
+const SHELTER = play('rb-shelter', ['b3b5', 'a7a6', 'b5e5', 'c10e8', 'h1g3', 'h10i8']);
+
+export const RB_SHELTER = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: SHELTER,
+      x: 0,
+      y: 0,
+      label: 'THE THREE-MOVE ANSWER',
+      perspective: 'red',
+      arrows: [
+        { from: 'e8' as XiangqiSquare, to: 'c10' as XiangqiSquare },
+        { from: 'e8' as XiangqiSquare, to: 'g10' as XiangqiSquare },
+      ],
+      dots: [
+        { square: 'a5' as XiangqiSquare },
+        { square: 'e10' as XiangqiSquare, blocked: true },
+      ],
+    }),
+  );

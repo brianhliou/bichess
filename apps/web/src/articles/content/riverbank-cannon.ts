@@ -1,7 +1,9 @@
 import { playClosing } from '../diagrams.js';
 import {
   RB_ADVISOR_TRAP,
+  RB_FIVE_FILES,
   RB_SEAL_COVER,
+  RB_SHELTER,
   RB_STEALTH_PAIR,
   RB_TRIPWIRE_PAIR,
 } from '../riverbank-cannon-diagrams.js';
@@ -33,12 +35,18 @@ export const riverbankCannonArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Put those together and Red’s opening cannon becomes alarming. Slide it to the riverbank and it stands one move from firing down any of five files: the chariots behind the edge soldiers, the elephants behind theirs, and behind the center soldier, the general. Black cannot know which, so he has to answer all five. One cannon capture ends the game. I built this variant, and I started to wonder whether it was dead on arrival.',
+        'That makes Red’s first move alarming. Slide the opening cannon to the riverbank and it is one move from firing down any of five files: two chariots, two elephants, and behind the center soldier, the general. One capture ends the game. I built this variant, and I wondered if it was dead on arrival.',
     },
+    {
+      kind: 'raw-svg',
+      svg: RB_FIVE_FILES,
+      caption:
+        'The dots are the five firing points. From each one the cannon shoots the piece behind the soldier screen: chariot, elephant, general, elephant, chariot.',
+    } as ArticleBlock,
     {
       kind: 'paragraph',
       text:
-        'So I checked. Every line below is verified against Mistboard’s rules engine, and the endgames are played out by Misty, our fog engine. The short version: the threat is worse than I thought, the defense most players will find first is a trap, and the game survives anyway.',
+        'So I checked, against the real rules kernel and our fog engine. Short version: the threat is worse than it looks, the natural defense is a trap, and the game survives.',
     },
   ],
   sections: [
@@ -48,13 +56,13 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The direct version at least announces itself: the cannon lifts through the b-file, and Black’s own cannon, watching down that file, sees an anonymous red piece land on the riverbank. You cannot tell what it is, but you know something came. Red does not have to grant you that. Up the empty d-file, nothing Black owns sees a single point: d3, d5, across to the center, mate on move 4. The only signal is that a red piece left home, which describes every xiangqi game ever played.',
+            'The b-file route announces itself: Black’s cannon watches that file and sees something land on the riverbank. Red does not have to go that way. Up the empty d-file, nothing Black owns sees a single point: d3, d5, e5, mate on move 4. The only warning is that a red piece left home, which describes every game ever played.',
         },
         {
           kind: 'raw-svg',
           svg: RB_STEALTH_PAIR,
           caption:
-            'One move before mate. Left: the truth, with the cannon’s route and its target. Right: everything Black can see. The cannon never enters the picture.',
+            'One move before mate. Left: the truth. Right: everything Black can see. The cannon never enters the picture.',
         } as ArticleBlock,
         {
           kind: 'xq-replay',
@@ -71,7 +79,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'So defense cannot be reactive: you have to play the answer every game, rush or no rush. Chess’s Scholar’s Mate at least enters your half of the board; the cannon fires from outside your vision. The theory lines in the rest of this article draw the visible b-file route so the diagrams are easy to follow. Every riverbank threat is identical however the cannon arrived; the defense must not care.',
+            'So the defense cannot wait for a warning; it has to be played every game. The rest of the article draws the visible route so the diagrams read easily. The threats are the same either way.',
         },
       ],
     },
@@ -81,23 +89,18 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The snipe works because there is exactly one screen between cannon and general: Black’s own center soldier. A cannon needs exactly one, so any second body on the center file kills the mate. Black has six ways to do that on move one. They are not equal.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The one most players find first is advisor up: shortest path, stays in the palace. It seals the center, and it plants a landmine.',
+            'There is exactly one screen between cannon and general: Black’s own center soldier. A cannon needs exactly one, so any second body on the center file kills the mate. The natural pick is advisor up. It seals the center and nothing else, and it plants a mine: Red slides to an elephant wing and takes.',
         },
         {
           kind: 'raw-svg',
           svg: RB_ADVISOR_TRAP,
           caption:
-            'The landmine, sprung: Black’s second move went elsewhere, and Red took the elephant on the wing whose advisor stayed home. The cannon fires along the back rank through that advisor; the marked flight square loses to the same shot; the sealing advisor sits on the only parry point. From here, all 41 of Black’s legal moves lose within two moves, engine-checked.',
+            'Red guessed the wing whose advisor stayed home. The cannon fires along the back rank through it, the marked flight point loses to the same shot, and the sealing advisor blocks the only parry. All 41 legal replies lose, engine-checked. The other wing costs only an elephant.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'The mine has a disarm, and Black even knows which wing it sits on, because he knows which advisor he moved: play the poisoned wing’s elephant to the middle on the very next move, and both grabs die (one target gone, the other covered by the recapture). Look at what that costs, though. The disarm is the elephant move Black should have played first, so advisor-up spent a whole move doing a fraction of the elephant’s job, and the two-move package covers no edge at all. Against advisor-first, Red does not gamble on the wings: he commits to a rim on move two and takes a chariot for free. Dominated, with a forced mate waiting for anyone who does not know the follow-up.',
+            'There is a save: play the poisoned wing’s elephant to the middle immediately, and both grabs die. But that is the move you should have opened with. The advisor spends a whole move doing a fraction of the elephant’s job, and while you fix it, Red takes a rim chariot for free.',
         },
       ],
     },
@@ -113,12 +116,12 @@ export const riverbankCannonArticle: Article = {
           kind: 'raw-svg',
           svg: RB_SEAL_COVER,
           caption:
-            'The central elephant. Second screen on the center file, so the snipe is marked dead; both elephant home points covered by the recapture.',
+            'Second screen on the center file, so the snipe is marked dead; both elephant home points covered by the recapture.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'The snipe is dead, and the elephant grabs now trade a cannon for an elephant, in Black’s favor. One move, three files, and it is a move your opening wanted anyway. Xiangqi theory arrived at this square centuries before the fog did. A cannon to the same point works too, and keeps both elephants home.',
+            'Snipe dead, both elephant wings covered, one move. Xiangqi theory reached this square centuries before the fog did. A cannon to the same point works too.',
         },
       ],
     },
@@ -128,23 +131,23 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'That leaves the edges. From the riverbank corner the cannon shoots the chariot through the edge soldier, and the elephant does nothing about that. There is a reactive block (a horse to the edge file), but the better scheme comes from a deadline.',
+            'That leaves the edges: from the riverbank corner the cannon shoots the chariot through the edge soldier, and the elephant does nothing about it.',
         },
         {
           kind: 'paragraph',
           text:
-            'The seal can wait one move: the snipe cannot land before Red’s third move. The edge cannot wait: Red commits his cannon on move two. So soldier first, elephant second. The pushed soldier watches the one point the cannon must fire from, and a cannon that lands there dies before it can shoot.',
+            'Move order decides this. The mate cannot arrive before Red’s third move, so the elephant is still in time on Black’s second. The edges cannot wait: Red picks his corner on his second move, and a soldier pushed after that is too late. So soldier first, elephant second. The pushed soldier watches the one point the cannon must fire from, and eats it on arrival.',
         },
         {
           kind: 'raw-svg',
           svg: RB_TRIPWIRE_PAIR,
           caption:
-            'The same push, one move apart. Played first, the soldier watches the arrival point and the cannon dies on landing. Played second, the cannon is already there and shoots the chariot straight over the soldier: a pushed soldier still counts as one screen.',
+            'The same push, one move apart. Played first, the soldier watches the arrival point and the cannon dies on landing. Played second, the cannon shoots the chariot straight over it: a pushed soldier still counts as one screen.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'Now the opening is an honest gamble, and a one-shot: Red’s only window is committing blind on move two, because a third Black move puts a horse on the other edge and closes both rims. Red picks an edge. Half the time it is the watched one and he trades his cannon for a soldier. Half the time he wins a chariot. We played both branches with the engine, fifteen games on the chariot side and five on the cannon side: the chariot branch converted about two thirds for Red, and the cannon branch cost him more than the cannon, because the soldier recapture hands Black a screen and the corner chariot falls to the counter-shot in every playout. Priced together, the rush is one fair coin flip per game against a player who knows the scheme.',
+            'That leaves one honest gamble. Red commits blind to a corner on move two: half the time it is the watched one and he trades his cannon for a soldier, half the time he wins a chariot. Played out by the engine, the branches roughly cancel. One fair coin flip per game, and only if Red commits immediately: given a third move, Black closes both edges.',
         },
       ],
     },
@@ -154,7 +157,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One pattern decided games in every branch, and it travels to any fog game with long-range pieces. A cannon on its firing point is also the block against the enemy cannon opposite: loaded and shielding at once. Whoever steps away first, the other fires through the hole. And the fog baits you: from the wall, an enemy soldier looks free through the blur. Take it and you are mated on the reply. Every bot we tested fell for this.',
+            'One pattern decided games in every branch, and it travels to any fog game with long-range pieces: a cannon on its firing point is also the block against the enemy cannon opposite. Whoever steps away first, the other fires through the hole. And the fog baits you to step away: from the wall, an enemy soldier looks free. Take it and you are mated on the reply.',
         },
         {
           kind: 'xq-replay',
@@ -165,13 +168,13 @@ export const riverbankCannonArticle: Article = {
             title: 'The counter-battery',
             event: 'Kernel-verified line',
             resultText:
-              'Black skipped the elephant entirely and parked a cannon on the center file. Red cannot see it, grabs the chariot, and is mated on the reply.',
+              'Black skipped the elephant and parked a cannon on the center file. Red cannot see it, grabs the chariot, and is mated on the reply.',
           },
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'That answers a fair question: why not go up to the riverbank yourself as Black? You can, and this is what it looks like. The battery is Black’s riverbank plan, and it punishes any Red who cashes a grab. Against a Red who seals before grabbing, though, the cannon sits frozen on e6 for the rest of the game, the edge gamble comes back a move later, and you are less developed than the soldier line leaves you. The engine\u2019s converged verdict on that position is +0.25 for Red, against dead even for the soldier line. Play the battery against opponents who grab. The soldier line stays the default.',
+            'Which answers a fair question: why not go to the riverbank yourself as Black? You can, and it punishes any Red who grabs. But against a Red who seals first, your cannon sits frozen on e6 for the rest of the game, a quarter point worse by the engine’s count than the soldier line. A weapon for greedy opponents, not a default.',
         },
       ],
     },
@@ -181,7 +184,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'I forced the rush onto the board and let Misty play both sides: twenty games where Red must march the cannon to the riverbank and try the snipe, ten more where he must take the rim chariot. The snipe never fired once; Black sealed within three moves in eighteen of twenty, and the rush games came out Black nine, Red four, seven ply-caps. The forced chariot grab told the other side: Red converted it five games to two with three caps, just as the evaluations predict. Here is one of the rush games in full:',
+            'I forced the rush onto the board and let Misty play both sides, thirty games: twenty through the snipe attempt, ten through the chariot grab. The snipe never fired once; Black sealed within three moves in eighteen of twenty. The rush games went Black 9, Red 4, seven ply-cap draws. The forced grabs went Red 5, Black 2, three caps. Here is one in full:',
         },
         {
           kind: 'xq-replay',
@@ -192,28 +195,20 @@ export const riverbankCannonArticle: Article = {
             title: 'Rush game 3 of 20',
             event: 'Engine-vs-engine playout, full record',
             resultText:
-              'Black seals on move two and the snipe never comes; the parked cannon just becomes a normal piece. A real middlegame follows, and Red converts on move 22 with a horse landing on the general.',
+              'Black seals on move two and the snipe never comes; the parked cannon just becomes a normal piece. Red converts a real middlegame on move 22.',
           },
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
+            // PROD study id (seeded 2026-08-23 under the mistboard account, unlisted until the
+            // article ships; flip to public at publish). Local preview: study KMssjbOV in the dev DB.
             'All the games behind this article are in the [companion study](/study/3LGIVr59): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
         },
         {
           kind: 'paragraph',
           text:
-            'Playing both sides from the start, sixteen games, Red won eleven of the twelve decisive ones and never once played the rush: soldier pushes, horses, the central cannon, long middlegames. Sixteen shallow games is a lean sample, and self-play exaggerates first-mover effects, so treat the eleven as a direction.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'One more check, on the recommended defense itself: I forced Black through the line this article teaches (soldier, elephant, far horse) and let Red play free, eight games. Black won five of the seven decisive ones, against one of twelve when both sides chose freely. Lean samples both, but the direction is loud: the three insurance moves cost nothing. They are just good moves.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The engine\u2019s position evaluations are firmer ground: they hold still under a sixteen-fold compute increase (64 to 1024 search iterations), so these are converged verdicts on its -1 to +1 scale.',
+            'Left to choose freely, sixteen more games, Red won eleven of the twelve decisive and never once played the rush. Lean samples, so treat the counts as direction. The position evaluations are firmer ground: they hold still under a sixteen-fold compute increase.',
         },
         {
           kind: 'table',
@@ -229,7 +224,12 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Average the two flip branches and the committed rush is worth about +0.10 to Red, the same ballpark as the +0.06 he starts with. The whole first-move advantage, spent in one gamble. First-move initiative in fog xiangqi is real, probably bigger than in chess, because defense is paid for blind; the rush is just the loudest way to spend it, and the loudest way is answerable.',
+            'One last check: I forced Black through the line this article teaches against a free Red, eight games. Black won five of the seven decisive, against one of twelve when choosing freely. The three insurance moves cost nothing.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Average the flip branches and the committed rush is worth about +0.10 to Red, the same ballpark as the +0.06 he starts with: the whole first-move advantage, spent in one gamble. Initiative in fog is real, probably bigger than in chess, because defense is paid blind. The rush is the loudest way to spend it, and the loudest way is answerable.',
         },
       ],
     },
@@ -237,22 +237,28 @@ export const riverbankCannonArticle: Article = {
       heading: 'The line to learn',
       blocks: [
         {
+          kind: 'raw-svg',
+          svg: RB_SHELTER,
+          caption:
+            'Black’s three moves: edge soldier, central elephant, far-side horse. The dot is the watched firing point, the cross is the dead snipe, the arrows are the elephant’s cover.',
+        } as ArticleBlock,
+        {
           kind: 'paragraph',
           text:
-            'As Black: push an edge soldier, then elephant to the middle, then a horse to the other edge. Three moves and every target is covered; the only real target left is the chariot on the edge you did not push, and only if Red commits to it on his second move. Never seal with the advisor. And if a cannon lands on your back rank anyway, count screens before you move anything near it; most of the losses we found came from moving a piece that was quietly holding a firing line shut.',
+            'As Black: edge soldier, elephant to the middle, horse to the other edge. After three moves the only target left is the chariot on the edge you did not push, and only if Red committed on move two. Never seal with the advisor. And before you move any piece near a landed cannon, count screens: most losses we found came from moving a piece that was quietly holding a firing line shut.',
         },
         {
           kind: 'paragraph',
           text:
-            'As Red: the rush beats anyone who has not read this far, and it is even money against anyone who has. If you play it anyway, commit to an edge on move two or not at all, and seal with your own elephant before cashing any grab: every scripted Red that grabbed first was mated, one hundred percent.',
+            'As Red: the rush beats anyone who has not read this far, and it is even money against anyone who has. If you play it, commit to an edge on move two or not at all, and seal your own center before cashing any grab: every scripted Red that grabbed first got mated.',
         },
       ],
     },
     playClosing({
       heading: 'Step through it yourself',
       lead:
-        'Every line and every game in this article is in the companion study, on a board you can flip to either side\u2019s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
-      // LOCAL study id: reseed on prod at publish (seed-riverbank-study.ts) and update.
+        'Every line and every game in this article is in the companion study, on a board you can flip to either side’s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
+      // PROD study id: see note above.
       playLabel: 'Open the companion study',
       playHref: '/study/3LGIVr59',
       secondary: [
