@@ -176,7 +176,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The other half, Black is a chariot down, and the engine calls it -0.75: close to lost, still fighting. The landed cannon looks scarier than it is. Every capture it has loses on the spot to a recapture. Its real power is the freeze: the horse and the elephant beside it are holding the back rank shut, and if either ever moves, the next shot is the general.',
+            'The other half, Black is a chariot down. The engine scores positions from -1, lost, to +1, won; it calls this one -0.75, which is roughly one win in eight. Close to lost, not over. And the landed cannon looks scarier than it is: every capture it has loses on the spot to a recapture. Its real power is the freeze: the horse and the elephant beside it are holding the back rank shut, and if either ever moves, the next shot is the general.',
         },
         {
           kind: 'raw-svg',
@@ -187,7 +187,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'So Black\u2019s plan is patience: touch nothing on the back rank, and counterattack on the other wing, where the battery and the mirror gamble still exist. In the engine playouts Black saved one game of five from here and led on material in another at the ply cap.',
+            'So how does Black fight? The engine showed three ideas. First, patience: touch nothing on the back rank. Second, an immediate simplification: in our first playouts its opening move from here, every game, was to snipe Red’s home horse with its own cannon, over Red’s home cannon as the screen, trading cannon for horse to blunt the attack. Third, counterattack the other wing, where the battery and the mirror gamble still exist. And it escapes: of the ten forced-grab games, Black won two outright (Rim gambit games 2 and 8 in the companion study, in 84 and 56 plies) and held three more to the ply cap. One win in eight is the eval; one in four was the practice.',
         },
       ],
     },
