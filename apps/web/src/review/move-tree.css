@@ -68,6 +68,63 @@
   border-left-color: var(--judgment-blunder);
   background: color-mix(in srgb, var(--judgment-blunder) 7%, transparent);
 }
+/* Ranked alternatives for a chance ply. Chance variants get this INSTEAD of a refutation
+   line: past a reveal nothing is knowable, so a line would be fiction while a ranked set is
+   exactly what the engine scored. Sits inside the advice bracket, same rule and wash. */
+.move-tree__candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 2px 8px 4px 10px;
+  border-left: 3px solid color-mix(in srgb, var(--site-muted) 30%, transparent);
+  border-radius: 0 0 3px 3px;
+  font-size: 12px;
+  color: var(--site-muted);
+}
+.move-tree__comment + .move-tree__candidates {
+  border-left-color: inherit;
+}
+.move-tree__comment--inaccuracy + .move-tree__candidates {
+  border-left-color: var(--judgment-inaccuracy);
+  background: color-mix(in srgb, var(--judgment-inaccuracy) 7%, transparent);
+}
+.move-tree__comment--mistake + .move-tree__candidates {
+  border-left-color: var(--judgment-mistake);
+  background: color-mix(in srgb, var(--judgment-mistake) 7%, transparent);
+}
+.move-tree__comment--blunder + .move-tree__candidates {
+  border-left-color: var(--judgment-blunder);
+  background: color-mix(in srgb, var(--judgment-blunder) 7%, transparent);
+}
+.move-tree__candidate {
+  display: grid;
+  grid-template-columns: 1.4em auto 3.2em auto;
+  align-items: baseline;
+  column-gap: 6px;
+}
+.move-tree__candidate-rank {
+  text-align: right;
+  color: var(--site-muted);
+}
+.move-tree__candidate-move {
+  color: var(--site-text);
+}
+.move-tree__candidate-win {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* The played move is the reader's own choice; name it rather than making them
+   count rows to find themselves. */
+.move-tree__candidate--played .move-tree__candidate-move {
+  font-weight: 700;
+}
+.move-tree__candidate-played {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--site-muted);
+}
+
 /* An authored study comment is body text, not a verdict: no severity colouring,
    and it keeps neither the rule nor the wash. */
 .move-tree__comment--user {

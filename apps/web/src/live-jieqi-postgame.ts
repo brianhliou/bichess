@@ -20,6 +20,7 @@ import {
 } from './review/jieqi-decisions.js';
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
+import { formatJieqiBestMove } from './review/move-advice.js';
 import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -227,6 +228,17 @@ function toDecisionOverlay(summary: JieqiDecisionSummary): DecisionOverlay {
           accuracy: view.accuracy,
           luck: view.luck,
           playedRank: view.playedRank,
+          // Format at the variant seam: the review layer is variant-agnostic and must never
+          // see engine UCI. Same formatter the "… was best." advice line uses.
+          ...(view.candidates?.length
+            ? {
+                candidates: view.candidates.map((candidate) => ({
+                  label: formatJieqiBestMove(candidate.move),
+                  win: candidate.win,
+                  ...(candidate.played ? { played: true } : {}),
+                })),
+              }
+            : {}),
         },
       ]),
     ),

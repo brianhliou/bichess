@@ -233,6 +233,20 @@ export type DecisionMoveInfo = {
   luck: number;
   /** The played reveal's rank among the alternatives (1 = best), or null when off the table. */
   playedRank: number | null;
+  /** Ranked alternatives for this chance ply, best first, ALREADY formatted by the variant
+   *  (the move text is board notation, not engine UCI — this layer is variant-agnostic).
+   *  Absent when the analysis predates candidate capture, or the variant cannot produce one. */
+  candidates?: DecisionCandidate[];
+};
+
+/** One ranked alternative, display-ready. */
+export type DecisionCandidate = {
+  /** Board-notation move text, e.g. "e8-a8". */
+  label: string;
+  /** Luck-free win% for this choice, already rounded for display. */
+  win: number;
+  /** True when this is the move actually played. */
+  played?: boolean;
 };
 
 export type DecisionPlayerSummary = {
@@ -1357,6 +1371,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             suffixClass: glyph?.suffixClass,
             luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
             luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+            // Chance plies get the ranked alternatives instead of a refutation line: past a
+            // reveal nothing is knowable, so a LINE would be a fiction while a ranked SET is
+            // exactly what the server scored.
+            ...(info.candidates?.length ? { candidates: info.candidates } : {}),
           });
         }
       }
