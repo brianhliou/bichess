@@ -37,12 +37,14 @@ export type EngineBudgetKnobs = {
   softBudgetCapMs: number;
 };
 
-/** Defaults matching the historical live-engine constants (do not change without a migration of expectations). */
+/** Defaults matching the historical live-engine constants (do not change without a migration of expectations).
+ * maxTimeoutMs raised 30s -> 60s with the liveness/allocation decoupling (see
+ * liveCapBudget): it now bounds only "engine is presumed dead", not think time. */
 export const DEFAULT_ENGINE_BUDGET = {
   safetyMs: 200,
   processOverheadMs: 10_000,
   clockGraceMs: 1_000,
-  maxTimeoutMs: 30_000,
+  maxTimeoutMs: 60_000,
   movesRemainingEstimate: 12,
   softBudgetCapMs: 12_000,
 } as const;
@@ -124,12 +126,17 @@ function liveCapBudget(
     usableClockMs > 0 ? usableClockMs : 50,
     perMoveBankBudget(usableClockMs, incrementMs, knobs),
   );
-  const dynamicTimeoutMs = Math.ceil(computeBudgetMs + knobs.processOverheadMs);
+  // The watchdog is a LIVENESS bound, not a time allocator. It used to be
+  // derived from the allocation (compute + processOverheadMs, capped 30s),
+  // which conflated "engine is slow" with "engine is dead": prod game
+  // 12c8ff99 was forfeited at ~22s with 228s on the engine's clock, over one
+  // ~30-50s belief-update turn (engine issue #11). The engine self-allocates
+  // think time (v2 budgets from the real clock; computeBudgetMs still signals
+  // the allocation to engines that use it) — the server only bounds a true
+  // hang (maxTimeoutMs) and clock exhaustion (the clock is the honest
+  // arbiter: an engine that overspends flags instead of being watchdogged).
   const clockBoundMs = Math.ceil(Math.max(0, remainingMs) + knobs.clockGraceMs);
-  const watchdogTimeoutMs = Math.max(
-    1,
-    Math.min(knobs.maxTimeoutMs, dynamicTimeoutMs, clockBoundMs),
-  );
+  const watchdogTimeoutMs = Math.max(1, Math.min(knobs.maxTimeoutMs, clockBoundMs));
   return {
     computeBudgetMs: Math.max(1, Math.min(Math.ceil(computeBudgetMs), watchdogTimeoutMs)),
     watchdogTimeoutMs,

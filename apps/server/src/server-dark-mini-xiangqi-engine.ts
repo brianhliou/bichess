@@ -102,13 +102,12 @@ function budgetFor(
   // capped so the engine can't flag. The worker re-derives its own budget from
   // the request clock; this sets the HTTP/compute ceiling.
   const perMove = Math.min(usable > 0 ? usable : 50, usable * 0.1 + incrementMs * 0.8 + 250);
+  // Liveness bound only — NOT derived from the per-move allocation (see the
+  // dxq twin and engine issue #11): the server bounds a true hang and clock
+  // exhaustion; overspending shows up as flag-fall, not a watchdog forfeit.
   const watchdogTimeoutMs = Math.max(
     1,
-    Math.min(
-      MAX_TIMEOUT_MS,
-      Math.ceil(perMove + PROCESS_OVERHEAD_MS),
-      Math.ceil(Math.max(0, remainingMs) + CLOCK_GRACE_MS),
-    ),
+    Math.min(MAX_TIMEOUT_MS, Math.ceil(Math.max(0, remainingMs) + CLOCK_GRACE_MS)),
   );
   return {
     computeBudgetMs: Math.max(1, Math.min(Math.ceil(perMove), watchdogTimeoutMs)),

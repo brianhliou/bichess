@@ -80,13 +80,15 @@ function budgetFor(
   }
   const usable = Math.max(0, remainingMs - BUDGET_SAFETY_MS);
   const perMove = Math.min(usable > 0 ? usable : 50, usable * 0.1 + incrementMs * 0.8 + 250);
+  // Liveness bound only — NOT derived from the per-move allocation. Deriving
+  // it from perMove + overhead conflated "slow" with "dead" and forfeited
+  // seats with minutes still banked (dark-chess 12c8ff99, engine issue #11;
+  // the same belief-explosion class hit fdx in July). The engine allocates
+  // its own think time; the server bounds a true hang (MAX_TIMEOUT_MS) and
+  // clock exhaustion — an engine that overspends flags on its clock instead.
   const watchdogTimeoutMs = Math.max(
     1,
-    Math.min(
-      MAX_TIMEOUT_MS,
-      Math.ceil(perMove + PROCESS_OVERHEAD_MS),
-      Math.ceil(Math.max(0, remainingMs) + CLOCK_GRACE_MS),
-    ),
+    Math.min(MAX_TIMEOUT_MS, Math.ceil(Math.max(0, remainingMs) + CLOCK_GRACE_MS)),
   );
   return {
     computeBudgetMs: Math.max(1, Math.min(Math.ceil(perMove), watchdogTimeoutMs)),

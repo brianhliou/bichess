@@ -151,7 +151,11 @@ test('python live engine fails closed when internal engine service is not config
   }
 });
 
-test('python live watchdog allows Tier-1 clock budget plus subprocess overhead', () => {
+test('python live watchdog is a liveness bound decoupled from the compute budget', () => {
+  // With a fat clock the watchdog rides the 60s hang cap, NOT compute+overhead:
+  // deriving it from the allocation forfeited a 228s-clock game over one slow
+  // belief-update turn (12c8ff99, engine issue #11). The engine self-budgets;
+  // overspending shows up as flag-fall, not a watchdog forfeit.
   const budget = pythonLiveTimeoutBudgetMs(
     {
       ...context([legalMove]),
@@ -170,8 +174,8 @@ test('python live watchdog allows Tier-1 clock budget plus subprocess overhead',
   );
 
   assert.equal(budget.computeBudgetMs, 12_000);
-  assert.equal(budget.watchdogTimeoutMs, 22_000);
-  assert.equal(timeoutMs, 22_000);
+  assert.equal(budget.watchdogTimeoutMs, 60_000);
+  assert.equal(timeoutMs, 60_000);
 });
 
 test('python live watchdog budget can be tuned by environment', () => {
@@ -189,8 +193,9 @@ test('python live watchdog budget can be tuned by environment', () => {
 
     assert.ok(budget.computeBudgetMs >= 6_400);
     assert.ok(budget.computeBudgetMs <= 6_600);
-    assert.ok(budget.watchdogTimeoutMs >= 16_400);
-    assert.ok(budget.watchdogTimeoutMs <= 16_600);
+    // Allocation knobs tune the compute budget only; the watchdog (liveness)
+    // is independent of them by design.
+    assert.equal(budget.watchdogTimeoutMs, 60_000);
   } finally {
     if (previous === undefined) delete process.env.PYTHON_LIVE_MOVES_REMAINING_ESTIMATE;
     else process.env.PYTHON_LIVE_MOVES_REMAINING_ESTIMATE = previous;

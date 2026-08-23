@@ -1,5 +1,19 @@
-350dc20
+91e73d6
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
+# Belief-update fail-safe + telemetry (2026-08-23): 91e73d6 makes the worker
+# project each belief update's cost (per-world EWMA learned per host) BEFORE
+# starting it and refuse the turn with an explicit BeliefUpdateOverBudget error
+# when it cannot fit the wall deadline (fail closed — no fallback move; issue
+# #11, game 12c8ff99: the update ran 20s+ inside the old ~22s watchdog and the
+# seat was forfeited silently). Also persists the update cost (feed.obsMs,
+# max |P|, learned rates) in the per-move diagnostics next to componentMs, and
+# alerts on stderr for projection refusals + past-deadline responses. Pairs
+# with the web-side watchdog decoupling (fow-engine-budget.ts: liveness bound
+# only, 60s cap) — with the raised deadline the projection refuses only truly
+# unservable turns. Kill switch: FOW_WORKER_OBS_PROJECTION=0.
+# Rollback target: 350dc20 (v1.6 ship; drops the projection + telemetry only,
+# no registry or env changes).
+#
 # Misty v1.6 (2026-08-23): 350dc20 ships the frozen v1.6 profile (v1.5 + the
 # catastrophe prune's net-hang floor, hv_prune_net_floor=300) + worker id
 # python-v2-v1.6. Fixes the Qxe8/Qxf2 net-hang class (games 42b652b6 move 24,
