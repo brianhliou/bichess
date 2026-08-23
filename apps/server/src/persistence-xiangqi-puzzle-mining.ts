@@ -641,22 +641,30 @@ export async function initializeXiangqiPuzzleMiningRun(input: {
   });
 }
 
+// Counted with scalar subqueries, NOT joins. Joining a run to BOTH its games
+// and its shards multiplies them: games x shards. The pilot's 1,000 games and
+// 40 shards made 40k rows and nobody noticed; 9,469 games and 379 shards make
+// 3.6M, and count(DISTINCT ...) sorts all of them carrying the run's three
+// JSONB profile columns. That spilled 45GB of temp files and filled the
+// production volume on 2026-08-22. The DISTINCT kept the counts correct
+// throughout, which is why no correctness test ever caught it.
+//
+// Exported so the plan-shape regression test explains THIS query rather than
+// its own copy of it.
+export const XIANGQI_PUZZLE_MINING_RUN_QUERY = `SELECT run.id, run.import_batch_id, run.manifest_sha256, run.execution_sha256, run.status,
+            run.engine_profile, run.scan_profile, run.audit_profile, run.created_at,
+            (SELECT count(*)::int FROM xiangqi_puzzle_mining_games game
+              WHERE game.run_id = run.id) AS selected_games,
+            (SELECT count(*)::int FROM xiangqi_puzzle_mining_shards shard
+              WHERE shard.run_id = run.id) AS shards
+     FROM xiangqi_puzzle_mining_runs run
+     WHERE run.id = $1`;
+
 export async function getXiangqiPuzzleMiningRun(
   db: Queryable,
   runId: string,
 ): Promise<XiangqiPuzzleMiningRun> {
-  const { rows } = await db.query<RunRow>(
-    `SELECT run.id, run.import_batch_id, run.manifest_sha256, run.execution_sha256, run.status,
-            run.engine_profile, run.scan_profile, run.audit_profile, run.created_at,
-            count(DISTINCT game.historical_game_id)::int AS selected_games,
-            count(DISTINCT shard.shard_index)::int AS shards
-     FROM xiangqi_puzzle_mining_runs run
-     LEFT JOIN xiangqi_puzzle_mining_games game ON game.run_id = run.id
-     LEFT JOIN xiangqi_puzzle_mining_shards shard ON shard.run_id = run.id
-     WHERE run.id = $1
-     GROUP BY run.id`,
-    [runId],
-  );
+  const { rows } = await db.query<RunRow>(XIANGQI_PUZZLE_MINING_RUN_QUERY, [runId]);
   if (!rows[0]) throw new Error(`mining run ${runId} not found`);
   return mapRun(rows[0]);
 }
@@ -1020,22 +1028,46 @@ export async function heartbeatXiangqiPuzzleMiningAuditCandidate(input: {
   return mapAuditClaim(rows[0]);
 }
 
+// A released candidate returns to `verified` and gets claimed again, which is
+// right for a transient failure (a preempted container, a dropped connection)
+// and wrong for a deterministic one. advanceXiangqiPuzzleMiningRunAfterAudit
+// refuses to advance while ANY candidate is `verified`, so with no ceiling a
+// single always-failing candidate pins the entire run in `verifying` forever.
+// On 2026-08-23 one position whose depth-22 search could not finish inside the
+// engine timeout did exactly that to a 2,500-game batch, after 850 of its 902
+// siblings had already passed.
+//
+// Parking as `audit-failed` is fail-closed: publication requires a PASSING
+// audit judgment, so a candidate we could not audit can never reach players.
+//
+// Five, not three: an interruption, a stale lease, and a fencing reclaim are
+// each legitimate transient retries and can consume three attempts between
+// them without anything being wrong. The ceiling has to sit above ordinary
+// retry churn or it parks healthy candidates.
+export const MAX_XIANGQI_PUZZLE_AUDIT_ATTEMPTS = 5;
+
 export async function failXiangqiPuzzleMiningAuditCandidate(input: {
   candidateId: string;
   claimToken: string;
   failure: Record<string, unknown>;
-}): Promise<void> {
-  const { rows } = await getPool().query<{ id: string }>(
+  maxAttempts?: number;
+}): Promise<{ parked: boolean; attempts: number }> {
+  const maxAttempts = input.maxAttempts ?? MAX_XIANGQI_PUZZLE_AUDIT_ATTEMPTS;
+  const { rows } = await getPool().query<{ status: string; audit_attempt_count: number }>(
     `UPDATE xiangqi_puzzle_mining_candidates
      SET audit_worker_id = NULL, audit_claim_token = NULL,
          audit_lease_expires_at = NULL, audit_last_heartbeat_at = now(),
-         audit_failure = $3::jsonb, updated_at = now()
+         audit_failure = $3::jsonb,
+         status = CASE WHEN audit_attempt_count >= $4 THEN 'audit-failed' ELSE status END,
+         updated_at = now()
      WHERE id = $1 AND status = 'verified' AND audit_claim_token = $2
        AND audit_lease_expires_at > now()
-     RETURNING id`,
-    [input.candidateId, input.claimToken, JSON.stringify(input.failure)],
+     RETURNING status, audit_attempt_count`,
+    [input.candidateId, input.claimToken, JSON.stringify(input.failure), maxAttempts],
   );
-  if (!rows[0]) throw new Error(`audit candidate ${input.candidateId} is not claimed`);
+  const row = rows[0];
+  if (!row) throw new Error(`audit candidate ${input.candidateId} is not claimed`);
+  return { parked: row.status === 'audit-failed', attempts: row.audit_attempt_count };
 }
 
 export async function advanceXiangqiPuzzleMiningRunAfterAudit(runId: string): Promise<boolean> {

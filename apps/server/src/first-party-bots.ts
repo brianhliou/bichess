@@ -86,6 +86,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-v2-v1.2',
       'python-v2-v1.3',
       'python-v2-v1.4',
+      'python-v2-v1.5',
       'python-dmx-v1.0',
       'misty-jungle-level-1',
       'misty-jungle-level-3',

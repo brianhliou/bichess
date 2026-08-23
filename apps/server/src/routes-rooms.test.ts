@@ -77,9 +77,9 @@ definePersistenceTests('room bot play requests', () => {
 
     assert.equal(handled, true);
     assert.equal(response.status, 201);
-    assert.deepEqual(reserved, { color: 'black', engineId: 'python-v2-v1.5' });
+    assert.deepEqual(reserved, { color: 'black', engineId: 'python-v2-v1.6' });
     assert.deepEqual(created, {
-      engineId: 'python-v2-v1.5',
+      engineId: 'python-v2-v1.6',
       hiddenDraft960: false,
       mode: 'pve',
       options: { engineColor: 'black', engineReservationId: 'reservation-1', botId: 'play-bot' },
@@ -127,7 +127,7 @@ definePersistenceTests('room bot play requests', () => {
 
     const handled = await tryHandle(
       createContext(),
-      jsonPost({ botId: 'play-bot', engineId: 'python-v2-v1.5', mode: 'pve' }),
+      jsonPost({ botId: 'play-bot', engineId: 'python-v2-v1.6', mode: 'pve' }),
       response,
       '/api/rooms',
     );
@@ -149,7 +149,7 @@ definePersistenceTests('room bot play requests', () => {
     assert.ok(resolved);
     assert.equal(resolved.botId, 'misty');
     assert.equal(resolved.gameSpecId, 'dark-chess');
-    assert.equal(resolved.engineId, 'python-v2-v1.5');
+    assert.equal(resolved.engineId, 'python-v2-v1.6');
   });
 
   test('a multi-variant bot resolves the per-spec engine for a supported spec', async () => {
@@ -203,7 +203,7 @@ function createContext(
     liveClockInitialMs: 180_000,
     lobbyQueue: [],
     lobbyTickets: new Map(),
-    pveBuiltinEngineClientId: 'python-v2-v1.5',
+    pveBuiltinEngineClientId: 'python-v2-v1.6',
     releaseLiveEngineReservation: () => {},
     reserveLiveEngineSeat: async () => 'reservation',
     rooms: new Map<string, Room>(),
@@ -246,7 +246,7 @@ async function insertMistyProfile(): Promise<void> {
       `INSERT INTO bot_profiles
          (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
           supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
-       VALUES ('misty', 'Misty', '', 'system', 'python-v2-v1.5', 'dark-chess',
+       VALUES ('misty', 'Misty', '', 'system', 'python-v2-v1.6', 'dark-chess',
                ARRAY['dark-chess', 'dark-draft960', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip'],
                180000, 2000, 'public')`,
     );
@@ -267,7 +267,7 @@ async function insertBotProfile(
       `INSERT INTO bot_profiles
          (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
           supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
-       VALUES ($1, $2, '', 'system', 'python-v2-v1.5', 'dark-chess',
+       VALUES ($1, $2, '', 'system', 'python-v2-v1.6', 'dark-chess',
                ARRAY['dark-chess'], 180000, 2000, $3)`,
       [id, displayName, visibility],
     );

@@ -4,6 +4,7 @@ import { buildElephantChessPilotManifest } from './elephantchess-pilot-manifest.
 import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import {
+  advanceXiangqiPuzzleMiningRunAfterAudit,
   checkpointXiangqiPuzzleMiningShard,
   claimNextXiangqiPuzzleMiningAuditCandidate,
   claimNextXiangqiPuzzleMiningShard,
@@ -18,6 +19,7 @@ import {
   recordXiangqiPuzzleEditorialReview,
   recordXiangqiPuzzleMiningCandidate,
   recordXiangqiPuzzleMiningJudgment,
+  XIANGQI_PUZZLE_MINING_RUN_QUERY,
   type XiangqiPuzzleMiningCandidate,
 } from './persistence-xiangqi-puzzle-mining.js';
 import { processNextXiangqiPuzzleAuditCandidate } from './xiangqi-puzzle-audit-worker.js';
@@ -852,6 +854,214 @@ definePersistenceTests('xiangqi puzzle mining', () => {
         )
       ).rows[0]?.count,
       1,
+    );
+  });
+
+  test('publication refuses a position an earlier run already published', async () => {
+    const games = Array.from({ length: 16 }, (_, index) => pilotGame(100 + index));
+    await seedEligibleGames(games);
+    const engineProfile = { engine: 'pikafish-test', binarySha256: 'e'.repeat(64) };
+    const sharedPositionKey = 'xiangqi-cross-run-shared-position';
+
+    const publishOneCandidate = async (seed: string, gameOffset: number): Promise<string> => {
+      const manifest = buildElephantChessPilotManifest(games.slice(gameOffset, gameOffset + 8), {
+        importBatchId: BATCH_ID,
+        seed,
+        targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
+      });
+      const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+      const historicalGameId = manifest.games[0]?.historicalGameId as string;
+      const postBlunderPly = 21;
+      const candidate = await recordXiangqiPuzzleMiningCandidate({
+        runId: run.id,
+        historicalGameId,
+        postBlunderPly,
+        positionKey: sharedPositionKey,
+        trigger: 'eval-swing',
+        scanEvidence: { beforeCp: 400, afterCp: 60, scanNodes: 60_000 },
+      });
+      await recordXiangqiPuzzleMiningJudgment({
+        candidateId: candidate.id,
+        stage: 'verify',
+        profileVersion: 'verify-v1',
+        verdict: 'pass',
+        engineProfile,
+        evidence: { depth: 20, bestCp: 520, secondCp: 110 },
+        puzzleData: publishablePuzzle(
+          `xq-mined-crossrun-${candidate.id}`,
+          historicalGameId,
+          postBlunderPly,
+        ),
+      });
+      await getPool().query(
+        `UPDATE xiangqi_puzzle_mining_runs SET status = 'verifying' WHERE id = $1`,
+        [run.id],
+      );
+      const claim = await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: `crossrun-audit-${seed}`,
+        claimToken: `crossrun-claim-${seed}`,
+      });
+      assert.equal(claim?.candidate.id, candidate.id);
+      await recordXiangqiPuzzleMiningJudgment({
+        candidateId: candidate.id,
+        stage: 'audit',
+        profileVersion: 'audit-v1',
+        verdict: 'pass',
+        engineProfile,
+        evidence: { depth: 22, stable: true },
+        claimToken: `crossrun-claim-${seed}`,
+      });
+      await getPool().query(
+        `UPDATE xiangqi_puzzle_mining_runs SET status = 'review' WHERE id = $1`,
+        [run.id],
+      );
+      return run.id;
+    };
+
+    const firstRunId = await publishOneCandidate('crossrun-first-v1', 0);
+    const firstPlan = await planXiangqiPuzzlePublication(getPool(), firstRunId);
+    assert.equal(firstPlan.eligibleCandidates, 1);
+    const firstPublished = await publishXiangqiPuzzlePublication({
+      runId: firstRunId,
+      expectedTotal: 1,
+      expectedPublicationSha256: firstPlan.publicationSha256,
+      operatorNote: 'First run publishes the position.',
+    });
+    assert.equal(firstPublished.publishedNow, 1);
+
+    // Same position, different source game, different run. Run-scoped
+    // positionDuplicateCount cannot see the first run, so only the cross-run
+    // guard stops this.
+    const secondRunId = await publishOneCandidate('crossrun-second-v1', 8);
+    await assert.rejects(
+      planXiangqiPuzzlePublication(getPool(), secondRunId),
+      /repeats a position already published as puzzle/,
+    );
+  });
+
+  test('the run loader never multiplies games by shards', async () => {
+    // A correctness assertion cannot catch this. The original loader joined a
+    // run to BOTH its games and its shards and de-duplicated with
+    // count(DISTINCT ...), so the counts were always right while the row set
+    // underneath was games x shards. At pilot scale that was 40k rows and
+    // invisible; at 9,469 games it was 3.6M and filled the production disk.
+    // So assert the PLAN: no node may see more rows than the larger child.
+    const games = Array.from({ length: 12 }, (_, index) => pilotGame(300 + index));
+    await seedEligibleGames(games);
+    const manifest = buildElephantChessPilotManifest(games, {
+      importBatchId: BATCH_ID,
+      seed: 'fanout-guard-v1',
+      targets: { representativeLiveBase: 8, coverageLive: 4, correspondenceMax: 0 },
+    });
+    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+
+    const loaded = await getXiangqiPuzzleMiningRun(getPool(), run.id);
+    assert.equal(loaded.selectedGames, 12);
+    assert.equal(loaded.shards, 4);
+
+    const explained = await getPool().query<{ 'QUERY PLAN': unknown }>(
+      `EXPLAIN (ANALYZE, FORMAT JSON) ${XIANGQI_PUZZLE_MINING_RUN_QUERY}`,
+      [run.id],
+    );
+    const explainRoot = explained.rows[0]?.['QUERY PLAN'] as
+      | [{ Plan: Record<string, unknown> }]
+      | undefined;
+    const plan = explainRoot?.[0]?.Plan;
+    assert.ok(plan, 'EXPLAIN returned no plan');
+    const rowCounts: number[] = [];
+    const walk = (node: Record<string, unknown>): void => {
+      const actual = node['Actual Rows'];
+      const loops = node['Actual Loops'];
+      if (typeof actual === 'number' && typeof loops === 'number') {
+        rowCounts.push(actual * loops);
+      }
+      for (const child of (node.Plans as Record<string, unknown>[]) ?? []) walk(child);
+    };
+    walk(plan);
+
+    // 12 games and 4 shards: a fan-out plan would surface a 48-row node.
+    const widest = Math.max(...rowCounts);
+    assert.ok(
+      widest <= 12,
+      `run loader plan touched ${widest} rows for 12 games and 4 shards; it is multiplying children`,
+    );
+  });
+
+  test('a candidate that always fails audit parks instead of blocking the run', async () => {
+    const games = Array.from({ length: 8 }, (_, index) => pilotGame(500 + index));
+    await seedEligibleGames(games);
+    const manifest = buildElephantChessPilotManifest(games, {
+      importBatchId: BATCH_ID,
+      seed: 'poison-pill-v1',
+      targets: { representativeLiveBase: 4, coverageLive: 2, correspondenceMax: 0 },
+    });
+    const run = await initializeXiangqiPuzzleMiningRun({ manifest, shardSize: 3 });
+    const historicalGameId = manifest.games[0]?.historicalGameId as string;
+    const candidate = await recordXiangqiPuzzleMiningCandidate({
+      runId: run.id,
+      historicalGameId,
+      postBlunderPly: 22,
+      positionKey: 'xiangqi-poison-pill-position',
+      trigger: 'eval-swing',
+      scanEvidence: { beforeCp: 400, afterCp: 40, scanNodes: 60_000 },
+    });
+    await recordXiangqiPuzzleMiningJudgment({
+      candidateId: candidate.id,
+      stage: 'verify',
+      profileVersion: 'verify-v1',
+      verdict: 'pass',
+      engineProfile: { engine: 'pikafish-test', binarySha256: 'f'.repeat(64) },
+      evidence: { depth: 20 },
+      puzzleData: publishablePuzzle(`xq-mined-poison-${candidate.id}`, historicalGameId, 22),
+    });
+    await getPool().query(
+      `UPDATE xiangqi_puzzle_mining_runs SET status = 'verifying' WHERE id = $1`,
+      [run.id],
+    );
+
+    // Five claim/fail cycles, as a deterministic engine timeout would produce.
+    const outcomes: { parked: boolean; attempts: number }[] = [];
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const claim = await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: `poison-worker-${attempt}`,
+        claimToken: `poison-claim-${attempt}`,
+      });
+      assert.equal(
+        claim?.candidate.id,
+        candidate.id,
+        `attempt ${attempt} should still be claimable`,
+      );
+      outcomes.push(
+        await failXiangqiPuzzleMiningAuditCandidate({
+          candidateId: candidate.id,
+          claimToken: `poison-claim-${attempt}`,
+          failure: { code: 'audit-processing-failed', message: 'pikafish request timed out' },
+        }),
+      );
+    }
+
+    // The first four release it for another try; the fifth parks it.
+    assert.deepEqual(
+      outcomes.map((outcome) => outcome.parked),
+      [false, false, false, false, true],
+    );
+    assert.equal(
+      (await getXiangqiPuzzleMiningCandidate(getPool(), candidate.id)).status,
+      'audit-failed',
+    );
+
+    // Parked, not verified: the run is free to advance and nothing can claim it.
+    assert.equal(await advanceXiangqiPuzzleMiningRunAfterAudit(run.id), true);
+    assert.equal((await getXiangqiPuzzleMiningRun(getPool(), run.id)).status, 'review');
+    assert.equal(
+      await claimNextXiangqiPuzzleMiningAuditCandidate({
+        runId: run.id,
+        workerId: 'poison-worker-after',
+        claimToken: 'poison-claim-after',
+      }),
+      null,
     );
   });
 });

@@ -92,6 +92,7 @@
     "test:mobile:shots": "npm run mobile:loop",
     "engine:capture-beliefs": "node scripts/capture-belief-artifacts.mjs",
     "puzzles:mine:mini-xiangqi": "tsx scripts/variant-lab/mini-xiangqi-puzzle-miner.ts",
+    "mine:remainder": "node scripts/mine-remainder.mjs",
     "pilot:elephantchess-worker": "tsx scripts/variant-lab/elephantchess-pilot-worker.ts",
     "pilot:elephantchess-audit": "tsx scripts/variant-lab/elephantchess-pilot-audit-worker.ts",
     "pilot:elephantchess-status": "npm run pilot:elephantchess-status --workspace @mistboard/server --",

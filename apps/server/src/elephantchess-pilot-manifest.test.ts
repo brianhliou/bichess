@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   buildElephantChessPilotManifest,
   type ElephantChessPilotGame,
+  maximalElephantChessPilotTargets,
   renderElephantChessPilotManifest,
   verifyElephantChessPilotManifest,
 } from './elephantchess-pilot-manifest.js';
@@ -157,4 +158,72 @@ test('verifies the internal content hash and ordered membership', () => {
       }),
     /selection index .* out of order/,
   );
+});
+
+test('maximal targets consume every eligible game', () => {
+  const games = corpus(1_100, 120);
+  const targets = maximalElephantChessPilotTargets(games);
+  assert.equal(targets.correspondenceMax, 120);
+  assert.equal(targets.coverageLive, 100);
+  assert.equal(targets.representativeLiveBase, 1_000);
+
+  const manifest = buildElephantChessPilotManifest(games, {
+    importBatchId: BATCH,
+    seed: 'remainder-seed-v1',
+    targets,
+  });
+  assert.equal(manifest.counts.selected, games.length);
+  assert.equal(manifest.games.length, games.length);
+  assert.deepEqual(
+    new Set(manifest.games.map((item) => item.historicalGameId)),
+    new Set(games.map((item) => item.historicalGameId)),
+  );
+});
+
+test('maximal targets survive a corpus with no correspondence games', () => {
+  const games = corpus(320, 0);
+  const targets = maximalElephantChessPilotTargets(games);
+  assert.equal(targets.correspondenceMax, 0);
+  assert.equal(targets.representativeLiveBase + targets.coverageLive, 320);
+  const manifest = buildElephantChessPilotManifest(games, {
+    importBatchId: BATCH,
+    seed: 'remainder-seed-v1',
+    targets,
+  });
+  assert.equal(manifest.counts.selected, 320);
+});
+
+test('maximal targets clamp coverage to a live population smaller than the quota', () => {
+  const games = corpus(40, 5);
+  const targets = maximalElephantChessPilotTargets(games, { coverageLive: 100 });
+  assert.equal(targets.coverageLive, 40);
+  assert.equal(targets.representativeLiveBase, 0);
+  assert.equal(targets.correspondenceMax, 5);
+  const manifest = buildElephantChessPilotManifest(games, {
+    importBatchId: BATCH,
+    seed: 'remainder-seed-v1',
+    targets,
+  });
+  assert.equal(manifest.counts.selected, 45);
+});
+
+test("a remainder manifest never reselects a prior manifest's games", () => {
+  const games = corpus(1_100, 120);
+  const pilot = buildElephantChessPilotManifest(games, {
+    importBatchId: BATCH,
+    seed: 'pilot-seed-v1',
+  });
+  const mined = new Set(pilot.games.map((item) => item.historicalGameId));
+  const remaining = games.filter((item) => !mined.has(item.historicalGameId));
+  assert.equal(remaining.length, games.length - 1_000);
+
+  const remainder = buildElephantChessPilotManifest(remaining, {
+    importBatchId: BATCH,
+    seed: 'remainder-seed-v1',
+    targets: maximalElephantChessPilotTargets(remaining),
+  });
+  assert.equal(remainder.counts.selected, remaining.length);
+  for (const item of remainder.games) {
+    assert.equal(mined.has(item.historicalGameId), false);
+  }
 });
