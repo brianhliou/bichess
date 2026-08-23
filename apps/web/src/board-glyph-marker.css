@@ -1,0 +1,45 @@
+/* Move-judgment badge pinned to a move's destination square. Imported by the
+   renderer that draws it (svg-board-marker.ts) and by the xiangqi board, which
+   builds the same markup in its own intersection geometry, so every variant that
+   shows a badge carries its palette with it rather than inheriting it from
+   whichever board stylesheet a page happened to load.
+
+   The palette is the SAME one the move list uses (review/move-list.css) on
+   purpose: the board and the list annotate the same move, so a disagreement in
+   colour would read as a disagreement in verdict. */
+.xq-marker--glyph .xq-marker__disc {
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.xq-marker--glyph .xq-marker__label {
+  fill: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  /* The badge is decoration for a verdict already stated in words in the move
+     list and the advice line; letting it catch a drag would cost more than it
+     gives. */
+  pointer-events: none;
+}
+
+.xq-marker--blunder .xq-marker__disc {
+  fill: #c0392b;
+}
+
+.xq-marker--mistake .xq-marker__disc {
+  fill: #d68910;
+}
+
+.xq-marker--inaccuracy .xq-marker__disc {
+  fill: #b7950b;
+}
+
+/* User-authored NAGs (annotations editor). Good moves read green, the
+   speculative ones purple, so they never masquerade as an engine verdict. */
+.xq-marker--good .xq-marker__disc {
+  fill: #2e7d32;
+}
+
+.xq-marker--speculative .xq-marker__disc {
+  fill: #7b5ea7;
+}

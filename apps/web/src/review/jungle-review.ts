@@ -18,6 +18,7 @@ import {
   animateJungleBoardMove,
   JUNGLE_BOARD_VIEW,
   type JungleBoardArrow,
+  type JungleBoardMarker,
 } from '../jungle-render.js';
 import {
   bestMoveArrowWithParser,
@@ -87,6 +88,14 @@ const junglePresentation: TreePresentation<
     className: `xq-arrow--draw xq-shape--${s.brush}`,
   }),
   shapeToMarker: (s: NodeShape) => s,
+  // Judgment badge on the square the move landed on, so the board states the
+  // same verdict the move list does (lila pins its glyphs the same way).
+  moveGlyphMarker: (move: JungleMove, glyph): JungleBoardMarker => ({
+    square: move.to,
+    kind: 'glyph',
+    text: glyph.text,
+    className: `xq-marker--${glyph.tone}`,
+  }),
 };
 
 export function mountJungleReview(

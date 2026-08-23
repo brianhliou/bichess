@@ -14,7 +14,7 @@ import {
   pikafishUciToJieqiMove,
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
-import type { JieqiBoardArrow } from '../live-jieqi-render.js';
+import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
 import {
   bestMoveArrowWithParser,
   engineArrowsFromLinesWithParser,
@@ -81,6 +81,14 @@ function makeJieqiPresentation(
       className: `xq-arrow--draw xq-shape--${s.brush}`,
     }),
     shapeToMarker: (s: NodeShape) => s,
+    // Judgment badge on the square the move landed on, so the board states the
+    // same verdict the move list does (lila pins its glyphs the same way).
+    moveGlyphMarker: (move: JieqiMove, glyph): JieqiBoardMarker => ({
+      square: move.to,
+      kind: 'glyph',
+      text: glyph.text,
+      className: `xq-marker--${glyph.tone}`,
+    }),
   };
 }
 

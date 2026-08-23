@@ -111,6 +111,15 @@ const fortressPresentation: TreePresentation<
     kind: 'circle',
     className: `xq-shape--${s.brush}`,
   }),
+  // Judgment badge on the square the move landed on, so the board states the
+  // same verdict the move list does (lila pins its glyphs the same way). A drop
+  // has no `from`, but it still HAS a destination, so both union members work.
+  moveGlyphMarker: (move: FortressXiangqiMove, glyph): FortressXiangqiBoardMarker => ({
+    square: move.to,
+    kind: 'glyph',
+    text: glyph.text,
+    className: `xq-marker--${glyph.tone}`,
+  }),
   // Drop reserves are deliberately NOT rendered here (product call): drops
   // replay in the mainline instead. To turn them back on, supply the controller's
   // `material` hook — it hands you the mat-top / mat-bot rows and a per-ply

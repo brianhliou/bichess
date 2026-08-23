@@ -1,7 +1,10 @@
-// Shared SVG circle-marker geometry for board overlays. Variant renderers own
-// square transforms and ring radii; this helper owns the common engine/user ink.
+// Shared SVG marker geometry for board overlays. Variant renderers own square
+// transforms and ring radii; this helper owns the common engine/user ink and the
+// move-judgment badge.
 
+import './board-glyph-marker.css';
 import type { SvgBoardPoint } from './svg-board-arrow.js';
+import { escapeHtml } from './web-utils.js';
 
 export type SvgBoardMarkerStyle = {
   className?: string;
@@ -9,6 +12,16 @@ export type SvgBoardMarkerStyle = {
   opacity?: number;
   width?: number;
 };
+
+/** Judgment badge pinned to a square's top-right corner (lila's glyph badge).
+ *  `text` is the same symbol the move list shows ('??', '?', '?!', a user NAG). */
+export type SvgBoardGlyphStyle = SvgBoardMarkerStyle & { text?: string };
+
+/** Badge geometry as fractions of a board's cell (or point spacing), so every
+ *  variant gets a proportionally identical badge from its own units. Matches the
+ *  xiangqi board's hand-tuned 13/21 against its 64-unit spacing. */
+export const GLYPH_RADIUS_RATIO = 0.2;
+export const GLYPH_OFFSET_RATIO = 0.33;
 
 export type SvgBoardMarkerOptions = {
   baseClassName?: string;
@@ -30,4 +43,34 @@ export function svgBoardCircleMarker(
   const opacity = marker.opacity ?? 0.9;
   const width = marker.width ?? options.defaultWidth ?? 4;
   return `<circle class="${className}" cx="${fmt(center.x)}" cy="${fmt(center.y)}" r="${fmt(radius)}" fill="none" stroke="${color}" stroke-width="${fmt(width)}" opacity="${opacity}" pointer-events="none"/>`;
+}
+
+/**
+ * Judgment badge for one square: a filled disc with the glyph, offset toward the
+ * square's top-right corner the way lila pins its move glyphs. The offset is in
+ * SCREEN space, so the badge stays in the same corner whichever way the board is
+ * flipped (callers pass an already-perspective-mapped centre).
+ *
+ * Empty text draws nothing rather than an unlabelled disc: a bare coloured dot
+ * next to a piece would read as a target hint, which is a different vocabulary.
+ */
+export function svgBoardGlyphMarker(
+  marker: SvgBoardGlyphStyle,
+  center: SvgBoardPoint,
+  radius: number,
+  offset: number,
+  options: SvgBoardMarkerOptions = {},
+): string {
+  if (!marker.text) return '';
+  const baseClassName = options.baseClassName ?? 'board-marker';
+  const className = marker.className ? `${baseClassName} ${marker.className}` : baseClassName;
+  const cx = fmt(center.x + offset);
+  const cy = fmt(center.y - offset);
+  const fontSize = fmt(radius * 1.15);
+  return (
+    `<g class="${className} xq-marker--glyph">` +
+    `<circle class="xq-marker__disc" cx="${cx}" cy="${cy}" r="${fmt(radius)}"/>` +
+    `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}">${escapeHtml(marker.text)}</text>` +
+    `</g>`
+  );
 }

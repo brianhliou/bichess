@@ -52,7 +52,13 @@ import {
   jungleBareTrapSvg,
 } from './jungle-skins.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 
 const FILES = 7;
 const RANKS = 9;
@@ -133,7 +139,9 @@ export interface JungleBoardArrow extends SvgBoardArrowStyle {
 
 export interface JungleBoardMarker extends SvgBoardMarkerStyle {
   square: JungleSquare;
-  kind: 'circle';
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
 }
 
 function cellRef(square: JungleSquare): GridCellRef {
@@ -352,7 +360,17 @@ export function jungleArrowSvg(arrow: JungleBoardArrow, perspective: JungleColor
 
 export function jungleMarkerSvg(marker: JungleBoardMarker, geom: GridGeometry): string {
   const { file, rank } = jungleCoordOf(marker.square);
-  return svgBoardCircleMarker(marker, geom.center(file, rank), geom.cell * 0.42, {
+  const center = geom.center(file, rank);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      geom.cell * GLYPH_RADIUS_RATIO,
+      geom.cell * GLYPH_OFFSET_RATIO,
+      { baseClassName: 'xq-marker' },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, geom.cell * 0.42, {
     baseClassName: 'xq-marker engine-marker',
   });
 }

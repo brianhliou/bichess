@@ -733,12 +733,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const MAX_INJECTED_PV_PLIES = 10;
 
   function injectBestLines(analysis: GameAnalysis): void {
-    // A presentation-supplied formatBestMove marks a variant whose analysis-engine
-    // UCI diverges from the board's move dialect (banqi/jungle-flip/jieqi) —
-    // parsing those PVs via adapter.fromUci could graft WRONG moves, so only the
-    // dialect-aligned variants (default formatter) build clickable lines; the
-    // others keep the textual advice row alone.
-    if (presentation.formatBestMove) return;
+    // Which parser turns an analysis PV token into a move. A variant whose
+    // analysis-engine UCI diverges from the board's move dialect (banqi,
+    // jungle-flip, jieqi, jungle) ships its own `moveFromEngineUci`; it is the
+    // SAME parser the engine panel and the best-move arrow already trust, so the
+    // lines grafted here are drawn from a decoder the surface relies on
+    // elsewhere. Until 2026-08-22 those variants were skipped entirely (a bare
+    // adapter.fromUci would have grafted wrong moves) and kept only the textual
+    // advice row.
+    const decodeUci = presentation.engine?.moveFromEngineUci;
     const nodes = mainlineNodes();
     const evalByPly = new Map(analysis.evals.map((entry) => [entry.ply, entry]));
     let injected = false;
@@ -748,16 +751,24 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       const parent = nodes[move.ply - 1];
       if (!before || !parent) continue;
       const pv = before.pv?.length ? before.pv : before.best ? [before.best] : [];
-      // The refutation REPLACES the played move; when the "best" line opens with
-      // the move actually played there is nothing to graft.
-      if (pv.length === 0 || pv[0] === nodes[move.ply]?.id) continue;
+      if (pv.length === 0) continue;
       let path = tree.pathTo(parent);
       let grafted = false;
+      let first = true;
       for (const uci of pv.slice(0, MAX_INJECTED_PV_PLIES)) {
         const at = tree.nodeAt(path);
         if (!at) break;
-        const pvMove = adapter.fromUci(uci, at.truth);
+        const pvMove = decodeUci ? decodeUci(uci, at.truth) : adapter.fromUci(uci, at.truth);
         if (!pvMove) break;
+        // The refutation REPLACES the played move; when the "best" line opens
+        // with the move actually played there is nothing to graft. Compared as
+        // move KEYS rather than raw tokens: a dialect variant's PV token is not
+        // the node id, so a token comparison would never match and would graft
+        // the played move back onto itself as a "variation".
+        if (first) {
+          first = false;
+          if (adapter.moveKey(pvMove) === nodes[move.ply]?.id) break;
+        }
         const isNew = !at.children.some((child) => child.id === adapter.moveKey(pvMove));
         const next = tree.addMove(path, pvMove);
         if (!next) break;
@@ -1273,7 +1284,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         }),
         decisionSummaryEl,
       );
-      decisionSummaryEl.replaceChildren(luckCaption());
+      // The luck legend ("Accuracy grades your choices; 🎲 marks the luck of each
+      // reveal.") used to sit here. Removed 2026-08-22: the 🎲 badges and the
+      // luck-free accuracy carry the story without a caption under the summary.
+      decisionSummaryEl.replaceChildren();
     }
     // The advantage chart's "if reveals ran average" ghost line is intentionally NOT drawn for now:
     // after the last tile flips the gap freezes and the ghost just shadows the real line for the
@@ -1666,15 +1680,6 @@ function decisionPendingNote(): HTMLElement {
   note.className = 'review-decision-summary__pending';
   note.textContent = 'Grading reveals…';
   return note;
-}
-
-// A one-line caption under the (luck-free) accuracy summary explaining that accuracy grades the
-// CHOICE and the 🎲 per-move badges + chart band are the luck, so the two never look contradictory.
-function luckCaption(): HTMLElement {
-  const cap = document.createElement('div');
-  cap.className = 'review-decision-summary__caption';
-  cap.textContent = 'Accuracy grades your choices; 🎲 marks the luck of each reveal.';
-  return cap;
 }
 
 // Fallback caption when the decomposition never loaded: the base accuracy skips reveal plies,

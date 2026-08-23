@@ -5,7 +5,7 @@
 .analysis-summary {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   padding: 6px 2px;
   border: none;
   background: transparent;
@@ -13,7 +13,11 @@
 .analysis-summary__player {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--site-text) 3%, transparent);
 }
 .analysis-summary__head {
   display: flex;
@@ -41,8 +45,15 @@
 /* Two-column body (lichess): counts left, accuracy/phases right. */
 .analysis-summary__cols {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: center;
+  gap: 22px;
+  /* Cap the pair and centre it: `space-between` pinned counts to the far left and
+     accuracy to the far right, so a wide rail put a void between two blocks that
+     belong to the same player. Wide enough that the longest label ("Average
+     centipawn loss", shown on the perfect-information variants) stays on one
+     line at the rail's narrowest. */
+  max-width: 25em;
+  margin: 0 auto;
   padding: 0 4px;
 }
 /* lichess ACC block anatomy: right-aligned value column, then the label. */
@@ -107,6 +118,12 @@
 .analysis-summary__phase--headline .analysis-summary__phase-value,
 .analysis-summary__phase--headline .analysis-summary__phase-label {
   color: var(--site-text);
+}
+.analysis-summary__phase--headline .analysis-summary__phase-value {
+  font-size: 15px;
+}
+.analysis-summary__phase--headline .analysis-summary__phase-label {
+  font-weight: 700;
 }
 .analysis-summary__phase--high .analysis-summary__phase-value,
 .analysis-summary__phase--high .analysis-summary__phase-label {

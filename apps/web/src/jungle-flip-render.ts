@@ -37,7 +37,13 @@ import {
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 
 const FILES = 4;
 const RANKS = 4;
@@ -117,7 +123,9 @@ export interface JungleFlipBoardArrow extends SvgBoardArrowStyle {
 
 export interface JungleFlipBoardMarker extends SvgBoardMarkerStyle {
   square: JungleFlipSquare;
-  kind: 'circle';
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
 }
 
 function cellRef(square: JungleFlipSquare): GridCellRef {
@@ -316,7 +324,17 @@ function jungleFlipMarkerSvgWithGeometry(
   geom: GridGeometry,
 ): string {
   const coord = jungleFlipCoordOf(marker.square);
-  return svgBoardCircleMarker(marker, geom.center(coord.file, coord.rank), geom.cell * (26 / 60), {
+  const center = geom.center(coord.file, coord.rank);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      geom.cell * GLYPH_RADIUS_RATIO,
+      geom.cell * GLYPH_OFFSET_RATIO,
+      { baseClassName: 'xq-marker' },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, geom.cell * (26 / 60), {
     baseClassName: 'xq-marker engine-marker',
   });
 }

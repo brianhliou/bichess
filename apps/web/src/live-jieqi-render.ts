@@ -1,7 +1,13 @@
 import type { JieqiColor, JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
@@ -45,7 +51,9 @@ export interface JieqiBoardArrow extends SvgBoardArrowStyle {
 
 export interface JieqiBoardMarker extends SvgBoardMarkerStyle {
   square: JieqiSquare;
-  kind: 'circle';
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
 }
 
 function jieqiCoordOf(square: JieqiSquare): { file: number; rank: number } {
@@ -104,7 +112,19 @@ export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): 
 
 export function jieqiMarkerSvg(marker: JieqiBoardMarker, perspective: JieqiColor): string {
   const { file, rank } = jieqiCoordOf(marker.square);
-  return svgBoardCircleMarker(marker, intersection(file, rank, perspective), RING_SELECTION, {
+  const center = intersection(file, rank, perspective);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      CELL * GLYPH_RADIUS_RATIO,
+      CELL * GLYPH_OFFSET_RATIO,
+      {
+        baseClassName: 'xq-marker',
+      },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, RING_SELECTION, {
     baseClassName: 'xq-marker engine-marker',
   });
 }

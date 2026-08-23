@@ -83,9 +83,9 @@ describe('jieqi decision overlay wiring', () => {
     expect(redBlock!.textContent).toContain('Mistake');
     expect(summary!.textContent).not.toContain('Non-reveal');
     expect(summary!.textContent).not.toContain('centipawn'); // ACPL hidden for chance variants
-    const caption = root.querySelector('.review-decision-summary__caption');
-    expect(caption).not.toBeNull();
-    expect(caption!.textContent).toContain('🎲');
+    // The luck caption was removed 2026-08-22: the summary carries the luck-free
+    // grade and the per-move 🎲 badges carry the luck, with no legend under them.
+    expect(root.querySelector('.review-decision-summary__caption')).toBeNull();
 
     // 2) The flagged reveal (ply 1) shows the decision glyph (? mistake) in the move list.
     expect(root.textContent).toContain('?');
