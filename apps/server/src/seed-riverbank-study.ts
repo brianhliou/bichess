@@ -94,7 +94,7 @@ const THEORY: Array<{ name: string; tokens: string[]; comment: string }> = [
     name: 'The poisoned advisor',
     tokens: ['b3b5', 'd10e9', 'b5g5', 'b10c8', 'g5g10', 'e10d10', 'g10d10'],
     comment:
-      'The defense most players find first, losing by force. The advisor seals the center file, Red takes the elephant on the wing whose advisor stayed home, and the cannon fires along the back rank through it. The flight square loses to the same shot; the sealing advisor occupies the only parry point. All 41 of Black’s legal moves lose within two moves.',
+      'The defense most players find first, and its landmine. Black’s second move went elsewhere, so Red takes the elephant on the wing whose advisor stayed home and the cannon fires along the back rank through it; from there all 41 of Black’s legal moves lose within two moves. The disarm exists (the poisoned wing’s elephant to the middle, immediately), but it is the move Black should have played first, and with both of Black’s moves spent on the center, Red takes a rim chariot for free instead.',
   },
   {
     name: 'The tripwire',
@@ -167,6 +167,18 @@ async function main(): Promise<void> {
           `Rim gambit game ${g.game + 1} (${g.winner ?? 'no result'}, ${g.plies} plies)`,
           clean,
           'Here scripted Red skips the snipe and goes straight for a chariot. Misty does not play the tripwire scheme, so the grab usually lands: these games show what the guessed-wrong branch looks like in the wild, chariot down, fighting.',
+        ),
+      );
+    }
+  }
+  const schemePath = typeof args.schemegames === 'string' ? args.schemegames : null;
+  if (schemePath) {
+    for (const g of readGames(schemePath)) {
+      chapters.push(
+        chapterPayload(
+          `Scheme test game ${g.game + 1} (${g.winner ?? 'ply cap'}, ${g.plies} plies)`,
+          g.moves,
+          'Black is forced through the recommended line (edge soldier, wing-matched central elephant, far-side horse) while Red, a free-playing Misty, does as it pleases. Black won five of the seven decisive games in this set, against one of twelve when both sides chose freely: the three insurance moves cost nothing.',
         ),
       );
     }

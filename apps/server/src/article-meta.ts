@@ -179,7 +179,7 @@ export const ARTICLE_META: Record<
     title: 'The Riverbank Cannon Problem',
     kind: 'article',
     description:
-      'Red\u2019s opening cannon reaches the riverbank first and aims at five files at once, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
+      'Red\u2019s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
   },
   'skill-vs-luck': {
     title: 'Separating Skill from Luck in Flip Games',

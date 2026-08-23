@@ -20,7 +20,7 @@ export const riverbankCannonArticle: Article = {
   title: 'The Riverbank Cannon Problem',
   seoTitle: 'Fog Xiangqi Opening Theory: The Riverbank Cannon',
   summary:
-    'Red’s opening cannon reaches the riverbank first and aims at five files at once, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
+    'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
   status: 'draft',
   audience:
     'Fog xiangqi players, xiangqi players curious about the fog variant, and anyone who wants to see how a hidden-information opening gets analyzed honestly.',
@@ -33,7 +33,7 @@ export const riverbankCannonArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Put those together and Red’s opening cannon becomes alarming. Slide it to the riverbank and it aims down five files at once: the chariots behind the edge soldiers, the elephants behind theirs, and behind the center soldier, the general. One cannon capture ends the game. I built this variant, and I started to wonder whether it was dead on arrival.',
+        'Put those together and Red’s opening cannon becomes alarming. Slide it to the riverbank and it stands one move from firing down any of five files: the chariots behind the edge soldiers, the elephants behind theirs, and behind the center soldier, the general. Black cannot know which, so he has to answer all five. One cannon capture ends the game. I built this variant, and I started to wonder whether it was dead on arrival.',
     },
     {
       kind: 'paragraph',
@@ -76,7 +76,7 @@ export const riverbankCannonArticle: Article = {
       ],
     },
     {
-      heading: 'The natural defense loses by force',
+      heading: 'The natural defense is a landmine',
       blocks: [
         {
           kind: 'paragraph',
@@ -86,18 +86,18 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The one most players find first is advisor up: shortest path, stays in the palace. It loses by force.',
+            'The one most players find first is advisor up: shortest path, stays in the palace. It seals the center, and it plants a landmine.',
         },
         {
           kind: 'raw-svg',
           svg: RB_ADVISOR_TRAP,
           caption:
-            'The advisor sealed, and Red took the elephant on the other wing. The cannon fires through the remaining advisor; the marked flight square loses to the same shot; the sealing advisor sits on the only parry square. All 41 of Black’s legal moves lose within two moves, engine-checked.',
+            'The landmine, sprung: Black’s second move went elsewhere, and Red took the elephant on the wing whose advisor stayed home. The cannon fires along the back rank through that advisor; the marked flight square loses to the same shot; the sealing advisor sits on the only parry point. From here, all 41 of Black’s legal moves lose within two moves, engine-checked.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'Red cannot see which advisor sealed, so he guesses the wing to raid: wrong wins an elephant, right is mate. A coin flip where tails is forced mate is not a defense.',
+            'The mine has a disarm, and Black even knows which wing it sits on, because he knows which advisor he moved: play the poisoned wing’s elephant to the middle on the very next move, and both grabs die (one target gone, the other covered by the recapture). Look at what that costs, though. The disarm is the elephant move Black should have played first, so advisor-up spent a whole move doing a fraction of the elephant’s job, and the two-move package covers no edge at all. Against advisor-first, Red does not gamble on the wings: he commits to a rim on move two and takes a chariot for free. Dominated, with a forced mate waiting for anyone who does not know the follow-up.',
         },
       ],
     },
@@ -199,7 +199,7 @@ export const riverbankCannonArticle: Article = {
           kind: 'paragraph',
           text:
             // LOCAL study id: reseed on prod at publish time (apps/server/src/seed-riverbank-study.ts) and update this link.
-            'All the games behind this article are in the [companion study](/study/A8lqGE6i): the theory lines, the twenty defense games, ten rim-gambit games where the chariot grab lands, and sixteen engine self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
+            'All the games behind this article are in the [companion study](/study/6pol6o3i): the theory lines, the twenty defense games, ten rim-gambit games where the chariot grab lands, and sixteen engine self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
         },
         {
           kind: 'paragraph',
@@ -221,6 +221,11 @@ export const riverbankCannonArticle: Article = {
             ['Red lost the cannon flip', '-0.55 for Red: clearly losing'],
             ['counter-battery vs a Red who seals first', '+0.25 Red: the battery concedes more than the soldier line'],
           ],
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'One more check, on the recommended defense itself: I forced Black through the line this article teaches (soldier, elephant, far horse) and let Red play free, eight games. Black won five of the seven decisive ones, against one of twelve when both sides chose freely. Lean samples both, but the direction is loud: the three insurance moves cost nothing. They are just good moves.',
         },
         {
           kind: 'paragraph',
@@ -250,7 +255,7 @@ export const riverbankCannonArticle: Article = {
         'Every line and every game in this article is in the companion study, on a board you can flip to either side\u2019s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
       // LOCAL study id: reseed on prod at publish (seed-riverbank-study.ts) and update.
       playLabel: 'Open the companion study',
-      playHref: '/study/A8lqGE6i',
+      playHref: '/study/6pol6o3i',
       secondary: [
         {
           label: 'Play vs computer',
