@@ -75,6 +75,7 @@ function parseSpecs() {
     /\bid:\s*(?:([A-Z0-9_]+_SPEC_ID)|'([a-z0-9-]+)')|\bpublicName:\s*'([^']+)'|\bpublicSurface:\s*'([a-z-]+)'|\bruntimeStatus:\s*'([a-z]+)'/g;
   let current = null;
   let match;
+  // biome-ignore lint/suspicious/noAssignInExpressions: standard /g regex iteration; exec() advances lastIndex so the assignment is the loop step.
   while ((match = token.exec(body)) !== null) {
     if (match[1] !== undefined || match[2] !== undefined) {
       let id = match[2];
@@ -116,6 +117,7 @@ function parseGate() {
   // Entries are `'dark-crazyhouse': { … }` or bare `kriegspiel: { … }`.
   const entry = /(?:'([a-z0-9-]+)'|\b([a-z][a-zA-Z0-9]*)):\s*\{([^}]*)\}/g;
   let match;
+  // biome-ignore lint/suspicious/noAssignInExpressions: standard /g regex iteration; exec() advances lastIndex so the assignment is the loop step.
   while ((match = entry.exec(body)) !== null) {
     const id = match[1] ?? kebab(match[2]);
     out.set(id, { flagged: /\benabled:/.test(match[3]) });
@@ -151,6 +153,7 @@ function parseFlags() {
   const out = new Map();
   const fn = /export function (\w+)\(\): boolean \{\s*return process\.env\.(\w+)/g;
   let match;
+  // biome-ignore lint/suspicious/noAssignInExpressions: standard /g regex iteration; exec() advances lastIndex so the assignment is the loop step.
   while ((match = fn.exec(text)) !== null) out.set(match[1], match[2]);
   assert(out.size > 0, `no feature flags parsed from ${FLAGS}`);
   return out;
@@ -237,9 +240,7 @@ async function main() {
   }
 
   console.log(`\n${rows.length} specs · ${flags.size} feature flags`);
-  console.log(
-    'Flags default to OFF and are set per environment, so "flag-gated" is not "live".',
-  );
+  console.log('Flags default to OFF and are set per environment, so "flag-gated" is not "live".');
 
   if (prod) {
     console.log('\nPROD (mistboard.com/api/server-status)');
