@@ -144,7 +144,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Now the opening is an honest gamble, and a one-shot: Red’s only window is committing blind on move two, because a third Black move puts a horse on the other edge and closes both rims. Red picks an edge. Half the time it is the watched one and he trades his cannon for a soldier. Half the time he wins a chariot. We played both branches with the engine, five games each: the chariot branch converted about two thirds for Red, and the cannon branch cost him more than the cannon, because the soldier recapture hands Black a screen and the corner chariot falls to the counter-shot in every playout. Priced together, the rush is one fair coin flip per game against a player who knows the scheme.',
+            'Now the opening is an honest gamble, and a one-shot: Red’s only window is committing blind on move two, because a third Black move puts a horse on the other edge and closes both rims. Red picks an edge. Half the time it is the watched one and he trades his cannon for a soldier. Half the time he wins a chariot. We played both branches with the engine, fifteen games on the chariot side and five on the cannon side: the chariot branch converted about two thirds for Red, and the cannon branch cost him more than the cannon, because the soldier recapture hands Black a screen and the corner chariot falls to the counter-shot in every playout. Priced together, the rush is one fair coin flip per game against a player who knows the scheme.',
         },
       ],
     },
@@ -181,25 +181,25 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'I scripted the rush and made Misty defend it, forty games: twenty straight up the b-file in plain sight, twenty up the stealth d-file. The snipe landed zero times. Against the visible version the engine sealed by move three in seventeen of twenty and never later than move seven; across all forty, Black won thirty-seven, Red one, and two hit the ply cap. My scripted Red plays the opening perfectly and the middlegame badly, so read that as the rush failing, not as Black dominance. Here is one of the visible games in full:',
+            'I forced the rush onto the board and let Misty play both sides: twenty games where Red must march the cannon to the riverbank and try the snipe, ten more where he must take the rim chariot. The snipe never fired once; Black sealed within three moves in eighteen of twenty, and the rush games came out Black nine, Red four, seven ply-caps. The forced chariot grab told the other side: Red converted it five games to two with three caps, just as the evaluations predict. Here is one of the rush games in full:',
         },
         {
           kind: 'xq-replay',
           spec: {
-            iccs: 'b2b4 c6c5 b4e4 c9e7 e4a4 h9i7 a4a9 i9i8 a9d9 e9d9 h2a2 b9c7 a2a6 b7b3 a6g6 b3e3 g0e2 e3e0',
-            red: 'Scripted rush',
-            black: 'Misty DXQ',
-            title: 'Defense game 1 of 20',
-            event: 'Engine playout, full record, visible route',
+            iccs: 'b2b4 c6c5 b4e4 c9e7 b0c2 h9i7 a0b0 b9a7 h2e2 i6i5 h0g2 i7h5 i0h0 h7h0 e4a4 h0h4 e2e6 f9e8 b0b7 h5f4 a4h4 f4e6 b7b6 e6g5 g3g4 g5i6 b6g6 i5i4 h4h5 i6h4 c2e1 h4g2 e1g2 i4i3 g2f4 a9c9 f4d5 a7c6 d5f6 c6d8 f6g8 c9c6 g8e9',
+            red: 'Misty (rush forced)',
+            black: 'Misty',
+            title: 'Rush game 3 of 20',
+            event: 'Engine-vs-engine playout, full record',
             resultText:
-              'The direct rush, answered: Misty seals on move two, gives up the chariot to the rim grab, then the general personally takes the cannon when it gets greedy on d10. Red’s own sealing elephant later becomes the screen for the mate on e1.',
+              'Black seals on move two and the snipe never comes; the parked cannon just becomes a normal piece. A real middlegame follows, and Red converts on move 22 with a horse landing on the general.',
           },
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
             // LOCAL study id: reseed on prod at publish time (apps/server/src/seed-riverbank-study.ts) and update this link.
-            'All the games behind this article are in the [companion study](/study/yZyCRZIA): the theory lines, twenty defense games and ten rim-gambit games up the visible route, and sixteen engine self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
+            'All the games behind this article are in the [companion study](/study/KMssjbOV): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
         },
         {
           kind: 'paragraph',
@@ -255,7 +255,7 @@ export const riverbankCannonArticle: Article = {
         'Every line and every game in this article is in the companion study, on a board you can flip to either side\u2019s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
       // LOCAL study id: reseed on prod at publish (seed-riverbank-study.ts) and update.
       playLabel: 'Open the companion study',
-      playHref: '/study/yZyCRZIA',
+      playHref: '/study/KMssjbOV',
       secondary: [
         {
           label: 'Play vs computer',

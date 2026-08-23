@@ -148,9 +148,9 @@ async function main(): Promise<void> {
     const clean = g.moves.map((m) => (m.includes('x') ? m.slice(0, m.indexOf('x')) : m));
     chapters.push(
       chapterPayload(
-        `Defense game ${g.game + 1} of ${games.length} (${g.plies} plies)`,
+        `Rush game ${g.game + 1} of ${games.length} (${g.winner ?? 'ply cap'}, ${g.plies} plies)`,
         clean,
-        `Scripted riverbank rush (Red), straight up the b-file in plain sight, versus Misty DXQ (Black), game ${g.game + 1} of ${games.length}. Black’s cannon watches the arrival point, and the engine answers with a seal in time: the snipe never lands. Red’s scripted play is strong in the opening and weak afterwards, so read these as the rush failing, not as Black demonstrating best play.`,
+        `Misty against itself, with Red forced through the visible riverbank rush (cannon to b5, then e5, snipe if it is ever legal) and free afterwards. Black sealed in time in eighteen of the twenty and the snipe never fired once; from there it is a real game between equal engines.`,
       ),
     );
   }
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
         chapterPayload(
           `Rim gambit game ${g.game + 1} (${g.winner ?? 'no result'}, ${g.plies} plies)`,
           clean,
-          'Scripted Red skips the snipe and goes straight for a chariot, in plain sight. Misty does not play the tripwire scheme, so the grab usually lands: what the guessed-wrong branch looks like in the wild, chariot down, fighting.',
+          'Misty against itself, with Red forced through the rim gambit: cannon to b5, then a5, chariot taken. The grab landed in all ten games, so every one is the guessed-wrong branch played out by equal engines. The landed cannon sits on the pin or slides out; it never donates itself.',
         ),
       );
     }
