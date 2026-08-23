@@ -1,5 +1,15 @@
-e97009e
+350dc20
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
+# Misty v1.6 (2026-08-23): 350dc20 ships the frozen v1.6 profile (v1.5 + the
+# catastrophe prune's net-hang floor, hv_prune_net_floor=300) + worker id
+# python-v2-v1.6. Fixes the Qxe8/Qxf2 net-hang class (games 42b652b6 move 24,
+# 12c8ff99 move 30 — the second prod instance triggered the ship). The ref also
+# carries the 2026-08-22 open-source-release engineering (variant guards moved
+# behind the variant-hooks registry, dead-flag collapse, analysis module) — all
+# validated byte-identical by the parity + golden-trace suites (1,327 green).
+# Rollback target: e97009e (drops v1.6 + today's refactors; registry keeps
+# v1.6 KNOWN-only until the Phase-2 offer flip, so rollback needs no registry
+# change if done before that flip).
 # Decision timing telemetry (2026-08-13): e97009e forwards `componentMs`
 # (sf_eval / sf_children / eq_pass / select_leaf / kluss / expand_seed),
 # `searchSeconds`, and `treeNodes` from gt_cfr into the live decision's

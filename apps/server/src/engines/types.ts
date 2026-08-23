@@ -29,6 +29,7 @@ export type EngineId =
   | 'python-v2-v1.3'
   | 'python-v2-v1.4'
   | 'python-v2-v1.5'
+  | 'python-v2-v1.6'
   | 'python-dmx-v1.0'
   | 'python-fdx-v1.0'
   | 'python-fdx-v1.1'

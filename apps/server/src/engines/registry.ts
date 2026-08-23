@@ -446,6 +446,33 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
       'Misty 1.5 — v1.4 profile + curated opening book (drop redundant Nc3 ' +
       'forces, force ...dxe4 for the move-2 c6 slip). Shipped 2026-06-21.',
   },
+  // Misty 1.6 (2026-08-23): the v1.5 profile + the catastrophe prune's NET-hang
+  // floor (net >= 300cp on a >= 500cp piece is vetoed even when the gross bar
+  // misses it). Fixes the Qxe8/Qxf2 queen-hang class (42b652b6, 12c8ff99 — the
+  // second prod instance triggered the ship). Pinned to engine 350dc20. Worker
+  // maps id -> v1.6. KNOWN here so the engine-worker can load it; OFFERED to
+  // players only when added to PROD_PLAYABLE_ENGINE_IDS (the Phase-2 flip).
+  'python-v2-v1.6': {
+    id: 'python-v2-v1.6',
+    engineId: 'v2',
+    engineName: 'Misty',
+    name: 'Misty 1.6',
+    kind: 'container',
+    configHash: 'v2-v1.6-350dc20',
+    playSignature: '350dc20',
+    config: {
+      kind: 'python-subprocess',
+      strategy: 'v2',
+      version: '1.6',
+      config: 'v2-net-hang-floor',
+      config_hash: '350dc20',
+      engine_pin: 'misty-1.6@350dc20',
+    },
+    livePolicy: { timeoutMs: 30_000 },
+    notes:
+      'Misty 1.6 — v1.5 + the catastrophe prune net-hang floor (300cp net on ' +
+      'high-value pieces). Fixes the Qxe8/Qxf2 hang class. Shipped 2026-08-23.',
+  },
   // Dark Mini Xiangqi engine. Not in the chess PvE picker; the Dark Mini
   // Xiangqi route selects it through the variant-aware worker protocol.
   'python-dmx-v1.0': {
