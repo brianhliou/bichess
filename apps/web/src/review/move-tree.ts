@@ -34,6 +34,10 @@ export interface MoveTreeAnnotation {
   commentMarker?: boolean;
   /** Colour hook for the comment row → .move-tree__comment--<class>. */
   commentClass?: string;
+  /** Ranked alternatives for a chance ply, rendered as rows under the advice text. Chance
+   *  variants cannot show a deep refutation LINE (nothing is knowable past the reveal), so the
+   *  honest equivalent is the ranked candidate set the engine actually scored. */
+  candidates?: Array<{ label: string; win: number; played?: boolean }>;
   /** Positional-assessment glyph (=, ⩲, ±, +−, …) closing a server-analysis
    *  variation, shown on the LAST move of the grafted line like an opening book
    *  ends a line with its verdict. */
@@ -243,12 +247,15 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         row.append(numberSpan(`${node.ply / 2}…`), emptyCell(), moveCell(node));
         rows.append(row);
       }
-      const comment = annotations.get(pathKey(pathOf(node)))?.comment;
-      if (comment || variations.length > 0) {
+      const nodeAnn = annotations.get(pathKey(pathOf(node)));
+      const comment = nodeAnn?.comment;
+      if (comment || variations.length > 0 || nodeAnn?.candidates?.length) {
         // This ply has an advice comment and/or alternatives: emit them right here
         // (comment first, lichess order), then break the line so the reply starts
         // on a fresh row (and a black move resumes as "N…").
         if (comment) rows.append(commentRow(node));
+        const candidates = annotations.get(pathKey(pathOf(node)))?.candidates;
+        if (candidates?.length) rows.append(candidatesRow(candidates));
         for (const variation of variations) rows.append(variationRow(variation));
         row = null;
       } else if (!isRed(node.ply)) {
@@ -261,6 +268,37 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
 
   // A judged move's advice row ("Blunder. h3-e3 was best."), full-width under the
   // move it grades, ahead of the refutation variation (lichess order).
+  /** The ranked-alternatives block: one row per candidate, best first, the played move
+   *  marked. Sits directly under the advice row and inside its bracket. */
+  function candidatesRow(candidates: NonNullable<MoveTreeAnnotation['candidates']>): HTMLElement {
+    const li = document.createElement('li');
+    li.className = 'move-tree__candidates';
+    for (const [index, candidate] of candidates.entries()) {
+      const row = document.createElement('span');
+      row.className = candidate.played
+        ? 'move-tree__candidate move-tree__candidate--played'
+        : 'move-tree__candidate';
+      const rank = document.createElement('span');
+      rank.className = 'move-tree__candidate-rank';
+      rank.textContent = `${index + 1}.`;
+      const label = document.createElement('span');
+      label.className = 'move-tree__candidate-move';
+      label.textContent = candidate.label;
+      const win = document.createElement('span');
+      win.className = 'move-tree__candidate-win';
+      win.textContent = `${Math.round(candidate.win)}%`;
+      row.append(rank, label, win);
+      if (candidate.played) {
+        const played = document.createElement('span');
+        played.className = 'move-tree__candidate-played';
+        played.textContent = 'played';
+        row.append(played);
+      }
+      li.append(row);
+    }
+    return li;
+  }
+
   function commentRow(node: GameTreeNode<M, T>): HTMLElement {
     const ann = annotations.get(pathKey(pathOf(node)));
     const li = document.createElement('li');

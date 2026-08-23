@@ -18,6 +18,19 @@ export type JieqiDecision = {
   realizedWin: number;
   /** Rank of the played move among candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
+  /** Alternatives the server true-baselined, best first. Absent on decisions cached before
+   *  the server kept them; every consumer treats that as "rank only, no list". */
+  candidates?: JieqiDecisionCandidate[];
+};
+
+/** One true-baselined alternative, in the same win% units as bestWin. */
+export type JieqiDecisionCandidate = {
+  /** Engine UCI of the candidate's root move. */
+  move: string;
+  /** True pool-mean EV (win%) of this move, mover POV — luck stripped. */
+  win: number;
+  /** True when this is the move actually played. */
+  played?: boolean;
 };
 
 export type JieqiDecisionsResponse = {
@@ -46,6 +59,8 @@ export type DecisionView = {
   /** Per-decision accuracy in [0, 100] (lila's win%-drop curve, best -> played). */
   accuracy: number;
   playedRank: number | null;
+  /** Ranked alternatives, best first, carried straight through from the server. */
+  candidates?: JieqiDecisionCandidate[];
 };
 
 export function decisionView(d: JieqiDecision): DecisionView {
@@ -61,6 +76,7 @@ export function decisionView(d: JieqiDecision): DecisionView {
     luck: d.realizedWin - d.playedWin,
     accuracy: accuracyPercent(d.bestWin, d.playedWin),
     playedRank: d.playedRank,
+    ...(d.candidates?.length ? { candidates: d.candidates } : {}),
   };
 }
 

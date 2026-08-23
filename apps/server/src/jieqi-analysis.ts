@@ -341,6 +341,21 @@ export type JieqiDecision = {
   realizedWin: number;
   /** Rank of the played move among the candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
+  /** The candidates that were true-baselined, best first. Every one of these was already
+   *  computed to derive bestWin and playedRank — they used to be thrown away, which left the
+   *  review page able to say "you ranked 3rd" without being able to say what the first two
+   *  were. Absent on rows cached before this existed; the UI degrades to the rank alone. */
+  candidates?: JieqiDecisionCandidate[];
+};
+
+/** One true-baselined alternative at a reveal ply, in the same WIN% units as bestWin. */
+export type JieqiDecisionCandidate = {
+  /** Engine UCI of the candidate's root move. */
+  move: string;
+  /** True pool-mean EV (win%) of this move, mover POV — luck stripped. */
+  win: number;
+  /** True when this is the move actually played. */
+  played?: boolean;
 };
 
 export type JieqiDecisionDeps = {
@@ -522,7 +537,7 @@ export async function analyzeJieqiDecisions(
       ]);
       let playedWin = 50;
       let realizedWin = 50;
-      const baselines: number[] = [];
+      const scored: JieqiDecisionCandidate[] = [];
       for (const uci of candidateUcis) {
         const candidate = uci === playedUci ? move : pikafishUciToJieqiMove(uci);
         if (!candidate) continue;
@@ -533,16 +548,26 @@ export async function analyzeJieqiDecisions(
           deps.evalPosition,
           repetitionWindow,
         );
-        baselines.push(baseline);
+        scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
           playedWin = baseline;
           realizedWin = realized;
         }
       }
+      const baselines = scored.map((c) => c.win);
       const bestWin = baselines.length ? Math.max(...baselines) : playedWin;
       // Rank by true baseline: 1 + how many candidates strictly beat the played move.
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
-      decisions.push({ ply: i + 1, mover, bestWin, playedWin, realizedWin, playedRank });
+      const candidates = [...scored].sort((a, b) => b.win - a.win);
+      decisions.push({
+        ply: i + 1,
+        mover,
+        bestWin,
+        playedWin,
+        realizedWin,
+        playedRank,
+        ...(candidates.length ? { candidates } : {}),
+      });
       if (progress) await progress.save({ nextIndex: i + 1, items: decisions });
     }
     const post = applyJieqiMove(state, move);

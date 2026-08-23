@@ -363,6 +363,42 @@ test('analyzeJieqiDecisions: a better candidate lifts bestWin above playedWin (d
   assert.equal(d.playedRank, 2); // one candidate strictly beat the played move
 });
 
+// The candidate table used to be computed and thrown away: the surface could say "you ranked
+// 2nd" without being able to say what came 1st. Every row here was already true-baselined to
+// derive bestWin/playedRank, so keeping them costs no extra engine work.
+test('decisions keep the true-baselined candidates, best first, with the played move marked', async () => {
+  const deal = STANDARD_JIEQI_DEAL;
+  const state0 = createInitialJieqiState('t', deal);
+  const reveals = getJieqiLegalMoves(state0).filter((m) => state0.board[m.from]?.faceDown === true);
+  const played = reveals[0]!;
+  const better = reveals[1]!;
+  const betterRole = state0.board[better.from]!.role;
+  const pool = redPool(deal);
+
+  const betterFens = new Set<string>();
+  for (const role of pool.keys()) {
+    const cf = jieqiCounterfactualCf(state0, better.from, role, betterRole, 'red');
+    betterFens.add(jieqiStateToPikafishFen(applyJieqiMove(cf, better)));
+  }
+  const decisions = await analyzeJieqiDecisions([played], deal, {
+    multiPv: async () => [mpvLine(1, jieqiMoveToPikafishUci(better), 0)],
+    evalPosition: async (fen) => ({ cp: betterFens.has(fen) ? -400 : -50, mate: null }),
+  });
+  const d = decisions[0]!;
+  const candidates = d.candidates ?? [];
+  assert.equal(candidates.length, 2, 'the engine candidate plus the played move');
+  // Best first, and the ordering is by the SAME true baseline that produced bestWin.
+  assert.ok(candidates[0]!.win > candidates[1]!.win);
+  assert.ok(Math.abs(candidates[0]!.win - d.bestWin) < 1e-6);
+  assert.equal(candidates[0]!.move, jieqiMoveToPikafishUci(better));
+  assert.equal(candidates[0]!.played, undefined);
+  // The played move is marked so the reader is not left counting rows to find themselves.
+  const playedRow = candidates.find((c) => c.played === true);
+  assert.ok(playedRow, 'the played move is present and flagged');
+  assert.equal(playedRow!.move, jieqiMoveToPikafishUci(played));
+  assert.ok(Math.abs(playedRow!.win - d.playedWin) < 1e-6);
+});
+
 function decisionsMemoryCache(): JieqiDecisionsCache & { saves: number } {
   const store = new Map<string, JieqiDecision[]>();
   const cache = {
