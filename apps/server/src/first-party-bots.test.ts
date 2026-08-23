@@ -37,7 +37,7 @@ test('the merged Misty identity fronts every house variant', () => {
 
 test('the merged Pikafish identity fronts xiangqi and jieqi', () => {
   assert.equal(firstPartyBotEngineFor('pikafish', 'xiangqi'), 'pikafish-xiangqi-level-8');
-  assert.equal(firstPartyBotEngineFor('pikafish', 'jieqi'), 'pikafish-jieqi-strong');
+  assert.equal(firstPartyBotEngineFor('pikafish', 'jieqi'), 'pikafish-jieqi-strongest');
 
   // Every retired Pikafish bot id and engine id lands on the merged identity.
   for (const legacyId of [

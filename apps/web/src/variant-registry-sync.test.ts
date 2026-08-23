@@ -14,6 +14,7 @@ import { isClientRoute } from '../../server/src/server-policy.js';
 // apps/server/src/index.ts (and registry.test.ts) do.
 import '../../server/src/variant-tenant/register-tenants.js';
 import { ENGINE_PINNED_GAME_SPEC_IDS, engineTimeControlPin } from '@mistboard/game';
+import { JIEQI_DEFAULT_ENGINE_ID } from '../../server/src/jieqi-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
@@ -95,6 +96,18 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       [...XIANGQI_PUBLIC_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
     );
     expect(tenant?.landing?.defaultEngineId).toBe(XIANGQI_DEFAULT_ENGINE_ID);
+  });
+
+  it('the jieqi picker offers the tier the server actually serves', () => {
+    // Jieqi exposes ONE engine option, so the picker id IS the served tier. It
+    // pointed at the depth-capped middle rung while the uncapped tier sat
+    // unreachable (2026-08-23) — every jieqi PvE game was played at depth 10.
+    const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
+    expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
+    expect((tenant?.landing?.engineOptions ?? []).map((option) => option.id)).toEqual([
+      JIEQI_DEFAULT_ENGINE_ID,
+    ]);
+    expect(tenant?.landing?.defaultEngineId).toBe(JIEQI_DEFAULT_ENGINE_ID);
   });
 
   it('web tenant roomIdPrefixes are unique', () => {
