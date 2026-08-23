@@ -166,7 +166,24 @@ export const riverbankCannonArticle: Article = {
           kind: 'raw-svg',
           svg: RB_CANNON_DOWN,
           caption:
-            'After the recapture on a5, Black\u2019s cannon steps to the edge and fires through Red\u2019s own soldier. Misty found this follow-up in every playout.',
+            'After the recapture on a5, Black’s cannon steps to the edge and fires through Red’s own soldier. Misty found this follow-up in every playout.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text:
+            'Can Red defend the shot? Two ways, neither happy. Declining the recapture keeps two screens on the file, but the crossed soldier just keeps eating and the shot reopens a move later, one soldier cheaper. Recapturing and then blocking with the horse holds the chariot. In six engine playouts from the fired tripwire, the whole sequence played itself out, capture, recapture, counter-shot and all, and Black converted five (the Tripwire games in the companion study). The block:',
+        },
+        {
+          kind: 'xq-replay',
+          spec: {
+            iccs: 'b2b4 a6a5 b4a4 a5a4 a3a4 b7a7 b0a2',
+            red: 'Red',
+            black: 'Black',
+            title: 'Red saves the chariot',
+            event: 'Kernel-verified line',
+            resultText:
+              'The horse steps to the edge as a second screen and the shot is dead. Red is still a cannon for a soldier down with nothing to attack. The engine scores the branch -0.55 either way and calls the recapture the least bad move on the board: the block saves a piece, not the game.',
+          },
         } as ArticleBlock,
       ],
     },
@@ -230,18 +247,18 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'I forced the rush onto the board and let Misty play both sides, thirty games: twenty through the snipe attempt, ten through the chariot grab. The snipe never fired once; Black sealed within three moves in eighteen of twenty. The rush games went Black 9, Red 4, seven ply-cap draws. The forced grabs went Red 5, Black 2, three caps. Here is one in full:',
+            'I forced the rush onto the board and let Misty play both sides, thirty games: twenty through the snipe attempt, ten through the chariot grab. The snipe never fired once; Black sealed within three moves in eighteen of twenty. The rush games went Black 9, Red 4, seven ply-cap draws; the forced grabs went Red 5, Black 2, three caps. Then I made Black answer the same forced rush with this article’s exact line, eight more games: Black won six, no draws. The line does not just suit humans; it outscored the engine’s own defensive choices. Here is one of those games in full:',
         },
         {
           kind: 'xq-replay',
           spec: {
-            iccs: 'b2b4 c6c5 b4e4 c9e7 b0c2 h9i7 a0b0 b9a7 h2e2 i6i5 h0g2 i7h5 i0h0 h7h0 e4a4 h0h4 e2e6 f9e8 b0b7 h5f4 a4h4 f4e6 b7b6 e6g5 g3g4 g5i6 b6g6 i5i4 h4h5 i6h4 c2e1 h4g2 e1g2 i4i3 g2f4 a9c9 f4d5 a7c6 d5f6 c6d8 f6g8 c9c6 g8e9',
+            iccs: 'b2b4 a6a5 b4e4 c9e7 b0c2 h9i7 a0b0 b9a7 h2e2 i6i5 h0g2 i7h5 i0h0 h7h0 b0b7 h0h1 e4e7 g9e7 b7e7 d9e8 e2e6 h5f4 e7a7 f4e6 a7a9 e8d9 c3c4 i9h9 g2e1 h9h2 a9a5 c6c5 c4c5 h1h0 a5a4 h2f2 c5d5 f2f0 e0f0 h0f0',
             red: 'Misty (rush forced)',
-            black: 'Misty',
-            title: 'Rush game 3 of 20',
+            black: 'Misty (this article’s line)',
+            title: 'Rush vs the recommended line, game 7 of 8',
             event: 'Engine-vs-engine playout, full record',
             resultText:
-              'Black seals on move two and the snipe never comes; the parked cannon just becomes a normal piece. Red converts a real middlegame on move 22.',
+              'Both sides forced through their first three moves, then free. Black follows the line this article teaches; the snipe never comes, heavy trades follow, and Black finishes with a deflection: chariot takes the advisor beside the general, the general recaptures, and the second chariot takes the general.',
           },
         } as ArticleBlock,
         {
