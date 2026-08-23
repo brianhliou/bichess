@@ -1098,13 +1098,14 @@
   width: min(480px, 100%);
 }
 
-/* Riverbank Cannon article: replays are the exhibits, render them at the same
-   showcase width as the xiangqi rules page's famous-game replay. */
+/* Riverbank Cannon article: one board size everywhere. Replay boards render at
+   the same width as the static diagrams (one board of a pair, ~48.5% of the
+   column). */
 [data-article-slug="riverbank-cannon"]
   .xq-replay
   .raw-svg-stepper-frame-xq
   > .xq-article-svg[data-xq-layout="single"] {
-  width: min(480px, 100%);
+  width: min(48.5%, 100%);
 }
 
 .xq-replay-slider {
