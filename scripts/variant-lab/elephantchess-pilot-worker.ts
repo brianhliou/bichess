@@ -83,7 +83,17 @@ if (!Number.isSafeInteger(maxShards) || maxShards <= 0) {
   throw new Error('--max-shards must be a positive integer');
 }
 
-init(databaseUrl);
+// Blast radius for a worker fleet. A mining worker only ever runs small,
+// indexed queries plus its own engine work, so a query still running after five
+// minutes is a bug, not slow progress, and 2GB of temp files is far more than
+// any healthy query here needs. On 2026-08-22 the absence of both let eight
+// workers fill the production volume with 45GB of spill.
+const MINING_SESSION_GUARDS = {
+  statementTimeoutMs: 5 * 60_000,
+  tempFileLimitKb: 2 * 1024 * 1024,
+};
+
+init(databaseUrl, MINING_SESSION_GUARDS);
 let engine: PikafishEngine | null = null;
 try {
   const run = await getXiangqiPuzzleMiningRun(getPool(), runId);

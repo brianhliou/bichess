@@ -33,6 +33,7 @@ const MODAL_BIN = existsSync(join(homedir(), '.local/bin/modal'))
 const SOURCE_SLUG = 'elephantchess-pvp';
 const TASK_CAP = 1_000;
 const SHARD_SIZE = 25;
+const DEFAULT_BATCH_GAMES = 1_000;
 const PILOT_YIELD = 0.356;
 const CORE_HOURS_PER_1K_GAMES = 5;
 const RAILWAY_LINK_HINT =
@@ -43,6 +44,8 @@ const { values } = parseArgs({
     status: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
     containers: { type: 'string' },
+    batch: { type: 'string' },
+    all: { type: 'boolean', default: false },
     seed: { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
@@ -177,8 +180,14 @@ const pg = require('pg');
   const candidates = await q(
     'SELECT status, count(*)::int AS n FROM xiangqi_puzzle_mining_candidates WHERE run_id = $1 GROUP BY status',
     ['${runId}']);
+  // Games actually finished, summed from durable per-shard checkpoints. This is
+  // what the canary checks: a stuck worker holds a lease and moves this by zero.
+  const scanned = await q(
+    'SELECT coalesce(sum(next_selection_index - selection_start), 0)::int AS done FROM xiangqi_puzzle_mining_shards WHERE run_id = $1',
+    ['${runId}']);
   console.log(JSON.stringify({
     runStatus: runRow[0] ? runRow[0].status : null,
+    gamesScanned: scanned[0] ? scanned[0].done : 0,
     shards: byStatus(shards),
     candidates: byStatus(candidates),
   }));
@@ -229,13 +238,29 @@ function readCorpus() {
     log('\nNothing left to mine. The cleared corpus is fully consumed.');
     process.exit(0);
   }
-  const shards = Math.ceil(corpus.remaining / SHARD_SIZE);
-  const coreHours = Math.round((corpus.remaining / 1000) * CORE_HOURS_PER_1K_GAMES);
-  const expected = Math.round(corpus.remaining * PILOT_YIELD);
-  log(`  plan                 ${shards} shards, ~${coreHours} core-hours`);
+  const thisBatch = values.all ? corpus.remaining : Math.min(batchSize, corpus.remaining);
+  const shards = Math.ceil(thisBatch / SHARD_SIZE);
+  const coreHours = ((thisBatch / 1000) * CORE_HOURS_PER_1K_GAMES).toFixed(1);
+  const expected = Math.round(thisBatch * PILOT_YIELD);
+  log(
+    `  THIS BATCH           ${thisBatch.toLocaleString()} games, ${shards} shards, ~${coreHours} core-hours`,
+  );
   log(`  expected yield       ~${expected.toLocaleString()} puzzles at the pilot's 35.6%`);
+  if (!values.all) {
+    const batches = Math.ceil(corpus.remaining / batchSize);
+    log(`  batches to finish    ${batches} (re-run this command per batch)`);
+  }
   return corpus;
 }
+
+const batchSize = (() => {
+  if (values.batch === undefined) return DEFAULT_BATCH_GAMES;
+  const parsed = Number(values.batch);
+  if (!Number.isSafeInteger(parsed) || parsed < 25) {
+    fail('--batch must be an integer of at least 25');
+  }
+  return parsed;
+})();
 
 function generateManifest(corpus, existingSeed) {
   step('Generating the remainder manifest');
@@ -243,12 +268,20 @@ function generateManifest(corpus, existingSeed) {
   const seed =
     existingSeed ??
     values.seed ??
-    `elephantchess-remainder-${new Date().toISOString().slice(0, 10)}`;
+    `elephantchess-remainder-${new Date().toISOString().slice(0, 10)}-${corpus.mined}`;
   const out = join(STATE_DIR, `${seed}.json`);
+  // Batch, not the whole remainder. Every batch is a checkpoint: a bad one
+  // costs a batch instead of the corpus, and 1,000 games in the pilot's
+  // 800/100/100 shape is the only size this pipeline has ever completed.
+  // --all opts into the entire remainder for whoever wants it later.
+  const batchFlags = values.all
+    ? '--fill-remaining'
+    : `--representative ${Math.round(batchSize * 0.8)} --coverage ${Math.round(batchSize * 0.1)} ` +
+      `--correspondence ${Math.round(batchSize * 0.1)}`;
   const result = railwayShell(
     `DATABASE_URL="$DATABASE_PUBLIC_URL" npm run --silent pilot:elephantchess-manifest ` +
       `--workspace @mistboard/server -- --import-batch-id "${corpus.importBatchId}" ` +
-      `--seed "${seed}" --exclude-mined --fill-remaining --out "${out}"`,
+      `--seed "${seed}" --exclude-mined ${batchFlags} --out "${out}"`,
   );
   if (result.status !== 0) {
     fail(`Manifest generation failed:\n${result.stderr || result.stdout}`);
@@ -368,9 +401,37 @@ async function main() {
   }
 
   let progress = queryProduction(progressSnippet(state.runId));
+
+  // ONE shard first, then prove it moved the counter. On 2026-08-22 this script
+  // went straight to 379 shards; eight workers then spun for twenty minutes
+  // scanning zero games while filling the production disk. A fan-out that
+  // never completes looks exactly like slow progress from the outside, and the
+  // only cheap way to tell them apart is to demand evidence of one finished
+  // unit before committing the fleet.
+  if (!state.canaryPassed && (progress.shards.pending ?? 0) > 0) {
+    step('Canary: one shard');
+    const before = progress.gamesScanned ?? 0;
+    await modalRun('scan', ['--run-id', state.runId, '--tasks', '1'], state.manifestPath);
+    progress = queryProduction(progressSnippet(state.runId));
+    const scanned = (progress.gamesScanned ?? 0) - before;
+    if (scanned <= 0) {
+      fail(
+        'Canary scanned 0 games. NOT fanning out.\n' +
+          `  run ${state.runId}\n` +
+          `  shards     ${JSON.stringify(progress.shards)}\n` +
+          `  candidates ${JSON.stringify(progress.candidates)}\n\n` +
+          'A worker that claims a shard but finishes no game is stuck, not slow.\n' +
+          'Investigate before re-running; do not raise --containers to compensate.',
+      );
+    }
+    log(`  canary scanned ${scanned} game(s) — safe to fan out`);
+    state.canaryPassed = true;
+    saveState(state);
+  }
+
   const pendingShards = (progress.shards.pending ?? 0) + (progress.shards.claimed ?? 0);
   if (pendingShards > 0) {
-    step(`Scanning ${pendingShards} shard(s)`);
+    step(`Scanning ${pendingShards} remaining shard(s)`);
     log('  The long phase. Safe to interrupt: leases expire and re-running resumes.\n');
     await modalRun(
       'scan',

@@ -2,14 +2,43 @@ import pg from 'pg';
 
 let pool: pg.Pool | null = null;
 
-export function init(connectionString: string): void {
+// Per-session resource ceilings for batch workers. A long-running fleet
+// hammering one query deserves a blast radius; the live server wants neither of
+// these, so they are opt-in rather than a default.
+//
+// On 2026-08-22 eight mining workers ran a query that spilled 45GB of temp
+// files and filled the production volume. Either limit alone would have turned
+// that into aborted queries instead of an incident. See memory
+// ops_mining_fanout_disk_full.
+export type PoolSessionGuards = {
+  statementTimeoutMs?: number;
+  tempFileLimitKb?: number;
+};
+
+export function init(connectionString: string, guards?: PoolSessionGuards): void {
   if (pool) throw new Error('persistence already initialized');
+  // Both limits ride libpq's `options`, so the server applies them while the
+  // session starts. Setting them from a pool 'connect' handler instead would
+  // queue the SET behind whatever query triggered the new connection, leaving
+  // that first query — the one most likely to be the runaway — unguarded.
+  //
+  // temp_file_limit is superuser-only on some deployments. Failing the
+  // connection outright is the right behaviour: a batch fleet that cannot
+  // install its ceiling should refuse to start rather than run uncapped.
+  const settings: string[] = [];
+  if (guards?.statementTimeoutMs !== undefined) {
+    settings.push(`-c statement_timeout=${Math.trunc(guards.statementTimeoutMs)}`);
+  }
+  if (guards?.tempFileLimitKb !== undefined) {
+    settings.push(`-c temp_file_limit=${Math.trunc(guards.tempFileLimitKb)}`);
+  }
   pool = new pg.Pool({
     connectionString,
     max: 10,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
     idleTimeoutMillis: 30_000,
+    ...(settings.length === 0 ? {} : { options: settings.join(' ') }),
   });
 }
 
