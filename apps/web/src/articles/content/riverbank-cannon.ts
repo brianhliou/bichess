@@ -181,25 +181,25 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'I scripted the rush and made Misty defend blind, twenty games. It found a seal by move three in every one, elephant or cannon as the position suggested, and won all twenty; not one snipe landed. My scripted Red plays the opening perfectly and the middlegame badly, so read that as the rush never landing, not as Black dominance. Here is one of the twenty in full:',
+            'I scripted the rush and made Misty defend it, forty games: twenty straight up the b-file in plain sight, twenty up the stealth d-file. The snipe landed zero times. Against the visible version the engine sealed by move three in seventeen of twenty and never later than move seven; across all forty, Black won thirty-seven, Red one, and two hit the ply cap. My scripted Red plays the opening perfectly and the middlegame badly, so read that as the rush failing, not as Black dominance. Here is one of the visible games in full:',
         },
         {
           kind: 'xq-replay',
           spec: {
-            iccs: 'b2d2 h9g7 d2d4 b7e7 d4e4 b9c7 e4a4 h7i7 a4a9 e7e3 a9d9 i9h9 d9f9 h9h2 f9c9 h2e2 c0e2 e3e0',
+            iccs: 'b2b4 c6c5 b4e4 c9e7 e4a4 h9i7 a4a9 i9i8 a9d9 e9d9 h2a2 b9c7 a2a6 b7b3 a6g6 b3e3 g0e2 e3e0',
             red: 'Scripted rush',
             black: 'Misty DXQ',
-            title: 'Defense game 7 of 20',
-            event: 'Engine playout, full record',
+            title: 'Defense game 1 of 20',
+            event: 'Engine playout, full record, visible route',
             resultText:
-              'Red wins a chariot, two advisors, and an elephant, and is mated on move 9 anyway: his own recapture on e3 became the screen for Black\u2019s e-file cannon. Material does not save a leaking file.',
+              'The direct rush, answered: Misty seals on move two, gives up the chariot to the rim grab, then the general personally takes the cannon when it gets greedy on d10. Red’s own sealing elephant later becomes the screen for the mate on e1.',
           },
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
             // LOCAL study id: reseed on prod at publish time (apps/server/src/seed-riverbank-study.ts) and update this link.
-            'All the games behind this article are in the [companion study](/study/6pol6o3i): the theory lines, the twenty defense games, ten rim-gambit games where the chariot grab lands, and sixteen engine self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
+            'All the games behind this article are in the [companion study](/study/yZyCRZIA): the theory lines, twenty defense games and ten rim-gambit games up the visible route, and sixteen engine self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.',
         },
         {
           kind: 'paragraph',
@@ -255,7 +255,7 @@ export const riverbankCannonArticle: Article = {
         'Every line and every game in this article is in the companion study, on a board you can flip to either side\u2019s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.',
       // LOCAL study id: reseed on prod at publish (seed-riverbank-study.ts) and update.
       playLabel: 'Open the companion study',
-      playHref: '/study/6pol6o3i',
+      playHref: '/study/yZyCRZIA',
       secondary: [
         {
           label: 'Play vs computer',
