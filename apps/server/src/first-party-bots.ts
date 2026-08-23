@@ -97,7 +97,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     displayName: 'Pikafish',
     engines: {
       xiangqi: 'pikafish-xiangqi-level-8',
-      jieqi: 'pikafish-jieqi-strong',
+      jieqi: 'pikafish-jieqi-strongest',
     },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
@@ -112,7 +112,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'pikafish-xiangqi-strong',
       'pikafish-xiangqi-strongest',
       'pikafish-jieqi-amateur',
-      'pikafish-jieqi-strongest',
+      'pikafish-jieqi-strong',
     ],
     legacyBotIds: [
       'pikafish-xiangqi-level-1',

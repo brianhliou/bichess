@@ -14,7 +14,7 @@ test('playable live engine client ids = the single streamlined PVE engine (Misty
   // v1.5 shipped 2026-06-21, superseding v1.4 in the picker (opening-book update:
   // drop redundant Nc3 forces, force ...dxe4). Older versions stay in the registry
   // so historical games resolve, but are no longer offered.
-  assert.equal(isPlayableLiveEngineClientId('python-v2-v1.5'), true);
+  assert.equal(isPlayableLiveEngineClientId('python-v2-v1.6'), true);
   assert.equal(isPlayableLiveEngineClientId('python-v2-v1.4'), false);
   assert.equal(isPlayableLiveEngineClientId('python-v2-v1.3'), false);
   assert.equal(isPlayableLiveEngineClientId('python-v2-v1.2'), false);

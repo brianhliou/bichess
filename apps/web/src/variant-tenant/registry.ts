@@ -386,13 +386,13 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // grows a real strength knob.
       engineOptions: [
         {
-          id: 'pikafish-jieqi-strong',
+          id: 'pikafish-jieqi-strongest',
           name: 'Pikafish',
           familyName: 'Pikafish',
           kind: 'container',
         },
       ],
-      defaultEngineId: 'pikafish-jieqi-strong',
+      defaultEngineId: 'pikafish-jieqi-strongest',
     },
   },
   {

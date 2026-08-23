@@ -13,8 +13,10 @@
 // the NNUE `jieqi` branch + our own-trained net via MISTBOARD_PIKAFISH_NET (EvalFile).
 
 import { existsSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { resolve } from 'node:path';
 import {
+  boundedEnvInt,
   runUciBestmove,
   runUciEval,
   runUciMultiPv,
@@ -24,10 +26,16 @@ import {
   type UciMultiPvLine,
 } from './uci-engine-harness.js';
 
-export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strong';
+export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier). The shipped
 // engine is the no-net classical Pikafish jieqi_old build; bump on any engine/config change.
-export const JIEQI_ENGINE_VERSION = '0.1.0';
+export const JIEQI_ENGINE_VERSION = '0.2.0';
+// ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
+// (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the binary and the
+// analysis search config (fixed depth 12, single thread, default hash) are untouched, so
+// cached sweeps stay valid and must not be invalidated. Bump this one only when the binary
+// or the analysis search config itself changes.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.1.0';
 
 export type JieqiEngineTier = {
   id: string;
@@ -48,17 +56,49 @@ const JIEQI_ENGINE_TIERS = [
     movetimeMs: 800,
   },
   {
-    id: JIEQI_DEFAULT_ENGINE_ID,
+    id: 'pikafish-jieqi-strong',
     name: 'PikaJieQi - Strong',
     depth: 10,
     movetimeMs: 1200,
   },
   {
-    id: 'pikafish-jieqi-strongest',
+    // The tier every jieqi PvE game is served by (the web registry offers exactly one
+    // jieqi engine and the Pikafish bot profile points here). No depth cap, and the
+    // movetime matches mainline Pikafish's top xiangqi rung (level-8, 4000ms) so the
+    // two bots wearing the "Pikafish" badge at least get comparable think time.
+    // Measured at the jieqi start position on an 8-core dev box: this config reaches
+    // depth 32, against depth 10 for the 'strong' rung that used to serve every game.
+    id: JIEQI_DEFAULT_ENGINE_ID,
     name: 'PikaJieQi - Strongest',
-    movetimeMs: 2500,
+    movetimeMs: 4_000,
   },
 ] as const satisfies readonly JieqiEngineTier[];
+
+// Per-process search resources for LIVE play. PikaJieQi ships UCI defaults of
+// Threads=1 / Hash=16, and 16MB is badly undersized for this binary: it runs at
+// ~3M nps, so hashfull pegs at 1000 (a fully thrashing table) inside the first
+// second of a 4s search. Measured at the start position, 4000ms:
+//   16MB/1thr -> depth 25 | 256MB/1thr -> depth 28 | 256MB/2thr -> depth 32.
+// Deliberately NOT applied to the analysis path: a fixed-depth sweep is cached by
+// (room, engine, depth) and its comment promises a CPU-independent result, which
+// both a bigger table and a second thread would break.
+//
+// Threads never claims more than HALF the container's cores: the engine shares the
+// `web` box with the WS server's event loop, and the live pool can run
+// MISTBOARD_PIKAFISH_MAX_PROCESSES (default 2) of these at once. So a 2-vCPU box
+// stays single-threaded and only an 8-vCPU box reaches the cap of 4. Both knobs are
+// env-tunable: raise MISTBOARD_PIKAFISH_JIEQI_THREADS / _HASH_MB if the container
+// has headroom (each concurrent search allocates its own Hash).
+function jieqiLiveResourceOptions(): string[] {
+  const hashMb = boundedEnvInt('MISTBOARD_PIKAFISH_JIEQI_HASH_MB', 256, 16, 4_096);
+  const threads = boundedEnvInt(
+    'MISTBOARD_PIKAFISH_JIEQI_THREADS',
+    Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2))),
+    1,
+    16,
+  );
+  return [`setoption name Hash value ${hashMb}`, `setoption name Threads value ${threads}`];
+}
 
 export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS;
 
@@ -146,6 +186,24 @@ export function jieqiEngineBinaryAvailable(): boolean {
   }
 }
 
+/** The exact UCI block a fixed-depth analysis eval sends. Exported so the ABSENCE of
+ *  the live resource options is testable: a cached sweep is keyed by
+ *  (room, engine, depth) and promises a CPU-independent result, which neither a
+ *  bigger transposition table nor a second search thread would preserve. */
+export function buildJieqiAnalysisCommands(
+  fen: string,
+  opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
+): string[] {
+  return [
+    'uci',
+    ...netOption(),
+    'ucinewgame',
+    'isready',
+    buildJieqiPositionCommand(fen, opts.moves),
+    `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
+  ];
+}
+
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read PikaJieQi's
 // `info … score` for a redacted current-position FEN, side-to-move POV. Unlike the 3 custom
 // engines, Pikafish ALREADY emits `info score` — no engine change was needed here, so this just
@@ -158,14 +216,7 @@ export async function evaluateJieqiFen(
   fen: string,
   opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
 ): Promise<UciEval> {
-  const commands = [
-    'uci',
-    ...netOption(),
-    'ucinewgame',
-    'isready',
-    buildJieqiPositionCommand(fen, opts.moves),
-    `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
-  ];
+  const commands = buildJieqiAnalysisCommands(fen, opts);
   const release = await analysisPool.acquire();
   try {
     return await runUciEval({
@@ -335,23 +386,30 @@ export async function jieqiLiveEngineMove(
   }
 }
 
+/** The exact UCI block a live bot move sends. Exported so the resource options and
+ *  go-limit wiring are unit-testable without spawning the binary. */
+export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
+  const movetimeMs = opts.movetimeMs ?? 500;
+  const depth = opts.depth !== undefined ? Math.max(1, Math.floor(opts.depth)) : null;
+  return [
+    'uci',
+    ...netOption(),
+    ...jieqiLiveResourceOptions(),
+    'ucinewgame',
+    'isready',
+    buildJieqiPositionCommand(fen, opts.moves),
+    // depth cap (if any) stops the search early for weaker tiers; movetime bounds
+    // latency on the deep tiers. `go depth N movetime T` halts at whichever hits first.
+    depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`,
+  ];
+}
+
 export function jieqiEngineMove(
   fen: string,
   opts: JieqiEngineOptions = {},
 ): Promise<string | null> {
   const movetimeMs = opts.movetimeMs ?? 500;
-  const depth = opts.depth !== undefined ? Math.max(1, Math.floor(opts.depth)) : null;
-  const position = buildJieqiPositionCommand(fen, opts.moves);
-  const commands = [
-    'uci',
-    ...netOption(),
-    'ucinewgame',
-    'isready',
-    position,
-    // depth cap (if any) stops the search early for weaker tiers; movetime bounds
-    // latency on the deep tiers. `go depth N movetime T` halts at whichever hits first.
-    depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`,
-  ];
+  const commands = buildJieqiLiveCommands(fen, opts);
   return runUciBestmove({
     bin: pikaJieqiPath(),
     commands,

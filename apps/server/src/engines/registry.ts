@@ -1,4 +1,5 @@
 import type pg from 'pg';
+import { JIEQI_ENGINE_VERSION } from '../jieqi-engine.js';
 import { XIANGQI_FSF_ENGINE_VERSION, XIANGQI_FSF_PLAYABLE_ENGINES } from '../xiangqi-fsf-engine.js';
 import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
 import {
@@ -766,10 +767,13 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
     name: 'PikaJieQi - Strongest',
     kind: 'container',
     gameSpecId: 'jieqi',
-    configHash: 'pikafish-jieqi-strongest',
-    playSignature: 'pikafish-jieqi-strongest',
-    config: { kind: 'pikafish', movetime_ms: 2500 },
-    notes: 'Top Jieqi PikaJieQi tier — full strength, time-bounded (no depth cap).',
+    // Versioned so the 0.2.0 serving config (4000ms + Hash 256 / Threads 2) is not
+    // conflated with the 2500ms single-threaded 16MB-hash definition it replaced.
+    configHash: `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`,
+    playSignature: `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`,
+    config: { kind: 'pikafish', movetime_ms: 4000 },
+    notes:
+      'Top Jieqi PikaJieQi tier and the one every jieqi PvE game is served by — no depth cap, 4000ms, Hash 256 / Threads 2 (see jieqiLiveResourceOptions).',
   },
 };
 
