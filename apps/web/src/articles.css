@@ -1098,6 +1098,15 @@
   width: min(480px, 100%);
 }
 
+/* Riverbank Cannon article: replays are the exhibits, render them at the same
+   showcase width as the xiangqi rules page's famous-game replay. */
+[data-article-slug="riverbank-cannon"]
+  .xq-replay
+  .raw-svg-stepper-frame-xq
+  > .xq-article-svg[data-xq-layout="single"] {
+  width: min(480px, 100%);
+}
+
 .xq-replay-slider {
   width: min(292px, 100%);
   accent-color: var(--site-accent);
