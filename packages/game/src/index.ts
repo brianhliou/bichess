@@ -16,6 +16,7 @@ export * from './puzzles-fortress-xiangqi.js';
 export * from './puzzles-jungle.js';
 export * from './puzzles-mini-xiangqi.js';
 export * from './puzzles-xiangqi.js';
+export * from './puzzles-xiangqi-difficulty.js';
 export * from './puzzles-xiangqi-mining.js';
 export * from './start-fen.js';
 export * from './time-controls.js';
