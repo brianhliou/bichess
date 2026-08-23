@@ -71,7 +71,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'So defense cannot be reactive: you have to play the answer every game, rush or no rush. Chess’s Scholar’s Mate at least enters your half of the board; the cannon fires from outside your vision. The rest of this article draws the visible b-file route so the diagrams are easy to follow. Every riverbank threat is identical however the cannon arrived; the defense must not care.',
+            'So defense cannot be reactive: you have to play the answer every game, rush or no rush. Chess’s Scholar’s Mate at least enters your half of the board; the cannon fires from outside your vision. The theory lines in the rest of this article draw the visible b-file route so the diagrams are easy to follow. Every riverbank threat is identical however the cannon arrived; the defense must not care.',
         },
       ],
     },
@@ -209,6 +209,11 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
+            'One more check, on the recommended defense itself: I forced Black through the line this article teaches (soldier, elephant, far horse) and let Red play free, eight games. Black won five of the seven decisive ones, against one of twelve when both sides chose freely. Lean samples both, but the direction is loud: the three insurance moves cost nothing. They are just good moves.',
+        },
+        {
+          kind: 'paragraph',
+          text:
             'The engine\u2019s position evaluations are firmer ground: they hold still under a sixteen-fold compute increase (64 to 1024 search iterations), so these are converged verdicts on its -1 to +1 scale.',
         },
         {
@@ -225,11 +230,6 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One more check, on the recommended defense itself: I forced Black through the line this article teaches (soldier, elephant, far horse) and let Red play free, eight games. Black won five of the seven decisive ones, against one of twelve when both sides chose freely. Lean samples both, but the direction is loud: the three insurance moves cost nothing. They are just good moves.',
-        },
-        {
-          kind: 'paragraph',
-          text:
             'Average the two flip branches and the committed rush is worth about +0.10 to Red, the same ballpark as the +0.06 he starts with. The whole first-move advantage, spent in one gamble. First-move initiative in fog xiangqi is real, probably bigger than in chess, because defense is paid for blind; the rush is just the loudest way to spend it, and the loudest way is answerable.',
         },
       ],
@@ -240,7 +240,7 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'As Black: push an edge soldier, then elephant to the middle, then a horse to the other edge. Three moves and every target is covered; the only thing Red can ever hit is the chariot on the edge you did not push, and only by committing to it on his second move. Never seal with the advisor. And if a cannon lands on your back rank anyway, count screens before you move anything near it; most of the losses we found came from moving a piece that was quietly holding a firing line shut.',
+            'As Black: push an edge soldier, then elephant to the middle, then a horse to the other edge. Three moves and every target is covered; the only real target left is the chariot on the edge you did not push, and only if Red commits to it on his second move. Never seal with the advisor. And if a cannon lands on your back rank anyway, count screens before you move anything near it; most of the losses we found came from moving a piece that was quietly holding a firing line shut.',
         },
         {
           kind: 'paragraph',
