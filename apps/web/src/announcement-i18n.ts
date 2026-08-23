@@ -18,10 +18,20 @@ import type { Locale } from './i18n/locale.js';
 
 export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 
+// AWAITING A NATIVE READ: the 2026-08-22 batch (both bots / four times as many
+// puzzles / move badges / skill from luck) shipped without one, by decision, to
+// avoid holding the English feed. The two long bodies carry the most risk:
+// 着法评级 for "move-judgment badge", 翻子回合 for "reveal ply", and 方差 for
+// "variance". Correct them in place when a native reader gets to them.
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
   // ── headlines ──
+  'Both house bots play stronger.': '两台自家引擎都变强了。',
+  'Four times as many xiangqi puzzles.': '象棋题目增至四倍。',
+  'Move badges and best lines on every reviewable variant.':
+    '所有支持复盘的棋类都有着法评级与最佳变化。',
+  'Separating skill from luck in flip games.': '在翻子棋中区分棋力与运气。',
   'What Patron support will cost.': '赞助 Mistboard 的价格。',
   'A games database for xiangqi.': '象棋对局库。',
   'Perpetual check now loses in standard xiangqi.': '标准象棋中长将判负。',
@@ -60,6 +70,14 @@ const ZH_HANS: Record<string, string> = {
   'Misty 1.0 has launched.': 'Misty 1.0 已上线。',
 
   // ── bodies ──
+  'Misty runs version 1.6 in fog chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
+    '迷雾国际象棋中的 Misty 已升级到 1.6 版，修正了以往会送后的一类失误。揭棋中的 Pikafish 现在会搜索到完整深度；此前它过早停止搜索，因此比应有的水平更容易被击败。',
+  'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
+    '标准象棋题库从 394 题增加到 1,605 题，每一题都取自已结束的对局，并在上线前经过引擎校验。',
+  'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
+    '着法评级标记现在会显示在全部六种支持分析的棋类棋盘上，不再只有象棋，漏着还会指出反驳它的具体着法。揭棋的翻子回合不再给出变化，而是列出引擎评分后的候选着法排名，因为翻子之后的局面无法预知。',
+  'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
+    '暗棋、揭棋和翻翻棋中有一半的着法取决于运气，用国际象棋那套复盘方式会把方差算在你头上。对局复盘把每次翻子拆成你做的决策和你翻到的子，文章用 52 局人机对局验证了这一点。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」页面列出了每月的赞助金额、包含的内容（个人资料上的徽章，不影响对局），以及完整的计费与退款条款。结账尚未开放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -138,6 +156,7 @@ const ZH_HANS: Record<string, string> = {
   'Open volume one': '打开第一卷',
   'Browse the studies': '浏览研习',
   'Find a game': '找一局棋',
+  'Read the article': '阅读文章',
   'Open the board': '打开棋盘',
   'Browse studies': '浏览研习',
   'Watch now': '立即观战',
@@ -152,6 +171,11 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   // ── headlines ──
+  'Both house bots play stronger.': '兩台自家引擎都變強了。',
+  'Four times as many xiangqi puzzles.': '象棋題目增至四倍。',
+  'Move badges and best lines on every reviewable variant.':
+    '所有支援覆盤的棋類都有著法評級與最佳變化。',
+  'Separating skill from luck in flip games.': '在翻子棋中區分棋力與運氣。',
   'What Patron support will cost.': '贊助 Mistboard 的價格。',
   'A games database for xiangqi.': '象棋對局庫。',
   'Perpetual check now loses in standard xiangqi.': '標準象棋中長將判負。',
@@ -190,6 +214,14 @@ const ZH_HANT: Record<string, string> = {
   'Misty 1.0 has launched.': 'Misty 1.0 已上線。',
 
   // ── bodies ──
+  'Misty runs version 1.6 in fog chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
+    '迷霧國際象棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
+  'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
+    '標準象棋題庫從 394 題增加到 1,605 題，每一題都取自已結束的對局，並在上線前經過引擎校驗。',
+  'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
+    '著法評級標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
+  'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
+    '暗棋、揭棋和翻翻棋中有一半的著法取決於運氣，用國際象棋那套覆盤方式會把方差算在你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的子，文章用 52 局人機對局驗證了這一點。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」頁面列出了每月的贊助金額、包含的內容（個人資料上的徽章，不影響對局），以及完整的計費與退款條款。結帳尚未開放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -268,6 +300,7 @@ const ZH_HANT: Record<string, string> = {
   'Open volume one': '開啟第一卷',
   'Browse the studies': '瀏覽研習',
   'Find a game': '找一局棋',
+  'Read the article': '閱讀文章',
   'Open the board': '開啟棋盤',
   'Browse studies': '瀏覽研習',
   'Watch now': '立即觀戰',
