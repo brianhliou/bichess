@@ -24,6 +24,38 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-08-22',
+    kind: 'update',
+    headline: 'Both house bots play stronger.',
+    body: 'Misty runs version 1.6 in fog chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.',
+    href: '/',
+    cta: 'Find a game',
+  },
+  {
+    date: '2026-08-22',
+    kind: 'update',
+    headline: 'Four times as many xiangqi puzzles.',
+    body: 'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.',
+    href: '/puzzles',
+    cta: 'Solve puzzles',
+  },
+  {
+    date: '2026-08-22',
+    kind: 'release',
+    headline: 'Move badges and best lines on every reviewable variant.',
+    body: 'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.',
+    href: '/analysis',
+    cta: 'Open the board',
+  },
+  {
+    date: '2026-08-22',
+    kind: 'article',
+    headline: 'Separating skill from luck in flip games.',
+    body: 'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.',
+    href: '/blog/skill-vs-luck',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-08-13',
     kind: 'update',
     headline: 'What Patron support will cost.',
