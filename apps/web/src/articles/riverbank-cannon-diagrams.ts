@@ -179,3 +179,63 @@ export const RB_SHELTER = () =>
       ],
     }),
   );
+
+// The counter-battery, answered: red seals his center before grabbing, and the
+// battery on e6 is frozen (two screens to e1). Red's converged plan: the edges.
+const BATTERY_FROZEN = play('rb-battery-frozen', ['b3b5', 'h8h6', 'g1e3', 'h6e6']);
+
+export const RB_BATTERY_FROZEN = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: BATTERY_FROZEN,
+      x: 0,
+      y: 0,
+      label: 'THE BATTERY, FROZEN',
+      perspective: 'red',
+      arrows: [{ from: 'b5' as XiangqiSquare, to: 'i5' as XiangqiSquare }],
+      dots: [{ square: 'e1' as XiangqiSquare, blocked: true }],
+    }),
+  );
+
+// Branch L: red recaptured the tripwire soldier, and the recapture is the
+// screen for black's counter-shot at the corner chariot.
+const CANNON_DOWN = play('rb-cannon-down', ['b3b5', 'a7a6', 'b5a5', 'a6a5', 'a4a5', 'b8a8']);
+
+export const RB_CANNON_DOWN = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: CANNON_DOWN,
+      x: 0,
+      y: 0,
+      label: 'THE RECAPTURE IS A GIFT',
+      perspective: 'red',
+      arrows: [{ from: 'a8' as XiangqiSquare, to: 'a1' as XiangqiSquare }],
+      dots: [{ square: 'a1' as XiangqiSquare, capture: true }],
+    }),
+  );
+
+// Branch W: the landed cannon is a freeze, not a raider. Its bites lose to
+// recaptures; the horse and elephant beside it hold the back rank shut.
+const CHARIOT_DOWN = play('rb-chariot-down', ['b3b5', 'a7a6', 'b5i5', 'c10e8', 'i5i10']);
+
+export const RB_CHARIOT_DOWN = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: CHARIOT_DOWN,
+      x: 0,
+      y: 0,
+      label: 'THE FREEZE',
+      perspective: 'red',
+      arrows: [
+        { from: 'i10' as XiangqiSquare, to: 'g10' as XiangqiSquare },
+        { from: 'i10' as XiangqiSquare, to: 'f10' as XiangqiSquare },
+        { from: 'e8' as XiangqiSquare, to: 'g10' as XiangqiSquare },
+      ],
+    }),
+  );

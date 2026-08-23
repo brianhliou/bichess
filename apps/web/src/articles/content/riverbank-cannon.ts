@@ -1,6 +1,9 @@
 import { playClosing } from '../diagrams.js';
 import {
   RB_ADVISOR_TRAP,
+  RB_BATTERY_FROZEN,
+  RB_CANNON_DOWN,
+  RB_CHARIOT_DOWN,
   RB_FIVE_FILES,
   RB_SEAL_COVER,
   RB_SHELTER,
@@ -152,6 +155,43 @@ export const riverbankCannonArticle: Article = {
       ],
     },
     {
+      heading: 'When the cannon dies',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'Half the flips, Red loses the cannon to the soldier. He recaptures the soldier (the engine did, in every playout), and the recapture is a gift: it is now the screen, and Black\u2019s cannon shoots the corner chariot straight through it. The engine scores this -0.55 for Red: attack over, a cannon down, nothing to show.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: RB_CANNON_DOWN,
+          caption:
+            'After the recapture on a5, Black\u2019s cannon steps to the edge and fires through Red\u2019s own soldier. Misty found this follow-up in every playout.',
+        } as ArticleBlock,
+      ],
+    },
+    {
+      heading: 'When the chariot falls',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'The other half, Black is a chariot down, and the engine calls it -0.75: close to lost, still fighting. The landed cannon looks scarier than it is. Every capture it has loses on the spot to a recapture. Its real power is the freeze: the horse and the elephant beside it are holding the back rank shut, and if either ever moves, the next shot is the general.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: RB_CHARIOT_DOWN,
+          caption:
+            'The cannon\u2019s bites (arrows left) are answered: the central elephant retakes on one point, the general on the other. But the horse and elephant are the back rank\u2019s screens now. Move either and the cannon mates. Leave them home.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text:
+            'So Black\u2019s plan is patience: touch nothing on the back rank, and counterattack on the other wing, where the battery and the mirror gamble still exist. In the engine playouts Black saved one game of five from here and led on material in another at the ply cap.',
+        },
+      ],
+    },
+    {
       heading: 'Whoever moves the wall first dies',
       blocks: [
         {
@@ -174,8 +214,14 @@ export const riverbankCannonArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Which answers a fair question: why not go to the riverbank yourself as Black? You can, and it punishes any Red who grabs. But against a Red who seals first, your cannon sits frozen on e6 for the rest of the game, a quarter point worse by the engine’s count than the soldier line. A weapon for greedy opponents, not a default.',
+            'Which answers a fair question: why not go to the riverbank yourself as Black? You can, and it punishes any Red who grabs. Red has exactly one sound reply: seal his own center before touching anything. Then the battery never fires.',
         },
+        {
+          kind: 'raw-svg',
+          svg: RB_BATTERY_FROZEN,
+          caption:
+            'The line: cannon to the riverbank, Black answers with his own battery, Red seals with the elephant before grabbing. The battery is now two screens from the general (the cross) and frozen where it stands; move it and Red\u2019s cannon fires. The engine puts Red a quarter point up here (+0.25, against 0.00 in the soldier line) and sends its cannon to the edges (the arrow). A weapon for greedy opponents, not a default.',
+        } as ArticleBlock,
       ],
     },
     {
