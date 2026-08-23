@@ -13,8 +13,8 @@ export const MISTBOARD_ENGINE_BASELINE_NAME = 'Mistboard Engine v0.9.5';
 // bump both together when Misty ships a new version. Used for the homepage
 // self-play showcase and as the canonical display name wherever the engine's
 // subject id appears.
-export const MISTBOARD_ENGINE_MISTY_ID = 'python-v2-v1.5';
-export const MISTBOARD_ENGINE_MISTY_NAME = 'Misty 1.5';
+export const MISTBOARD_ENGINE_MISTY_ID = 'python-v2-v1.6';
+export const MISTBOARD_ENGINE_MISTY_NAME = 'Misty 1.6';
 
 export type GameParticipant = {
   color: 'white' | 'black' | 'red';

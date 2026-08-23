@@ -28,7 +28,7 @@ export type FirstPartyBotProfile = {
   legacyBotIds?: readonly string[];
 };
 
-export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.5';
+export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 

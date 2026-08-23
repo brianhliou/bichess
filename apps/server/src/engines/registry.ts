@@ -47,7 +47,13 @@ const PROD_PLAYABLE_ENGINE_IDS = new Set<EngineId>([
   // can load python-v2-v1.5, so this flip has no offer-without-serve window. v1.4 stays
   // KNOWN (for replay/provenance); roll back by restoring 'python-v2-v1.4' + reverting
   // engine.ref to 3ae331c.
-  'python-v2-v1.5', // Misty 1.5 (opening-book update; supersedes 1.4)
+  // GO-LIVE (2026-08-23): flip the player-facing PvE engine v1.5 -> v1.6 (the
+  // catastrophe prune's net-hang floor; fixes the Qxe8/Qxf2 queen-hang class,
+  // second prod instance 12c8ff99). The engine-worker deploys engine 350dc20
+  // (engine-ref-deployed verified) and can load python-v2-v1.6, so this flip has
+  // no offer-without-serve window. v1.5 stays KNOWN (replay/provenance); roll
+  // back by restoring 'python-v2-v1.5' + reverting engine.ref to e97009e.
+  'python-v2-v1.6', // Misty 1.6 (net-hang prune floor; supersedes 1.5)
 ]);
 
 // Opt-in extras for load testing / local experimentation. Set
