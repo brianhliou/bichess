@@ -20,9 +20,16 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 
 // AWAITING A NATIVE READ: the 2026-08-22 batch (both bots / four times as many
 // puzzles / move badges / skill from luck) shipped without one, by decision, to
-// avoid holding the English feed. The two long bodies carry the most risk:
-// 着法评级 for "move-judgment badge", 翻子回合 for "reveal ply", and 方差 for
-// "variance". Correct them in place when a native reader gets to them.
+// avoid holding the English feed.
+//
+// A consistency pass against the strings this site already publishes caught three
+// of its own errors, all from translating in isolation instead of reusing the
+// vocabulary next door: 评级 for a move judgment (the product says 评注/評註,
+// per review.zh-*.ts), 回合 for a ply (a full move; the article says 半回合), and
+// 方差 for "variance" (the published article renders the same sentence with
+// 运气). When translating a new string here, grep article-i18n.ts and
+// i18n/catalogs/*.zh-*.ts for the terms first: a native read is scarce, internal
+// consistency is free, and it is the same class of error either way.
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
@@ -30,7 +37,7 @@ const ZH_HANS: Record<string, string> = {
   'Both house bots play stronger.': '两台自家引擎都变强了。',
   'Four times as many xiangqi puzzles.': '象棋题目增至四倍。',
   'Move badges and best lines on every reviewable variant.':
-    '所有支持复盘的棋类都有着法评级与最佳变化。',
+    '所有支持复盘的棋类都有着法评注与最佳变化。',
   'Separating skill from luck in flip games.': '在翻子棋中区分棋力与运气。',
   'What Patron support will cost.': '赞助 Mistboard 的价格。',
   'A games database for xiangqi.': '象棋对局库。',
@@ -75,9 +82,9 @@ const ZH_HANS: Record<string, string> = {
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '标准象棋题库从 394 题增加到 1,605 题，每一题都取自已结束的对局，并在上线前经过引擎校验。',
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
-    '着法评级标记现在会显示在全部六种支持分析的棋类棋盘上，不再只有象棋，漏着还会指出反驳它的具体着法。揭棋的翻子回合不再给出变化，而是列出引擎评分后的候选着法排名，因为翻子之后的局面无法预知。',
+    '着法评注标记现在会显示在全部六种支持分析的棋类棋盘上，不再只有象棋，漏着还会指出反驳它的具体着法。揭棋的翻子半回合不再给出变化，而是列出引擎评分后的候选着法排名，因为翻子之后的局面无法预知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻棋中有一半的着法取决于运气，用国际象棋那套复盘方式会把方差算在你头上。对局复盘把每次翻子拆成你做的决策和你翻到的子，文章用 52 局人机对局验证了这一点。',
+    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。对局复盘把每次翻子拆成你做的决策和你翻到的棋子，文章用 52 盘人机对局验证了这一点。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」页面列出了每月的赞助金额、包含的内容（个人资料上的徽章，不影响对局），以及完整的计费与退款条款。结账尚未开放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
@@ -174,7 +181,7 @@ const ZH_HANT: Record<string, string> = {
   'Both house bots play stronger.': '兩台自家引擎都變強了。',
   'Four times as many xiangqi puzzles.': '象棋題目增至四倍。',
   'Move badges and best lines on every reviewable variant.':
-    '所有支援覆盤的棋類都有著法評級與最佳變化。',
+    '所有支援覆盤的棋類都有著法評註與最佳變化。',
   'Separating skill from luck in flip games.': '在翻子棋中區分棋力與運氣。',
   'What Patron support will cost.': '贊助 Mistboard 的價格。',
   'A games database for xiangqi.': '象棋對局庫。',
@@ -219,9 +226,9 @@ const ZH_HANT: Record<string, string> = {
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '標準象棋題庫從 394 題增加到 1,605 題，每一題都取自已結束的對局，並在上線前經過引擎校驗。',
   'The move-judgment badge now sits on the board for all six variants with analysis, not xiangqi alone, and a blunder names the move that refutes it. Jieqi reveal plies get the ranked candidates the engine scored instead of a line, since nothing past a flip is knowable.':
-    '著法評級標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
+    '著法評註標記現在會顯示在全部六種支援分析的棋類棋盤上，不再只有象棋，漏著還會指出反駁它的具體著法。揭棋的翻子半回合不再給出變化，而是列出引擎評分後的候選著法排名，因為翻子之後的局面無法預知。',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Game review splits every flip into the decision you made and the tile you got, and the article runs that over 52 human-versus-engine games.':
-    '暗棋、揭棋和翻翻棋中有一半的著法取決於運氣，用國際象棋那套覆盤方式會把方差算在你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的子，文章用 52 局人機對局驗證了這一點。',
+    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。對局覆盤把每次翻子拆成你做的決策和你翻到的棋子，文章用 52 盤人機對局驗證了這一點。',
   'The Support page lists the monthly amounts, what they include (a profile badge, no gameplay advantage), and the billing and refund terms in full. Checkout is not open yet.':
     '「支持 Mistboard」頁面列出了每月的贊助金額、包含的內容（個人資料上的徽章，不影響對局），以及完整的計費與退款條款。結帳尚未開放。',
   'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.':
