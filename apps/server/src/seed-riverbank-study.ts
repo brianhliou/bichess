@@ -273,7 +273,9 @@ async function main(): Promise<void> {
       throw new Error(`chapter ${index + 2} (${chapter.name}) failed: ${response.status}`);
     }
   }
-  console.log(`done: ${chapters.length} chapters at ${base.replace(':3001', ':3000')}/study/${created.study.id}`);
+  console.log(
+    `done: ${chapters.length} chapters at ${base.replace(':3001', ':3000')}/study/${created.study.id}`,
+  );
 }
 
 main().catch((error) => {

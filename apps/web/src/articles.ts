@@ -366,7 +366,13 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // index (and each variant's card marker), not in this homepage row, so this
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
-const HOME_ARTICLE_SLUGS = ['skill-vs-luck', 'misty', 'mistybanqi', 'server-enforced-fog'] as const;
+const HOME_ARTICLE_SLUGS = [
+  'riverbank-cannon',
+  'skill-vs-luck',
+  'misty',
+  'mistybanqi',
+  'server-enforced-fog',
+] as const;
 
 type HomeCardItem =
   | {

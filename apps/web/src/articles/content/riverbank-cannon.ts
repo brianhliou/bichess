@@ -26,7 +26,8 @@ export const riverbankCannonArticle: Article = {
   seoTitle: 'Fog Xiangqi Opening Theory: The Riverbank Cannon',
   summary:
     'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
-  status: 'draft',
+  status: 'published',
+  publishedAt: '2026-08-23',
   audience:
     'Fog xiangqi players, xiangqi players curious about the fog variant, and anyone who wants to see how a hidden-information opening gets analyzed honestly.',
   intro: [
