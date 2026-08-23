@@ -81,22 +81,32 @@
 :root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__zone--black {
   fill: color-mix(in srgb, #6b96c8 10%, transparent);
 }
-/* Accent for the eval curve + ply cursor. A saturated warm red reads over both
-   the red and black advantage fills and in both themes, which a --site-text
-   stroke did not: at 45% it sank into the fill it was supposed to trace. */
+/* Accent for the eval curve + ply cursor: the site's own brand accent, which is
+   already defined per theme.
+
+   Deliberately NOT a warm hue. lichess can spend orange-red on its curve because
+   its two sides are white and black; here RED IS A SEAT, so a red curve reads as
+   one player's ink rather than as the measurement. Every other slot is spoken
+   for too: blue is the engine's best-move arrow, the yellow-orange-red ramp is
+   the judgment glyphs, green is a good NAG. The cool brand accent is the one
+   that reads as instrumentation. */
 .advantage-chart {
-  --advantage-accent: #e2523b;
-}
-:root[data-effective-theme="dark"] .advantage-chart {
-  --advantage-accent: #ff6b4a;
+  --advantage-accent: var(--site-brand-accent);
 }
 .advantage-chart__line {
   fill: none;
   stroke: var(--advantage-accent);
-  stroke-width: 1.6;
+  stroke-width: 1.8;
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
+  /* Casing, and it is the load-bearing part. The curve crosses a mid-red fill
+     above the midline and a near-black one below (inverted in dark theme), and
+     NO single hue clears 2:1 against all four of those surfaces — measured, the
+     best candidate managed 1.4. A halo in the page ground gives the stroke its
+     own edge wherever it runs, which takes the worst case to ~2.6 and is what
+     actually makes the line readable rather than the colour choice. */
+  filter: drop-shadow(0 0 1.4px var(--site-bg)) drop-shadow(0 0 1.4px var(--site-bg));
 }
 .advantage-chart__cursor {
   stroke: var(--advantage-accent);
