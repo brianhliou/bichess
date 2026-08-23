@@ -248,16 +248,17 @@ export const RB_CHARIOT_DOWN = () =>
     }),
   );
 
-// Article-card thumbnail: the thesis position cropped to a landscape 8:5 band.
-// Black's army above, the landed cannon on the riverbank below, the five
-// firing points dotted and the five targets ringed. Rendered as a thunk so the
-// card tracks the xiangqi piece-set picker like every other diagram.
+// Article-card thumbnail: the core position (cannon landed on the riverbank,
+// five firing points dotted, five targets ringed) as a FULL board, centered in
+// the card's 8:5 frame with blank margins left and right. Thunk so the card
+// tracks the xiangqi piece-set picker.
 export const RB_THUMBNAIL = () => {
-  const x0 = 18;
-  const y0 = 6;
+  const scale = 192 / (XQ_BOARD_H + 8);
+  const width = XQ_BOARD_W * scale;
+  const tx = (320 - width) / 2;
   const body = [
-    '<rect x="0" y="0" width="320" height="200" class="xq-diagram-bg"/>',
-    xqBoardGrid(x0, y0, 'red'),
+    `<rect x="0" y="0" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="10" class="xq-diagram-bg"/>`,
+    xqBoardGrid(0, 0, 'red'),
     xqMoveDots(
       [
         { square: 'a5' as XiangqiSquare },
@@ -271,11 +272,11 @@ export const RB_THUMBNAIL = () => {
         { square: 'g10' as XiangqiSquare, capture: true },
         { square: 'i10' as XiangqiSquare, capture: true },
       ],
-      x0,
-      y0,
+      0,
+      0,
       'red',
     ),
-    xqPiecesLayer(ARRIVED, null, x0, y0, 'red'),
+    xqPiecesLayer(ARRIVED, null, 0, 0, 'red'),
   ].join('');
-  return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">${body}</svg>`;
+  return `<svg class="xq-article-svg" viewBox="0 0 320 200" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"><g transform="translate(${tx.toFixed(1)} 4) scale(${scale.toFixed(4)})">${body}</g></svg>`;
 };
