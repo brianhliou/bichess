@@ -85,6 +85,7 @@ describe('article public listing gates', () => {
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
       '/blog/fog-chess-concepts',
+      '/blog/riverbank-cannon',
     ]);
   });
 
