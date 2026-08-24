@@ -52,16 +52,14 @@ describe('flair allowlist: web mirror <-> server authority', () => {
       const icon = buildFlairIcon(key, { labelled: true });
       expect(icon.dataset.flair).toBe(key);
       expect(icon.getAttribute('aria-label')).toBe(label);
-      // Variant flair paints a mask over currentColor; piece flair renders a
-      // character. Either way something visible must be in there, and for the
-      // mask that means the custom property actually carries a url() -- an
-      // empty --flair-mask paints a solid block, and rendering the same PNG in
-      // an <img> instead paints a blank white square, which is how the first
-      // cut of this shipped.
+      // Variant flair paints a mask over currentColor; piece flair draws the
+      // board's own piece SVG. Both have failed by rendering nothing visible:
+      // an empty --flair-mask paints a solid block, and the mask art in an
+      // <img> paints a blank white square. Assert each carries real content.
       const mask = icon.querySelector<HTMLElement>('.flair-mask');
       const hasMask = !!mask && /^url\(/.test(mask.style.getPropertyValue('--flair-mask'));
-      const hasGlyph = (icon.querySelector('.flair-glyph')?.textContent ?? '').length > 0;
-      expect(hasMask || hasGlyph, `${key} renders an empty icon`).toBe(true);
+      const hasPiece = !!icon.querySelector('svg.flair-piece-svg path, svg.flair-piece-svg text');
+      expect(hasMask || hasPiece, `${key} renders an empty icon`).toBe(true);
       expect(icon.querySelector('img'), `${key} renders the mask art as a picture`).toBeNull();
     }
   });

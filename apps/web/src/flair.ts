@@ -18,6 +18,7 @@ import type { XiangqiColor, XiangqiPieceRole } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
 import { variantDisplayLabel } from './game-display.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 import { xiangqiCharacter } from './xiangqi-pieces.js';
 
 // key -> the variant spec id whose marker art and localized name it borrows.
@@ -44,9 +45,20 @@ const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = {
 };
 
 // Red and black take different characters for the same role, which is the
-// point: picking 傌 over 馬 says which side you like playing. The characters
-// themselves come from xiangqi-pieces.ts rather than a second copy here, so a
-// flair can never disagree with the piece drawn on the board.
+// point: picking 傌 over 馬 says which side you like playing.
+//
+// The icon is the board's own piece, rendered by renderXiangqiPieceGlyphed with
+// the traditional set. The first cut drew a CSS circle around a text character
+// instead, which failed twice: the glyph overflowed the hairline ring (兵 broke
+// through the bottom), and the character came from whatever CJK serif the
+// viewer's system happened to have. The piece renderer solves both, because it
+// draws baked Noto Sans CJK outlines (XIANGQI_GLYPH_PATHS) inset in a proper
+// double-ring disc, which is why every other surface already uses it.
+//
+// Pinned to 'traditional' rather than following the viewer's piece-set
+// preference: the flair key names a character and its label quotes that
+// character, so rendering a red-cannon flair as the international cannon icon
+// would make the name wrong.
 const PIECE_ROLES: readonly XiangqiPieceRole[] = [
   'general',
   'advisor',
@@ -123,14 +135,18 @@ export function buildFlairIcon(
     mask.className = 'flair-mask';
     mask.style.setProperty('--flair-mask', `url('${variant.path}')`);
     wrap.append(mask);
-  } else {
-    // A key that got past both allowlists must still not throw inside a profile
-    // render, so an unknown key degrades to an empty disc rather than crashing.
-    wrap.classList.add(`flair-ink-${piece?.ink ?? 'black'}`);
-    const glyph = document.createElement('span');
-    glyph.className = 'flair-glyph';
-    glyph.textContent = piece ? xiangqiCharacter(piece.ink, piece.role) : '';
-    wrap.append(glyph);
+  } else if (piece) {
+    // No size option: that leaves the svg without width/height attributes so it
+    // fills the em-sized wrapper, and one flair scales with whatever text it
+    // sits beside instead of being pinned to a pixel size.
+    wrap.innerHTML = renderXiangqiPieceGlyphed(
+      { color: piece.ink, role: piece.role },
+      'traditional',
+      {
+        ariaLabel: label,
+        className: 'flair-piece-svg',
+      },
+    );
   }
 
   if (opts.labelled) {
