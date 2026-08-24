@@ -31,6 +31,7 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  'riverbank-cannon',
   'skill-vs-luck',
   'fog-chess',
   'fog-xiangqi',
@@ -1024,6 +1025,134 @@ const ZH_HANS: Record<string, string> = {
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
   'Play Jungle Flip': '下翻翻棋',
+  // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
+  'The Riverbank Cannon Problem': '巡河炮问题',
+  'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷雾象棋开局理论：巡河炮',
+  'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.':
+    '红方的起手炮抢先赶到河沿，只差一步就能沿五条纵线中的任何一条开火，而在迷雾里你根本看不见它的到来。这会不会毁掉整个棋种，最终落在一步飞象、一个有毒的防守，以及一次我们用引擎算清了价码的硬币对赌上。',
+  'Fog xiangqi is xiangqi with two changes: you only see the points your own pieces could move to, and there is no check. Capture the general and the game ends.':
+    '迷雾象棋就是改了两条规则的象棋：你只能看见自己棋子能走到的交叉点，而且没有将军。擒获将帅，对局即告结束。',
+  'That makes Red’s first move alarming. Slide the opening cannon to the riverbank and it is one move from firing down any of five files: two chariots, two elephants, and behind the center soldier, the general. One capture ends the game. I built this variant, and I wondered if it was dead on arrival.':
+    '这让红方的第一步变得令人不安。起手把炮拉上河沿，它就只差一步便能沿五条纵线中的任何一条开火：两个车、两个象，还有中卒身后的将。吃一子就能终结对局。这个变体是我做的，我一度怀疑它是不是一落地就死了。',
+  'The dots are the five firing points. From each one the cannon shoots the piece behind the soldier screen: chariot, elephant, general, elephant, chariot.':
+    '圆点是五个开火点。从每个点上，炮都隔着一枚卒作炮架，打中它身后的那枚棋子：车、象、将、象、车。',
+  'So I checked, against the real rules kernel and our fog engine. Short version: the threat is worse than it looks, the natural defense is a trap, and the game survives.':
+    '于是我去验证了，用的是真实的规则内核和我们的迷雾引擎。简短版结论：威胁比看上去更凶，最自然的防守是个陷阱，而这个棋种活了下来。',
+  'The rush is invisible': '速攻是隐形的',
+  'The b-file route announces itself: Black’s cannon watches that file and sees something land on the riverbank. Red does not have to go that way. Up the empty d-file, nothing Black owns sees a single point: d3, d5, e5, mate on move 4. The only warning is that a red piece left home, which describes every game ever played.':
+    '走 b 路会自报行踪：黑方的炮盯着这条纵线，能看见有东西落到河沿上。但红方不必走那条路。沿着空空的 d 路上去，黑方没有任何棋子能看见其中任何一个点：d3、d5、e5，第 4 回合擒将。唯一的警报只是「有一枚红子离开了原位」，而这句话描述的是古往今来的每一盘棋。',
+  'One move before mate. Left: the truth. Right: everything Black can see. The cannon never enters the picture.':
+    '擒将前一步。左：真实局面。右：黑方能看见的一切。炮自始至终没有进入画面。',
+  'So the defense cannot wait for a warning; it has to be played every game. The rest of the article draws the visible route so the diagrams read easily. The threats are the same either way.':
+    '所以防守不能等警报响了再做，它必须每盘都走。本文其余部分为了图示清晰，一律画可见的那条路线。两条路线的威胁完全相同。',
+  'The natural defense is a landmine': '最自然的防守是颗地雷',
+  'There is exactly one screen between cannon and general: Black’s own center soldier. A cannon needs exactly one, so any second body on the center file kills the mate. The natural pick is advisor up. It seals the center and nothing else, and it plants a mine: Red slides to an elephant wing and takes.':
+    '炮与将之间恰好隔着一个炮架：黑方自己的中卒。炮吃子恰好需要一个炮架，所以在中路上再垫进任何一枚棋子，擒将就不成立了。最顺手的选择是补士。它封住中路，除此之外什么也不做，还埋下一颗地雷：红炮平到一侧象所在的纵线，隔着卒把象吃掉。',
+  'Red guessed the wing whose advisor stayed home. The cannon fires along the back rank through it, the marked flight point loses to the same shot, and the sealing advisor blocks the only parry. All 41 legal replies lose, engine-checked. The other wing costs only an elephant.':
+    '红方猜中了士还留在原位的那一翼。炮沿底线隔着这枚士开火，标记的出逃点同样挨这记炮，而支上去的那枚士又恰好堵住了唯一的解法。经引擎穷举，41 种合法应着全部败北。红方猜向另一翼时，黑方只损失一个象。',
+  'There is a save: play the poisoned wing’s elephant to the middle immediately, and both grabs die. But that is the move you should have opened with. The advisor spends a whole move doing a fraction of the elephant’s job, and while you fix it, Red takes a rim chariot for free.':
+    '有一手解救：立刻把有毒一翼的象飞上中路，两个吃象点就同时失效。但这本该是你开局的第一步。补士花掉整整一步，却只做了飞象工作的一小部分，而在你补救的同时，红方白吃一个边线的车。',
+  'One elephant move holds everything': '一步飞象守住一切',
+  'The move that works is the standard developing move of xiangqi: elephant to the middle.':
+    '真正管用的，是象棋里最标准的出子着法：飞中象。',
+  'Second screen on the center file, so the snipe is marked dead; both elephant home points covered by the recapture.':
+    '中路多了第二个炮架，狙击宣告失效（图中打叉处）；两个象位原点都有回吃保护。',
+  'Snipe dead, both elephant wings covered, one move. Xiangqi theory reached this square centuries before the fog did. A cannon to the same point works too.':
+    '狙击废了，两翼的象都有保护，只用一步。象棋理论比迷雾早几百年就走到了这个点上。把炮走到同一个点同样管用。',
+  'The chariot gamble': '赌车',
+  'That leaves the edges: from the riverbank corner the cannon shoots the chariot through the edge soldier, and the elephant does nothing about it.':
+    '剩下的是两条边线：炮从河沿的边角隔着边卒打车，而中象对此无能为力。',
+  'Move order decides this. The mate cannot arrive before Red’s third move, so the elephant is still in time on Black’s second. The edges cannot wait: Red picks his corner on his second move, and a soldier pushed after that is too late. So soldier first, elephant second. The pushed soldier watches the one point the cannon must fire from, and eats it on arrival.':
+    '这件事由行棋次序决定。擒将最早也要等到红方第三步，所以黑方第二步飞象还来得及。边线却等不起：红方第二步就要选定边角，之后再推的卒已经迟了。所以先挺卒，再飞象。推上去的卒正好盯住炮必须开火的那个点，炮一落地就被吃掉。',
+  'The same push, one move apart. Played first, the soldier watches the arrival point and the cannon dies on landing. Played second, the cannon shoots the chariot straight over it: a pushed soldier still counts as one screen.':
+    '同一步挺卒，只差一个回合。先走，卒盯住落点，炮一落地就死。后走，炮直接隔着它把车打掉：推过的卒照样只算一个炮架。',
+  'That leaves one honest gamble. Red commits blind to a corner on move two: half the time it is the watched one and he trades his cannon for a soldier, half the time he wins a chariot. Played out by the engine, the branches roughly cancel. One fair coin flip per game, and only if Red commits immediately: given a third move, Black closes both edges.':
+    '于是只剩一场堂堂正正的赌局。红方第二步盲选一个边角：一半概率选中被盯住的那边，用炮换一个卒；另一半概率赢下一个车。交给引擎跑完后续，两条分支大致相抵。每盘只有一次公平的掷硬币，而且红方必须立刻下注：只要多给黑方一步，两条边线就都关上了。',
+  'When the cannon dies': '炮死之后',
+  'Half the flips, Red loses the cannon to the soldier. He recaptures the soldier (the engine did, in every playout), and the recapture is a gift: it is now the screen, and Black’s cannon shoots the corner chariot straight through it. The engine scores this -0.55 for Red: attack over, a cannon down, nothing to show.':
+    '掷硬币的一半结果里，红炮死在卒的手上。红方回吃这个卒（引擎在每一盘推演里都这么走了），而这步回吃是份大礼：它自己成了炮架，黑炮隔着它一炮打穿角上的车。引擎给红方打出 -0.55：攻势结束，净亏一炮，一无所获。',
+  'After the recapture on a5, Black’s cannon steps to the edge and fires through Red’s own soldier. Misty found this follow-up in every playout.':
+    '红方在 a5 回吃之后，黑炮平到边线，隔着红方自己的兵开火。Misty 在每一盘推演里都找到了这个后续。',
+  'Can Red defend the shot? Two ways, neither happy. Declining the recapture keeps two screens on the file, but the crossed soldier just keeps eating and the shot reopens a move later, one soldier cheaper. Recapturing and then blocking with the horse holds the chariot. In six engine playouts from the fired tripwire, the whole sequence played itself out, capture, recapture, counter-shot and all, and Black converted five (the Tripwire games in the companion study). The block:':
+    '红方挡得住这一炮吗？有两条路，都不痛快。不回吃可以在这条线上留住两个炮架，可过河的黑卒会继续一路吃过去，一步之后炮线重新打开，红方还多丢一个兵。回吃之后再跳马垫线，车是保住了。在从绊索触发开始的六盘引擎推演里，整套流程自动上演，吃、回吃、反击炮一样不缺，黑方拿下了其中五盘（配套研究里的 Tripwire 系列对局）。垫挡是这样的：',
+  'When the chariot falls': '车丢之后',
+  'The other half, Black is a chariot down. The engine scores positions from -1, lost, to +1, won; it calls this one -0.75, which is roughly one win in eight. Close to lost, not over. And the landed cannon looks scarier than it is: every capture it has loses on the spot to a recapture. Its real power is the freeze: the horse and the elephant beside it are holding the back rank shut, and if either ever moves, the next shot is the general.':
+    '另一半结果里，黑方净亏一个车。引擎给局面打分从 -1（必败）到 +1（必胜）；它给这个局面打 -0.75，大约是八盘赢一盘。接近输定，但还没完。而且落在角上的炮看着比实际吓人：它能吃的每一子，吃完都会立刻被回吃。它真正的威力是冻结：旁边的马和象正把底线关得死死的，两者只要有一个动了，下一炮打的就是将。',
+  'The cannon’s bites (arrows left) are answered: the central elephant retakes on one point, the general on the other. But the horse and elephant are the back rank’s screens now. Move either and the cannon mates. Leave them home.':
+    '炮能吃的两个点（左侧箭头）都有回应：一个点由中象回吃，另一个点由将亲自回吃。但马和象现在就是底线的炮架。动其中任何一个，炮就擒将。让它们待在家里。',
+  'So how does Black fight? The engine showed three ideas. First, patience: touch nothing on the back rank. Second, an immediate simplification: in our first playouts its opening move from here, every game, was to snipe Red’s home horse with its own cannon, over Red’s home cannon as the screen, trading cannon for horse to blunt the attack. Third, counterattack on the other wing, where your own cannons still have a game; the next section shows the sharpest version. And it escapes: of the ten forced-grab games, Black won two outright (Rim gambit games 2 and 8 in the companion study, in 84 and 56 plies) and held three more to the ply cap. One win in eight is the eval; in the decided games, the practice was one in four.':
+    '那黑方怎么打？引擎给出了三条思路。第一，耐心：底线上什么都不碰。第二，立刻简化：在我们最初的推演里，它从这个局面走的第一步，每一盘都是用自己的炮隔着红方还在原位的炮，把红方原位的马狙掉，以炮换马，钝化攻势。第三，在另一翼反击，你自己的炮在那边还有戏；下一节会展示最锋利的版本。而且这局面逃得出去：十盘强制抓车的对局里，黑方直接赢下两盘（配套研究里的 Rim gambit 第 2、第 8 局，分别用了 84 着和 56 着），另有三盘撑到了着数上限。八分之一的胜率是评估值；在分出胜负的对局里，实战是四分之一。',
+  'Whoever moves the wall first dies': '谁先挪墙谁先死',
+  'One pattern decided games in every branch, and it travels to any fog game with long-range pieces: a cannon on its firing point is also the block against the enemy cannon opposite. Whoever steps away first, the other fires through the hole. And the fog baits you to step away: from the wall, an enemy soldier looks free. Take it and you are mated on the reply.':
+    '有一个模式在每条分支里都决定过胜负，而且它适用于任何带远程棋子的迷雾棋：站在开火点上的炮，同时也是挡住对面敌炮的墙。谁先离开，对方就从缺口里开火。而迷雾偏偏会引诱你离开：站在墙上望过去，敌方的卒像是白送的。吃了它，下一着你就被擒将。',
+  'Which answers a fair question: why not go to the riverbank yourself as Black? You can, and it punishes any Red who grabs. Red has exactly one sound reply: seal his own center before touching anything. Then the battery never fires.':
+    '这也回答了一个合理的问题：黑方为什么不自己也去河沿？可以去，而且它能惩罚任何伸手抓子的红方。红方只有一条稳妥的应法：先封住自己的中路，再碰任何东西。这样一来，这门反架炮永远开不了火。',
+  'The line: cannon to the riverbank, Black answers with his own battery, Red seals with the elephant before grabbing. The battery is now two screens from the general (the cross) and frozen where it stands; move it and Red’s cannon fires. The engine puts Red a quarter point up here (+0.25, against 0.00 in the soldier line) and sends its cannon to the edges (the arrow). A weapon for greedy opponents, not a default.':
+    '变化如下：红炮上河沿，黑方用自己的反架炮回应，红方在抓子之前先飞相封中。这门反架炮与红帅之间现在隔着两个炮架（打叉处），被冻结在原地；它一动，红炮就开火。引擎认为红方在此领先四分之一个点（+0.25，对比挺卒主线的 0.00），并把炮转向两条边线（箭头处）。这是对付贪心对手的武器，不是默认选择。',
+  'What the engine says': '引擎怎么说',
+  'I forced the rush onto the board and let Misty play both sides, thirty games: twenty through the snipe attempt, ten through the chariot grab. The snipe never fired once; Black sealed within three moves in eighteen of twenty. The rush games went Black 9, Red 4, seven ply-cap draws; the forced grabs went Red 5, Black 2, three caps. Then I made Black answer the same forced rush with this article’s exact line, eight more games: Black won six, no draws. The line does not just suit humans; it outscored the engine’s own defensive choices. Here is one of those games in full:':
+    '我把速攻强制摆上棋盘，让 Misty 执双方下了三十盘：二十盘走狙击尝试，十盘走抓车。狙击一次也没有打响；二十盘里有十八盘，黑方三步之内就完成了封堵。速攻组的战绩是黑方 9 胜、红方 4 胜、7 盘达到着数上限；强制抓车组是红方 5 胜、黑方 2 胜、3 盘到上限。然后我让黑方用本文教的这条线应对同样的强制速攻，又下了八盘：黑方赢了六盘，没有和棋。这条线不只是适合人类；它拿下的分数比引擎自己选的防守还多。下面是其中一盘的完整棋谱：',
+  'All the games behind this article are in the [companion study](/study/3LGIVr59): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.':
+    '本文背后的所有对局都收录在[配套研究](/study/3LGIVr59)里：理论变化、二十盘强制速攻与十盘强制边线抓车的引擎对局，以及十六盘自由自对弈。把研究棋盘切到黑方的迷雾视角，一步步看他当时究竟看见了什么。',
+  'Left to choose freely, sixteen more games, Red won eleven of the twelve decisive and never once played the rush. Lean samples, so treat the counts as direction. The position evaluations are firmer ground: they hold still under a sixteen-fold compute increase.':
+    '完全放开让它自由选择，再下十六盘，十二盘分出胜负的对局里红方赢了十一盘，而且一次也没有走过速攻。样本不大，这些计数只当方向看。局面评估值则站得更稳：算力加到十六倍，数值纹丝不动。',
+  position: '局面',
+  'engine verdict': '引擎判定',
+  'game start, Red to move': '开局局面，红方走子',
+  '+0.06 Red: a real but small first-move edge': '+0.06 红优：真实但很小的先手优势',
+  'theory settled: seal up, rush cannon on e5': '理论定型：封堵完成，速攻炮停在 e5',
+  '0.00: dead even, the rush fully answered': '0.00：完全均势，速攻被彻底化解',
+  'Red won the chariot flip': '红方赌赢了车',
+  '-0.75 for Black: close to lost, still fighting': '黑方 -0.75：接近输定，仍有抵抗',
+  'Red lost the cannon flip': '红方赌输了炮',
+  '-0.55 for Red: clearly losing': '红方 -0.55：明显败势',
+  'counter-battery vs a Red who seals first': '反架炮对先封中的红方',
+  '+0.25 Red: the battery concedes more than the soldier line':
+    '+0.25 红优：反架炮比挺卒主线让出更多',
+  'One last check: I forced Black through the line this article teaches against a free Red, eight games. Black won five of the seven decisive, against one of twelve when choosing freely. The three insurance moves cost nothing.':
+    '最后一项检验：我强制黑方按本文教的线走，对手是自由行棋的红方，共八盘。七盘分出胜负的对局黑方赢了五盘，而自由选择时是十二盘里赢一盘。这三步保险着法毫无代价。',
+  'Average the flip branches and the committed rush is worth about +0.10 to Red, the same ballpark as the +0.06 he starts with: the whole first-move advantage, spent in one gamble. Initiative in fog is real, probably bigger than in chess, because defense is paid blind. The rush is the loudest way to spend it, and the loudest way is answerable.':
+    '把赌局的两条分支取平均，孤注一掷的速攻对红方约值 +0.10，和开局自带的 +0.06 属于同一量级：整份先手优势，在一场赌局里一次花光。迷雾中的主动权是真实的，多半比国际象棋里还大，因为防守是闭着眼睛付账的。速攻是花掉主动权最响亮的方式，而最响亮的方式是有解的。',
+  'The line to learn': '该学的那条线',
+  'Black’s three moves: edge soldier, central elephant, far-side horse. The dot is the watched firing point, the cross is the dead snipe, the arrows are the elephant’s cover.':
+    '黑方的三步：挺边卒、飞中象、跳远端马。圆点是被盯住的开火点，叉是已失效的狙击，箭头是中象的保护范围。',
+  'As Black: edge soldier, elephant to the middle, horse to the other edge. After three moves the only target left is the chariot on the edge you did not push, and only if Red committed on move two. Never seal with the advisor. And before you move any piece near a landed cannon, count screens: most losses we found came from moving a piece that was quietly holding a firing line shut.':
+    '执黑：挺边卒，飞中象，马跳向另一侧边线。三步之后，剩下的唯一目标就是你没推卒那一侧的车，而且只有红方第二步就下注时才吃得到。永远不要用士封中。在挪动落地炮附近的任何棋子之前，先数炮架：我们找到的大多数败局，都来自挪动了一枚正默默封着某条火线的棋子。',
+  'As Red: the rush beats anyone who has not read this far, and it is even money against anyone who has. If you play it, commit to an edge on move two or not at all, and seal your own center before cashing any grab: every scripted Red that grabbed first got mated.':
+    '执红：速攻能赢下所有没读到这里的人，对读过的人则是对半开的赌注。如果你要走它，第二步就选定边线，否则干脆别选，并且在兑现任何抓取之前先封住自己的中路：脚本里每一个先抓子的红方都被擒了将。',
+  'Step through it yourself': '亲手走一遍',
+  'Every line and every game in this article is in the companion study, on a board you can flip to either side’s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.':
+    '本文的每条变化、每盘对局都在配套研究里，棋盘可以切换到任何一方的迷雾视角。准备好之后，Misty 会在你练这条线的时候好好教训你。无需账户。',
+  'Open the companion study': '打开配套研究',
+  'THE TRUTH': '真实局面',
+  'WHAT BLACK SEES': '黑方所见',
+  'THE POISONED ADVISOR': '有毒的补士',
+  'ONE MOVE, THREE FILES': '一步守三线',
+  'SOLDIER FIRST': '先挺卒',
+  'SOLDIER TOO LATE': '挺卒已迟',
+  'ONE SLIDE FROM EVERYTHING': '一步之遥',
+  'THE THREE-MOVE ANSWER': '三步答案',
+  'THE BATTERY, FROZEN': '冻结的反架炮',
+  'THE RECAPTURE IS A GIFT': '回吃是份大礼',
+  'THE FREEZE': '冻结',
+  'The stealth rush': '隐形速攻',
+  'Kernel-verified line': '经规则内核验证的变化',
+  'Red captures the general on move 4. Black developed normally and saw nothing.':
+    '红方在第 4 回合擒获黑将。黑方正常出子，全程什么都没看见。',
+  'Red saves the chariot': '红方保车',
+  'The horse steps to the edge as a second screen and the shot is dead. Red is still a cannon for a soldier down with nothing to attack. The engine scores the branch -0.55 either way and calls the recapture the least bad move on the board: the block saves a piece, not the game.':
+    '马跳到边线充当第二个炮架，这一炮就打不响了。红方仍然是用一炮换了一卒，且无攻可组。引擎给这条分支的评分横竖都是 -0.55，并认为回吃是全盘最不坏的一步：垫挡救的是一枚子，不是这盘棋。',
+  'The counter-battery': '反架炮',
+  'Black skipped the elephant and parked a cannon on the center file. Red cannot see it, grabs the chariot, and is mated on the reply.':
+    '黑方跳过飞象，把一门炮架在了中路。红方看不见它，伸手抓了车，下一着帅就被擒。',
+  'Rush vs the recommended line, game 7 of 8': '速攻对推荐线，八盘中的第七盘',
+  'Engine-vs-engine playout, full record': '引擎对引擎推演，完整棋谱',
+  'Both sides forced through their first three moves, then free. Black follows the line this article teaches; the snipe never comes, heavy trades follow, and Black finishes with a deflection: chariot takes the advisor beside the general, the general recaptures, and the second chariot takes the general.':
+    '双方前三步按脚本强制，之后自由行棋。黑方走的正是本文教的线；狙击始终没有到来，随后是大量兑子，最后黑方用一记引离收尾：车吃掉帅旁边的仕，帅回吃，另一个车擒帅。',
+  'Misty (rush forced)': 'Misty（强制速攻）',
+  'Misty (this article’s line)': 'Misty（本文推荐线）',
+  Red: '红方',
+  Black: '黑方',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -1931,6 +2060,134 @@ const ZH_HANT: Record<string, string> = {
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
   'Play Jungle Flip': '下翻翻棋',
+  // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
+  'The Riverbank Cannon Problem': '巡河炮問題',
+  'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷霧象棋開局理論：巡河炮',
+  'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.':
+    '紅方的起手炮搶先趕到河沿，只差一步就能沿五條縱線中的任何一條開火，而在迷霧裡你根本看不見它的到來。這會不會毀掉整個棋種，最終落在一步飛象、一個有毒的防守，以及一次我們用引擎算清了價碼的硬幣對賭上。',
+  'Fog xiangqi is xiangqi with two changes: you only see the points your own pieces could move to, and there is no check. Capture the general and the game ends.':
+    '迷霧象棋就是改了兩條規則的象棋：你只能看見自己棋子能走到的交叉點，而且沒有將軍。擒獲將帥，對局即告結束。',
+  'That makes Red’s first move alarming. Slide the opening cannon to the riverbank and it is one move from firing down any of five files: two chariots, two elephants, and behind the center soldier, the general. One capture ends the game. I built this variant, and I wondered if it was dead on arrival.':
+    '這讓紅方的第一步變得令人不安。起手把炮拉上河沿，它就只差一步便能沿五條縱線中的任何一條開火：兩個車、兩個象，還有中卒身後的將。吃一子就能終結對局。這個變體是我做的，我一度懷疑它是不是一落地就死了。',
+  'The dots are the five firing points. From each one the cannon shoots the piece behind the soldier screen: chariot, elephant, general, elephant, chariot.':
+    '圓點是五個開火點。從每個點上，炮都隔著一枚卒作炮架，打中它身後的那枚棋子：車、象、將、象、車。',
+  'So I checked, against the real rules kernel and our fog engine. Short version: the threat is worse than it looks, the natural defense is a trap, and the game survives.':
+    '於是我去驗證了，用的是真實的規則核心和我們的迷霧引擎。簡短版結論：威脅比看上去更兇，最自然的防守是個陷阱，而這個棋種活了下來。',
+  'The rush is invisible': '速攻是隱形的',
+  'The b-file route announces itself: Black’s cannon watches that file and sees something land on the riverbank. Red does not have to go that way. Up the empty d-file, nothing Black owns sees a single point: d3, d5, e5, mate on move 4. The only warning is that a red piece left home, which describes every game ever played.':
+    '走 b 路會自報行蹤：黑方的炮盯著這條縱線，能看見有東西落到河沿上。但紅方不必走那條路。沿著空空的 d 路上去，黑方沒有任何棋子能看見其中任何一個點：d3、d5、e5，第 4 回合擒將。唯一的警報只是「有一枚紅子離開了原位」，而這句話描述的是古往今來的每一盤棋。',
+  'One move before mate. Left: the truth. Right: everything Black can see. The cannon never enters the picture.':
+    '擒將前一步。左：真實局面。右：黑方能看見的一切。炮自始至終沒有進入畫面。',
+  'So the defense cannot wait for a warning; it has to be played every game. The rest of the article draws the visible route so the diagrams read easily. The threats are the same either way.':
+    '所以防守不能等警報響了再做，它必須每盤都走。本文其餘部分為了圖示清晰，一律畫可見的那條路線。兩條路線的威脅完全相同。',
+  'The natural defense is a landmine': '最自然的防守是顆地雷',
+  'There is exactly one screen between cannon and general: Black’s own center soldier. A cannon needs exactly one, so any second body on the center file kills the mate. The natural pick is advisor up. It seals the center and nothing else, and it plants a mine: Red slides to an elephant wing and takes.':
+    '炮與將之間恰好隔著一個炮架：黑方自己的中卒。炮吃子恰好需要一個炮架，所以在中路上再墊進任何一枚棋子，擒將就不成立了。最順手的選擇是補士。它封住中路，除此之外什麼也不做，還埋下一顆地雷：紅炮平到一側象所在的縱線，隔著卒把象吃掉。',
+  'Red guessed the wing whose advisor stayed home. The cannon fires along the back rank through it, the marked flight point loses to the same shot, and the sealing advisor blocks the only parry. All 41 legal replies lose, engine-checked. The other wing costs only an elephant.':
+    '紅方猜中了士還留在原位的那一翼。炮沿底線隔著這枚士開火，標記的出逃點同樣挨這記炮，而支上去的那枚士又恰好堵住了唯一的解法。經引擎窮舉，41 種合法應著全部敗北。紅方猜向另一翼時，黑方只損失一個象。',
+  'There is a save: play the poisoned wing’s elephant to the middle immediately, and both grabs die. But that is the move you should have opened with. The advisor spends a whole move doing a fraction of the elephant’s job, and while you fix it, Red takes a rim chariot for free.':
+    '有一手解救：立刻把有毒一翼的象飛上中路，兩個吃象點就同時失效。但這本該是你開局的第一步。補士花掉整整一步，卻只做了飛象工作的一小部分，而在你補救的同時，紅方白吃一個邊線的車。',
+  'One elephant move holds everything': '一步飛象守住一切',
+  'The move that works is the standard developing move of xiangqi: elephant to the middle.':
+    '真正管用的，是象棋裡最標準的出子著法：飛中象。',
+  'Second screen on the center file, so the snipe is marked dead; both elephant home points covered by the recapture.':
+    '中路多了第二個炮架，狙擊宣告失效（圖中打叉處）；兩個象位原點都有回吃保護。',
+  'Snipe dead, both elephant wings covered, one move. Xiangqi theory reached this square centuries before the fog did. A cannon to the same point works too.':
+    '狙擊廢了，兩翼的象都有保護，只用一步。象棋理論比迷霧早幾百年就走到了這個點上。把炮走到同一個點同樣管用。',
+  'The chariot gamble': '賭車',
+  'That leaves the edges: from the riverbank corner the cannon shoots the chariot through the edge soldier, and the elephant does nothing about it.':
+    '剩下的是兩條邊線：炮從河沿的邊角隔著邊卒打車，而中象對此無能為力。',
+  'Move order decides this. The mate cannot arrive before Red’s third move, so the elephant is still in time on Black’s second. The edges cannot wait: Red picks his corner on his second move, and a soldier pushed after that is too late. So soldier first, elephant second. The pushed soldier watches the one point the cannon must fire from, and eats it on arrival.':
+    '這件事由行棋次序決定。擒將最早也要等到紅方第三步，所以黑方第二步飛象還來得及。邊線卻等不起：紅方第二步就要選定邊角，之後再推的卒已經遲了。所以先挺卒，再飛象。推上去的卒正好盯住炮必須開火的那個點，炮一落地就被吃掉。',
+  'The same push, one move apart. Played first, the soldier watches the arrival point and the cannon dies on landing. Played second, the cannon shoots the chariot straight over it: a pushed soldier still counts as one screen.':
+    '同一步挺卒，只差一個回合。先走，卒盯住落點，炮一落地就死。後走，炮直接隔著它把車打掉：推過的卒照樣只算一個炮架。',
+  'That leaves one honest gamble. Red commits blind to a corner on move two: half the time it is the watched one and he trades his cannon for a soldier, half the time he wins a chariot. Played out by the engine, the branches roughly cancel. One fair coin flip per game, and only if Red commits immediately: given a third move, Black closes both edges.':
+    '於是只剩一場堂堂正正的賭局。紅方第二步盲選一個邊角：一半機率選中被盯住的那邊，用炮換一個卒；另一半機率贏下一個車。交給引擎跑完後續，兩條分支大致相抵。每盤只有一次公平的擲硬幣，而且紅方必須立刻下注：只要多給黑方一步，兩條邊線就都關上了。',
+  'When the cannon dies': '炮死之後',
+  'Half the flips, Red loses the cannon to the soldier. He recaptures the soldier (the engine did, in every playout), and the recapture is a gift: it is now the screen, and Black’s cannon shoots the corner chariot straight through it. The engine scores this -0.55 for Red: attack over, a cannon down, nothing to show.':
+    '擲硬幣的一半結果裡，紅炮死在卒的手上。紅方回吃這個卒（引擎在每一盤推演裡都這麼走了），而這步回吃是份大禮：它自己成了炮架，黑炮隔著它一炮打穿角上的車。引擎給紅方打出 -0.55：攻勢結束，淨虧一炮，一無所獲。',
+  'After the recapture on a5, Black’s cannon steps to the edge and fires through Red’s own soldier. Misty found this follow-up in every playout.':
+    '紅方在 a5 回吃之後，黑炮平到邊線，隔著紅方自己的兵開火。Misty 在每一盤推演裡都找到了這個後續。',
+  'Can Red defend the shot? Two ways, neither happy. Declining the recapture keeps two screens on the file, but the crossed soldier just keeps eating and the shot reopens a move later, one soldier cheaper. Recapturing and then blocking with the horse holds the chariot. In six engine playouts from the fired tripwire, the whole sequence played itself out, capture, recapture, counter-shot and all, and Black converted five (the Tripwire games in the companion study). The block:':
+    '紅方擋得住這一炮嗎？有兩條路，都不痛快。不回吃可以在這條線上留住兩個炮架，可過河的黑卒會繼續一路吃過去，一步之後炮線重新開啟，紅方還多丟一個兵。回吃之後再跳馬墊線，車是保住了。在從絆索觸發開始的六盤引擎推演裡，整套流程自動上演，吃、回吃、反擊炮一樣不缺，黑方拿下了其中五盤（配套研究裡的 Tripwire 系列對局）。墊擋是這樣的：',
+  'When the chariot falls': '車丟之後',
+  'The other half, Black is a chariot down. The engine scores positions from -1, lost, to +1, won; it calls this one -0.75, which is roughly one win in eight. Close to lost, not over. And the landed cannon looks scarier than it is: every capture it has loses on the spot to a recapture. Its real power is the freeze: the horse and the elephant beside it are holding the back rank shut, and if either ever moves, the next shot is the general.':
+    '另一半結果裡，黑方淨虧一個車。引擎給局面打分從 -1（必敗）到 +1（必勝）；它給這個局面打 -0.75，大約是八盤贏一盤。接近輸定，但還沒完。而且落在角上的炮看著比實際嚇人：它能吃的每一子，吃完都會立刻被回吃。它真正的威力是凍結：旁邊的馬和象正把底線關得死死的，兩者只要有一個動了，下一炮打的就是將。',
+  'The cannon’s bites (arrows left) are answered: the central elephant retakes on one point, the general on the other. But the horse and elephant are the back rank’s screens now. Move either and the cannon mates. Leave them home.':
+    '炮能吃的兩個點（左側箭頭）都有回應：一個點由中象回吃，另一個點由將親自回吃。但馬和象現在就是底線的炮架。動其中任何一個，炮就擒將。讓它們待在家裡。',
+  'So how does Black fight? The engine showed three ideas. First, patience: touch nothing on the back rank. Second, an immediate simplification: in our first playouts its opening move from here, every game, was to snipe Red’s home horse with its own cannon, over Red’s home cannon as the screen, trading cannon for horse to blunt the attack. Third, counterattack on the other wing, where your own cannons still have a game; the next section shows the sharpest version. And it escapes: of the ten forced-grab games, Black won two outright (Rim gambit games 2 and 8 in the companion study, in 84 and 56 plies) and held three more to the ply cap. One win in eight is the eval; in the decided games, the practice was one in four.':
+    '那黑方怎麼打？引擎給出了三條思路。第一，耐心：底線上什麼都不碰。第二，立刻簡化：在我們最初的推演裡，它從這個局面走的第一步，每一盤都是用自己的炮隔著紅方還在原位的炮，把紅方原位的馬狙掉，以炮換馬，鈍化攻勢。第三，在另一翼反擊，你自己的炮在那邊還有戲；下一節會展示最鋒利的版本。而且這局面逃得出去：十盤強制抓車的對局裡，黑方直接贏下兩盤（配套研究裡的 Rim gambit 第 2、第 8 局，分別用了 84 著和 56 著），另有三盤撐到了著數上限。八分之一的勝率是評估值；在分出勝負的對局裡，實戰是四分之一。',
+  'Whoever moves the wall first dies': '誰先挪牆誰先死',
+  'One pattern decided games in every branch, and it travels to any fog game with long-range pieces: a cannon on its firing point is also the block against the enemy cannon opposite. Whoever steps away first, the other fires through the hole. And the fog baits you to step away: from the wall, an enemy soldier looks free. Take it and you are mated on the reply.':
+    '有一個模式在每條分支裡都決定過勝負，而且它適用於任何帶遠端棋子的迷霧棋：站在開火點上的炮，同時也是擋住對面敵炮的牆。誰先離開，對方就從缺口裡開火。而迷霧偏偏會引誘你離開：站在牆上望過去，敵方的卒像是白送的。吃了它，下一著你就被擒將。',
+  'Which answers a fair question: why not go to the riverbank yourself as Black? You can, and it punishes any Red who grabs. Red has exactly one sound reply: seal his own center before touching anything. Then the battery never fires.':
+    '這也回答了一個合理的問題：黑方為什麼不自己也去河沿？可以去，而且它能懲罰任何伸手抓子的紅方。紅方只有一條穩妥的應法：先封住自己的中路，再碰任何東西。這樣一來，這門反架炮永遠開不了火。',
+  'The line: cannon to the riverbank, Black answers with his own battery, Red seals with the elephant before grabbing. The battery is now two screens from the general (the cross) and frozen where it stands; move it and Red’s cannon fires. The engine puts Red a quarter point up here (+0.25, against 0.00 in the soldier line) and sends its cannon to the edges (the arrow). A weapon for greedy opponents, not a default.':
+    '變化如下：紅炮上河沿，黑方用自己的反架炮回應，紅方在抓子之前先飛相封中。這門反架炮與紅帥之間現在隔著兩個炮架（打叉處），被凍結在原地；它一動，紅炮就開火。引擎認為紅方在此領先四分之一個點（+0.25，對比挺卒主線的 0.00），並把炮轉向兩條邊線（箭頭處）。這是對付貪心對手的武器，不是預設選擇。',
+  'What the engine says': '引擎怎麼說',
+  'I forced the rush onto the board and let Misty play both sides, thirty games: twenty through the snipe attempt, ten through the chariot grab. The snipe never fired once; Black sealed within three moves in eighteen of twenty. The rush games went Black 9, Red 4, seven ply-cap draws; the forced grabs went Red 5, Black 2, three caps. Then I made Black answer the same forced rush with this article’s exact line, eight more games: Black won six, no draws. The line does not just suit humans; it outscored the engine’s own defensive choices. Here is one of those games in full:':
+    '我把速攻強制擺上棋盤，讓 Misty 執雙方下了三十盤：二十盤走狙擊嘗試，十盤走抓車。狙擊一次也沒有打響；二十盤裡有十八盤，黑方三步之內就完成了封堵。速攻組的戰績是黑方 9 勝、紅方 4 勝、7 盤達到著數上限；強制抓車組是紅方 5 勝、黑方 2 勝、3 盤到上限。然後我讓黑方用本文教的這條線應對同樣的強制速攻，又下了八盤：黑方贏了六盤，沒有和棋。這條線不只是適合人類；它拿下的分數比引擎自己選的防守還多。下面是其中一盤的完整棋譜：',
+  'All the games behind this article are in the [companion study](/study/3LGIVr59): the theory lines, twenty forced-rush games and ten forced rim-gambit games with the engine on both sides, and sixteen free self-play games. Flip the study board to Black’s fogged view and step through what he actually saw.':
+    '本文背後的所有對局都收錄在[配套研究](/study/3LGIVr59)裡：理論變化、二十盤強制速攻與十盤強制邊線抓車的引擎對局，以及十六盤自由自對弈。把研究棋盤切到黑方的迷霧視角，一步步看他當時究竟看見了什麼。',
+  'Left to choose freely, sixteen more games, Red won eleven of the twelve decisive and never once played the rush. Lean samples, so treat the counts as direction. The position evaluations are firmer ground: they hold still under a sixteen-fold compute increase.':
+    '完全放開讓它自由選擇，再下十六盤，十二盤分出勝負的對局裡紅方贏了十一盤，而且一次也沒有走過速攻。樣本不大，這些計數只當方向看。局面評估值則站得更穩：算力加到十六倍，數值紋絲不動。',
+  position: '局面',
+  'engine verdict': '引擎判定',
+  'game start, Red to move': '開局局面，紅方走子',
+  '+0.06 Red: a real but small first-move edge': '+0.06 紅優：真實但很小的先手優勢',
+  'theory settled: seal up, rush cannon on e5': '理論定型：封堵完成，速攻炮停在 e5',
+  '0.00: dead even, the rush fully answered': '0.00：完全均勢，速攻被徹底化解',
+  'Red won the chariot flip': '紅方賭贏了車',
+  '-0.75 for Black: close to lost, still fighting': '黑方 -0.75：接近輸定，仍有抵抗',
+  'Red lost the cannon flip': '紅方賭輸了炮',
+  '-0.55 for Red: clearly losing': '紅方 -0.55：明顯敗勢',
+  'counter-battery vs a Red who seals first': '反架炮對先封中的紅方',
+  '+0.25 Red: the battery concedes more than the soldier line':
+    '+0.25 紅優：反架炮比挺卒主線讓出更多',
+  'One last check: I forced Black through the line this article teaches against a free Red, eight games. Black won five of the seven decisive, against one of twelve when choosing freely. The three insurance moves cost nothing.':
+    '最後一項檢驗：我強制黑方按本文教的線走，對手是自由行棋的紅方，共八盤。七盤分出勝負的對局黑方贏了五盤，而自由選擇時是十二盤裡贏一盤。這三步保險著法毫無代價。',
+  'Average the flip branches and the committed rush is worth about +0.10 to Red, the same ballpark as the +0.06 he starts with: the whole first-move advantage, spent in one gamble. Initiative in fog is real, probably bigger than in chess, because defense is paid blind. The rush is the loudest way to spend it, and the loudest way is answerable.':
+    '把賭局的兩條分支取平均，孤注一擲的速攻對紅方約值 +0.10，和開局自帶的 +0.06 屬於同一量級：整份先手優勢，在一場賭局裡一次花光。迷霧中的主動權是真實的，多半比國際象棋裡還大，因為防守是閉著眼睛付賬的。速攻是花掉主動權最響亮的方式，而最響亮的方式是有解的。',
+  'The line to learn': '該學的那條線',
+  'Black’s three moves: edge soldier, central elephant, far-side horse. The dot is the watched firing point, the cross is the dead snipe, the arrows are the elephant’s cover.':
+    '黑方的三步：挺邊卒、飛中象、跳遠端馬。圓點是被盯住的開火點，叉是已失效的狙擊，箭頭是中象的保護範圍。',
+  'As Black: edge soldier, elephant to the middle, horse to the other edge. After three moves the only target left is the chariot on the edge you did not push, and only if Red committed on move two. Never seal with the advisor. And before you move any piece near a landed cannon, count screens: most losses we found came from moving a piece that was quietly holding a firing line shut.':
+    '執黑：挺邊卒，飛中象，馬跳向另一側邊線。三步之後，剩下的唯一目標就是你沒推卒那一側的車，而且只有紅方第二步就下注時才吃得到。永遠不要用士封中。在挪動落地炮附近的任何棋子之前，先數炮架：我們找到的大多數敗局，都來自挪動了一枚正默默封著某條火線的棋子。',
+  'As Red: the rush beats anyone who has not read this far, and it is even money against anyone who has. If you play it, commit to an edge on move two or not at all, and seal your own center before cashing any grab: every scripted Red that grabbed first got mated.':
+    '執紅：速攻能贏下所有沒讀到這裡的人，對讀過的人則是對半開的賭注。如果你要走它，第二步就選定邊線，否則乾脆別選，並且在兌現任何抓取之前先封住自己的中路：指令碼里每一個先抓子的紅方都被擒了將。',
+  'Step through it yourself': '親手走一遍',
+  'Every line and every game in this article is in the companion study, on a board you can flip to either side’s fogged view. When you are ready, Misty will punish you while you learn the line. No account required.':
+    '本文的每條變化、每盤對局都在配套研究裡，棋盤可以切換到任何一方的迷霧視角。準備好之後，Misty 會在你練這條線的時候好好教訓你。無需帳號。',
+  'Open the companion study': '開啟配套研究',
+  'THE TRUTH': '真實局面',
+  'WHAT BLACK SEES': '黑方所見',
+  'THE POISONED ADVISOR': '有毒的補士',
+  'ONE MOVE, THREE FILES': '一步守三線',
+  'SOLDIER FIRST': '先挺卒',
+  'SOLDIER TOO LATE': '挺卒已遲',
+  'ONE SLIDE FROM EVERYTHING': '一步之遙',
+  'THE THREE-MOVE ANSWER': '三步答案',
+  'THE BATTERY, FROZEN': '凍結的反架炮',
+  'THE RECAPTURE IS A GIFT': '回吃是份大禮',
+  'THE FREEZE': '凍結',
+  'The stealth rush': '隱形速攻',
+  'Kernel-verified line': '經規則核心驗證的變化',
+  'Red captures the general on move 4. Black developed normally and saw nothing.':
+    '紅方在第 4 回合擒獲黑將。黑方正常出子，全程什麼都沒看見。',
+  'Red saves the chariot': '紅方保車',
+  'The horse steps to the edge as a second screen and the shot is dead. Red is still a cannon for a soldier down with nothing to attack. The engine scores the branch -0.55 either way and calls the recapture the least bad move on the board: the block saves a piece, not the game.':
+    '馬跳到邊線充當第二個炮架，這一炮就打不響了。紅方仍然是用一炮換了一卒，且無攻可組。引擎給這條分支的評分橫豎都是 -0.55，並認為回吃是全盤最不壞的一步：墊擋救的是一枚子，不是這盤棋。',
+  'The counter-battery': '反架炮',
+  'Black skipped the elephant and parked a cannon on the center file. Red cannot see it, grabs the chariot, and is mated on the reply.':
+    '黑方跳過飛象，把一門炮架在了中路。紅方看不見它，伸手抓了車，下一著帥就被擒。',
+  'Rush vs the recommended line, game 7 of 8': '速攻對推薦線，八盤中的第七盤',
+  'Engine-vs-engine playout, full record': '引擎對引擎推演，完整棋譜',
+  'Both sides forced through their first three moves, then free. Black follows the line this article teaches; the snipe never comes, heavy trades follow, and Black finishes with a deflection: chariot takes the advisor beside the general, the general recaptures, and the second chariot takes the general.':
+    '雙方前三步按指令碼強制，之後自由行棋。黑方走的正是本文教的線；狙擊始終沒有到來，隨後是大量兌子，最後黑方用一記引離收尾：車吃掉帥旁邊的仕，帥回吃，另一個車擒帥。',
+  'Misty (rush forced)': 'Misty（強制速攻）',
+  'Misty (this article’s line)': 'Misty（本文推薦線）',
+  Red: '紅方',
+  Black: '黑方',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
