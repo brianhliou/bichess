@@ -1,4 +1,5 @@
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
+import { PM_MATE_LANDS, PM_QUIET_KEY_MOVE } from '../puzzle-mining-diagrams.js';
 
 // How the xiangqi puzzle miner works, written for developers. Every number in
 // the prose comes from the two production runs that built the current corpus:
@@ -128,6 +129,18 @@ export const puzzleMiningArticle: Article = {
           kind: 'paragraph',
           text: '**Two thirds of them open with a move that captures nothing.** 1,052 of 1,605. If you hunt for tactics by scanning the captures first, which is what most of us do, you are looking at the wrong third of the board most of the time.',
         },
+        {
+          kind: 'raw-svg',
+          svg: PM_QUIET_KEY_MOVE,
+          caption:
+            'One of the 1,052, exactly as it is served. Red plays the chariot from b3 all the way to h3, taking nothing and threatening nothing yet. Black’s horse comes back to c3 to cover the mate.',
+        } as ArticleBlock,
+        {
+          kind: 'raw-svg',
+          svg: PM_MATE_LANDS,
+          caption:
+            'It does not cover it. The chariot climbs the h-file to h9 and the general on f9 has no square. This is ply 84 of a real game played on 2026-04-22; the loser had a defence and picked the wrong one.',
+        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: '**Only 10% involve giving material away.** Sacrifices are the tactics people remember, so I had assumed they would be a larger slice. In real games between real players, the winning move is usually just a move.',
