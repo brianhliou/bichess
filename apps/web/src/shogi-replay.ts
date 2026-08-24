@@ -1,7 +1,6 @@
 // Lightweight client-side shogi game replay. One board plus compact hands,
 // stepped through a western shogi move list by replaying the real rules kernel.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   applyShogiMove,
   createInitialShogiState,
@@ -18,6 +17,8 @@ import {
   type ShogiSquare,
   shogiSquareOf,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import { renderShogiBoardSvg, SHOGI_HAND_ORDER, shogiHandKomaSvg } from './shogi-render.js';
 import { shogiAppearanceChangedEvent } from './theme.js';
 

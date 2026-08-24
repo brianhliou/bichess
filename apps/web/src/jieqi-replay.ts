@@ -6,8 +6,6 @@
 // and rendered on demand by the live jieqi board renderer. Face-down pieces show as
 // backs and flip to their dealt identity on first move, exactly as in play.
 
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyJieqiMove,
   createInitialJieqiState,
@@ -18,7 +16,9 @@ import {
   type JieqiPieceRole,
   type JieqiSquare,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
 import { installJieqiBoardStyles, renderJieqiBoardSvg } from './live-jieqi-render.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 
 export type JieqiReplaySpec = {
   red: string;

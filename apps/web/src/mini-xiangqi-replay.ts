@@ -2,8 +2,7 @@
 // through a move list by replaying through the rules kernel — no per-ply SVG is
 // shipped, each position is rendered on demand. Sibling of xiangqi-replay.ts;
 // first used by the Mini Xiangqi Rules article to show a strong engine game.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   applyMiniXiangqiMove,
   createInitialMiniXiangqiState,
@@ -18,7 +17,9 @@ import {
   miniXiangqiSquareOf,
   type XiangqiPiece,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 

@@ -3,8 +3,7 @@
 // a compact UCI string and each position is rendered on demand. The chess
 // analogue of xiangqi-replay.ts; first used by the Chess Rules article to show
 // a full historical game.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   boardFen,
   hiddenSquareClasses,
@@ -21,7 +20,9 @@ import {
 } from '@mistboard/game';
 import type { Api } from 'chessground/api';
 import type * as cg from 'chessground/types';
+import type { ArticleLang } from './article-i18n.js';
 import { chessgroundAnimation } from './board-anim.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 
 export type ChessReplaySpec = {
   // Space-separated UCI coordinate tokens (e.g. "e2e4 e7e5 ..."). Castling is

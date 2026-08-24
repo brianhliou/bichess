@@ -1132,8 +1132,10 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
-  if (block.kind === 'drop-mini-xiangqi-replay') return renderDropMiniXiangqiReplayBlock(block, lang);
-  if (block.kind === 'fortress-xiangqi-replay') return renderFortressXiangqiReplayBlock(block, lang);
+  if (block.kind === 'drop-mini-xiangqi-replay')
+    return renderDropMiniXiangqiReplayBlock(block, lang);
+  if (block.kind === 'fortress-xiangqi-replay')
+    return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block, lang);
   if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
   if (block.kind === 'crossroads-replay') return renderCrossroadsReplayBlock(block, lang);
@@ -1164,7 +1166,10 @@ function renderChessReplayBlock(block: ChessReplayBlock, lang?: ArticleLang): HT
   return figure;
 }
 
-function renderCrossroadsReplayBlock(block: CrossroadsReplayBlock, lang?: ArticleLang): HTMLElement {
+function renderCrossroadsReplayBlock(
+  block: CrossroadsReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-crossroads';
   figure.dataset.pendingWidget = 'crossroads-replay';
@@ -1287,7 +1292,10 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
   return figure;
 }
 
-function renderMiniXiangqiReplayBlock(block: MiniXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
+function renderMiniXiangqiReplayBlock(
+  block: MiniXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'mxq-replay';
@@ -1307,7 +1315,10 @@ function renderMiniXiangqiReplayBlock(block: MiniXiangqiReplayBlock, lang?: Arti
   return figure;
 }
 
-function renderDropMiniXiangqiReplayBlock(block: DropMiniXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
+function renderDropMiniXiangqiReplayBlock(
+  block: DropMiniXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
   const figure = document.createElement('figure');
   figure.className =
     'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
@@ -1328,7 +1339,10 @@ function renderDropMiniXiangqiReplayBlock(block: DropMiniXiangqiReplayBlock, lan
   return figure;
 }
 
-function renderFortressXiangqiReplayBlock(block: FortressXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
+function renderFortressXiangqiReplayBlock(
+  block: FortressXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
   const figure = document.createElement('figure');
   figure.className =
     'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';

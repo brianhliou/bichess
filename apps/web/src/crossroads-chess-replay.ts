@@ -8,8 +8,6 @@
 // (applyCrossroadsChessOpenMove): the dark kernel now arms a pending Try on a
 // far-rank arrival instead of winning outright, which the open referee never does.
 
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyCrossroadsChessOpenMove,
   type CrossroadsChessColor,
@@ -19,7 +17,9 @@ import {
   createInitialCrossroadsChessState,
   getCrossroadsChessOpenView,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
 import { renderCrossroadsChessViewBoard } from './crossroads-chess-diagram.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 
 export type CrossroadsReplaySpec = {
   white: string;

@@ -3,8 +3,7 @@
 // replaying the real rules kernel. Boards render through the live renderer
 // (renderFortressXiangqiBoardSvg), so the replay tracks the reader's xiangqi
 // board theme and piece set and draws the same last-move markers as a live game.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   applyFortressXiangqiMove,
   createInitialFortressXiangqiState,
@@ -17,6 +16,8 @@ import {
   isFortressXiangqiLegalMove,
   oppositeFortressXiangqiColor,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import './drop-mini-xiangqi.css';
 import {
   installFortressXiangqiBoardStyles,

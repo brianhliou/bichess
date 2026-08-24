@@ -1,8 +1,7 @@
 // Lightweight client-side Drop Mini Xiangqi replay. One 7x7 board plus both
 // reserves, stepped through a compact move list by replaying the real rules
 // kernel.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   applyDropMiniXiangqiMove,
   createInitialDropMiniXiangqiState,
@@ -22,6 +21,8 @@ import {
   oppositeMiniXiangqiColor,
   type XiangqiPiece,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import './drop-mini-xiangqi.css';
 import { tokenPieceSize } from './board-metrics.js';
 import { dropMiniXiangqiMoveLabel, fillDropMiniXiangqiReserve } from './drop-mini-xiangqi-view.js';

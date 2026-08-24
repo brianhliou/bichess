@@ -2,8 +2,7 @@
 // move list by replaying through the rules kernel — no per-ply SVG is shipped,
 // each position is rendered on demand. Reusable game viewer; first used by the
 // Xiangqi Rules article to show a full historical game.
-import type { ArticleLang } from './article-i18n.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+
 import {
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
@@ -14,7 +13,9 @@ import {
   type XiangqiPiece,
   type XiangqiSquare,
 } from '@mistboard/game';
+import type { ArticleLang } from './article-i18n.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
