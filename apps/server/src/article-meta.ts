@@ -182,7 +182,7 @@ export const ARTICLE_META: Record<
       'Red\u2019s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.',
   },
   'how-puzzle-mining-works': {
-    title: "89% of blunders don't make puzzles",
+    title: 'Where Mistboard’s xiangqi puzzles come from',
     kind: 'article',
     description:
       'Mistboard ran 3,500 real xiangqi games through Pikafish looking for tactics. It found 10,503 blunders and published 1,211 of them. The reasons the other 9,292 were thrown out turn out to be a working definition of what a puzzle is.',

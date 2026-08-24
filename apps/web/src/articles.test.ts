@@ -79,8 +79,10 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      '/blog/how-puzzle-mining-works',
+      // Same publish date as the mining explainer; ties break alphabetically
+      // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
       '/blog/riverbank-cannon',
+      '/blog/how-puzzle-mining-works',
       '/blog/skill-vs-luck',
       '/blog/fog-openings',
       '/blog/misty',

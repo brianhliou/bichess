@@ -12,7 +12,7 @@ export const puzzleMiningArticle: Article = {
   slug: 'how-puzzle-mining-works',
   kind: 'article',
   publisher: 'mistboard',
-  title: "89% of blunders don't make puzzles",
+  title: 'Where Mistboard’s xiangqi puzzles come from',
   seoTitle: 'How Mistboard mines xiangqi puzzles from real games',
   summary:
     'Mistboard ran 3,500 real xiangqi games through Pikafish looking for tactics. It found 10,503 blunders and published 1,211 of them. The reasons the other 9,292 were thrown out turn out to be a working definition of what a puzzle is.',
@@ -33,7 +33,7 @@ export const puzzleMiningArticle: Article = {
   ],
   sections: [
     {
-      heading: 'What happens to one game',
+      heading: 'Scanning a game for candidates',
       blocks: [
         {
           kind: 'paragraph',
@@ -54,7 +54,7 @@ export const puzzleMiningArticle: Article = {
       ],
     },
     {
-      heading: 'The first gate: is there exactly one answer',
+      heading: 'Checking the answer is unique',
       blocks: [
         {
           kind: 'paragraph',
@@ -97,7 +97,7 @@ export const puzzleMiningArticle: Article = {
       ],
     },
     {
-      heading: 'The second gate: ask again, differently',
+      heading: 'The independent audit',
       blocks: [
         {
           kind: 'paragraph',
@@ -114,7 +114,7 @@ export const puzzleMiningArticle: Article = {
       ],
     },
     {
-      heading: "What's left",
+      heading: 'What the corpus looks like',
       blocks: [
         {
           kind: 'paragraph',
@@ -135,7 +135,7 @@ export const puzzleMiningArticle: Article = {
       ],
     },
     {
-      heading: 'The definition that falls out',
+      heading: 'What counts as a puzzle',
       blocks: [
         {
           kind: 'paragraph',
