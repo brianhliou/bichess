@@ -52,7 +52,10 @@ const accountSettingsSectionGroups: readonly (readonly AccountSettingsSection[])
 
 const accountSettingsSections = accountSettingsSectionGroups.flat();
 
-const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>(['pieceAnimation']);
+const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>([
+  'pieceAnimation',
+  'playerFlairs',
+]);
 const pieceAnimationSaveQueues = new WeakMap<AuthUser, Promise<void>>();
 
 // ── Page mounts ──────────────────────────────────────────────────────────────

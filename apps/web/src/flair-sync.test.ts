@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 // The web bundle cannot import server code, so apps/web/src/flair.ts
 // hand-maintains a mirror of the server's flair allowlist
 // (apps/server/src/flair.ts), which is what actually gates the write. This test
@@ -10,9 +10,23 @@ import {
   FLAIR_KEYS as SERVER_FLAIR_KEYS,
   isFlairKey as serverIsFlairKey,
 } from '../../server/src/flair.js';
-import { buildFlairIcon, flairLabel, FLAIR_KEYS as WEB_FLAIR_KEYS } from './flair.js';
+import {
+  buildFlairIcon,
+  buildFlairIconIfSet,
+  flairLabel,
+  FLAIR_KEYS as WEB_FLAIR_KEYS,
+} from './flair.js';
 
 describe('flair allowlist: web mirror <-> server authority', () => {
+  beforeEach(() => {
+    // This environment has no localStorage unless one is installed; the display
+    // preference read needs a real one to exercise both sides of the toggle.
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: memoryStorage(),
+    });
+  });
+
   it('holds exactly the same keys in the same order', () => {
     expect(WEB_FLAIR_KEYS).toEqual([...SERVER_FLAIR_KEYS]);
   });
@@ -52,6 +66,23 @@ describe('flair allowlist: web mirror <-> server authority', () => {
     }
   });
 
+  // The viewer-facing toggle: someone who turns player flairs off must stop
+  // seeing other people's, while the picker keeps showing their own choices.
+  it('honours the playerFlairs display preference on the display path only', async () => {
+    const { writeDisplayPreference } = await import('./display-preferences.js');
+    const key = WEB_FLAIR_KEYS[0]!;
+
+    writeDisplayPreference('playerFlairs', true);
+    expect(buildFlairIconIfSet(key)).not.toBeNull();
+
+    writeDisplayPreference('playerFlairs', false);
+    expect(buildFlairIconIfSet(key)).toBeNull();
+    // The picker path is deliberately ungated.
+    expect(buildFlairIcon(key)).not.toBeNull();
+
+    writeDisplayPreference('playerFlairs', true);
+  });
+
   it('marks flair decorative unless it is asked to stand alone', () => {
     const decorative = buildFlairIcon(WEB_FLAIR_KEYS[0]!);
     expect(decorative.getAttribute('aria-hidden')).toBe('true');
@@ -62,3 +93,17 @@ describe('flair allowlist: web mirror <-> server authority', () => {
     expect(standalone.hasAttribute('aria-hidden')).toBe(false);
   });
 });
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
+}

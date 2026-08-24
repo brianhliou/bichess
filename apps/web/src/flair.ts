@@ -15,6 +15,7 @@ import './flair.css';
 // the role word alongside it.
 
 import type { XiangqiColor, XiangqiPieceRole } from '@mistboard/game';
+import { readDisplayPreferences } from './display-preferences.js';
 import { variantDisplayLabel } from './game-display.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { xiangqiCharacter } from './xiangqi-pieces.js';
@@ -144,9 +145,27 @@ export function buildFlairIcon(
 
 // Convenience for the many surfaces that hold a possibly-null flair off a
 // payload and want an element or nothing.
+//
+// This is the DISPLAY path, so it honours the viewer's playerFlairs preference:
+// someone who does not want other people's flair on their screen turns it off
+// here. The picker calls buildFlairIcon directly and is deliberately not gated,
+// because you must be able to see the flair you are choosing even with the
+// display toggle off.
 export function buildFlairIconIfSet(
   value: unknown,
   opts: { labelled?: boolean; locale?: Locale } = {},
 ): HTMLElement | null {
-  return isFlairKey(value) ? buildFlairIcon(value, opts) : null;
+  if (!isFlairKey(value)) return null;
+  if (!viewerShowsFlairs()) return null;
+  return buildFlairIcon(value, opts);
+}
+
+function viewerShowsFlairs(): boolean {
+  // Storage can throw (private mode, blocked site data). Flair is decoration,
+  // so an unreadable preference shows it rather than failing the render.
+  try {
+    return readDisplayPreferences().playerFlairs;
+  } catch {
+    return true;
+  }
 }
