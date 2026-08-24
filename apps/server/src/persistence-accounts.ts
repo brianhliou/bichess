@@ -8,6 +8,7 @@
 // row plumbing (USER_COLUMNS, USER_COLUMNS_QUALIFIED, UserRow, userFromRow,
 // isUniqueViolation) is internal to those persistence-* modules; it is
 // deliberately NOT re-exported from the persistence.ts barrel.
+import type { FlairKey } from './flair.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
@@ -106,6 +107,11 @@ export type UserAccount = {
   // pipeline (routes/titles.ts). NULL = untitled. Closed vocabulary; see
   // persistence-titles.ts.
   title: PlayerTitle | null;
+  // Cosmetic profile flair (122): one key from the closed allowlist in
+  // flair.ts, or NULL for none. Purely decorative — nothing keys behaviour off
+  // it, so an unknown value read from an older row degrades to "no flair"
+  // rather than breaking a profile render.
+  flair: FlairKey | null;
   locale: AccountLocale | null;
   dmPolicy: DmPolicy;
   eloRating: number;
@@ -140,6 +146,7 @@ export const USER_COLUMNS = [
   'profile_visibility',
   'account_role',
   'title',
+  'flair',
   'locale',
   'dm_policy',
   'elo_rating',
@@ -243,6 +250,7 @@ export type UserRow = {
   profile_visibility: UserAccount['profileVisibility'];
   account_role: AccountRole;
   title: PlayerTitle | null;
+  flair: FlairKey | null;
   locale: AccountLocale | null;
   dm_policy: DmPolicy;
   elo_rating: number;
@@ -270,6 +278,7 @@ export function userFromRow(row: UserRow): UserAccount {
     profileVisibility: row.profile_visibility,
     accountRole: row.account_role,
     title: row.title,
+    flair: row.flair,
     locale: row.locale,
     dmPolicy: row.dm_policy,
     eloRating: row.elo_rating,

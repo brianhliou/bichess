@@ -14,7 +14,10 @@ import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './fea
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl } from './i18n/locale.js';
 import {
+  challengesNotificationSource,
   correspondenceNotificationSource,
+  followersNotificationSource,
+  forumNotificationSource,
   inboxNotificationSource,
   registerNotificationSource,
 } from './notification-nav.js';
@@ -46,6 +49,11 @@ initializeThemeSettings();
 // zero snapshot for anonymous visitors, and the bell only mounts signed-in).
 if (correspondenceEnabled()) registerNotificationSource(correspondenceNotificationSource);
 registerNotificationSource(inboxNotificationSource);
+registerNotificationSource(followersNotificationSource);
+registerNotificationSource(forumNotificationSource);
+// Directed challenges are correspondence seeks, so this source has nothing to
+// report unless correspondence is on.
+if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
 // The account nav renders localized labels, so it waits for the locale chunk
 // like the route mounts do (mountOrReport). The restart banner is English-only.
 void localeReady.then(() => initializeAccountNav());

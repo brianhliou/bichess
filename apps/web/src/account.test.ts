@@ -789,9 +789,59 @@ describe('account page auth flow', () => {
         bio: 'Xiangqi learner',
         location: 'Taipei',
         profileLinks: ['https://example.com/xiangqi'],
+        // Untouched picker sends the account's current flair (none here), not
+        // an omitted key: the server keeps the existing flair when the field is
+        // absent, so an absent key would silently mean "leave it" rather than
+        // "the user cleared it".
+        flair: null,
       },
     ]);
     expect(document.querySelector('.account-status')?.textContent).toBe('Public profile saved.');
+  });
+
+  it('sends the flair the user picked, and clears it again on No flair', async () => {
+    window.history.replaceState(null, '', '/account/settings');
+    const user = testUser('misty');
+    const requests: { flair?: unknown }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/auth/me') return jsonResponse({ user });
+        if (url === '/api/account/public-profile') {
+          const body = JSON.parse(String(init?.body)) as { flair?: unknown };
+          requests.push(body);
+          return jsonResponse({ user: { ...user, flair: body.flair ?? null } });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    const { mountAccountSettings } = await import('./account.js');
+    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
+    await flushDom();
+
+    const submit = () =>
+      document
+        .querySelector<HTMLFormElement>('.account-public-profile-form')
+        ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    const cannon = document.querySelector<HTMLInputElement>(
+      'input[name="flair"][value="piece-red-cannon"]',
+    );
+    if (!cannon) throw new Error('missing flair option');
+    cannon.checked = true;
+    submit();
+    await flushDom();
+
+    const none = document.querySelector<HTMLInputElement>('input[name="flair"][value=""]');
+    if (!none) throw new Error('missing no-flair option');
+    none.checked = true;
+    cannon.checked = false;
+    submit();
+    await flushDom();
+
+    expect(requests.map((request) => request.flair)).toEqual(['piece-red-cannon', null]);
   });
 });
 

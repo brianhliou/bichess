@@ -1,0 +1,65 @@
+/* Flair sits inline beside a handle, so it scales with the surrounding text
+   rather than carrying a fixed pixel size: a flair in a nav row and one in a
+   profile h1 both come out proportional. */
+.flair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.18em;
+  flex: none;
+  line-height: 1;
+  /* Flair trails a name, so it needs its own breathing room: without this it
+     collides with the last character of the handle. */
+  margin-inline-start: 0.25em;
+}
+
+/* Inside the picker the flair IS the content of its cell, so the trailing-icon
+   spacing would just push it off-centre. */
+.account-flair-option .flair {
+  margin-inline-start: 0;
+}
+
+/* Variant flair paints the marker PNG as a mask over currentColor, matching
+   variant-markers.css. The art is white-on-transparent, so an <img> would show
+   a blank square on any light surface. */
+.flair-mask {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: currentColor;
+  color: var(--site-muted);
+  -webkit-mask: var(--flair-mask) center / contain no-repeat;
+  mask: var(--flair-mask) center / contain no-repeat;
+}
+
+.flair-piece {
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 0.72em;
+  font-weight: 600;
+  /* The disc is drawn at the text's own size, so the glyph needs a font stack
+     that actually has the CJK forms before the generic fallback. */
+  font-family: "Noto Serif TC", "Noto Serif SC", "Songti SC", "SimSun", serif;
+}
+
+.flair-glyph {
+  transform: translateY(0.02em);
+}
+
+/* Ink colours are the board's, not the theme's: red stays red in dark mode
+   because it names the side, and a theme-following flair would flip 帥 and 將
+   into the same colour. Only black, which would vanish against a dark panel,
+   lifts to the theme's ink. */
+.flair-ink-red {
+  color: #b23b2e;
+}
+
+.flair-ink-black {
+  color: #2c2c2c;
+}
+
+:root[data-effective-theme="dark"] .flair-ink-black {
+  color: #d8d4cc;
+}

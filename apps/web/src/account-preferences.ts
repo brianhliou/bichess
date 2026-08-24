@@ -10,6 +10,9 @@ export type AccountPreferences = {
   confirmGameActions: boolean;
   inboxBell: boolean;
   correspondenceBell: boolean;
+  followersBell: boolean;
+  forumBell: boolean;
+  challengesBell: boolean;
   correspondenceDeadlineEmail: boolean;
 };
 
@@ -20,6 +23,9 @@ export const defaultAccountPreferences: AccountPreferences = {
   confirmGameActions: true,
   inboxBell: true,
   correspondenceBell: true,
+  followersBell: true,
+  forumBell: true,
+  challengesBell: true,
   correspondenceDeadlineEmail: true,
 };
 
@@ -80,6 +86,12 @@ export function normalizeAccountPreferences(value: unknown): AccountPreferences 
     correspondenceBell: booleanOrDefault(
       parsed.correspondenceBell,
       defaultAccountPreferences.correspondenceBell,
+    ),
+    followersBell: booleanOrDefault(parsed.followersBell, defaultAccountPreferences.followersBell),
+    forumBell: booleanOrDefault(parsed.forumBell, defaultAccountPreferences.forumBell),
+    challengesBell: booleanOrDefault(
+      parsed.challengesBell,
+      defaultAccountPreferences.challengesBell,
     ),
     correspondenceDeadlineEmail: booleanOrDefault(
       parsed.correspondenceDeadlineEmail,

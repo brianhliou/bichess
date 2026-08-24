@@ -27,6 +27,10 @@ export type AuthUser = {
   bio: string;
   location: string;
   profileLinks: string[];
+  // Cosmetic flair key, or null for none. Kept as a plain string here: the
+  // allowlist lives in flair.ts and the server validates it, so the shell type
+  // does not need to enumerate the keys.
+  flair: string | null;
   displayPreferences: {
     pieceAnimation?: 'none' | 'fast' | 'normal' | 'slow';
   };

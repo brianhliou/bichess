@@ -7,6 +7,7 @@ import { maybeGameSpecForId, type RatingVariant } from '@mistboard/game';
 import { bindBotPlayControl } from './bot-play.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { correspondenceEnabled } from './feature-flags.js';
+import { buildFlairIconIfSet } from './flair.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { buildTitleBadge } from './player-titles.js';
@@ -39,6 +40,7 @@ export type UserCardProfile = {
     // Verified title key ('xgm', 'gm', ...); absent/null = untitled. Unknown
     // values render no badge (fail-closed in player-titles.ts).
     title?: string | null;
+    flair?: string | null;
     createdAt: string;
   };
   ratings: ProfileBucketRating[];
@@ -166,6 +168,9 @@ function buildHeader(
   name.href = `/@/${encodeURIComponent(profile.user.handle)}`;
   name.textContent = profile.user.displayName;
   header.append(name);
+
+  const flair = buildFlairIconIfSet(profile.user.flair, { locale });
+  if (flair) header.append(flair);
 
   if (profile.user.accountRole === 'admin') {
     const badge = document.createElement('span');

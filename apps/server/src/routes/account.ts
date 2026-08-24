@@ -16,6 +16,7 @@ import {
   sendEmailChangeCode,
 } from './../account-session.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
+import { type FlairKey, parseFlair } from './../flair.js';
 import * as persistence from './../persistence.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -434,7 +435,7 @@ export async function tryHandle(
       writeJson(response, 401, { error: 'not_signed_in' });
       return true;
     }
-    const details = parsePublicProfileDetails(await readJsonBody(request));
+    const details = parsePublicProfileDetails(await readJsonBody(request), user);
     if (!details) {
       writeJson(response, 400, { error: 'invalid_public_profile' });
       return true;
@@ -488,9 +489,21 @@ function expiredSessionCookies(): string | string[] {
 
 function parsePublicProfileDetails(
   body: Record<string, unknown>,
-): { bio: string; location: string; profileLinks: string[] } | null {
+  current: { flair: FlairKey | null },
+): { bio: string; location: string; profileLinks: string[]; flair: FlairKey | null } | null {
   if (typeof body.bio !== 'string' || typeof body.location !== 'string') return null;
   if (!Array.isArray(body.profileLinks) || body.profileLinks.length > 5) return null;
+
+  // Flair is optional on this endpoint: a client that predates it (or a form
+  // that only edits the bio) omits the key entirely and must keep whatever
+  // flair the account already had. Only an explicit null or '' clears it, and
+  // an unrecognized key is a 400 rather than a silent clear.
+  let flair = current.flair;
+  if ('flair' in body) {
+    const parsed = parseFlair(body.flair);
+    if (parsed === undefined) return null;
+    flair = parsed;
+  }
 
   const bio = body.bio.trim();
   const location = body.location.trim();
@@ -512,5 +525,5 @@ function parsePublicProfileDetails(
       return null;
     }
   }
-  return { bio, location, profileLinks };
+  return { bio, location, profileLinks, flair };
 }

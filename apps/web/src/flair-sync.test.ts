@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest';
+// The web bundle cannot import server code, so apps/web/src/flair.ts
+// hand-maintains a mirror of the server's flair allowlist
+// (apps/server/src/flair.ts), which is what actually gates the write. This test
+// imports the server source directly (same pattern as
+// variant-registry-sync.test.ts) so a flair added to one side and not the other
+// fails here instead of shipping as a picker option the server rejects with a
+// 400, or a stored key the profile renders as an empty disc.
+import {
+  FLAIR_KEYS as SERVER_FLAIR_KEYS,
+  isFlairKey as serverIsFlairKey,
+} from '../../server/src/flair.js';
+import { buildFlairIcon, flairLabel, FLAIR_KEYS as WEB_FLAIR_KEYS } from './flair.js';
+
+describe('flair allowlist: web mirror <-> server authority', () => {
+  it('holds exactly the same keys in the same order', () => {
+    expect(WEB_FLAIR_KEYS).toEqual([...SERVER_FLAIR_KEYS]);
+  });
+
+  it('accepts every web key on the server side', () => {
+    for (const key of WEB_FLAIR_KEYS) {
+      expect(
+        serverIsFlairKey(key),
+        `${key} is offered by the picker but the server rejects it`,
+      ).toBe(true);
+    }
+  });
+
+  it('renders every key with a non-empty label and no placeholder glyph', () => {
+    for (const key of WEB_FLAIR_KEYS) {
+      const label = flairLabel(key, 'en');
+      expect(label, `${key} has no label`).toBeTruthy();
+      // A key present in FLAIR_KEYS but missing from both def maps falls
+      // through to returning the key itself, which would ship as a label like
+      // "piece-red-horse". Catch that here rather than in a screenshot.
+      expect(label, `${key} fell through to its raw key as a label`).not.toBe(key);
+
+      const icon = buildFlairIcon(key, { labelled: true });
+      expect(icon.dataset.flair).toBe(key);
+      expect(icon.getAttribute('aria-label')).toBe(label);
+      // Variant flair paints a mask over currentColor; piece flair renders a
+      // character. Either way something visible must be in there, and for the
+      // mask that means the custom property actually carries a url() -- an
+      // empty --flair-mask paints a solid block, and rendering the same PNG in
+      // an <img> instead paints a blank white square, which is how the first
+      // cut of this shipped.
+      const mask = icon.querySelector<HTMLElement>('.flair-mask');
+      const hasMask = !!mask && /^url\(/.test(mask.style.getPropertyValue('--flair-mask'));
+      const hasGlyph = (icon.querySelector('.flair-glyph')?.textContent ?? '').length > 0;
+      expect(hasMask || hasGlyph, `${key} renders an empty icon`).toBe(true);
+      expect(icon.querySelector('img'), `${key} renders the mask art as a picture`).toBeNull();
+    }
+  });
+
+  it('marks flair decorative unless it is asked to stand alone', () => {
+    const decorative = buildFlairIcon(WEB_FLAIR_KEYS[0]!);
+    expect(decorative.getAttribute('aria-hidden')).toBe('true');
+    expect(decorative.hasAttribute('aria-label')).toBe(false);
+
+    const standalone = buildFlairIcon(WEB_FLAIR_KEYS[0]!, { labelled: true });
+    expect(standalone.getAttribute('role')).toBe('img');
+    expect(standalone.hasAttribute('aria-hidden')).toBe(false);
+  });
+});

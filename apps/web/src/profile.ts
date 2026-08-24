@@ -5,6 +5,7 @@ import './account-profile.css';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
+import { buildFlairIconIfSet } from './flair.js';
 import type { FeaturedGame } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
@@ -82,6 +83,7 @@ type UserProfile = {
     // only through the /verify-title pipeline (see routes/titles.ts); unknown
     // values render no badge (fail-closed in player-titles.ts).
     title?: string | null;
+    flair?: string | null;
     // Set while a donation is active; drives the cosmetic Patron badge. Absent
     // /null = not a patron. Server-derived (see routes/patron.ts).
     patronSince?: string | null;
@@ -889,6 +891,11 @@ export function buildProfileIdentity(
   const titleBadge = buildTitleBadge(profile.user.title, locale);
   if (titleBadge) heading.append(titleBadge);
   heading.append(document.createTextNode(`@${profile.user.handle}`));
+  // Flair trails the handle (title badges lead it): an earned title qualifies
+  // the name, a self-chosen flair decorates it, and the order keeps the two
+  // from reading as the same kind of claim.
+  const flair = buildFlairIconIfSet(profile.user.flair, { locale });
+  if (flair) heading.append(flair);
   identity.append(heading);
 
   // Badge line: verified title, admin, and patron badges (the join date now

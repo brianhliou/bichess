@@ -300,6 +300,14 @@ export {
   getLeaderboardSummary,
   getMostActivePlayers,
 } from './persistence-leaderboards.js';
+export type { NotificationWatermarkKind } from './persistence-notifications.js';
+export {
+  countForumReplies,
+  countIncomingChallenges,
+  countNewFollowers,
+  isNotificationWatermarkKind,
+  markNotificationsSeen,
+} from './persistence-notifications.js';
 export type { PatronSubscriptionInput, PatronTransaction } from './persistence-patron.js';
 export {
   applyPatronSubscription,

@@ -2,19 +2,46 @@ import './notification-nav.css';
 import { readAccountPreferences } from './account-preferences.js';
 
 // A reusable nav notification button: a bell + count badge that aggregates every
-// registered source. Built to grow — correspondence "your move" is the first
-// source; future kinds (game-over, deadline-soon, opponent-joined, system)
-// register the same way and show up as additional panel rows. account-nav owns
-// signed-in detection and the nav MutationObserver, so it mounts the bell (via
-// mountNotificationBell) and tears it down on sign-out — this module owns only
-// the registry, rendering, and refresh.
+// registered source. account-nav owns signed-in detection and the nav
+// MutationObserver, so it mounts the bell (via mountNotificationBell) and tears
+// it down on sign-out; this module owns the registry, rendering, and refresh.
+//
+// Sources used to fetch independently, which meant every new notification kind
+// cost each signed-in client another request on every poll. They now read out
+// of one /api/notifications snapshot: a source is a pure function from counts
+// to rows, so adding a kind costs one server field and one closure and no extra
+// network traffic.
 
 export type NotificationEntry = { label: string; href: string };
 export type NotificationSnapshot = { count: number; entries: NotificationEntry[] };
-// A source reports its pending count (summed into the badge) and the rows it
-// contributes to the panel. Must resolve fast and never throw (errors are
-// swallowed to a zero snapshot so one bad source can't blank the bell).
-export type NotificationSource = () => Promise<NotificationSnapshot>;
+
+// Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
+export type NotificationCounts = {
+  inboxUnread: number;
+  correspondenceYourMove: number;
+  newFollowers: number;
+  forumReplies: number;
+  incomingChallenges: number;
+};
+
+const EMPTY_COUNTS: NotificationCounts = {
+  inboxUnread: 0,
+  correspondenceYourMove: 0,
+  newFollowers: 0,
+  forumReplies: 0,
+  incomingChallenges: 0,
+};
+
+export type NotificationSource = {
+  // Pure: turns the shared snapshot into this source's badge count and panel
+  // rows. Must not throw; a source that cannot read its field returns zero.
+  read(counts: NotificationCounts): NotificationSnapshot;
+  // Watermarked feeds (new followers, forum replies) clear when the user opens
+  // the panel, which is the moment they have actually seen the rows. Live-state
+  // sources (unread DMs, your-move games, pending challenges) omit this: their
+  // count must survive being looked at, because the work is still outstanding.
+  markSeen?(): Promise<void>;
+};
 
 const sources: NotificationSource[] = [];
 let lastSnapshot: NotificationSnapshot = { count: 0, entries: [] };
@@ -26,33 +53,108 @@ export function registerNotificationSource(source: NotificationSource): void {
   sources.push(source);
 }
 
-// The correspondence source: badge counts games awaiting the player's move; the
-// panel always offers a link to the dashboard so the bell is the entry point to
-// /correspondence regardless of count. Registered from main.ts behind the flag.
-export const correspondenceNotificationSource: NotificationSource = async () => {
-  if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
-  const resp = await fetch('/api/correspondence/games').catch(() => null);
-  if (!resp?.ok) return { count: 0, entries: [] };
-  const data = (await resp.json()) as { yourMoveCount?: number };
-  const count = typeof data.yourMoveCount === 'number' ? data.yourMoveCount : 0;
-  const label =
-    count > 0
-      ? `${count} ${count === 1 ? 'game needs' : 'games need'} your move`
-      : 'Correspondence games';
-  return { count, entries: [{ label, href: '/correspondence' }] };
+// Test-only. The registry is process-wide and main.ts fills it once at boot, so
+// clearNotificationBells() deliberately does NOT clear it (a sign-out must not
+// leave a signed-back-in session with no sources). Tests that register their
+// own sources need a way to not leak them into the next test.
+export function resetNotificationSourcesForTest(): void {
+  sources.length = 0;
+  lastSnapshot = { count: 0, entries: [] };
+}
+
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}
+
+async function markKindSeen(kind: 'followers' | 'forum-replies'): Promise<void> {
+  await fetch('/api/notifications/seen', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ kind }),
+  }).catch(() => null);
+}
+
+// Games awaiting the player's move. The panel always offers the dashboard link
+// so the bell is the entry point to /correspondence regardless of count.
+export const correspondenceNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().correspondenceBell) return { count: 0, entries: [] };
+    const count = counts.correspondenceYourMove;
+    const label =
+      count > 0
+        ? `${count} ${plural(count, 'game needs', 'games need')} your move`
+        : 'Correspondence games';
+    return { count, entries: [{ label, href: '/correspondence' }] };
+  },
 };
 
-// The inbox source: badge counts unread DM threads; the panel always offers
-// the inbox link so the bell doubles as the /inbox entry point. Anonymous
-// visitors get a 401 → zero snapshot (and the bell never mounts signed-out).
-export const inboxNotificationSource: NotificationSource = async () => {
-  if (!readAccountPreferences().inboxBell) return { count: 0, entries: [] };
-  const resp = await fetch('/api/inbox/unread-count').catch(() => null);
-  if (!resp?.ok) return { count: 0, entries: [] };
-  const data = (await resp.json()) as { count?: number };
-  const count = typeof data.count === 'number' ? data.count : 0;
-  const label = count > 0 ? `${count} unread ${count === 1 ? 'message' : 'messages'}` : 'Inbox';
-  return { count, entries: [{ label, href: '/inbox' }] };
+// Unread DM threads. The panel always offers the inbox link so the bell doubles
+// as the /inbox entry point.
+export const inboxNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().inboxBell) return { count: 0, entries: [] };
+    const count = counts.inboxUnread;
+    const label = count > 0 ? `${count} unread ${plural(count, 'message', 'messages')}` : 'Inbox';
+    return { count, entries: [{ label, href: '/inbox' }] };
+  },
+};
+
+// New followers since the user last opened the bell. Count only, and the row
+// links to /following rather than to a followers list, because there is no
+// followers surface: 069_user_relations keeps the follow edge private to the
+// actor and nothing here changes that.
+export const followersNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().followersBell) return { count: 0, entries: [] };
+    const count = counts.newFollowers;
+    if (count === 0) return { count: 0, entries: [] };
+    return {
+      count,
+      entries: [
+        { label: `${count} new ${plural(count, 'follower', 'followers')}`, href: '/following' },
+      ],
+    };
+  },
+  markSeen: () => markKindSeen('followers'),
+};
+
+// Replies on topics the user started, since they last opened the bell.
+export const forumNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().forumBell) return { count: 0, entries: [] };
+    const count = counts.forumReplies;
+    if (count === 0) return { count: 0, entries: [] };
+    return {
+      count,
+      entries: [
+        {
+          label: `${count} new ${plural(count, 'reply', 'replies')} on your topics`,
+          href: '/forum',
+        },
+      ],
+    };
+  },
+  markSeen: () => markKindSeen('forum-replies'),
+};
+
+// Direct challenges waiting on an answer. Live state, so no markSeen: an
+// unanswered challenge keeps its badge until it is accepted, declined, or
+// expires.
+export const challengesNotificationSource: NotificationSource = {
+  read: (counts) => {
+    if (!readAccountPreferences().challengesBell) return { count: 0, entries: [] };
+    const count = counts.incomingChallenges;
+    if (count === 0) return { count: 0, entries: [] };
+    return {
+      count,
+      entries: [
+        {
+          label: `${count} ${plural(count, 'challenge', 'challenges')} waiting for you`,
+          href: '/correspondence',
+        },
+      ],
+    };
+  },
 };
 
 export function mountNotificationBell(nav: HTMLElement): void {
@@ -90,6 +192,7 @@ export function mountNotificationBell(nav: HTMLElement): void {
     }
     control.classList.toggle('notif-nav-open', open);
     trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) void markOpenedSourcesSeen();
   });
 
   control.append(trigger, panel);
@@ -113,15 +216,18 @@ export function clearNotificationBells(): void {
   }
 }
 
-// Re-poll every source and repaint all mounted bells. Called on mount; callers
-// (e.g. after a move) can re-invoke to refresh without a page load.
+// Fetch the shared counts once and repaint every mounted bell. Called on mount;
+// callers (e.g. after a move) can re-invoke to refresh without a page load.
 export async function refreshNotifications(): Promise<void> {
   if (sources.length === 0) return;
-  const snapshots = await Promise.all(
-    sources.map((source) =>
-      source().catch(() => ({ count: 0, entries: [] }) as NotificationSnapshot),
-    ),
-  );
+  const counts = await fetchNotificationCounts();
+  const snapshots = sources.map((source) => {
+    try {
+      return source.read(counts);
+    } catch {
+      return { count: 0, entries: [] } as NotificationSnapshot;
+    }
+  });
   lastSnapshot = {
     count: snapshots.reduce((total, snapshot) => total + snapshot.count, 0),
     entries: snapshots.flatMap((snapshot) => snapshot.entries),
@@ -129,6 +235,34 @@ export async function refreshNotifications(): Promise<void> {
   for (const control of document.querySelectorAll<HTMLElement>('[data-notification-nav]')) {
     applySnapshot(control);
   }
+}
+
+async function fetchNotificationCounts(): Promise<NotificationCounts> {
+  const resp = await fetch('/api/notifications').catch(() => null);
+  // A 401 (signed out) or a transient failure reads as "nothing pending"
+  // rather than leaving the last counts on screen, so a stale badge never
+  // outlives the session it belonged to.
+  if (!resp?.ok) return EMPTY_COUNTS;
+  const data = (await resp.json().catch(() => null)) as Partial<NotificationCounts> | null;
+  if (!data) return EMPTY_COUNTS;
+  const read = (value: unknown): number =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  return {
+    inboxUnread: read(data.inboxUnread),
+    correspondenceYourMove: read(data.correspondenceYourMove),
+    newFollowers: read(data.newFollowers),
+    forumReplies: read(data.forumReplies),
+    incomingChallenges: read(data.incomingChallenges),
+  };
+}
+
+// Opening the panel is the read receipt for every watermarked source. Fires
+// once per open, then refreshes so the cleared counts leave the badge.
+async function markOpenedSourcesSeen(): Promise<void> {
+  const pending = sources.filter((source) => source.markSeen).map((source) => source.markSeen?.());
+  if (pending.length === 0) return;
+  await Promise.all(pending);
+  await refreshNotifications();
 }
 
 function applySnapshot(control: HTMLElement): void {

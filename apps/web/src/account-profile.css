@@ -2795,3 +2795,89 @@
     flex-basis: 18px;
   }
 }
+
+/* ── Flair picker ─────────────────────────────────────────────────────────────
+   A radio grid, not a <select>: flair is chosen by how it looks, and a dropdown
+   of two dozen names shows the reader none of them. The radio itself is
+   visually hidden and the swatch carries the selected state, so the control
+   stays a real radio group for keyboard and screen-reader users. */
+.account-flair-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.account-flair-group legend {
+  padding: 0;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.account-flair-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.account-flair-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  cursor: pointer;
+}
+
+/* Overrides .account-field input, which sizes text inputs to fill the row. */
+.account-flair-option input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  min-width: 1px;
+  height: 1px;
+  min-height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account-flair-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--site-muted);
+}
+
+/* The flair name is the accessible label, not a caption: showing 24 names in a
+   44px grid would be unreadable, and the swatch plus tooltip carries it. */
+.account-flair-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account-flair-option:hover {
+  border-color: var(--site-accent);
+}
+
+.account-flair-option:has(input:checked) {
+  border-color: var(--site-accent);
+  box-shadow: inset 0 0 0 1px var(--site-accent);
+  background: var(--site-brand-accent-soft);
+}
+
+.account-flair-option:has(input:focus-visible) {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}

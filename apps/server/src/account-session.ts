@@ -109,6 +109,7 @@ export function publicUser(user: persistence.UserAccount): Record<string, unknow
     accountPreferences: user.accountPreferences,
     profileVisibility: user.profileVisibility,
     accountRole: user.accountRole,
+    flair: user.flair,
     locale: user.locale,
     dmPolicy: user.dmPolicy,
     // Patron program: entitlement is server-derived (patron_since is only set by

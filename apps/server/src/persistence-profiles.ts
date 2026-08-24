@@ -4,6 +4,7 @@
 // these share the loadProfileUser + profileVisibilityClause privacy gate.
 // Split out of persistence-accounts.ts; the shared users-row plumbing
 // (USER_COLUMNS, userFromRow) stays there.
+import type { FlairKey } from './flair.js';
 import { PROVISIONAL_RD } from './glicko.js';
 import {
   type AccountLocale,
@@ -46,6 +47,10 @@ export type PublicProfileUser = {
   // Verified player title; drives the title badge (flair) on the public
   // profile and user card. NULL = untitled.
   title: PlayerTitle | null;
+  // Self-chosen cosmetic icon key (122). Distinct from `title`, which is
+  // earned and verified: flair is decoration the account picks for itself and
+  // carries no claim about the player.
+  flair: FlairKey | null;
   // Set while a donation is active; drives the cosmetic Patron badge on the
   // public profile. NULL = not a patron.
   patronSince: Date | null;
@@ -185,7 +190,7 @@ export async function updateUserProfile(
 
 export async function updateUserPublicProfileDetails(
   userId: string,
-  details: { bio: string; location: string; profileLinks: string[] },
+  details: { bio: string; location: string; profileLinks: string[]; flair: FlairKey | null },
   at: Date,
 ): Promise<UserAccount | null> {
   const { rows } = await getPool().query<UserRow>(
@@ -193,10 +198,11 @@ export async function updateUserPublicProfileDetails(
      SET bio = $2,
          location = $3,
          profile_links = $4,
-         updated_at = $5
+         flair = $5,
+         updated_at = $6
      WHERE id = $1
      RETURNING ${USER_COLUMNS}`,
-    [userId, details.bio, details.location, details.profileLinks, at],
+    [userId, details.bio, details.location, details.profileLinks, details.flair, at],
   );
   return rows[0] ? userFromRow(rows[0]) : null;
 }
@@ -567,6 +573,7 @@ export async function getUserProfileByHandle(
       profileVisibility: user.profileVisibility,
       accountRole: user.accountRole,
       title: user.title,
+      flair: user.flair,
       patronSince: user.patronSince,
       createdAt: user.createdAt,
     },

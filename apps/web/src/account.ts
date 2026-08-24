@@ -25,6 +25,7 @@ import {
   readDisplayPreferences,
   writeDisplayPreference,
 } from './display-preferences.js';
+import { buildFlairIcon, FLAIR_KEYS, flairLabel } from './flair.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
@@ -408,6 +409,8 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
   links.input.maxLength = 1504;
   links.help.textContent = t('account.publicLinksHelp', {}, locale);
 
+  const flair = buildFlairPicker(user.flair ?? null, locale);
+
   const status = document.createElement('p');
   status.className = 'account-status';
   status.setAttribute('aria-live', 'polite');
@@ -424,7 +427,7 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
   profile.textContent = t('account.viewProfile', {}, locale);
   actions.append(save, profile);
 
-  form.append(bio.wrap, location.wrap, links.wrap, actions, status);
+  form.append(bio.wrap, location.wrap, links.wrap, flair.wrap, actions, status);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const profileLinks = links.input.value
@@ -444,6 +447,7 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
           bio: bio.input.value,
           location: location.input.value,
           profileLinks,
+          flair: flair.value(),
         }),
       });
       const data = (await resp.json()) as { user?: AuthUser; error?: string };
@@ -451,9 +455,11 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
       user.bio = data.user.bio;
       user.location = data.user.location;
       user.profileLinks = data.user.profileLinks;
+      user.flair = data.user.flair ?? null;
       bio.input.value = user.bio;
       location.input.value = user.location;
       links.input.value = user.profileLinks.join('\n');
+      flair.setValue(user.flair);
       status.textContent = t('account.publicProfileSaved', {}, locale);
     } catch (err) {
       status.textContent = err instanceof Error ? err.message : t('account.saveFailed', {}, locale);
@@ -464,6 +470,75 @@ function buildPublicProfileSettings(user: AuthUser, locale: Locale = currentLoca
 
   panel.append(form);
   return panel;
+}
+
+// A radio grid rather than a <select>: flair is chosen by how it looks, and a
+// dropdown of two dozen names shows the reader none of them. "No flair" is the
+// first option so clearing is as easy as picking.
+function buildFlairPicker(
+  current: string | null,
+  locale: Locale,
+): { wrap: HTMLElement; value: () => string | null; setValue: (next: string | null) => void } {
+  const wrap = document.createElement('div');
+  wrap.className = 'account-field account-flair-field';
+
+  const group = document.createElement('fieldset');
+  group.className = 'account-flair-group';
+  const legend = document.createElement('legend');
+  legend.textContent = t('account.flair', {}, locale);
+  group.append(legend);
+
+  const options = document.createElement('div');
+  options.className = 'account-flair-options';
+
+  const inputs: HTMLInputElement[] = [];
+  const addOption = (key: string | null, label: string, icon: HTMLElement | null) => {
+    const item = document.createElement('label');
+    item.className = 'account-flair-option';
+    item.title = label;
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'flair';
+    input.value = key ?? '';
+    input.checked = key === current;
+    inputs.push(input);
+
+    const face = document.createElement('span');
+    face.className = 'account-flair-face';
+    if (icon) face.append(icon);
+    else face.textContent = '\u2014';
+
+    // The visible label is the icon; the accessible name is the flair's name,
+    // so the radio group reads as a list of flair names rather than of blanks.
+    const name = document.createElement('span');
+    name.className = 'account-flair-name';
+    name.textContent = label;
+
+    item.append(input, face, name);
+    options.append(item);
+  };
+
+  addOption(null, t('account.flairNone', {}, locale), null);
+  for (const key of FLAIR_KEYS) {
+    addOption(key, flairLabel(key, locale), buildFlairIcon(key, { labelled: false, locale }));
+  }
+
+  group.append(options);
+
+  const help = document.createElement('p');
+  help.className = 'account-field-help';
+  help.textContent = t('account.flairHelp', {}, locale);
+
+  wrap.append(group, help);
+
+  return {
+    wrap,
+    value: () => inputs.find((input) => input.checked)?.value || null,
+    setValue: (next) => {
+      for (const input of inputs) input.checked = (input.value || null) === next;
+    },
+  };
 }
 
 function buildSettingsPanel(
