@@ -3,6 +3,8 @@
 // a compact UCI string and each position is rendered on demand. The chess
 // analogue of xiangqi-replay.ts; first used by the Chess Rules article to show
 // a full historical game.
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   boardFen,
   hiddenSquareClasses,
@@ -59,7 +61,12 @@ function uciToMove(tok: string): Move {
   return promo ? { ...move, promotion: promo } : move;
 }
 
-export function mountChessReplay(host: HTMLElement, spec: ChessReplaySpec): ChessReplayController {
+export function mountChessReplay(
+  host: HTMLElement,
+  spec: ChessReplaySpec,
+  options: { lang?: ArticleLang } = {},
+): ChessReplayController {
+  const copy = replayStepperCopy(options.lang, 'chess');
   const perspective = spec.perspective ?? 'white';
   const moves = spec.uci
     .trim()
@@ -85,7 +92,7 @@ export function mountChessReplay(host: HTMLElement, spec: ChessReplaySpec): Ches
   header.className = 'chess-replay-header';
   const players = document.createElement('div');
   players.className = 'chess-replay-players';
-  players.textContent = `${spec.white} (White) vs ${spec.black} (Black)`;
+  players.textContent = `${spec.white}${copy.firstRole} vs ${spec.black}${copy.secondRole}`;
   const eventLine = document.createElement('div');
   eventLine.className = 'chess-replay-event';
   eventLine.textContent = spec.event;
@@ -104,14 +111,14 @@ export function mountChessReplay(host: HTMLElement, spec: ChessReplaySpec): Ches
     b.textContent = label;
     return b;
   };
-  const first = mkButton('⏮', 'First move');
-  const prev = mkButton('←', 'Previous move');
+  const first = mkButton('⏮', copy.firstMove);
+  const prev = mkButton('←', copy.previousMove);
   prev.classList.add('stepper-button-prev');
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', 'Next move');
+  const next = mkButton('→', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', 'Last move');
+  const last = mkButton('⏭', copy.lastMove);
   controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
@@ -120,7 +127,7 @@ export function mountChessReplay(host: HTMLElement, spec: ChessReplaySpec): Ches
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';
-  slider.setAttribute('aria-label', 'Move');
+  slider.setAttribute('aria-label', copy.sliderLabel);
 
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
@@ -199,14 +206,14 @@ export function mountChessReplay(host: HTMLElement, spec: ChessReplaySpec): Ches
     if (index > 0) {
       plyButtons[index - 1]?.scrollIntoView({ block: 'nearest' });
     }
-    counter.textContent = index === 0 ? 'Start' : `${index} / ${total}`;
+    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
     if (index === 0) {
-      narrative.textContent = 'Step through the moves. White moves first.';
+      narrative.textContent = copy.intro;
     } else if (index === total) {
       // The last ply is usually the decisive one, so a note on it is the line
       // worth reading; keep the result alongside rather than replacing it.

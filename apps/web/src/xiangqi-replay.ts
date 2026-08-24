@@ -2,6 +2,8 @@
 // move list by replaying through the rules kernel — no per-ply SVG is shipped,
 // each position is rendered on demand. Reusable game viewer; first used by the
 // Xiangqi Rules article to show a full historical game.
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
@@ -167,7 +169,9 @@ function iccsToMove(tok: string): XiangqiMove {
 export function mountXiangqiReplay(
   host: HTMLElement,
   spec: XiangqiReplaySpec,
+  options: { lang?: ArticleLang } = {},
 ): XiangqiReplayController {
+  const copy = replayStepperCopy(options.lang, 'xiangqi');
   const perspective = spec.perspective ?? 'red';
   const moves = spec.iccs
     .trim()
@@ -189,7 +193,7 @@ export function mountXiangqiReplay(
   header.className = 'xq-replay-header';
   header.textContent = spec.title
     ? `${spec.title} · ${spec.event}`
-    : `${spec.red} (Red) vs ${spec.black} (Black) · ${spec.event}`;
+    : `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole} · ${spec.event}`;
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -204,14 +208,14 @@ export function mountXiangqiReplay(
     b.textContent = label;
     return b;
   };
-  const first = mkButton('⏮', 'First move');
-  const prev = mkButton('←', 'Previous move');
+  const first = mkButton('⏮', copy.firstMove);
+  const prev = mkButton('←', copy.previousMove);
   prev.classList.add('stepper-button-prev');
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', 'Next move');
+  const next = mkButton('→', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', 'Last move');
+  const last = mkButton('⏭', copy.lastMove);
   controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
@@ -220,7 +224,7 @@ export function mountXiangqiReplay(
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';
-  slider.setAttribute('aria-label', 'Move');
+  slider.setAttribute('aria-label', copy.sliderLabel);
 
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
@@ -231,20 +235,20 @@ export function mountXiangqiReplay(
   function render(): void {
     const lastMove = index > 0 ? moves[index - 1] : undefined;
     frame.innerHTML = boardSvg(states[index]!.board, lastMove, perspective, index);
-    counter.textContent = index === 0 ? 'Start' : `${index} / ${total}`;
+    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
     if (index === 0) {
-      narrative.textContent = 'Step through the moves. Red moves first.';
+      narrative.textContent = copy.intro;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
       const mv = moves[index - 1]!;
-      const mover = index % 2 === 1 ? 'Red' : 'Black';
-      narrative.textContent = `Move ${Math.ceil(index / 2)} · ${mover}: ${mv.from}–${mv.to}`;
+      const mover = index % 2 === 1 ? copy.first : copy.second;
+      narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
   }
 

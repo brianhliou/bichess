@@ -6,6 +6,8 @@
 // and rendered on demand by the live jieqi board renderer. Face-down pieces show as
 // backs and flip to their dealt identity on first move, exactly as in play.
 
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyJieqiMove,
   createInitialJieqiState,
@@ -45,7 +47,12 @@ function tokenToMove(tok: string): JieqiMove | null {
   return { from: m[1] as JieqiSquare, to: m[2] as JieqiSquare };
 }
 
-export function mountJieqiReplay(host: HTMLElement, spec: JieqiReplaySpec): JieqiReplayController {
+export function mountJieqiReplay(
+  host: HTMLElement,
+  spec: JieqiReplaySpec,
+  options: { lang?: ArticleLang } = {},
+): JieqiReplayController {
+  const copy = replayStepperCopy(options.lang, 'jieqi');
   installJieqiBoardStyles();
   const perspective = spec.perspective ?? 'red';
   const moves = spec.moves
@@ -72,7 +79,7 @@ export function mountJieqiReplay(host: HTMLElement, spec: JieqiReplaySpec): Jieq
   const header = document.createElement('div');
   header.className = 'xq-replay-header';
   const headerPlayers = document.createElement('div');
-  headerPlayers.textContent = `${spec.red} (Red) vs ${spec.black} (Black)`;
+  headerPlayers.textContent = `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole}`;
   const headerEvent = document.createElement('div');
   headerEvent.className = 'xq-replay-header-event';
   headerEvent.textContent = spec.event;
@@ -97,14 +104,14 @@ export function mountJieqiReplay(host: HTMLElement, spec: JieqiReplaySpec): Jieq
     b.textContent = label;
     return b;
   };
-  const first = mkButton('⏮', 'First move');
-  const prev = mkButton('←', 'Previous move');
+  const first = mkButton('⏮', copy.firstMove);
+  const prev = mkButton('←', copy.previousMove);
   prev.classList.add('stepper-button-prev');
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', 'Next move');
+  const next = mkButton('→', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', 'Last move');
+  const last = mkButton('⏭', copy.lastMove);
   controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
@@ -113,7 +120,7 @@ export function mountJieqiReplay(host: HTMLElement, spec: JieqiReplaySpec): Jieq
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';
-  slider.setAttribute('aria-label', 'Move');
+  slider.setAttribute('aria-label', copy.sliderLabel);
 
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
@@ -126,21 +133,20 @@ export function mountJieqiReplay(host: HTMLElement, spec: JieqiReplaySpec): Jieq
       getJieqiPlayerView(states[index]!, perspective),
       perspective,
     );
-    counter.textContent = index === 0 ? 'Start' : `${index} / ${total}`;
+    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
     if (index === 0) {
-      narrative.textContent =
-        'Step through the game. Red moves first; dark pieces flip as they move.';
+      narrative.textContent = copy.intro;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
       const mv = moves[index - 1]!;
-      const mover = index % 2 === 1 ? 'Red' : 'Black';
-      narrative.textContent = `Move ${Math.ceil(index / 2)} · ${mover}: ${mv.from}–${mv.to}`;
+      const mover = index % 2 === 1 ? copy.first : copy.second;
+      narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
   }
 

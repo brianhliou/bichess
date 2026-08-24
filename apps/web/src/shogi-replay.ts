@@ -1,5 +1,7 @@
 // Lightweight client-side shogi game replay. One board plus compact hands,
 // stepped through a western shogi move list by replaying the real rules kernel.
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyShogiMove,
   createInitialShogiState,
@@ -170,10 +172,6 @@ function boardSvg(
   });
 }
 
-function sideName(color: ShogiColor): string {
-  return color === 'black' ? 'Sente' : 'Gote';
-}
-
 function handKoma(
   role: ShogiHandRole,
   color: ShogiColor,
@@ -195,11 +193,13 @@ function renderHandStrip(
   hand: ShogiHand,
   color: ShogiColor,
   pointsUp: boolean,
+  labelText: string,
+  emptyText: string,
 ): void {
   host.replaceChildren();
   const label = document.createElement('span');
   label.className = 'shogi-replay-hand-label';
-  label.textContent = `${sideName(color)} hand`;
+  label.textContent = labelText;
 
   const pieces = document.createElement('span');
   pieces.className = 'shogi-replay-hand-pieces';
@@ -207,7 +207,7 @@ function renderHandStrip(
   if (entries.length === 0) {
     const empty = document.createElement('span');
     empty.className = 'shogi-replay-hand-empty';
-    empty.textContent = 'No pieces';
+    empty.textContent = emptyText;
     pieces.append(empty);
   } else {
     for (const role of entries) pieces.append(handKoma(role, color, hand[role] ?? 0, pointsUp));
@@ -215,7 +215,12 @@ function renderHandStrip(
   host.append(label, pieces);
 }
 
-export function mountShogiReplay(host: HTMLElement, spec: ShogiReplaySpec): ShogiReplayController {
+export function mountShogiReplay(
+  host: HTMLElement,
+  spec: ShogiReplaySpec,
+  options: { lang?: ArticleLang } = {},
+): ShogiReplayController {
+  const copy = replayStepperCopy(options.lang, 'shogi');
   const perspective = spec.perspective ?? 'black';
   const topColor: ShogiColor = perspective === 'black' ? 'white' : 'black';
   const bottomColor = perspective;
@@ -228,7 +233,7 @@ export function mountShogiReplay(host: HTMLElement, spec: ShogiReplaySpec): Shog
 
   const header = document.createElement('div');
   header.className = 'shogi-replay-header';
-  header.textContent = `${spec.sente} (Sente) vs ${spec.gote} (Gote) · ${spec.event}`;
+  header.textContent = `${spec.sente}${copy.firstRole} vs ${spec.gote}${copy.secondRole} · ${spec.event}`;
 
   const stack = document.createElement('div');
   stack.className = 'shogi-replay-board-stack';
@@ -250,14 +255,14 @@ export function mountShogiReplay(host: HTMLElement, spec: ShogiReplaySpec): Shog
     b.textContent = label;
     return b;
   };
-  const first = mkButton('⏮', 'First move');
-  const prev = mkButton('←', 'Previous move');
+  const first = mkButton('⏮', copy.firstMove);
+  const prev = mkButton('←', copy.previousMove);
   prev.classList.add('stepper-button-prev');
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', 'Next move');
+  const next = mkButton('→', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', 'Last move');
+  const last = mkButton('⏭', copy.lastMove);
   controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
@@ -266,7 +271,7 @@ export function mountShogiReplay(host: HTMLElement, spec: ShogiReplaySpec): Shog
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';
-  slider.setAttribute('aria-label', 'Move');
+  slider.setAttribute('aria-label', copy.sliderLabel);
 
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
@@ -278,21 +283,35 @@ export function mountShogiReplay(host: HTMLElement, spec: ShogiReplaySpec): Shog
     const state = states[index]!;
     const lastMove = index > 0 ? moves[index - 1] : undefined;
     frame.innerHTML = boardSvg(state, lastMove, perspective);
-    renderHandStrip(topHand, state.hands[topColor], topColor, false);
-    renderHandStrip(bottomHand, state.hands[bottomColor], bottomColor, true);
-    counter.textContent = index === 0 ? 'Start' : `${index} / ${total}`;
+    renderHandStrip(
+      topHand,
+      state.hands[topColor],
+      topColor,
+      false,
+      `${topColor === 'black' ? copy.first : copy.second}${copy.pocket}`,
+      copy.noPieces,
+    );
+    renderHandStrip(
+      bottomHand,
+      state.hands[bottomColor],
+      bottomColor,
+      true,
+      `${bottomColor === 'black' ? copy.first : copy.second}${copy.pocket}`,
+      copy.noPieces,
+    );
+    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
     if (index === 0) {
-      narrative.textContent = 'Step through the moves. Sente moves first.';
+      narrative.textContent = copy.intro;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
-      const mover = index % 2 === 1 ? 'Sente' : 'Gote';
-      narrative.textContent = `Move ${index} · ${mover}: ${tokens[index - 1]}`;
+      const mover = index % 2 === 1 ? copy.first : copy.second;
+      narrative.textContent = `${copy.movePrefix(index)} · ${mover}: ${tokens[index - 1]}`;
     }
   }
 

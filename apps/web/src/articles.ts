@@ -1130,21 +1130,21 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
-  if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block);
-  if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block);
-  if (block.kind === 'drop-mini-xiangqi-replay') return renderDropMiniXiangqiReplayBlock(block);
-  if (block.kind === 'fortress-xiangqi-replay') return renderFortressXiangqiReplayBlock(block);
-  if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block);
-  if (block.kind === 'chess-replay') return renderChessReplayBlock(block);
-  if (block.kind === 'crossroads-replay') return renderCrossroadsReplayBlock(block);
-  if (block.kind === 'jieqi-replay') return renderJieqiReplayBlock(block);
+  if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
+  if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
+  if (block.kind === 'drop-mini-xiangqi-replay') return renderDropMiniXiangqiReplayBlock(block, lang);
+  if (block.kind === 'fortress-xiangqi-replay') return renderFortressXiangqiReplayBlock(block, lang);
+  if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block, lang);
+  if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
+  if (block.kind === 'crossroads-replay') return renderCrossroadsReplayBlock(block, lang);
+  if (block.kind === 'jieqi-replay') return renderJieqiReplayBlock(block, lang);
   if (block.kind === 'banqi-replay') return renderBanqiReplayBlock(block, lang);
   if (block.kind === 'jungle-replay') return renderJungleReplayBlock(block, lang);
   if (block.kind === 'jungle-flip-replay') return renderJungleFlipReplayBlock(block, lang);
   return renderInteractiveBlock(block);
 }
 
-function renderChessReplayBlock(block: ChessReplayBlock): HTMLElement {
+function renderChessReplayBlock(block: ChessReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive';
   figure.dataset.pendingWidget = 'chess-replay';
@@ -1160,11 +1160,11 @@ function renderChessReplayBlock(block: ChessReplayBlock): HTMLElement {
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderCrossroadsReplayBlock(block: CrossroadsReplayBlock): HTMLElement {
+function renderCrossroadsReplayBlock(block: CrossroadsReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-crossroads';
   figure.dataset.pendingWidget = 'crossroads-replay';
@@ -1180,11 +1180,11 @@ function renderCrossroadsReplayBlock(block: CrossroadsReplayBlock): HTMLElement 
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderJieqiReplayBlock(block: JieqiReplayBlock): HTMLElement {
+function renderJieqiReplayBlock(block: JieqiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-jieqi';
   figure.dataset.pendingWidget = 'jieqi-replay';
@@ -1200,7 +1200,7 @@ function renderJieqiReplayBlock(block: JieqiReplayBlock): HTMLElement {
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
@@ -1267,7 +1267,7 @@ function renderJungleFlipReplayBlock(
   return figure;
 }
 
-function renderXiangqiReplayBlock(block: XiangqiReplayBlock): HTMLElement {
+function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'xq-replay';
@@ -1283,11 +1283,11 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock): HTMLElement {
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderMiniXiangqiReplayBlock(block: MiniXiangqiReplayBlock): HTMLElement {
+function renderMiniXiangqiReplayBlock(block: MiniXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'mxq-replay';
@@ -1303,11 +1303,11 @@ function renderMiniXiangqiReplayBlock(block: MiniXiangqiReplayBlock): HTMLElemen
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderDropMiniXiangqiReplayBlock(block: DropMiniXiangqiReplayBlock): HTMLElement {
+function renderDropMiniXiangqiReplayBlock(block: DropMiniXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className =
     'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
@@ -1324,11 +1324,11 @@ function renderDropMiniXiangqiReplayBlock(block: DropMiniXiangqiReplayBlock): HT
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderFortressXiangqiReplayBlock(block: FortressXiangqiReplayBlock): HTMLElement {
+function renderFortressXiangqiReplayBlock(block: FortressXiangqiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className =
     'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
@@ -1345,11 +1345,11 @@ function renderFortressXiangqiReplayBlock(block: FortressXiangqiReplayBlock): HT
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
-function renderShogiReplayBlock(block: ShogiReplayBlock): HTMLElement {
+function renderShogiReplayBlock(block: ShogiReplayBlock, lang?: ArticleLang): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-shogi';
   figure.dataset.pendingWidget = 'shogi-replay';
@@ -1365,7 +1365,7 @@ function renderShogiReplayBlock(block: ShogiReplayBlock): HTMLElement {
     figure.append(cap);
   }
 
-  rememberPendingMount(figure, block);
+  rememberPendingMount(figure, block, lang);
   return figure;
 }
 
@@ -1980,21 +1980,21 @@ export function mountPendingWidgets(
     } else if (block.kind === 'live-boards') {
       controllers.push(mountLiveBoards(target, block.spec));
     } else if (block.kind === 'xq-replay') {
-      controllers.push(mountXiangqiReplay(target, block.spec));
+      controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'mxq-replay') {
-      controllers.push(mountMiniXiangqiReplay(target, block.spec));
+      controllers.push(mountMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'drop-mini-xiangqi-replay') {
-      controllers.push(mountDropMiniXiangqiReplay(target, block.spec));
+      controllers.push(mountDropMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
-      controllers.push(mountFortressXiangqiReplay(target, block.spec));
+      controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'shogi-replay') {
-      controllers.push(mountShogiReplay(target, block.spec));
+      controllers.push(mountShogiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {
-      controllers.push(mountChessReplay(target, block.spec));
+      controllers.push(mountChessReplay(target, block.spec, { lang }));
     } else if (block.kind === 'crossroads-replay') {
-      controllers.push(mountCrossroadsChessReplay(target, block.spec));
+      controllers.push(mountCrossroadsChessReplay(target, block.spec, { lang }));
     } else if (block.kind === 'jieqi-replay') {
-      controllers.push(mountJieqiReplay(target, block.spec));
+      controllers.push(mountJieqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'banqi-replay') {
       controllers.push(mountBanqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'jungle-replay') {

@@ -1,6 +1,8 @@
 // Lightweight client-side Drop Mini Xiangqi replay. One 7x7 board plus both
 // reserves, stepped through a compact move list by replaying the real rules
 // kernel.
+import type { ArticleLang } from './article-i18n.js';
+import { replayStepperCopy } from './replay-stepper-copy.js';
 import {
   applyDropMiniXiangqiMove,
   createInitialDropMiniXiangqiState,
@@ -255,14 +257,12 @@ function reserveHost(labelText: string): { root: HTMLElement; pieces: HTMLElemen
   return { root, pieces };
 }
 
-function sideName(color: MiniXiangqiColor): string {
-  return color === 'red' ? 'Red' : 'Black';
-}
-
 export function mountDropMiniXiangqiReplay(
   host: HTMLElement,
   spec: DropMiniXiangqiReplaySpec,
+  options: { lang?: ArticleLang } = {},
 ): DropMiniXiangqiReplayController {
+  const copy = replayStepperCopy(options.lang, 'xiangqi');
   const perspective = spec.perspective ?? 'red';
   const topColor = oppositeMiniXiangqiColor(perspective);
   const bottomColor = perspective;
@@ -276,7 +276,7 @@ export function mountDropMiniXiangqiReplay(
   const header = document.createElement('div');
   header.className = 'xq-replay-header';
   const headerPlayers = document.createElement('div');
-  headerPlayers.textContent = `${spec.red} (Red) vs ${spec.black} (Black)`;
+  headerPlayers.textContent = `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole}`;
   const headerEvent = document.createElement('div');
   headerEvent.className = 'xq-replay-header-event';
   headerEvent.textContent = spec.event;
@@ -286,10 +286,12 @@ export function mountDropMiniXiangqiReplay(
   frame.className =
     'raw-svg-stepper-frame raw-svg-stepper-frame-xq replay-pane drop-mini-replay-frame';
   frame.style.setProperty('--xq-svg-width', `${BOARD_W + PAD * 2}px`);
-  const topReserve = reserveHost(`${sideName(topColor)} reserve`);
+  const topReserve = reserveHost(`${topColor === 'red' ? copy.first : copy.second}${copy.pocket}`);
   const board = document.createElement('div');
   board.className = 'drop-mini-replay-board';
-  const bottomReserve = reserveHost(`${sideName(bottomColor)} reserve`);
+  const bottomReserve = reserveHost(
+    `${bottomColor === 'red' ? copy.first : copy.second}${copy.pocket}`,
+  );
   frame.append(topReserve.root, board, bottomReserve.root);
 
   const controls = document.createElement('div');
@@ -302,14 +304,14 @@ export function mountDropMiniXiangqiReplay(
     b.textContent = label;
     return b;
   };
-  const first = mkButton('⏮', 'First move');
-  const prev = mkButton('←', 'Previous move');
+  const first = mkButton('⏮', copy.firstMove);
+  const prev = mkButton('←', copy.previousMove);
   prev.classList.add('stepper-button-prev');
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', 'Next move');
+  const next = mkButton('→', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', 'Last move');
+  const last = mkButton('⏭', copy.lastMove);
   controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
@@ -318,7 +320,7 @@ export function mountDropMiniXiangqiReplay(
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';
-  slider.setAttribute('aria-label', 'Move');
+  slider.setAttribute('aria-label', copy.sliderLabel);
 
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
@@ -333,19 +335,19 @@ export function mountDropMiniXiangqiReplay(
     board.innerHTML = boardSvg(state.board, lastMove, perspective, index);
     fillDropMiniXiangqiReserve(topReserve.pieces, view, topColor);
     fillDropMiniXiangqiReserve(bottomReserve.pieces, view, bottomColor);
-    counter.textContent = index === 0 ? 'Start' : `${index} / ${total}`;
+    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
     if (index === 0) {
-      narrative.textContent = 'Step through the moves. Red moves first.';
+      narrative.textContent = copy.intro;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
-      const mover = index % 2 === 1 ? 'Red' : 'Black';
-      narrative.textContent = `Move ${Math.ceil(index / 2)} · ${mover}: ${tokens[index - 1]}`;
+      const mover = index % 2 === 1 ? copy.first : copy.second;
+      narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${tokens[index - 1]}`;
     }
   }
 
