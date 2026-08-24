@@ -79,6 +79,7 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      '/blog/how-puzzle-mining-works',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
       '/blog/fog-openings',
