@@ -74,3 +74,51 @@ describe('seen-set capacity', () => {
     expect(reloaded.has(`puzzle-${CORPUS - 1}`)).toBe(true);
   });
 });
+
+describe('bounded explore', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the explore pick near the viewer rating instead of anywhere in the pool', () => {
+    // The explore pick ignores rating scoring on purpose. Drawing it uniformly
+    // was harmless while every puzzle shared one of four depth-derived
+    // ratings; once a real difficulty prior spread them across 1255-2600 it
+    // started handing a 1300-rated viewer a 2600 puzzle.
+    const near = Array.from({ length: 20 }, (_, i) => puzzle(`near-${i}`, 1300 + i, 'fork'));
+    const wild = Array.from({ length: 20 }, (_, i) => puzzle(`wild-${i}`, 2400 + i, 'mate'));
+
+    // Sweep the random draw across its whole range so the assertion does not
+    // depend on one lucky value.
+    const picked = new Set<string>();
+    for (let r = 0; r < 1; r += 0.05) {
+      vi.spyOn(Math, 'random').mockReturnValue(r);
+      for (const p of rotatePuzzleOrder(
+        [...near, ...wild],
+        new Map(),
+        new Map([['xiangqi', 1300]]),
+      )) {
+        picked.add(p.id);
+      }
+      vi.restoreAllMocks();
+    }
+    // Everything still appears -- this bounds WHERE the explore pick draws
+    // from, it does not remove puzzles from the queue.
+    expect(picked.size).toBe(40);
+
+    // With a 1300 target, the first several picks must all come from the near
+    // band: the four scored picks by rating, and the 5th by the explore window.
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    const ordered = rotatePuzzleOrder([...near, ...wild], new Map(), new Map([['xiangqi', 1300]]));
+    const firstTen = ordered.slice(0, 10);
+    expect(firstTen.every(({ id }) => id.startsWith('near-'))).toBe(true);
+  });
+
+  it('widens the window when nothing sits near the target', () => {
+    // A viewer far outside the corpus still gets variety, from the closest
+    // band available rather than nothing.
+    const only = Array.from({ length: 10 }, (_, i) => puzzle(`only-${i}`, 2400 + i, 'mate'));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const ordered = rotatePuzzleOrder(only, new Map(), new Map([['xiangqi', 1000]]));
+    expect(ordered).toHaveLength(10);
+    expect(new Set(ordered.map(({ id }) => id)).size).toBe(10);
+  });
+});

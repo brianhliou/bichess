@@ -69,6 +69,38 @@ export function rotatePuzzleOrder(
   return [...adaptive, ...seenList];
 }
 
+// The explore pick deliberately ignores the rating match, so that a queue is not
+// a monotone run of near-identical puzzles. It used to draw uniformly from the
+// whole pool, which was harmless while every puzzle carried one of four
+// depth-derived ratings -- "random" and "well matched" were the same draw. Once
+// puzzles got a real difficulty prior the ratings spread across 1255-2600, and
+// the same line started handing a 1300-rated player a 2600 puzzle: 35% of the
+// pool sits more than 500 points from that target.
+//
+// So explore inside a window instead. Widen it when the band is empty rather
+// than giving up, because a viewer far from the bulk of the corpus should still
+// get variety -- just the closest variety available, not the whole range.
+const EXPLORE_WINDOWS = [300, 600, 1200] as const;
+
+function exploreIndex(
+  remaining: readonly { puzzle: PuzzleSummary }[],
+  targetRating: number,
+): number {
+  for (const window of EXPLORE_WINDOWS) {
+    const withinBand: number[] = [];
+    for (let index = 0; index < remaining.length; index += 1) {
+      if (Math.abs(remaining[index]!.puzzle.rating - targetRating) <= window)
+        withinBand.push(index);
+    }
+    if (withinBand.length > 0) {
+      return withinBand[Math.floor(Math.random() * withinBand.length)]!;
+    }
+  }
+  // Nothing anywhere near the target: fall back to the old uniform draw rather
+  // than refusing to explore.
+  return Math.floor(Math.random() * remaining.length);
+}
+
 function adaptivePuzzleOrder(
   puzzles: readonly PuzzleSummary[],
   targetRating: number,
@@ -79,7 +111,7 @@ function adaptivePuzzleOrder(
     const explore = ordered.length % 5 === 4;
     let selectedIndex = 0;
     if (explore) {
-      selectedIndex = Math.floor(Math.random() * remaining.length);
+      selectedIndex = exploreIndex(remaining, targetRating);
     } else {
       const recentThemes = new Set(
         ordered.slice(-2).flatMap((puzzle) => puzzle.themes.slice(0, 1)),
