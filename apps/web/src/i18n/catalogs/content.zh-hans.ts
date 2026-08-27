@@ -254,8 +254,7 @@ export const ZH_HANS_CONTENT = {
   'patron.intro':
     'Mistboard 是一个独立、无广告的项目。核心的对弈与学习功能始终免费。如果它对你有价值，赞助能帮忙付服务器的钱，也能让这项工作继续下去。',
   'patron.perkTitle': '赞助包含什么',
-  'patron.perk':
-    '赞助者的资料页上会有一个小爪印徽章。赞助不解锁功能，也不带来对局上的优势。今后可能会有单独收费的工具或产品。',
+  'patron.perk': '赞助者的资料页上会有一个小爪印徽章。赞助不解锁功能，也不带来对局上的优势。',
   'patron.supportLine': 'Mistboard 是一个人的项目，你的支持能起很大作用。',
   'patron.chooseTitle': '选择金额',
   'patron.monthlySuffix': '/ 月',
@@ -269,7 +268,7 @@ export const ZH_HANS_CONTENT = {
   'patron.checkoutError': '发起结账时出了问题，请重试。',
   'patron.transparencyTitle': '这些钱用在哪里',
   'patron.transparency':
-    '赞助用来支付托管开销（服务器、数据库和带宽），以及继续开发的时间。Mistboard 由一个人运营。',
+    'Mistboard 每月的运营开销约为 22 美元：服务器、数据库和带宽。赞助用来覆盖这部分开销，以及继续开发的时间。Mistboard 由一个人运营。',
   'patron.faqTitle': '常见问题',
   'patron.faqPerkQuestion': '有赞助者专属的内容吗？',
   'patron.faqPerkAnswer':
@@ -278,13 +277,13 @@ export const ZH_HANS_CONTENT = {
   'patron.faqTaxAnswer': '不可以。Mistboard 不是注册慈善机构，赞助不能抵税。',
   'patron.faqCancelQuestion': '怎样取消或调整我的赞助？',
   'patron.faqCancelAnswer':
-    '随时可以从本页打开账单管理页面来调整金额或取消。周期性赞助会在当前周期结束时停止。',
+    '随时可以从本页打开账单管理页面来调整金额或取消。周期性赞助会在当前周期结束时停止。如果扣款有误，或者你想要回最近一笔付款，请在扣款后 30 天内联系我们，我们会退款。',
   'patron.termsPrefix': '扣款、取消和退款的规定见',
   'patron.termsLink': '使用条款',
   'patron.termsSuffix': '。',
   'contribute.heading': '参与贡献',
   'contribute.intro':
-    'Mistboard 是免费开源的，由一个小团队公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
+    'Mistboard 是免费开源的，由一个人公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
   'contribute.playHeading': '下棋并给出反馈',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。',

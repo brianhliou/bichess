@@ -254,8 +254,7 @@ export const ZH_HANT_CONTENT = {
   'patron.intro':
     'Mistboard 是一個獨立、無廣告的專案。核心的對弈與學習功能始終免費。如果它對你有價值，贊助能幫忙付伺服器的錢，也能讓這項工作繼續下去。',
   'patron.perkTitle': '贊助包含什麼',
-  'patron.perk':
-    '贊助者的資料頁上會有一個小爪印徽章。贊助不解鎖功能，也不帶來對局上的優勢。今後可能會有單獨收費的工具或產品。',
+  'patron.perk': '贊助者的資料頁上會有一個小爪印徽章。贊助不解鎖功能，也不帶來對局上的優勢。',
   'patron.supportLine': 'Mistboard 是一個人的專案，你的支持能起很大作用。',
   'patron.chooseTitle': '選擇金額',
   'patron.monthlySuffix': '/ 月',
@@ -269,7 +268,7 @@ export const ZH_HANT_CONTENT = {
   'patron.checkoutError': '發起結帳時出了問題，請重試。',
   'patron.transparencyTitle': '這些錢用在哪裡',
   'patron.transparency':
-    '贊助用來支付託管開銷（伺服器、資料庫和頻寬），以及繼續開發的時間。Mistboard 由一個人營運。',
+    'Mistboard 每月的營運開銷約為 22 美元：伺服器、資料庫和頻寬。贊助用來涵蓋這部分開銷，以及繼續開發的時間。Mistboard 由一個人營運。',
   'patron.faqTitle': '常見問題',
   'patron.faqPerkQuestion': '有贊助者專屬的內容嗎？',
   'patron.faqPerkAnswer':
@@ -278,13 +277,13 @@ export const ZH_HANT_CONTENT = {
   'patron.faqTaxAnswer': '不可以。Mistboard 不是註冊慈善機構，贊助不能抵稅。',
   'patron.faqCancelQuestion': '怎樣取消或調整我的贊助？',
   'patron.faqCancelAnswer':
-    '隨時可以從本頁打開帳單管理頁面來調整金額或取消。週期性贊助會在當前週期結束時停止。',
+    '隨時可以從本頁打開帳單管理頁面來調整金額或取消。週期性贊助會在當前週期結束時停止。如果扣款有誤，或者你想要回最近一筆付款，請在扣款後 30 天內聯絡我們，我們會退款。',
   'patron.termsPrefix': '扣款、取消和退款的規定見',
   'patron.termsLink': '使用條款',
   'patron.termsSuffix': '。',
   'contribute.heading': '參與貢獻',
   'contribute.intro':
-    'Mistboard 是免費開源的，由一個小團隊公開開發。要做的事還有很多，無論你寫不寫程式，都有很多種幫忙的方式。',
+    'Mistboard 是免費開源的，由一個人公開開發。要做的事還有很多，無論你寫不寫程式，都有很多種幫忙的方式。',
   'contribute.playHeading': '下棋並給出回饋',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然後告訴我們哪裡壞了、哪裡彆扭。真實對局暴露規則漏洞、含糊之處和缺失功能的速度，比任何其他方式都快。',
