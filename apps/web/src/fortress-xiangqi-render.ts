@@ -13,6 +13,20 @@ import {
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
+import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+} from './xiangqi-board-surface.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -55,8 +69,33 @@ const HIT_HALF = 31;
 // --board-corner-radius like every other board.
 
 type Palace = { fileLo: number; fileHi: number; rankLo: number; rankHi: number };
+// Storm the Fortress is a 7x8 xiangqi-shaped board, so it takes the shared
+// surface: that is what lets the board appearance preferences reach it, since
+// 'Square grid' is a different way of drawing the board rather than a flag.
+// Its river is a TINTED BAND rather than a caption and its palace bands carry
+// their own class, so those stay local for the intersection layout; the square
+// grid uses the shared ones, which is where the tinted cells are the cue.
+const FXQ_GEO: XiangqiBoardGeometry = {
+  fileCount: FILES,
+  rankCount: RANKS,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: Math.round(CELL / 5),
+};
+let activeLayout: XiangqiBoardLayout = 'intersection';
 const RED_PALACE: Palace = { fileLo: 0, fileHi: 2, rankLo: 1, rankHi: 3 };
 const BLACK_PALACE: Palace = { fileLo: 4, fileHi: 6, rankLo: 6, rankHi: 8 };
+const FXQ_SURFACE: XiangqiSurfaceConfig = {
+  geo: FXQ_GEO,
+  palaces: [RED_PALACE, BLACK_PALACE].map((p) => ({
+    fileMin: p.fileLo,
+    fileMax: p.fileHi,
+    rankMin: p.rankLo,
+    rankMax: p.rankHi,
+  })),
+  // No caption: this board's river is drawn as a tinted band, below.
+  riverAfterRank: 4,
+};
 
 export type FortressXiangqiBoardRenderOptions = {
   arrows?: readonly FortressXiangqiBoardArrow[];
@@ -71,6 +110,8 @@ export type FortressXiangqiBoardRenderOptions = {
   blockedSquares?: readonly FortressXiangqiSquare[];
   pieceSet?: XiangqiPieceSet;
   draggingFrom?: FortressXiangqiSquare | null;
+  /** Override the stored board-layout preference (tests, previews). */
+  layout?: XiangqiBoardLayout;
 };
 
 export interface FortressXiangqiBoardArrow extends SvgBoardArrowStyle {
@@ -94,12 +135,16 @@ export function renderFortressXiangqiBoardSvg(
 ): string {
   const pieceSet = options.pieceSet ?? readStoredXiangqiPieceSet();
   const targets = options.targets ?? [];
+  const layout = options.layout ?? readStoredXiangqiBoardLayout();
+  activeLayout = layout;
+  const vb = xiangqiBoardViewBox(layout, FXQ_GEO);
+  const cell = layout === 'cell';
   return `
-    <svg class="fxq-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
-      <rect class="fxq-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
-      ${riverBand(perspective)}
-      ${palaceBands(perspective)}
-      <g class="fxq-grid">${gridLines()}${palaceCrosses(perspective)}</g>
+    <svg class="fxq-board fxq-board--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
+      ${cell ? '' : `<rect class="fxq-board-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>`}
+      ${cell ? xiangqiSurfaceRiver(FXQ_SURFACE, perspective, layout) : riverBand(perspective)}
+      ${cell ? xiangqiSurfacePalaceBands(FXQ_SURFACE, perspective, layout) : palaceBands(perspective)}
+      <g class="fxq-grid">${xiangqiSurfaceGrid(FXQ_SURFACE, layout)}${xiangqiSurfacePalace(FXQ_SURFACE, perspective, layout)}</g>
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
@@ -188,36 +233,6 @@ export function renderFortressXiangqiPieceInline(
   });
 }
 
-function gridLines(): string {
-  const parts: string[] = [];
-  const left = MARGIN;
-  const right = MARGIN + (FILES - 1) * CELL;
-  const top = MARGIN;
-  const bottom = MARGIN + (RANKS - 1) * CELL;
-  // Horizontal lines span the full width, including the two banks that bound
-  // the river (grid rows 3 and 4 on an 8-rank board).
-  for (let r = 0; r < RANKS; r += 1) {
-    const y = MARGIN + r * CELL;
-    parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`);
-  }
-  // The river band occupies the cell-row between grid rows 3 and 4 (the middle
-  // of the board, perspective-independent). Interior vertical lines break at
-  // the river as on a real xiangqi board; only the two outer files run
-  // edge-to-edge, forming the continuous board frame.
-  const riverTop = MARGIN + 3 * CELL;
-  const riverBottom = MARGIN + 4 * CELL;
-  for (let f = 0; f < FILES; f += 1) {
-    const x = MARGIN + f * CELL;
-    if (f === 0 || f === FILES - 1) {
-      parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"/>`);
-    } else {
-      parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}"/>`);
-      parts.push(`<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}"/>`);
-    }
-  }
-  return parts.join('');
-}
-
 // The river sits between ranks 4 and 5 — a tinted band across the middle.
 function riverBand(perspective: FortressXiangqiColor): string {
   const top = intersection(0, perspective === 'red' ? 5 : 4, perspective);
@@ -247,19 +262,6 @@ function palaceRect(
     width: Math.abs(b.x - a.x),
     height: Math.abs(b.y - a.y),
   };
-}
-
-function palaceCrosses(perspective: FortressXiangqiColor): string {
-  const parts: string[] = [];
-  for (const palace of [RED_PALACE, BLACK_PALACE]) {
-    const a = intersection(palace.fileLo, palace.rankLo, perspective);
-    const b = intersection(palace.fileHi, palace.rankHi, perspective);
-    const c = intersection(palace.fileHi, palace.rankLo, perspective);
-    const d = intersection(palace.fileLo, palace.rankHi, perspective);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`);
-  }
-  return parts.join('');
 }
 
 function pieceLayer(
@@ -479,11 +481,9 @@ function intersection(
   file: number,
   rank: number,
   perspective: FortressXiangqiColor,
+  layout: XiangqiBoardLayout = activeLayout,
 ): { x: number; y: number } {
-  return {
-    x: MARGIN + displayFileFor(file, perspective) * CELL,
-    y: MARGIN + displayRankFor(rank, perspective) * CELL,
-  };
+  return xiangqiBoardPoint(file, rank, perspective, layout, FXQ_GEO);
 }
 
 // Black views the board rotated 180 degrees (BOTH axes flipped), so each side's
