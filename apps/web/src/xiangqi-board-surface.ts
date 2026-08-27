@@ -16,6 +16,7 @@
 // are config, not constants: fortress is a 7x8 board and does not share
 // xiangqi's palace coordinates.
 
+import './xiangqi-board-surface.css';
 import type { XiangqiColor } from '@mistboard/game';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-geometry.js';

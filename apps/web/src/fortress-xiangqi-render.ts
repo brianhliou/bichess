@@ -140,11 +140,17 @@ export function renderFortressXiangqiBoardSvg(
   const vb = xiangqiBoardViewBox(layout, FXQ_GEO);
   const cell = layout === 'cell';
   return `
-    <svg class="fxq-board fxq-board--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
+    <svg class="fxq-board fxq-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
       ${cell ? '' : `<rect class="fxq-board-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>`}
-      ${cell ? xiangqiSurfaceRiver(FXQ_SURFACE, perspective, layout) : riverBand(perspective)}
-      ${cell ? xiangqiSurfacePalaceBands(FXQ_SURFACE, perspective, layout) : palaceBands(perspective)}
+      ${cell ? '' : riverBand(perspective)}
+      ${cell ? '' : palaceBands(perspective)}
+      <!-- Square grid draws the palace tint and river band AFTER the cells:
+           they are filled rects, so anything under them is invisible. The
+           intersection layout keeps its original order, where the grid is only
+           lines and the bands must sit beneath. -->
       <g class="fxq-grid">${xiangqiSurfaceGrid(FXQ_SURFACE, layout)}${xiangqiSurfacePalace(FXQ_SURFACE, perspective, layout)}</g>
+      ${cell ? xiangqiSurfaceRiver(FXQ_SURFACE, perspective, layout) : ''}
+      ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(FXQ_SURFACE, perspective, layout)}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
@@ -598,6 +604,16 @@ export function installFortressXiangqiBoardStyles(): void {
       border-radius: 10px;
       overflow: hidden;
       box-shadow: 0 18px 50px rgba(37, 31, 24, 0.16);
+    }
+    /* The square grid is a different rectangle: it spans full cells plus the
+       river gap (7*72 wide, 8*72 + 14 tall) rather than the outer intersections.
+       Both the slot aspect and the board's own aspect-ratio have to follow, or
+       the board overflows its overflow:hidden host and loses its bottom rank. */
+    :root[data-xiangqi-board-layout='cell'] .live-route--fortress-xiangqi {
+      --uni-board-aspect: calc(504 / 590);
+    }
+    :root[data-xiangqi-board-layout='cell'] .fortress-xiangqi-live-board {
+      aspect-ratio: 504 / 590;
     }
     .fortress-xiangqi-live-board--disabled {
       background: repeating-linear-gradient(135deg, #ece7dc, #ece7dc 16px, #ddd5c5 16px, #ddd5c5 32px);

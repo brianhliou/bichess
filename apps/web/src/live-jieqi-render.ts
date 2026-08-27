@@ -144,6 +144,9 @@ export function renderJieqiBoardSvg(
     layout === 'cell'
       ? ''
       : `<rect class="jieqi-board-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" rx="${BOARD_CORNER_RX}"/>`;
+  // Drawn AFTER the grid, matching the standard board. On the square grid the
+  // cells are filled rects, so anything beneath them is invisible; the tint and
+  // the river band have to sit on top to be seen at all.
   // Emitted only when they draw something. The intersection layout has neither a
   // river tint nor palace bands (the gap and the diagonals are its cues), and an
   // empty <g> would still put its class in the markup, which reads as a tint
@@ -158,11 +161,11 @@ export function renderJieqiBoardSvg(
     ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
     : '';
   return `
-    <svg class="jieqi-board jieqi-board--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
+    <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
+      <g class="jieqi-grid">${xiangqiSurfaceGrid(JIEQI_SURFACE, layout)}${xiangqiSurfacePalace(JIEQI_SURFACE, perspective, layout)}</g>
       ${river}
       ${palaceBands}
-      <g class="jieqi-grid">${xiangqiSurfaceGrid(JIEQI_SURFACE, layout)}${xiangqiSurfacePalace(JIEQI_SURFACE, perspective, layout)}</g>
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}

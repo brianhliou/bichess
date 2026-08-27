@@ -358,13 +358,24 @@ function boardSvg(
   activeLayout = layout;
   const vb = xiangqiBoardViewBox(layout, FOG_GEO);
   return `
-    <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg">
+    <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(FOG_SURFACE, perspective, layout)}</g>
       <g class="xq-live-grid">${xiangqiSurfaceGrid(FOG_SURFACE, layout)}</g>
       <g class="xq-live-palace">${xiangqiSurfacePalace(FOG_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>
+      ${layout === 'cell' ? '' : `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>`}
       <g class="xq-live-fog">${fog}</g>
+      ${
+        // The square grid's river is a 12-unit strip BETWEEN two rows of cells,
+        // so it overlaps no square and can sit above the fog: board furniture,
+        // not information. Deliberately NOT done on the intersection layout,
+        // where the "river" is the 60-unit gap between the rank 5 and rank 6
+        // lines and a piece on rank 5 occupies 27 of those units -- lifting the
+        // fog there would show the top half of every piece on that rank.
+        layout === 'cell'
+          ? `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>`
+          : ''
+      }
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
       <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
       <g class="xq-live-hints">${options.interactive ? '' : hintLayer(view, perspective, sel)}</g>

@@ -146,7 +146,7 @@ export function xiangqiBoardSvg(
   const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_GEO);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   return `
-    <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
+    <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
       <g class="xq-live-grid">${xiangqiSurfaceGrid(LIVE_BOARD_SURFACE, layout)}</g>
       <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(LIVE_BOARD_SURFACE, perspective, layout)}</g>
