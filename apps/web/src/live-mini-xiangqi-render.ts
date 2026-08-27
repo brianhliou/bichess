@@ -8,8 +8,13 @@ import {
   miniXiangqiCoordOf,
   miniXiangqiSquareOf,
 } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  BOARD_LASTMOVE_MARKER_SELECTOR,
+  boardLastMoveMarkersSvg,
+  boardLastMoveStyleAttr,
+} from './board-lastmove.js';
+import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
@@ -33,6 +38,9 @@ const RANKS = 7;
 const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
+// Shared board rounding (board-metrics), so this board's corner matches every
+// other board's at the same rendered width.
+const BOARD_CORNER_RX = boardCornerRadius(WIDTH);
 const FOG_OVERLAP = 0.5;
 
 // Monotonic source of unique fog-mask ids (see renderMiniXiangqiBoardSvg).
@@ -78,12 +86,12 @@ export function renderMiniXiangqiBoardSvg(
   const fog = showFog ? fogLayer(view, perspective, maskId) : '';
   const legalMoves = options.legalMoves ?? [];
   return `
-    <svg class="mini-xq-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dark Mini Xiangqi board">
-      <rect class="mini-xq-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="10"/>
+    <svg class="mini-xq-board"${boardLastMoveStyleAttr(pieceSize)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dark Mini Xiangqi board">
+      <rect class="mini-xq-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${BOARD_CORNER_RX}"/>
       ${palaceBands(perspective)}
       <g class="mini-xq-grid">${gridLines()}${palaceCrosses(perspective)}</g>
       <g class="mini-xq-fog">${fog}</g>
-      ${lastMoveMarkers(view, perspective)}
+      ${lastMoveMarkers(view, perspective, pieceSize)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, pieceSize)}
@@ -244,6 +252,11 @@ export function animateMiniXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Draw the destination halo on as the piece lands (forward moves only): a
+  // reverse step renders the prior move's marker at a different square.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+  }
 }
 
 function fogLayer(
@@ -298,17 +311,25 @@ function moveHints(
     .join('');
 }
 
-function lastMoveMarkers(view: MiniXiangqiPlayerView, perspective: MiniXiangqiColor): string {
+// Shared with every other token board (board-lastmove.ts). Under fog an endpoint
+// the viewer cannot see is dropped, so a partly-visible move marks only the half
+// it is entitled to.
+function lastMoveMarkers(
+  view: MiniXiangqiPlayerView,
+  perspective: MiniXiangqiColor,
+  pieceSize: number,
+): string {
   if (!view.lastMove) return '';
   const visible = new Set(view.visibleSquares);
-  return [view.lastMove.from, view.lastMove.to]
-    .filter((sq) => visible.has(sq))
-    .map((sq) => {
-      const { file, rank } = miniXiangqiCoordOf(sq);
-      const { x, y } = intersection(file, rank, perspective);
-      return `<circle class="mini-xq-last" cx="${x}" cy="${y}" r="${RING_LAST}"/>`;
-    })
-    .join('');
+  const center = (square: MiniXiangqiSquare): { x: number; y: number } | null => {
+    if (!visible.has(square)) return null;
+    const { file, rank } = miniXiangqiCoordOf(square);
+    return intersection(file, rank, perspective);
+  };
+  return boardLastMoveMarkersSvg(
+    { from: center(view.lastMove.from), to: center(view.lastMove.to) },
+    pieceSize,
+  );
 }
 
 export function miniXiangqiArrowSvg(
@@ -474,12 +495,6 @@ export function installMiniXiangqiBoardStyles(): void {
     .mini-xq-hit--target:hover .mini-xq-hint,
     .mini-xq-hit--target:hover .mini-xq-hint-capture {
       opacity: 0;
-    }
-    .mini-xq-last {
-      fill: rgba(250, 204, 21, 0.22);
-      stroke: rgba(180, 83, 9, 0.55);
-      stroke-width: 2;
-      pointer-events: none;
     }
     .mini-xq-piece {
       pointer-events: none;

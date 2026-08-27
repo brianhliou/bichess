@@ -6,7 +6,12 @@ import type {
   XiangqiPiece,
 } from '@mistboard/game';
 import { fortressXiangqiCoordOf, fortressXiangqiSquareOf } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  BOARD_LASTMOVE_MARKER_SELECTOR,
+  boardLastMoveMarkersSvg,
+  boardLastMoveStyleAttr,
+} from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -45,6 +50,9 @@ const RANKS = 8;
 const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
+// This board deliberately does NOT round its own background: perimeter clipping
+// is the host's job here (see the render test), and the host clips at the shared
+// --board-corner-radius like every other board.
 
 type Palace = { fileLo: number; fileHi: number; rankLo: number; rankHi: number };
 const RED_PALACE: Palace = { fileLo: 0, fileHi: 2, rankLo: 1, rankHi: 3 };
@@ -87,7 +95,7 @@ export function renderFortressXiangqiBoardSvg(
   const pieceSet = options.pieceSet ?? readStoredXiangqiPieceSet();
   const targets = options.targets ?? [];
   return `
-    <svg class="fxq-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
+    <svg class="fxq-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
       <rect class="fxq-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
       ${riverBand(perspective)}
       ${palaceBands(perspective)}
@@ -296,6 +304,11 @@ export function animateFortressXiangqiBoardMove(
   const from = intersection(origin.file, origin.rank, perspective);
   const to = intersection(settle.file, settle.rank, perspective);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Draw the destination halo on as the piece lands (forward moves only): a
+  // reverse step renders the prior move's marker at a different square.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+  }
 }
 
 // Render a single piece centered on (x, y). The six shared xiangqi roles go
@@ -415,20 +428,22 @@ function blockedMarks(
     .join('');
 }
 
+// Shared with every other token board (board-lastmove.ts). A drop has no origin
+// square, so it marks only the destination.
 function lastMoveMarkers(
   view: FortressXiangqiPlayerView,
   perspective: FortressXiangqiColor,
 ): string {
   const last = view.lastMove;
   if (!last) return '';
-  const squares: FortressXiangqiSquare[] = 'from' in last ? [last.from, last.to] : [last.to];
-  return squares
-    .map((sq) => {
-      const { file, rank } = fortressXiangqiCoordOf(sq);
-      const { x, y } = intersection(file, rank, perspective);
-      return `<circle class="fxq-last" cx="${x}" cy="${y}" r="${RING_LAST}"/>`;
-    })
-    .join('');
+  const center = (square: FortressXiangqiSquare): { x: number; y: number } => {
+    const { file, rank } = fortressXiangqiCoordOf(square);
+    return intersection(file, rank, perspective);
+  };
+  return boardLastMoveMarkersSvg(
+    { from: 'from' in last ? center(last.from) : null, to: center(last.to) },
+    PIECE_SIZE,
+  );
 }
 
 function hitLayer(
@@ -560,12 +575,6 @@ export function installFortressXiangqiBoardStyles(): void {
     .fxq-hit--target:hover .fxq-hint,
     .fxq-hit--target:hover .fxq-hint-capture {
       opacity: 0;
-    }
-    .fxq-last {
-      fill: rgba(250, 204, 21, 0.22);
-      stroke: rgba(180, 83, 9, 0.55);
-      stroke-width: 2;
-      pointer-events: none;
     }
     .fxq-piece {
       pointer-events: none;

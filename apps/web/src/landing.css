@@ -22,6 +22,13 @@
   /* Desktop side-rail (puzzle / players column) width. Single-sourced here so the
      grid columns and the puzzle board's derived height stay in sync. */
   --landing-rail-width: 340px;
+  /* The daily-puzzle captions ride INSIDE the widget box. Their line box and the
+     gap to the board are single-sourced here because two rules need the number:
+     the captions set their own line-height from it, and the band-2 height adds it
+     twice (once above the board, once below) so the widget still lines up with
+     the forum and chat boxes top AND bottom. */
+  --home-puzzle-caption-line: 16px;
+  --home-puzzle-caption-gap: 2px;
 
   display: grid;
   /* lichess-shaped portal in three bands. Band 1 (~the first two-thirds of the
@@ -88,13 +95,17 @@
   outline: none;
 }
 
-/* Puzzle-of-the-day widget: a flush square board box (fills the rail, top-aligned
-   to the article-row top; feed height is tuned to ~the rail so the box bottom rides
-   the support-row bottom). The board hugs the inner/center-facing edge and the drop
-   reserve stacks on the outer edge. Title/turn captions sit just outside the box. */
+/* Puzzle-of-the-day widget: caption, board, caption as one column. The two
+   captions used to be absolutely positioned OUT of the widget (bottom: 100% and
+   top: 100%), which aligned the BOARD with the forum and chat boxes and left the
+   text floating in the row gutters above and below the band. They are in flow
+   now, so the widget box is the thing that aligns and the text sits inside it.
+   The board still hugs the inner/center-facing edge with the drop reserve on the
+   outer edge. */
 .home-puzzle-widget {
-  position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: var(--home-puzzle-caption-gap, 2px);
   color: var(--site-muted);
   text-decoration: none;
 }
@@ -121,6 +132,9 @@
   justify-content: flex-start;
   gap: 6px;
   position: relative;
+  /* Hold the board's own height: it is a flex child of the widget column now, and
+     the default shrink would let the captions eat into it. */
+  flex: none;
 }
 
 /* Board fills the box HEIGHT (width follows aspect). Absolute fill so height:100%
@@ -191,28 +205,25 @@
   background: color-mix(in srgb, var(--site-panel) 58%, transparent);
 }
 
-/* Captions outside the box, right-aligned, thin + embossed (nav style), tight. */
+/* Captions inside the box, right-aligned, thin + embossed (nav style), tight.
+   The line box is pinned (not a ratio) because the desktop band-2 height is
+   derived from it: a caption that grew a pixel would push the widget past the
+   forum and chat boxes it lines up with. */
 .home-puzzle-widget-title,
 .home-puzzle-widget-turn {
-  position: absolute;
-  left: 0;
-  right: 0;
+  flex: none;
+  height: var(--home-puzzle-caption-line, 16px);
   color: var(--site-muted);
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.25;
+  line-height: var(--home-puzzle-caption-line, 16px);
   text-align: right;
 }
 
 .home-puzzle-widget-title {
-  bottom: calc(100% + 2px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.home-puzzle-widget-turn {
-  top: calc(100% + 2px);
 }
 
 :root:not([data-effective-theme="dark"]) .home-puzzle-widget-title,
@@ -251,9 +262,10 @@
 }
 
 /* Puzzle column (band 2, left): the daily puzzle. The three band-2 boxes share
-   their TOP edge (the grid's align-items: start): the puzzle's title caption is
-   absolutely positioned above its box, so the box top is the column top and the
-   forum/players boxes line up with it. */
+   their TOP edge (the grid's align-items: start). The puzzle's title caption is
+   the first row of the widget itself, so the column top IS the caption top and
+   the forum/chat boxes line up with the whole widget rather than with the bare
+   board. */
 .landing-puzzle-column {
   grid-area: puzzle;
   display: flex;
@@ -1482,17 +1494,28 @@
   max-width: 100%;
 }
 
+/* Frameless viewer: drop the .showcase-widget panel chrome on the homepage so the
+   board reads as a bare box matching the daily-puzzle box one band below (the dev
+   variant sheet keeps its frame). This used to apply only above 1241px, so on
+   phones and tablets the viewer wore a panel the puzzle never had. */
+.landing-page .landing-board-column #landing-replay {
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 .landing-page .replay-page {
   padding: 0;
   min-height: 0;
 }
 
 /* replay.ts tags its mount root .replay-page; on the chess showcase that root is
-   also the .showcase-widget panel, so `.landing-page .replay-page { padding: 0 }`
-   would strip the panel padding. Restore the shared widget padding so chess frames
-   its board exactly like the tenants (keep this in sync with .showcase-widget). */
+   also the .showcase-widget panel. The homepage viewer is frameless, so chess
+   gets the same zero inset as the tenants (the dev variant sheet, which is not
+   .landing-page, keeps .showcase-widget's own 8px). */
 .landing-page .showcase-widget.replay-page {
-  padding: 8px;
+  padding: 0;
 }
 
 .landing-page #landing-replay .replay-layout {
@@ -1500,12 +1523,15 @@
   max-width: none;
 }
 
+/* No panel means no panel inset: with the frame gone at every width (above), the
+   old padding just held the board off its own box edge. Zeroed here rather than
+   only in the desktop band, so the viewer and the puzzle box below it start at
+   the same left edge on phones too. */
 .landing-page:not(.watch-route):not(.game-route):not(.about-route):not(.learn-route):not(
-    .account-route
-  ):not(.profile-route):not(.source-route)
-  #landing-replay {
-  gap: 8px;
-  padding: clamp(6px, 0.9vw, 12px);
+  .account-route
+):not(.profile-route):not(.source-route) #landing-replay {
+  gap: 0;
+  padding: 0;
 }
 
 .landing-page:not(.watch-route):not(.game-route):not(.about-route):not(.learn-route):not(
@@ -2065,18 +2091,24 @@
 
   /* ── Band-2 equal heights ────────────────────────────────────────────────────
      The daily-puzzle board fills the rail width. A standard xiangqi board is
-     portrait (540:612), so the box is taller than the old square: derive the
-     shared band-2 height from the rail width times that ratio, and the box takes
-     it. The forum and top-players boxes read the same variable, so all three
-     band-2 boxes still align top AND bottom. The board sizes from this height and
-     its width lands flush with the rail (no pillarboxing). */
+     portrait (540:612), so the board box is the rail width times that ratio and
+     its width lands flush with the rail (no pillarboxing). The shared band-2
+     height is that board PLUS its two captions, which now sit inside the widget
+     instead of in the row gutters. The forum and chat boxes read the same
+     variable, so all three band-2 boxes align top AND bottom — the alignment is
+     of the whole widget now, caption to caption, not of the bare board. */
   .landing-demo {
-    --landing-lower-widget-height: calc(var(--landing-rail-width) * 612 / 540);
+    --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 540);
+    --landing-lower-widget-height: calc(
+      var(--landing-puzzle-board-height) +
+      (var(--home-puzzle-caption-line) + var(--home-puzzle-caption-gap)) *
+      2
+    );
   }
 
   .landing-puzzle-column .home-puzzle-box {
     width: 100%;
-    height: var(--landing-lower-widget-height);
+    height: var(--landing-puzzle-board-height);
     aspect-ratio: auto;
   }
 
@@ -2124,24 +2156,10 @@
     --showcase-widget-size: 100cqw;
   }
 
-  /* Frameless viewer: drop the .showcase-widget panel chrome on the homepage so the
-   board reads as a bare box matching the puzzle (the dev sheet keeps its frame). */
+  /* Desktop only: reserve the out-of-flow seat rows (name/clock, ~26px each).
+     The frame itself is dropped at every width by the rule near .showcase-widget. */
   .landing-page .landing-board-column #landing-replay {
-    border: none;
-    background: none;
-    box-shadow: none;
-    border-radius: 0;
-    /* Reserve the out-of-flow seat rows (name/clock, ~26px each). */
     margin-block: 28px;
-  }
-
-  /* Zero the panel padding on desktop (this selector matches the high-specificity
-   home-viewer padding rule above so it actually wins). */
-  .landing-page:not(.watch-route):not(.game-route):not(.about-route):not(.learn-route):not(
-    .account-route
-  ):not(.profile-route):not(.source-route) #landing-replay {
-    padding: 0;
-    gap: 0;
   }
 
   /* Hug the box to the inner (center-facing = right) edge of the left rail, so the

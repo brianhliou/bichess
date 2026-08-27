@@ -20,6 +20,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { BOARD_LASTMOVE_MARKER_SELECTOR, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
@@ -280,14 +281,12 @@ function lastMoveLayer(
   }
   // Origin: a darkened "the piece came from here" shadow disc. Destination: a
   // gold ring around the moved piece (this layer sits under the pieces, so only
-  // the halo outside the r=27 piece radius shows). Styling lives in
-  // live-xiangqi.css. The -from modifier carries the darker origin fill; the
-  // fog board (live-dark-xiangqi.ts) still renders plain -cell circles on both
-  // endpoints and keeps its lighter wash.
-  return (
-    `<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="${fromCenter.x}" cy="${fromCenter.y}" r="27"/>` +
-    `<circle class="xq-live-lastmove-ring" cx="${toCenter.x}" cy="${toCenter.y}" r="26"/>`
-  );
+  // the halo outside the piece radius shows). Markup + styling are shared with
+  // every other token board (board-lastmove.ts); this board is the one the
+  // proportions were tuned on, so it passes its own PIECE_SIZE and gets the
+  // canonical r=27 / r=26 back. The fog board (live-dark-xiangqi.ts) still
+  // renders plain -cell circles on both endpoints and keeps its lighter wash.
+  return boardLastMoveMarkersSvg({ from: fromCenter, to: toCenter }, PIECE_SIZE);
 }
 
 // ── Arrows (engine PV hints) ─────────────────────────────────────────────────
@@ -484,10 +483,7 @@ export function animateXiangqiBoardMove(
   // destination-cell wash. A reverse step renders the prior move's marker at a
   // different square, so fading it would not track the reverse glide.
   if (!opts.reverse) {
-    drawMarkerOnArrival(
-      host.querySelector('.xq-live-lastmove-to, .xq-live-lastmove-ring'),
-      duration,
-    );
+    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
   }
 }
 

@@ -101,12 +101,14 @@
 }
 
 .xiangqi-live-board {
-  --xq-board-radius: 16px;
+  /* One board corner for the whole site (app-base.css). Was a fixed 16px, which
+     rounded harder than every other board's ~1.9%-of-width curve and read as two
+     different corner treatments when a xiangqi board sat beside a jieqi or mini
+     one. The alias stays so the SVG below can clip itself to the same value. */
+  --xq-board-radius: var(--board-corner-radius);
   aspect-ratio: 552 / 612;
   width: 100%;
   min-height: 0;
-  /* Keep the radius in CSS pixels on both host and SVG. The painted background
-     stays full-bleed, avoiding a second curve in responsive viewBox units. */
   border-radius: var(--xq-board-radius);
   overflow: hidden;
   box-shadow: 0 18px 50px rgba(37, 31, 24, 0.16);
@@ -126,7 +128,7 @@
   height: 100%;
   /* Some shared-renderer consumers (for example the homepage puzzle) mount the
      SVG without a `.xiangqi-live-board` host, so the SVG must clip itself too. */
-  border-radius: var(--xq-board-radius, 16px);
+  border-radius: var(--xq-board-radius, var(--board-corner-radius));
   overflow: hidden;
   /* The shrouded "?" token renders as an SVG <text> node (browser-selectable
      text). Without this, dragging across the board text-highlights those "?"
@@ -214,19 +216,9 @@
   fill: var(--xq-fog-fill, rgba(36, 25, 15, 0.55));
 }
 
-.xq-live-lastmove-cell {
-  fill: #f59e0b;
-  opacity: 0.26;
-}
-
-/* Standard-board origin marker: noticeably darker than the shared -cell wash so
-   it reads as "the piece came from here" at a glance. The fog board
-   (live-dark-xiangqi.ts) renders plain -cell circles on both endpoints and
-   keeps the lighter wash above. */
-.xq-live-lastmove-cell.xq-live-lastmove-from {
-  fill: #a16207;
-  opacity: 0.34;
-}
+/* The intersection-layout marks (-cell / -from / -ring) moved to
+   board-lastmove.css on 2026-08-27 when jieqi, mini, and fortress adopted them;
+   only the square-grid rects below are still xiangqi's alone. */
 
 /* Square-grid boards use the same spatial language as Western chess boards:
    tint the complete source and destination cells instead of drawing token-sized
@@ -239,18 +231,6 @@
 
 .xq-live-lastmove-square.xq-live-lastmove-from {
   fill: rgba(161, 98, 7, 0.3);
-}
-
-/* Destination: a gold halo around the last-moved piece. Drawn under the piece
-   layer at r=29 (piece radius 27), so a ~4-unit ring shows around the disc.
-   Gold rides the shared board-highlight token (contrast/colorblind board themes
-   override it); the tight drop-shadow keeps the ring legible on the pale tan
-   board skins where flat gold would wash out. */
-.xq-live-lastmove-ring {
-  fill: none;
-  stroke: var(--board-highlight, #d6af4e);
-  stroke-width: 4;
-  filter: drop-shadow(0 0 1px rgba(70, 45, 8, 0.5));
 }
 
 /* Engine candidate arrows. The renderer paints a default blue as presentation

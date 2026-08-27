@@ -1,5 +1,11 @@
 import type { JieqiColor, JieqiMove, JieqiPlayerView, JieqiSquare } from '@mistboard/game';
-import { tokenPieceSize } from './board-metrics.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  BOARD_LASTMOVE_MARKER_SELECTOR,
+  boardLastMoveMarkersSvg,
+  boardLastMoveStyleAttr,
+} from './board-lastmove.js';
+import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -29,6 +35,9 @@ const RANKS = 10;
 const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
+// Shared board rounding (board-metrics), so this board's corner matches every
+// other board's at the same rendered width.
+const BOARD_CORNER_RX = boardCornerRadius(WIDTH);
 // The river sits between ranks 5 and 6 (display rows 4 and 5 from the top).
 const RIVER_TOP = MARGIN + 4 * CELL;
 const RIVER_BOTTOM = MARGIN + 5 * CELL;
@@ -85,8 +94,8 @@ export function renderJieqiBoardSvg(
   const pieceSet = options.pieceSet ?? readStoredXiangqiPieceSet();
   const legalMoves = options.legalMoves ?? [];
   return `
-    <svg class="jieqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
-      <rect class="jieqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="10"/>
+    <svg class="jieqi-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
+      <rect class="jieqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${BOARD_CORNER_RX}"/>
       <g class="jieqi-grid">${gridLines()}${palaceCrosses(perspective)}</g>
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
@@ -205,6 +214,9 @@ function palaceCrosses(perspective: JieqiColor): string {
   return parts.join('');
 }
 
+// Each piece is wrapped in a positioned slot keyed by its square, so the glide
+// (animateJieqiBoardMove) can find the piece that just settled. Mirrors the
+// xiangqi / mini / fortress piece layers.
 function pieceLayer(
   view: JieqiPlayerView,
   perspective: JieqiColor,
@@ -217,31 +229,61 @@ function pieceLayer(
       const dragSource = square === draggingFrom;
       const { file, rank } = jieqiCoordOf(square as JieqiSquare);
       const { x, y } = intersection(file, rank, perspective);
-      if (entry.faceDown) {
-        return renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
-          ariaLabel: `${entry.color} hidden piece`,
-          className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
-          shrouded: true,
-          shroudedStyle: 'back',
-          x: x - PIECE_SIZE / 2,
-          y: y - PIECE_SIZE / 2,
-          size: PIECE_SIZE,
-        });
-      }
-      // A revealed soldier past the river draws with the promoted-soldier art,
-      // same as the standard xiangqi board (red owns ranks 1-5, black 6-10).
-      const crossed = entry.role === 'soldier' && (entry.color === 'red' ? rank >= 6 : rank <= 5);
-      return renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
-        ariaLabel: `${entry.color} ${entry.role}`,
-        className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
-        shrouded: false,
-        x: x - PIECE_SIZE / 2,
-        y: y - PIECE_SIZE / 2,
-        size: PIECE_SIZE,
-        crossed,
-      });
+      const pieceSvg = entry.faceDown
+        ? renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
+            ariaLabel: `${entry.color} hidden piece`,
+            className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
+            shrouded: true,
+            shroudedStyle: 'back',
+            x: x - PIECE_SIZE / 2,
+            y: y - PIECE_SIZE / 2,
+            size: PIECE_SIZE,
+          })
+        : // A revealed soldier past the river draws with the promoted-soldier art,
+          // same as the standard xiangqi board (red owns ranks 1-5, black 6-10).
+          renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
+            ariaLabel: `${entry.color} ${entry.role}`,
+            className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
+            shrouded: false,
+            x: x - PIECE_SIZE / 2,
+            y: y - PIECE_SIZE / 2,
+            size: PIECE_SIZE,
+            crossed: entry.role === 'soldier' && (entry.color === 'red' ? rank >= 6 : rank <= 5),
+          });
+      return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
     })
     .join('');
+}
+
+/**
+ * Glide the piece that settled on `move.to` from its origin (or with `reverse`
+ * the piece back on `move.from`), then draw the destination halo on as it lands.
+ * Call AFTER the innerHTML swap that rendered the final position. No-op at
+ * duration 0 or when the slot is missing. The move must come from a payload the
+ * client already received (an event, a view's lastMove), never a board diff.
+ */
+export function animateJieqiBoardMove(
+  host: HTMLElement,
+  move: { from: JieqiSquare; to: JieqiSquare },
+  perspective: JieqiColor,
+  opts: { reverse?: boolean } = {},
+): void {
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settleSquare = opts.reverse ? move.from : move.to;
+  const originSquare = opts.reverse ? move.to : move.from;
+  const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
+  if (!slot) return;
+  const origin = jieqiCoordOf(originSquare);
+  const settle = jieqiCoordOf(settleSquare);
+  const from = intersection(origin.file, origin.rank, perspective);
+  const to = intersection(settle.file, settle.rank, perspective);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // A reverse step renders the PRIOR move's marker at a different square, so
+  // fading it in would not track the reverse glide.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+  }
 }
 
 function selectionRing(selection: JieqiSquare | null, perspective: JieqiColor): string {
@@ -268,15 +310,19 @@ function moveHints(
     .join('');
 }
 
+// Shared with every other token board (board-lastmove.ts): a darkened origin
+// disc and a gold halo on the destination, rather than the symmetric pair of
+// soft rings this board drew until 2026-08-27.
 function lastMoveMarkers(view: JieqiPlayerView, perspective: JieqiColor): string {
   if (!view.lastMove) return '';
-  return [view.lastMove.from, view.lastMove.to]
-    .map((sq) => {
-      const { file, rank } = jieqiCoordOf(sq);
-      const { x, y } = intersection(file, rank, perspective);
-      return `<circle class="jieqi-last" cx="${x}" cy="${y}" r="${RING_LAST}"/>`;
-    })
-    .join('');
+  const center = (square: JieqiSquare): { x: number; y: number } => {
+    const { file, rank } = jieqiCoordOf(square);
+    return intersection(file, rank, perspective);
+  };
+  return boardLastMoveMarkersSvg(
+    { from: center(view.lastMove.from), to: center(view.lastMove.to) },
+    PIECE_SIZE,
+  );
 }
 
 function hitLayer(
@@ -344,10 +390,6 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit--target:hover .jieqi-hint,
     .jieqi-hit--target:hover .jieqi-hint-capture {
       opacity: 0;
-    }
-    .jieqi-last {
-      fill: rgba(250, 204, 21, 0.22); stroke: rgba(180, 83, 9, 0.55);
-      stroke-width: 2; pointer-events: none;
     }
     .jieqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
     .jieqi-piece--drag-source { opacity: 0.34; }

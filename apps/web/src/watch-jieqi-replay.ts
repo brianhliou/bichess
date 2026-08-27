@@ -10,7 +10,11 @@ import {
   postgameReplayMaxPly,
   postgameViewAtPly,
 } from './live-jieqi-postgame.js';
-import { installJieqiBoardStyles, renderJieqiBoardSvg } from './live-jieqi-render.js';
+import {
+  animateJieqiBoardMove,
+  installJieqiBoardStyles,
+  renderJieqiBoardSvg,
+} from './live-jieqi-render.js';
 import type { ReplayHandle } from './replay.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
@@ -57,6 +61,14 @@ export function mountJieqiWatchReplay(
       viewAtPly: postgameViewAtPly,
       paneKind,
       renderBoard: (view, orientation) => renderJieqiBoardSvg(view, orientation, {}),
+      // One-ply steps glide (pieceAnimation pref): forward animates the newly
+      // rendered view's lastMove; a back step reverse-animates the move the
+      // previous ply carried. Moves come from the watch payload's views only.
+      animateMove: (boardEl, view, prevView, direction, orientation) => {
+        const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+        if (!move) return;
+        animateJieqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+      },
       // Captures are intentionally absent from the compact TV product.
       fillCaptures: () => {},
     },
