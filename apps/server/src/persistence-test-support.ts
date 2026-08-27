@@ -89,6 +89,7 @@ export function definePersistenceTests(area: string, registerTests: () => void):
            account_sessions,
            user_handle_reservations,
            forum_topic_watches,
+           forum_post_quotes,
            forum_posts,
            forum_topics,
            bot_rating_snapshots,

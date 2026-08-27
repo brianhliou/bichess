@@ -5,6 +5,10 @@ import type { PlayerTitle } from './persistence-titles.js';
 
 export type ForumTopicWritePolicy = 'account' | 'admin';
 
+// How many earlier posts one reply may link as quotes (124). A cap, not a
+// rule about the text: the body may quote more, only the first few link.
+export const MAX_QUOTED_POSTS = 5;
+
 export type ForumCategory = {
   id: string;
   slug: string;
@@ -529,6 +533,10 @@ export async function addForumPost(input: {
   authorAccountId: string;
   bodyText: string;
   now: Date;
+  // Earlier posts this reply quotes (124), as sent by the Quote button.
+  // Validated here to visible posts in the same topic; anything else is
+  // dropped silently, since the quoted text stands on its own either way.
+  quotedPostIds?: readonly string[];
 }): Promise<AddForumPostResult> {
   return withTransaction(async (client) => {
     const { rows: topics } = await client.query<{
@@ -574,6 +582,19 @@ export async function addForumPost(input: {
       topicId: input.topicId,
       now: input.now,
     });
+    const quotedPostIds = [...new Set(input.quotedPostIds ?? [])].slice(0, MAX_QUOTED_POSTS);
+    if (quotedPostIds.length > 0) {
+      await client.query(
+        `INSERT INTO forum_post_quotes (post_id, quoted_post_id, created_at)
+         SELECT $1, q.id, $4
+         FROM forum_posts q
+         WHERE q.id = ANY($2::text[])
+           AND q.topic_id = $3
+           AND q.hidden_at IS NULL
+         ON CONFLICT DO NOTHING`,
+        [input.id, quotedPostIds, input.topicId, input.now],
+      );
+    }
     const post = postFromRow(rows[0]!);
     return { ok: true, post };
   });

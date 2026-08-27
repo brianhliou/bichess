@@ -35,6 +35,7 @@ function watchedRow(overrides: Partial<ForumWatchNotification> = {}): ForumWatch
     title: 'Scouting the center',
     unread: 2,
     firstUnreadPostId: 'post_strategy_reply',
+    quote: null,
     ...overrides,
   };
 }
@@ -188,6 +189,26 @@ describe('notification nav', () => {
     ]);
     expect(snapshot.entries[0]?.href).toBe('/forum/redirect/post/post_strategy_reply');
     expect(snapshot.entries[2]?.href).toBe('/forum');
+  });
+
+  it('says who quoted you and links to the quoting post', () => {
+    const snapshot = forumNotificationSource.read(
+      counts({
+        forumTopics: 1,
+        forumWatched: [watchedRow({ unread: 3, quote: { postId: 'post_quoting', by: 'Bob' } })],
+      }),
+    );
+    expect(snapshot.entries[0]?.label).toBe('Bob quoted you in Scouting the center');
+    expect(snapshot.entries[0]?.href).toBe('/forum/redirect/post/post_quoting');
+    // A quoter whose account is gone still produces a usable row.
+    expect(
+      forumNotificationSource.read(
+        counts({
+          forumTopics: 1,
+          forumWatched: [watchedRow({ quote: { postId: 'post_quoting', by: null } })],
+        }),
+      ).entries[0]?.label,
+    ).toBe('Someone quoted you in Scouting the center');
   });
 
   it('singularizes the follower, reply and challenge rows', () => {

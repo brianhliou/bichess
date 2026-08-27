@@ -403,6 +403,7 @@ async function createPost(
     authorAccountId: user.id,
     bodyText,
     now: new Date(),
+    quotedPostIds: parseQuotedPostIds(body.quotedPostIds),
   });
   if (!result.ok) {
     writeJson(response, result.error === 'topic_not_found' ? 404 : 423, { error: result.error });
@@ -854,6 +855,22 @@ function serializeReport(report: persistence.ForumReport): ForumReportJson {
         }
       : null,
   };
+}
+
+// Quote links (124) as sent by the Quote button: ids only, deduped, capped.
+// Existence and same-topic checks happen in persistence.
+const QUOTED_POST_ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+function parseQuotedPostIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const ids: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string' || !QUOTED_POST_ID_PATTERN.test(item) || ids.includes(item)) {
+      continue;
+    }
+    ids.push(item);
+    if (ids.length >= persistence.MAX_QUOTED_POSTS) break;
+  }
+  return ids;
 }
 
 function normalizeSlug(value: string): string | null {

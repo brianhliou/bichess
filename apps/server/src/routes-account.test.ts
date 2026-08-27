@@ -142,6 +142,9 @@ definePersistenceTests('account routes', () => {
       confirmGameActions: true,
       inboxBell: true,
       correspondenceBell: true,
+      challengesBell: true,
+      forumBell: true,
+      followersBell: true,
       correspondenceDeadlineEmail: false,
     });
   });

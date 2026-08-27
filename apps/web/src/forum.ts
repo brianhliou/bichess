@@ -1279,11 +1279,46 @@ function insertPostQuote(post: ForumPost): void {
   textarea.value = nextValue.slice(0, maxLength);
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  const form = textarea.closest('form');
+  if (form) recordQuotedPost(form, post);
+}
+
+function quoteHeader(post: ForumPost): string {
+  return `> ${authorLabel(post.author)} wrote:`;
 }
 
 function quoteText(post: ForumPost): string {
   const lines = post.bodyText.split(/\r?\n/).map((line) => `> ${line}`);
-  return `> ${authorLabel(post.author)} wrote:\n${lines.join('\n')}\n\n`;
+  return `${quoteHeader(post)}\n${lines.join('\n')}\n\n`;
+}
+
+// Quote links (124): one hidden input per quoted post, carrying the header
+// line the quote inserted so submit can drop a link whose quote the writer
+// deleted again. The quoted author is told "X quoted you" from these.
+function recordQuotedPost(form: HTMLFormElement, post: ForumPost): void {
+  const existing = Array.from(
+    form.querySelectorAll<HTMLInputElement>('input[name="quotedPostIds"]'),
+  );
+  if (existing.some((input) => input.value === post.id)) return;
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'quotedPostIds';
+  input.value = post.id;
+  input.dataset.quoteHeader = quoteHeader(post);
+  form.append(input);
+}
+
+function quotedPostIdsStillInBody(form: HTMLFormElement, body: string): string[] {
+  return Array.from(form.querySelectorAll<HTMLInputElement>('input[name="quotedPostIds"]'))
+    .filter((input) => {
+      const header = input.dataset.quoteHeader ?? '';
+      return header.length > 0 && body.includes(header);
+    })
+    .map((input) => input.value);
+}
+
+function clearQuotedPosts(form: HTMLFormElement): void {
+  for (const input of form.querySelectorAll('input[name="quotedPostIds"]')) input.remove();
 }
 
 function renderPostBodyInto(body: HTMLElement, text: string): void {
@@ -1518,7 +1553,10 @@ function replyForm(topic: ForumTopicDetail, _user: AuthUser): HTMLElement {
   const submit = submitButton(t('forum.reply'), { check: true });
   // Cancel clears the draft and returns to the Write tab (the reply box is
   // always shown, so there is nothing to collapse — lichess clears the same way).
-  const cancel = forumCancelLink(() => resetBodyComposer(bodyComposer));
+  const cancel = forumCancelLink(() => {
+    resetBodyComposer(bodyComposer);
+    clearQuotedPosts(form);
+  });
   const footer = document.createElement('div');
   footer.className = 'forum-reply-footer';
   footer.append(cancel, error, submit);
@@ -1673,11 +1711,15 @@ async function submitReply(
   submit.disabled = true;
   error.textContent = '';
   const data = new FormData(form);
+  const bodyText = String(data.get('body') ?? '');
   try {
     const resp = await fetch(`/api/forum/topics/${encodeURIComponent(topic.id)}/posts`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ body: String(data.get('body') ?? '') }),
+      body: JSON.stringify({
+        body: bodyText,
+        quotedPostIds: quotedPostIdsStillInBody(form, bodyText),
+      }),
     });
     if (!resp.ok) throw new Error(errorMessageForStatus(resp.status));
     const payload = (await resp.json()) as { post: ForumPost };

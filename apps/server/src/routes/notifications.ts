@@ -32,6 +32,7 @@ export type ForumWatchNotificationJson = {
   title: string;
   unread: number;
   firstUnreadPostId: string;
+  quote: { postId: string; by: string | null } | null;
 };
 
 // The bell payload: every count, plus the per-topic rows behind forumTopics

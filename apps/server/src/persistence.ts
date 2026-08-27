@@ -163,6 +163,7 @@ export {
   listForumReports,
   listForumTopics,
   listLatestForumPosts,
+  MAX_QUOTED_POSTS,
   moderateForumTopic,
   moveForumTopic,
   resolveForumReport,

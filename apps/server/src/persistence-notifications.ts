@@ -52,6 +52,10 @@ export type ForumWatchNotification = {
   // The oldest unread reply: the bell row deep-links to it through the post
   // redirect route, so one click lands where the reader left off.
   firstUnreadPostId: string;
+  // The newest unread post that quotes one of this user's posts (124), with
+  // the quoter's display name (null if that account is gone). When set, the
+  // row says "X quoted you" and links to the quoting post instead.
+  quote: { postId: string; by: string | null } | null;
 };
 
 export type UnreadWatchedForumTopics = {
@@ -66,12 +70,14 @@ export type UnreadWatchedForumTopics = {
 // stays; a thread the user walked away from simply stops asking for them.
 export const FORUM_UNREAD_WINDOW_DAYS = 30;
 
-// Replies by other people in the topics this user watches (123), grouped per
-// topic. A reply is unread when it postdates BOTH the bell watermark (opening
-// the panel) and the topic's own seen_at (visiting the thread). Left out so
-// the badge never points at something the user cannot see or does not want:
-// hidden posts and topics, their own posts, replies from accounts they block,
-// and anything older than the window.
+// Unread forum activity for this user, grouped per topic, from two sources:
+// replies by other people in topics they watch (123), and posts anywhere that
+// quote one of their posts (124). A quote does NOT subscribe them to the
+// thread; it is a one-off row. A post is unread when it postdates the bell
+// watermark (opening the panel) and, if the topic is watched, its seen_at
+// (visiting the thread). Left out so the badge never points at something the
+// user cannot see or does not want: hidden posts and topics, their own posts,
+// posts from accounts they block, and anything older than the window.
 export async function unreadWatchedForumTopics(
   userId: string,
   options: { limit?: number } = {},
@@ -83,31 +89,52 @@ export async function unreadWatchedForumTopics(
     title: string;
     unread: number;
     first_unread_post_id: string;
+    quote_post_id: string | null;
+    quote_by: string | null;
     total: number;
   }>(
-    `WITH unread AS (
-       SELECT t.id AS topic_id, t.slug, t.title, t.last_post_at,
-              count(*)::int AS unread,
-              (array_agg(p.id ORDER BY p.created_at ASC, p.id ASC))[1] AS first_unread_post_id
+    `WITH candidate AS (
+       SELECT p.id AS post_id, p.topic_id, p.created_at, false AS quotes_me
        FROM forum_topic_watches w
-       JOIN users u ON u.id = w.account_id
-       JOIN forum_topics t ON t.id = w.topic_id AND t.hidden_at IS NULL
-       JOIN forum_posts p ON p.topic_id = t.id
+       JOIN forum_posts p ON p.topic_id = w.topic_id AND p.created_at > w.seen_at
+       WHERE w.account_id = $1
+       UNION ALL
+       SELECT p.id, p.topic_id, p.created_at, true
+       FROM forum_post_quotes fq
+       JOIN forum_posts q ON q.id = fq.quoted_post_id AND q.author_account_id = $1
+       JOIN forum_posts p ON p.id = fq.post_id
+       LEFT JOIN forum_topic_watches w ON w.account_id = $1 AND w.topic_id = p.topic_id
+       WHERE w.topic_id IS NULL OR p.created_at > w.seen_at
+     ),
+     unread AS (
+       SELECT t.id AS topic_id, t.slug, t.title, t.last_post_at,
+              count(DISTINCT c.post_id)::int AS unread,
+              (array_agg(c.post_id ORDER BY c.created_at ASC, c.post_id ASC))[1]
+                AS first_unread_post_id,
+              (array_agg(c.post_id ORDER BY c.created_at DESC, c.post_id DESC)
+                 FILTER (WHERE c.quotes_me))[1] AS quote_post_id,
+              (array_agg(COALESCE(pu.display_name, pu.handle)
+                           ORDER BY c.created_at DESC, c.post_id DESC)
+                 FILTER (WHERE c.quotes_me))[1] AS quote_by
+       FROM candidate c
+       JOIN users u ON u.id = $1
+       JOIN forum_topics t ON t.id = c.topic_id AND t.hidden_at IS NULL
+       JOIN forum_posts p ON p.id = c.post_id
          AND p.hidden_at IS NULL
-         AND p.author_account_id IS DISTINCT FROM w.account_id
-         AND p.created_at > GREATEST(u.forum_replies_seen_at, w.seen_at)
+         AND p.author_account_id IS DISTINCT FROM $1
+         AND p.created_at > u.forum_replies_seen_at
          AND p.created_at > now() - make_interval(days => $2::int)
          AND NOT EXISTS (
            SELECT 1
            FROM user_relations b
-           WHERE b.actor_id = w.account_id
+           WHERE b.actor_id = $1
              AND b.target_id = p.author_account_id
              AND b.relation = 'block'
          )
-       WHERE w.account_id = $1
+       LEFT JOIN users pu ON pu.id = p.author_account_id
        GROUP BY t.id, t.slug, t.title, t.last_post_at
      )
-     SELECT topic_id, slug, title, unread, first_unread_post_id,
+     SELECT topic_id, slug, title, unread, first_unread_post_id, quote_post_id, quote_by,
             (count(*) OVER ())::int AS total
      FROM unread
      ORDER BY last_post_at DESC, topic_id ASC
@@ -122,6 +149,7 @@ export async function unreadWatchedForumTopics(
       title: row.title,
       unread: row.unread,
       firstUnreadPostId: row.first_unread_post_id,
+      quote: row.quote_post_id ? { postId: row.quote_post_id, by: row.quote_by } : null,
     })),
   };
 }

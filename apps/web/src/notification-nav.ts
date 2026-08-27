@@ -21,6 +21,9 @@ export type ForumWatchNotification = {
   title: string;
   unread: number;
   firstUnreadPostId: string;
+  // Set when one of the unread posts quotes the user: the row says who and
+  // links to the quoting post instead of the oldest unread reply.
+  quote: { postId: string; by: string | null } | null;
 };
 
 // Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
@@ -141,8 +144,10 @@ export const forumNotificationSource: NotificationSource = {
     const count = counts.forumTopics;
     if (count === 0) return { count: 0, entries: [] };
     const entries: NotificationEntry[] = counts.forumWatched.map((row) => ({
-      label: `${row.unread} new ${plural(row.unread, 'reply', 'replies')} in ${row.title}`,
-      href: `/forum/redirect/post/${encodeURIComponent(row.firstUnreadPostId)}`,
+      label: row.quote
+        ? `${row.quote.by ?? 'Someone'} quoted you in ${row.title}`
+        : `${row.unread} new ${plural(row.unread, 'reply', 'replies')} in ${row.title}`,
+      href: `/forum/redirect/post/${encodeURIComponent(row.quote?.postId ?? row.firstUnreadPostId)}`,
     }));
     const more = count - entries.length;
     if (more > 0) {
@@ -304,9 +309,17 @@ function readForumWatched(value: unknown): ForumWatchNotification[] {
       title: row.title,
       unread: Math.floor(row.unread),
       firstUnreadPostId: row.firstUnreadPostId,
+      quote: readQuote(row.quote),
     });
   }
   return rows;
+}
+
+function readQuote(value: unknown): ForumWatchNotification['quote'] {
+  if (!value || typeof value !== 'object') return null;
+  const quote = value as Record<string, unknown>;
+  if (typeof quote.postId !== 'string') return null;
+  return { postId: quote.postId, by: typeof quote.by === 'string' ? quote.by : null };
 }
 
 // Opening the panel is the read receipt for every watermarked source. Fires

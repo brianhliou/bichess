@@ -53,6 +53,7 @@ definePersistenceTests('forum-watches', () => {
         title: 'Cannon openings',
         unread: 1,
         firstUnreadPostId: 'fw_post_reply_one',
+        quote: null,
       },
     ]);
     // The replier's own reply is not unread for them.
@@ -185,6 +186,61 @@ definePersistenceTests('forum-watches', () => {
     });
   });
 
+  test('a quote reaches the quoted author even in a thread they do not watch, and never subscribes them', async () => {
+    const t0 = new Date('2026-08-01T00:00:00Z');
+    await makeUser('fq_quoted', 'fqquoted', t0);
+    await makeUser('fq_quoter', 'fqquoter', t0);
+    const topicId = await makeTopic('fq_quoter', 'fq_topic', 'Quote thread', at(0));
+    await reply('fq_quoted', topicId, 'fq_post_original', at(1));
+    // Replying watched the thread; step back out so only a quote can reach them.
+    await unwatchForumTopic({ accountId: 'fq_quoted', topicId });
+    await reply('fq_quoter', topicId, 'fq_post_plain', at(2));
+    assert.equal((await unreadWatchedForumTopics('fq_quoted')).total, 0);
+
+    await reply('fq_quoter', topicId, 'fq_post_quote', at(3), ['fq_post_original']);
+    const quoted = await unreadWatchedForumTopics('fq_quoted');
+    assert.equal(quoted.total, 1);
+    assert.deepEqual(quoted.topics[0], {
+      topicId,
+      slug: 'quote-thread',
+      title: 'Quote thread',
+      unread: 1,
+      firstUnreadPostId: 'fq_post_quote',
+      quote: { postId: 'fq_post_quote', by: 'fqquoter' },
+    });
+    // Being quoted is a one-off row, not a subscription.
+    assert.equal(await isWatchingForumTopic('fq_quoted', topicId), false);
+    await markNotificationsSeen('fq_quoted', 'forum-replies', at(4));
+    assert.equal((await unreadWatchedForumTopics('fq_quoted')).total, 0);
+
+    // Watched AND quoted: still one row, the quote wins the label, and the
+    // per-topic receipt clears both.
+    assert.equal((await watchForumTopic({ accountId: 'fq_quoted', topicId, now: at(4) })).ok, true);
+    await reply('fq_quoter', topicId, 'fq_post_more', at(5));
+    await reply('fq_quoter', topicId, 'fq_post_quote_two', at(6), ['fq_post_original']);
+    const both = await unreadWatchedForumTopics('fq_quoted');
+    assert.equal(both.total, 1);
+    assert.equal(both.topics[0]?.unread, 2);
+    assert.equal(both.topics[0]?.firstUnreadPostId, 'fq_post_more');
+    assert.deepEqual(both.topics[0]?.quote, { postId: 'fq_post_quote_two', by: 'fqquoter' });
+    await markForumTopicSeen({ accountId: 'fq_quoted', topicId, now: at(7) });
+    assert.equal((await unreadWatchedForumTopics('fq_quoted')).total, 0);
+
+    // Self-quotes never ring; a quote of a post from another topic links
+    // nothing; a quote from a blocked account is silent.
+    await reply('fq_quoter', topicId, 'fq_post_self', at(8), ['fq_post_plain']);
+    assert.equal((await unreadWatchedForumTopics('fq_quoter')).total, 0);
+    // (That reply is an ordinary unread one for the watcher; read it away so
+    // the next two assertions isolate the quote rules.)
+    await markForumTopicSeen({ accountId: 'fq_quoted', topicId, now: at(9) });
+    const otherTopic = await makeTopic('fq_quoter', 'fq_topic_other', 'Other thread', at(9));
+    await reply('fq_quoter', otherTopic, 'fq_post_cross', at(10), ['fq_post_original']);
+    assert.equal((await unreadWatchedForumTopics('fq_quoted')).total, 0);
+    assert.equal((await blockUser({ actorId: 'fq_quoted', targetHandle: 'fqquoter' })).ok, true);
+    await reply('fq_quoter', topicId, 'fq_post_blocked_quote', at(11), ['fq_post_original']);
+    assert.equal((await unreadWatchedForumTopics('fq_quoted')).total, 0);
+  });
+
   test('watch routes: PUT/DELETE toggle, the topic GET carries viewer state, seen is a receipt', async () => {
     const t0 = new Date('2026-08-01T00:00:00Z');
     await makeUser('fw_route_author', 'fwrouteauthor', t0);
@@ -238,6 +294,26 @@ definePersistenceTests('forum-watches', () => {
     const unwatched = await call('DELETE', `${topicUrl}/watch`, cookie);
     assert.deepEqual(JSON.parse(unwatched.body), { watching: false });
     assert.equal(await isWatchingForumTopic('fw_route_reader', topicId), false);
+
+    // Quote links ride the reply route: ids are validated, junk is dropped.
+    await reply('fw_route_reader', topicId, 'fw_route_reader_post', new Date());
+    await runSql(
+      `UPDATE forum_topic_watches SET seen_at = now() - interval '1 minute'
+       WHERE account_id = $1 AND topic_id = $2`,
+      ['fw_route_reader', topicId],
+    );
+    const authorCookie = await makeSessionCookie('fw_route_author');
+    const quoting = await callJson(
+      'POST',
+      `${topicUrl}/posts`,
+      { body: 'Quoting you.', quotedPostIds: ['fw_route_reader_post', 'nope', 42] },
+      authorCookie,
+    );
+    assert.equal(quoting.status, 201);
+    const bell = await unreadWatchedForumTopics('fw_route_reader');
+    assert.equal(bell.total, 1);
+    assert.equal(bell.topics[0]?.quote?.by, 'fwrouteauthor');
+    assert.equal(bell.topics[0]?.quote?.postId, JSON.parse(quoting.body).post.id);
   });
 });
 
@@ -291,8 +367,16 @@ async function reply(
   topicId: string,
   id: string,
   now: Date,
+  quotedPostIds?: string[],
 ): Promise<void> {
-  const posted = await addForumPost({ id, topicId, authorAccountId, bodyText: 'A reply.', now });
+  const posted = await addForumPost({
+    id,
+    topicId,
+    authorAccountId,
+    bodyText: 'A reply.',
+    now,
+    quotedPostIds,
+  });
   assert.equal(posted.ok, true);
 }
 
@@ -312,11 +396,42 @@ async function makeSessionCookie(userId: string): Promise<string> {
 }
 
 async function call(method: string, path: string, cookie?: string): Promise<ResponseCapture> {
-  const request = {
+  return dispatch(
+    {
+      method,
+      headers: cookie ? { cookie } : {},
+      async *[Symbol.asyncIterator]() {},
+    } as unknown as IncomingMessage,
     method,
-    headers: cookie ? { cookie } : {},
-    async *[Symbol.asyncIterator]() {},
-  } as unknown as IncomingMessage;
+    path,
+  );
+}
+
+async function callJson(
+  method: string,
+  path: string,
+  body: unknown,
+  cookie?: string,
+): Promise<ResponseCapture> {
+  const chunks = [Buffer.from(JSON.stringify(body))];
+  return dispatch(
+    {
+      method,
+      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+      async *[Symbol.asyncIterator]() {
+        yield* chunks;
+      },
+    } as unknown as IncomingMessage,
+    method,
+    path,
+  );
+}
+
+async function dispatch(
+  request: IncomingMessage,
+  method: string,
+  path: string,
+): Promise<ResponseCapture> {
   const capture = {
     body: '',
     status: null as number | null,
