@@ -23,6 +23,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-chess-concepts',
   'shogi',
   'how-puzzle-mining-works',
+  'titled-players',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -174,6 +175,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
+  },
+  'titled-players': {
+    title: 'Titled players are welcome here',
+    kind: 'article',
+    description:
+      'Verify a xiangqi or chess title and your badge shows next to your name across the site, along with a coach listing, a study that can reach the front page, and a place in the video library.',
   },
   'riverbank-cannon': {
     title: 'The Riverbank Cannon Problem',

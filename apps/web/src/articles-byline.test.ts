@@ -18,6 +18,25 @@ const GUEST: Article = {
 
 const ANONYMOUS: Article = { ...GUEST, slug: 'house-piece', author: undefined };
 
+// Table cells rendered through textContent until 2026-08-27, so inline markdown
+// in a cell printed its own brackets.
+const TABLED: Article = {
+  ...GUEST,
+  slug: 'tabled-piece',
+  sections: [
+    {
+      heading: 'Numbers',
+      blocks: [
+        {
+          kind: 'table',
+          headers: ['Surface', 'What you get'],
+          rows: [['Coaching', 'Publish at [/coach](/coach), **no commission**.']],
+        },
+      ],
+    },
+  ],
+};
+
 vi.mock('./articles-data.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./articles-data.js')>();
   return {
@@ -25,6 +44,7 @@ vi.mock('./articles-data.js', async (importOriginal) => {
     findArticle: (slug: string) => {
       if (slug === 'guest-piece') return GUEST;
       if (slug === 'house-piece') return ANONYMOUS;
+      if (slug === 'tabled-piece') return TABLED;
       return actual.findArticle(slug);
     },
   };
@@ -56,5 +76,17 @@ describe('guest article byline', () => {
     expect(page.querySelector('.article-meta-byline')).toBeNull();
     // The dates still render, so the meta row is not simply empty.
     expect(page.querySelector('.article-meta-dates')?.textContent).toContain('Published');
+  });
+});
+
+describe('article table cells', () => {
+  it('renders inline markdown rather than printing its brackets', async () => {
+    const { buildArticlePage } = await import('./articles.js');
+    const page = buildArticlePage('tabled-piece');
+
+    const cell = page.querySelector('.article-table tbody td:last-child');
+    expect(cell?.textContent).not.toContain('[/coach]');
+    expect(cell?.querySelector<HTMLAnchorElement>('a')?.getAttribute('href')).toBe('/coach');
+    expect(cell?.querySelector('strong')?.textContent).toBe('no commission');
   });
 });
