@@ -8,9 +8,6 @@ import type { Article } from '../types.js';
 // nowhere else does, while chess titles are better recruited by name than by
 // broadcast.
 //
-// DRAFT: renders in dev only, and the slug is in UNPUBLISHED_ARTICLE_SLUGS so
-// the server does not serve real meta for it either.
-//
 // The streamer line deliberately does NOT link /streamer: the directory is
 // empty until someone is seeded into streamers-data.ts, and sending a recruit
 // to "no streamers are listed yet" undoes the paragraph above it. Link it once
@@ -30,7 +27,7 @@ export const titledPlayersArticle: Article = {
   // current, so it stays out of the chronological blog index rather than aging
   // down it.
   showInIndex: false,
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-08-27',
   audience:
     'Titled xiangqi players (WXF, CXA, national federations) and titled chess players curious about xiangqi.',
