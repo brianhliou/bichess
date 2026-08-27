@@ -19,6 +19,11 @@ export const xiangqiArticle: Article = {
     kind: 'rules',
     playableOnMistboard: true,
     title: 'Xiangqi Rules',
+    // The h1 keeps the variant's own name (renaming variants is a product
+    // decision, not an SEO one). This carries the term English speakers
+    // actually type: "Chinese chess" appeared only once in body prose, never in
+    // the title or the description, on the page sitting at position 37.
+    seoTitle: 'Xiangqi Rules: How to Play Chinese Chess',
     summary:
       'The rules of xiangqi: palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.',
     showSummaryOnPage: false,
