@@ -578,7 +578,7 @@ function renderStudy(
     if (gamebookable && chapter.gamebook && (!study.isOwner || previewMode)) {
       const aside = document.createElement('div');
       aside.className = 'study-aside';
-      aside.append(rail(statusSpan()), buildStudyChat(study.id));
+      aside.append(rail(statusSpan(study.isOwner)), buildStudyChat(study.id));
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -592,7 +592,7 @@ function renderStudy(
 
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
-    const status = statusSpan();
+    const status = statusSpan(study.isOwner);
     let autosave: StudyAutosave | null = null;
     if (study.isOwner) {
       const updateStatus = (state: StudyAutosaveState, message: string): void => {
@@ -701,7 +701,11 @@ function renderStudy(
             chapter.root = handle.serialize();
             autosave.markDirty(chapter.root);
           }
-        : undefined,
+        : // A viewer's first move is the moment "is this being saved?" becomes a
+          // real question. Answer it then, not on arrival.
+          () => {
+            status.hidden = false;
+          },
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
@@ -749,9 +753,22 @@ export function chapterIdFromStudyPath(pathname: string, studyId: string): strin
   return match?.[1] === studyId ? match[2]! : null;
 }
 
-function statusSpan(): HTMLElement {
+/** The save-state readout in the chapter rail. Only an owner's board writes
+ *  anywhere, but a viewer's board takes moves exactly like the owner's and said
+ *  nothing about where they went, so a signed-in non-owner read their own
+ *  scratch analysis as stored on someone else's study. A viewer now gets a
+ *  readout too, held back until their first move: before that there is no
+ *  question to answer, and every visitor to a public study is a viewer. */
+function statusSpan(isOwner: boolean): HTMLElement {
   const status = document.createElement('span');
   status.className = 'study-actions__status';
+  if (!isOwner) {
+    status.dataset.state = 'viewer';
+    status.textContent = t('study.viewerNotSaved');
+    status.title = t('study.viewerNotSavedHint');
+    status.hidden = true;
+    return status;
+  }
   status.dataset.state = 'saved';
   status.textContent = t('study.saved');
   return status;

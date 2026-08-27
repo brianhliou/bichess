@@ -94,6 +94,8 @@ export const ZH_HANT_REVIEW = {
   'study.signInToCreate': '登入後建立',
   'study.firstChapter': '第一章',
   'study.saved': '已儲存',
+  'study.viewerNotSaved': '未儲存',
+  'study.viewerNotSavedHint': '本研究屬於他人。你在此走的着法僅供自行推演，不會儲存到該研究中。',
   'study.saving': '儲存中…',
   'study.editing': '編輯中…',
   'study.retrying': '連線中斷，正在重試…',

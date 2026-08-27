@@ -57,6 +57,7 @@ describe('study creator workspace', () => {
     expect(root.querySelector('.study-chapters__add')).not.toBeNull();
     expect(root.querySelector('.study-actions__name')).toBeNull();
     expect(root.querySelector('.review-rail-main .annotation-editor')).toBeNull();
+    expect(root.querySelector<HTMLElement>('.study-actions__status')?.textContent).toBe('Saved');
 
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('.review-underboard-tab')];
     expect(tabs.map((tab) => tab.textContent)).toEqual([
@@ -139,7 +140,67 @@ describe('study creator workspace', () => {
 
     await vi.waitFor(() => expect(feature?.getAttribute('aria-pressed')).toBe('true'));
     expect(feature?.getAttribute('aria-label')).toBe('Remove from Staff picks');
-    expect(root.querySelector('.study-chapters__status')?.textContent).toBe('Featured');
+    const railStatus = root.querySelector<HTMLElement>('.study-chapters__status');
+    expect(railStatus?.textContent).toBe('Featured');
+    // The admin's readout opens as the hidden viewer one; curating must reveal it.
+    expect(railStatus?.hidden).toBe(false);
+  });
+
+  it('tells a signed-in non-owner their moves are not saved to the study', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = input.toString();
+      if (url === '/api/studies/study1') {
+        return jsonResponse({
+          study: {
+            id: 'study1',
+            name: 'Someone else\u2019s study',
+            description: '',
+            visibility: 'public',
+            isOwner: false,
+            featuredAt: null,
+            canFeature: false,
+            likeCount: 0,
+            likedByViewer: false,
+          },
+          chapters: [
+            {
+              id: 'chapter1',
+              name: 'First',
+              variant: 'xiangqi',
+              orientation: 'red',
+              root: { version: 1, root: { children: [] } },
+              version: 1,
+              gamebook: false,
+            },
+          ],
+        });
+      }
+      if (url === '/api/chat/study/study1') return jsonResponse({ lines: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountStudy(root, 'study1');
+    await vi.waitFor(() => expect(root.querySelector('.review-shell--study')).not.toBeNull());
+
+    // The board takes moves (it is an analysis board) and nothing used to say
+    // where they went, so a non-owner read their scratch line as stored on
+    // someone else's study. Quiet until they touch it...
+    const status = root.querySelector<HTMLElement>('.study-actions__status');
+    expect(status).not.toBeNull();
+    expect(status?.hidden).toBe(true);
+
+    // ...then the truth, on the first move they play.
+    clickSquare(root, 'h3');
+    clickSquare(root, 'e3');
+
+    expect(status?.hidden).toBe(false);
+    expect(status?.textContent).toBe('Not saved');
+    expect(status?.dataset.state).toBe('viewer');
+    expect(status?.title).toContain('not saved to it');
+    expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false);
   });
 });
 
@@ -292,6 +353,12 @@ describe('study chapter permalinks', () => {
     expect(storage.getItem(studyDraftKey('study1', 'chapter1'))).toBeNull();
   });
 });
+
+function clickSquare(root: HTMLElement, square: string): void {
+  root
+    .querySelector(`[data-square="${square}"]`)
+    ?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

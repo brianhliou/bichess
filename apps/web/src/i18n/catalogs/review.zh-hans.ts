@@ -94,6 +94,8 @@ export const ZH_HANS_REVIEW = {
   'study.signInToCreate': '登录后创建',
   'study.firstChapter': '第一章',
   'study.saved': '已保存',
+  'study.viewerNotSaved': '未保存',
+  'study.viewerNotSavedHint': '本研究属于他人。你在此走的着法仅供自行推演，不会保存到该研究中。',
   'study.saving': '保存中…',
   'study.editing': '编辑中…',
   'study.retrying': '连接中断，正在重试…',

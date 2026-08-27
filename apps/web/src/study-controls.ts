@@ -60,10 +60,11 @@ export function buildStudyRail(
 
   const tools = document.createElement('span');
   tools.className = 'study-chapters__tools';
-  if (study.isOwner || study.canFeature) {
-    status.classList.add('study-chapters__status');
-    tools.append(status);
-  }
+  // The readout mounts for every viewer, not just writers: a viewer's copy is
+  // hidden until they move a piece, and it is the only thing on the page that
+  // says their moves are not going into someone else's study.
+  status.classList.add('study-chapters__status');
+  tools.append(status);
   if (study.canFeature) {
     const renderFeatured = (button: HTMLButtonElement): void => {
       const featured = !!study.featuredAt;
@@ -279,6 +280,9 @@ export function moveChapterId(ids: string[], chapterId: string, targetIndex: num
 }
 
 function setRailStatus(status: HTMLElement, state: string, message: string): void {
+  // An admin who does not own the study starts with the hidden viewer readout;
+  // curating is still their own write and has to report itself.
+  status.hidden = false;
   status.dataset.state = state;
   status.textContent = message;
 }

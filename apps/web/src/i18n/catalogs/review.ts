@@ -277,6 +277,9 @@ export const EN_REVIEW = {
   'study.signInToCreate': 'Sign in to create',
   'study.firstChapter': 'Chapter 1',
   'study.saved': 'Saved',
+  'study.viewerNotSaved': 'Not saved',
+  'study.viewerNotSavedHint':
+    'This study belongs to someone else. Moves you make here are yours to explore and are not saved to it.',
   'study.saving': 'Saving…',
   'study.editing': 'Editing…',
   'study.retrying': 'Connection interrupted, retrying…',
@@ -496,6 +499,8 @@ export const CRITICAL_REVIEW_I18N_KEYS = [
   'study.signInToCreate',
   'study.firstChapter',
   'study.saved',
+  'study.viewerNotSaved',
+  'study.viewerNotSavedHint',
   'study.saving',
   'study.editing',
   'study.retrying',
