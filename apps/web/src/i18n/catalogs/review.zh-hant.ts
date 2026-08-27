@@ -397,5 +397,7 @@ export const ZH_HANT_REVIEW = {
   'review.analysisBoard': '分析棋盤',
   'review.flipBoard': '翻轉棋盤',
   'review.setDefaultView': '設為預設視角',
+  'review.revealIdentities': '揭示身分',
+  'review.hideIdentities': '隱藏身分',
   'review.defaultViewSaved': '已儲存預設視角',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

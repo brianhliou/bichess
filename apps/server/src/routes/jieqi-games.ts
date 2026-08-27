@@ -7,6 +7,7 @@ import {
   type JieqiGameState,
   type JieqiMove,
   type JieqiPlayerView,
+  jieqiMaskedBoard,
   jieqiTruthView,
   oppositeJieqiColor,
 } from '@mistboard/game';
@@ -175,17 +176,25 @@ async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersis
   const created = events[0];
   if (created?.type !== 'room-created') return null;
 
-  // One replay pass, one cheap truth projection per move. The richer postgame
+  // One replay pass, two cheap projections per move. The richer postgame
   // path below replays again and builds per-color views because review may grow
   // player-knowledge POVs later; TV deliberately does neither.
+  //
+  // Two tracks, because TV shows the game as it was PLAYED: `masked` keeps a
+  // never-moved piece face-down (the default board), and `truth` is the spoiler
+  // the Reveal control swaps in. Before 2026-08-27 only `truth` shipped, so a
+  // finished game replayed on /watch and on the homepage with every identity
+  // already face-up, which the review page never did.
   let projection = replayTenantEvents(jieqiTenant, [created]);
   let ply = 0;
   const truth = [{ ply, view: jieqiWatchTruthView(projection.state) }];
+  const masked = [{ ply, view: jieqiWatchMaskedView(projection.state) }];
   for (const event of events.slice(1)) {
     projection = applyTenantEvent(jieqiTenant, projection, event);
     if (event.type !== 'move-played') continue;
     ply += 1;
     truth.push({ ply, view: jieqiWatchTruthView(projection.state) });
+    masked.push({ ply, view: jieqiWatchMaskedView(projection.state) });
   }
 
   // This check is the truth-release boundary. Never cache or return an
@@ -203,7 +212,7 @@ async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersis
     },
     timeline: jieqiPostgameTimeline(events),
     view,
-    history: { truth },
+    history: { truth, masked },
   };
 }
 
@@ -212,6 +221,13 @@ async function buildJieqiWatchPostgame(roomId: string, deps: JieqiPostgamePersis
 // keeps TV independent of the future per-player knowledge presentation.
 function jieqiWatchTruthView(state: JieqiGameState): JieqiPlayerView {
   return { ...jieqiTruthView(state), captured: [] };
+}
+
+// The as-played board for the same ply: identical envelope, masked squares. Built
+// from the shared jieqiMaskedBoard so TV hides exactly what the live per-color view
+// hid, and no legal moves are generated (this pass runs once per ply per game).
+function jieqiWatchMaskedView(state: JieqiGameState): JieqiPlayerView {
+  return { ...jieqiWatchTruthView(state), board: jieqiMaskedBoard(state) };
 }
 
 // Shared loader for the analysis tiers (both `/analysis` and `/decisions`): the per-game deal

@@ -402,6 +402,11 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  position, keeping a FEN-seeded root. Only the analysis board sets it; wiping
    *  the moves of a game that was actually played is meaningless. */
   allowClearMoves?: boolean;
+  /** Enable the menu's Reveal/Hide identities toggle, for an identity-hidden
+   *  variant whose review board is masked as-played (jieqi). The ADAPTER owns what
+   *  revealing means — this only carries the flag back to it and re-renders — so a
+   *  variant opts in by supplying the setter its own projection reads. */
+  revealHidden?: { setRevealed(next: boolean): void };
 };
 
 /** Handle returned by mountTreeReview: lets a caller snapshot the current tree
@@ -850,6 +855,22 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       label: 'Clear moves',
       icon: REVIEW_MENU_ICONS.clear,
       onClick: () => clearMoves(),
+    });
+  }
+  // Spoiler control for a masked board. The default stays masked: the review's job
+  // is to show the game as it was played, and what the loser could not see is the
+  // whole subject. Revealing is a deliberate second look, so it lives a click deep
+  // in the menu rather than on the bar.
+  if (config.revealHidden) {
+    let hiddenRevealed = false;
+    menuItems.push({
+      label: () => (hiddenRevealed ? t('review.hideIdentities') : t('review.revealIdentities')),
+      icon: REVIEW_MENU_ICONS.reveal,
+      onClick: () => {
+        hiddenRevealed = !hiddenRevealed;
+        config.revealHidden?.setRevealed(hiddenRevealed);
+        render();
+      },
     });
   }
   const controls = createReviewControls({

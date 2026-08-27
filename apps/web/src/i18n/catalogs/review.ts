@@ -420,6 +420,8 @@ export const EN_REVIEW = {
   'review.analysisBoard': 'Analysis board',
   'review.flipBoard': 'Flip board',
   'review.setDefaultView': 'Set as default view',
+  'review.revealIdentities': 'Reveal identities',
+  'review.hideIdentities': 'Hide identities',
   'review.defaultViewSaved': 'Default view saved',
 } as const;
 

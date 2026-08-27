@@ -34,7 +34,13 @@ import { buildNav } from './site-shell.js';
 // dark piece reveals when a move in a line moves it. The server per-ply snapshots are
 // used only by the watch adapter (postgameViewAtPly below).
 
-export type JieqiPostgameViewKey = JieqiColor | 'truth';
+// 'red' | 'black' are the review payload's per-color views; 'truth' is the fully
+// revealed board (and the deal seed the review reconstructs from); 'masked' is the
+// as-played board the TV/watch payload carries, where a never-moved piece is still
+// face-down. Unlike the jungle-flip watch adapter — where 'truth' IS the mask —
+// jieqi keeps 'truth' meaning fully revealed, because the review payload and
+// recoverJieqiDeal already depend on that meaning.
+export type JieqiPostgameViewKey = JieqiColor | 'truth' | 'masked';
 
 export type JieqiPostgameResponse = {
   game: {

@@ -206,7 +206,7 @@ test('Jieqi postgame history snapshots every perspective per ply', async () => {
   assert.equal(payload.history.black?.length, 2);
 });
 
-test('Jieqi watch postgame emits only capture-free server-truth history', async () => {
+test('Jieqi watch postgame emits capture-free truth AND as-played masked history', async () => {
   const payload = await jieqiWatchPostgameForApi(
     ROOM_ID,
     deps(gameRecord(), finishedCaptureEvents()),
@@ -214,9 +214,16 @@ test('Jieqi watch postgame emits only capture-free server-truth history', async 
   assert.ok(payload);
 
   assert.equal('views' in payload, false);
-  assert.deepEqual(Object.keys(payload.history), ['truth']);
+  // Two tracks since 2026-08-27. 'masked' is what TV shows by default; 'truth' is
+  // what the Reveal control swaps in. Shipping only 'truth' is what made /watch and
+  // the homepage viewer replay a finished game with every identity already face-up.
+  assert.deepEqual(Object.keys(payload.history), ['truth', 'masked']);
   assert.deepEqual(
     payload.history.truth.map((snapshot) => snapshot.ply),
+    [0, 1],
+  );
+  assert.deepEqual(
+    payload.history.masked.map((snapshot) => snapshot.ply),
     [0, 1],
   );
 
@@ -229,6 +236,44 @@ test('Jieqi watch postgame emits only capture-free server-truth history', async 
   }
   assert.deepEqual(payload.view.captured, []);
   assert.deepEqual(payload.view.legalMoves, []);
+});
+
+// ── The as-played regression assertion ──────────────────────────────────────
+test('Jieqi watch masked history keeps a never-moved piece face-down', async () => {
+  const payload = await jieqiWatchPostgameForApi(
+    ROOM_ID,
+    deps(gameRecord(), finishedCaptureEvents()),
+  );
+  assert.ok(payload);
+
+  const masked = payload.history.masked.at(-1)?.view;
+  const truth = payload.history.truth.at(-1)?.view;
+  assert.ok(masked && truth);
+
+  // Same pieces on the same squares in both tracks: the mask is a redaction of
+  // identity, never of position. Jieqi hides WHAT a piece is, not WHERE it is.
+  assert.deepEqual(Object.keys(masked.board).sort(), Object.keys(truth.board).sort());
+  assert.deepEqual(masked.legalMoves, []);
+  assert.deepEqual(masked.captured, []);
+  assert.deepEqual(masked.lastMove, truth.lastMove);
+
+  // Black never moved in this line, so every black piece but the general is still
+  // face-down — the exact case the old truth-only payload spoiled.
+  const blackH8 = masked.board.h8;
+  assert.ok(blackH8);
+  assert.equal(blackH8.faceDown, true);
+  assert.equal('role' in blackH8, false);
+  assert.deepEqual(truth.board.h8, { color: 'black', role: 'cannon', faceDown: false });
+
+  // Red's cannon moved and captured, so IT is face-up in the masked track too:
+  // the mask replays the reveals that actually happened.
+  assert.deepEqual(masked.board.b10, { color: 'red', role: 'cannon', faceDown: false });
+
+  const hidden = Object.entries(masked.board).filter(([, entry]) => entry?.faceDown === true);
+  assert.ok(hidden.length > 20, `one ply leaves most of the deal dark, got ${hidden.length}`);
+  for (const [square, entry] of hidden) {
+    assert.ok(entry && !('role' in entry), `masked ${square} carries no role`);
+  }
 });
 
 test('Jieqi postgame builds a move-and-terminal timeline', async () => {
@@ -253,6 +298,8 @@ test('Jieqi postgame returns null for an unfinished game', async () => {
 test('Jieqi watch postgame never releases truth for an unfinished game', async () => {
   const events = finishedCaptureEvents().slice(0, -1);
   const payload = await jieqiWatchPostgameForApi(ROOM_ID, deps(gameRecord(), events));
+  // Neither track: the masked board is not a licence to serve a live game, whose
+  // move list would still be a live-information leak.
   assert.equal(payload, null);
 });
 

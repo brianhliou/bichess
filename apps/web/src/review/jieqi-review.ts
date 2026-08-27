@@ -98,6 +98,17 @@ export function mountJieqiReview(
   deal: JieqiDeal,
   config: JieqiReviewConfig,
 ): JieqiReviewHandle {
-  const adapter = makeJieqiTreeAdapter(gameId, deal);
-  return mountTreeReview(root, makeJieqiPresentation(adapter), config);
+  // The postgame deal is fully known here, so revealing is a presentation switch,
+  // not a data fetch: the flag lives beside the adapter that reads it and the menu
+  // item that flips it, and nothing else in the review needs to know about it.
+  let revealAll = false;
+  const adapter = makeJieqiTreeAdapter(gameId, deal, { revealAll: () => revealAll });
+  return mountTreeReview(root, makeJieqiPresentation(adapter), {
+    ...config,
+    revealHidden: {
+      setRevealed: (next) => {
+        revealAll = next;
+      },
+    },
+  });
 }

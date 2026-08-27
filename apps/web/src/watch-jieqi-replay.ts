@@ -1,8 +1,15 @@
 // Mistboard TV renderer for Jieqi — a thin adapter over the shared tenant watch
-// renderer (watch-tenant-replay.ts). TV deliberately shows one finished-game
-// server-truth board with no captures or player-knowledge POVs. The dedicated
-// /watch payload therefore avoids the richer review endpoint's Red + Black
-// histories and historical legal-move generation.
+// renderer (watch-tenant-replay.ts). TV shows one finished-game board with no
+// captures or player-knowledge POVs. The dedicated /watch payload therefore avoids
+// the richer review endpoint's Red + Black histories and historical legal-move
+// generation.
+//
+// That board is the AS-PLAYED one ('masked'): a piece nobody ever moved is still
+// face-down, which is how the game actually looked and how the review page has
+// always rendered it. The Reveal control (and `h`) swaps in the 'truth' track —
+// the same shape watch-jungle-flip-replay uses, with jieqi's key names, since
+// jieqi's 'truth' has to keep meaning fully-revealed for the review's deal
+// recovery.
 import type { JieqiPlayerView } from '@mistboard/game';
 import {
   type JieqiPostgameResponse,
@@ -24,6 +31,8 @@ type JieqiWatchLoadResult =
   | { ok: true; postgame: JieqiPostgameResponse }
   | { ok: false; status: number };
 
+// 'masked' and 'truth' are both single, side-agnostic boards, so they share the
+// neutral pane; only the review payload's per-color keys pick a side.
 function paneKind(key: JieqiPostgameViewKey): 'white' | 'truth' | 'black' {
   if (key === 'red') return 'white';
   if (key === 'black') return 'black';
@@ -56,9 +65,15 @@ export function mountJieqiWatchReplay(
       installStyles: installJieqiBoardStyles,
       loadPostgame: loadJieqiWatchPostgame,
       maxPly: postgameReplayMaxPly,
-      // The dedicated payload contains only this finished-game truth history.
-      viewEntries: () => [{ key: 'truth', label: 'Truth' }],
-      viewAtPly: postgameViewAtPly,
+      // One pane; the reveal toggle below chooses which track fills it.
+      viewEntries: () => [{ key: 'masked', label: 'Board' }],
+      // A payload built before the masked track existed (an unrefreshed cache, a
+      // client ahead of the server) still replays — revealed, as it did before —
+      // instead of rendering a blank board when the key is missing.
+      viewAtPly: (postgame, key, ply) =>
+        postgameViewAtPly(postgame, key, ply) ??
+        (key === 'masked' ? postgameViewAtPly(postgame, 'truth', ply) : null),
+      reveal: { hiddenKey: 'masked', truthKey: 'truth' },
       paneKind,
       renderBoard: (view, orientation) => renderJieqiBoardSvg(view, orientation, {}),
       // One-ply steps glide (pieceAnimation pref): forward animates the newly

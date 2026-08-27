@@ -20,6 +20,7 @@ import {
   type JieqiPlayerView,
   type JieqiSquare,
   jieqiHomeSquares,
+  jieqiTruthView,
 } from '@mistboard/game';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
@@ -57,9 +58,23 @@ export function recoverJieqiDeal(truth: JieqiPlayerView): JieqiDeal {
   return { red: readSide('red'), black: readSide('black') };
 }
 
+function projectJieqiView(truth: JieqiGameState, revealAll: boolean): JieqiPlayerView {
+  const masked = getJieqiPlayerView(
+    truth,
+    truth.status.type === 'playing' ? truth.status.turn : 'red',
+  );
+  if (!revealAll) return masked;
+  const full = jieqiTruthView(truth);
+  return { ...masked, board: full.board, captured: full.captured };
+}
+
 export function makeJieqiTreeAdapter(
   gameId: string,
   deal: JieqiDeal,
+  // Read at PROJECTION time, not at construction: the review menu's Reveal toggle
+  // flips the caller's flag and re-renders, and the adapter picks it up on the next
+  // project() rather than being rebuilt (which would drop the tree).
+  opts: { revealAll?: () => boolean } = {},
 ): VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView> {
   return {
     mode: 'perfect-info',
@@ -72,11 +87,11 @@ export function makeJieqiTreeAdapter(
         label: 'Board',
         tier: 'primary',
         // Masked as-played view, projected for the SIDE TO MOVE so legalMoves
-        // populate for the color the board is about to play.
-        view: getJieqiPlayerView(
-          truth,
-          truth.status.type === 'playing' ? truth.status.turn : 'red',
-        ),
+        // populate for the color the board is about to play. Revealed, only the
+        // hidden knowledge changes: the board and the captured pool come from the
+        // truth while legalMoves / inCheck / status stay the side-to-move's, so
+        // the line is still playable with the spoiler on.
+        view: projectJieqiView(truth, opts.revealAll?.() === true),
       },
     ],
     // Jieqi has no flip move — every move is a board move; label as from-to.

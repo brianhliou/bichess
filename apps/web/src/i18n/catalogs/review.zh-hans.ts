@@ -397,5 +397,7 @@ export const ZH_HANS_REVIEW = {
   'review.analysisBoard': '分析棋盘',
   'review.flipBoard': '翻转棋盘',
   'review.setDefaultView': '设为默认视角',
+  'review.revealIdentities': '揭示身份',
+  'review.hideIdentities': '隐藏身份',
   'review.defaultViewSaved': '已保存默认视角',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

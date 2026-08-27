@@ -13,7 +13,10 @@ import { t } from '../i18n/catalog.js';
 import './review-controls.css';
 
 export type ReviewMenuItem = {
-  label: string;
+  /** A function for an item whose wording depends on state it toggles (Reveal /
+   *  Hide). Re-read every time the menu opens, which is enough: clicking an item
+   *  closes the overlay, so a stale label is never left on screen. */
+  label: string | (() => string);
   icon: string; // inline SVG markup
   onClick?: () => void;
 };
@@ -123,10 +126,12 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
   rightGroup.className = 'review-controls__group review-controls__group--menu';
   rightGroup.append(menuButton);
 
-  const overlay = buildMenuOverlay(opts.menuItems, () => closeMenu());
+  const menu = buildMenuOverlay(opts.menuItems, () => closeMenu());
+  const overlay = menu.el;
   el.append(left, center, rightGroup, overlay);
 
   function openMenu(): void {
+    menu.refreshLabels();
     overlay.hidden = false;
     menuButton.classList.add('review-controls__menu-button--open');
     menuButton.setAttribute('aria-expanded', 'true');
@@ -152,7 +157,10 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
   };
 }
 
-function buildMenuOverlay(items: ReviewMenuItem[], onAction: () => void): HTMLElement {
+function buildMenuOverlay(
+  items: ReviewMenuItem[],
+  onAction: () => void,
+): { el: HTMLElement; refreshLabels(): void } {
   const overlay = document.createElement('div');
   overlay.className = 'review-menu';
   overlay.hidden = true;
@@ -163,6 +171,7 @@ function buildMenuOverlay(items: ReviewMenuItem[], onAction: () => void): HTMLEl
 
   const grid = document.createElement('div');
   grid.className = 'review-menu__grid';
+  const labels: Array<{ el: HTMLElement; item: ReviewMenuItem }> = [];
   for (const item of items) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -172,7 +181,8 @@ function buildMenuOverlay(items: ReviewMenuItem[], onAction: () => void): HTMLEl
     icon.innerHTML = item.icon;
     const label = document.createElement('span');
     label.className = 'review-menu__item-label';
-    label.textContent = item.label;
+    label.textContent = menuItemLabel(item);
+    labels.push({ el: label, item });
     button.append(icon, label);
     if (item.onClick) {
       button.addEventListener('click', () => {
@@ -184,7 +194,16 @@ function buildMenuOverlay(items: ReviewMenuItem[], onAction: () => void): HTMLEl
   }
 
   overlay.append(header, grid);
-  return overlay;
+  return {
+    el: overlay,
+    refreshLabels() {
+      for (const entry of labels) entry.el.textContent = menuItemLabel(entry.item);
+    },
+  };
+}
+
+function menuItemLabel(item: ReviewMenuItem): string {
+  return typeof item.label === 'function' ? item.label() : item.label;
 }
 
 /** Icon set for the menu items, so callers don't hand-write SVG. One entry per
@@ -196,6 +215,9 @@ export const REVIEW_MENU_ICONS = {
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>',
   clear:
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/></svg>',
+  // An eye: what the board is showing you, as against what was on it.
+  reveal:
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
   // A pin: this facing stays put, as against the arrows of a one-off flip.
   pinView:
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l2 3.2H7Z"/></svg>',

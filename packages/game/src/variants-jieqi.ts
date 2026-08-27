@@ -580,7 +580,12 @@ export function jieqiTruthView(state: JieqiGameState): JieqiPlayerView {
   };
 }
 
-export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): JieqiPlayerView {
+// The board as BOTH players see it. A face-down piece hides its role from its own
+// owner too — in jieqi you learn what your piece was when you move it — so the
+// masking rule is POV-free and the only per-color redaction is the captured pool.
+// Shared so the postgame spectator projection (TV/watch) masks by the SAME rule the
+// live per-color view does, rather than restating it and drifting from it.
+export function jieqiMaskedBoard(state: JieqiGameState): JieqiPlayerBoard {
   const board: JieqiPlayerBoard = {};
   for (const [sq, piece] of Object.entries(state.board)) {
     if (!piece) continue;
@@ -588,6 +593,11 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
       ? { color: piece.color, faceDown: true }
       : { color: piece.color, role: piece.role, faceDown: false };
   }
+  return board;
+}
+
+export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): JieqiPlayerView {
+  const board = jieqiMaskedBoard(state);
 
   // Capturer-only reveal: a captured role is known to the capturer, or if it was
   // already face-up when captured. The former owner of a still-dark piece never
