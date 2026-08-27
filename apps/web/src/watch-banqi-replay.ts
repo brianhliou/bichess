@@ -13,7 +13,11 @@ import {
   postgameViewAtPly,
   postgameViewEntries,
 } from './live-banqi-postgame.js';
-import { installBanqiBoardStyles, renderBanqiBoardSvg } from './live-banqi-render.js';
+import {
+  animateBanqiBoardMove,
+  installBanqiBoardStyles,
+  renderBanqiBoardSvg,
+} from './live-banqi-render.js';
 import type { ReplayHandle } from './replay.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
@@ -44,6 +48,13 @@ export function mountBanqiWatchReplay(
       paneKind,
       // Symmetric board: no fog/perspective to apply.
       renderBoard: (view, orientation) => renderBanqiBoardSvg(view, orientation),
+      // One-ply steps glide: forward animates the newly rendered view's lastMove,
+      // a back step reverse-animates the move the previous ply carried.
+      animateMove: (boardEl, view, prevView, direction) => {
+        const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+        if (!move) return;
+        animateBanqiBoardMove(boardEl, move, { reverse: direction === 'back' });
+      },
       fillCaptures: (host, view, owner) => fillCapturedPool(host, view.captured, owner),
       // Banqi seats (first/second mover) are decoupled from ink; the recorded
       // result is seat-keyed, so translate it to the bound ink for display.

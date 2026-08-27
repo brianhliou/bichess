@@ -26,6 +26,7 @@ import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
+  animateJieqiBoardMove,
   installJieqiBoardStyles,
   JIEQI_PIECE_PX,
   jieqiPieceGhostSvg,
@@ -142,6 +143,30 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     pveEngineId = null;
   },
   renderBoard,
+  // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
+  // move already re-rendered synchronously at input time, so animating the server
+  // echo would double-play it. Scrubs glide the stepped-into move forward and
+  // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
+  // drag ghost. A jieqi move may also REVEAL the piece it moves; the glide
+  // carries whatever the final render put on the destination square, so the
+  // reveal lands with the piece rather than ahead of it.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view || draggingFrom) return;
+    const pending = takePendingAnimation();
+    if (!pending) return;
+    const perspective = orientationFor(view);
+    if (pending.kind === 'live') {
+      if (pending.color === core?.state.seat) return;
+      animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      return;
+    }
+    if (pending.direction === 'forward') {
+      if (view.lastMove) animateJieqiBoardMove(liveRefs.board, view.lastMove, perspective);
+      return;
+    }
+    const undone = pending.prevView?.lastMove;
+    if (undone) animateJieqiBoardMove(liveRefs.board, undone, perspective, { reverse: true });
+  },
   renderExtras: (refs, view) => renderCapturedPools(refs, view),
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
