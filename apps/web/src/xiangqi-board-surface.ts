@@ -19,7 +19,11 @@
 import './xiangqi-board-surface.css';
 import type { XiangqiColor } from '@mistboard/game';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { type XiangqiBoardGeometry, xiangqiBoardPoint } from './xiangqi-board-geometry.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
 
 /** A palace, in 1-indexed board coordinates (inclusive on both ends). */
 export interface XiangqiPalaceRect {
@@ -180,4 +184,73 @@ function point(
   layout: XiangqiBoardLayout,
 ): { x: number; y: number } {
   return xiangqiBoardPoint(file, rank, perspective, layout, cfg.geo);
+}
+
+/** File labels for each side, indexed by LOGICAL file (0 = file a). Xiangqi
+ *  notation numbers files from each player's own right, so the two sides carry
+ *  different strings for the same file. Ranks are optional because WXF and
+ *  Chinese never name one: a move is a piece, a file, a direction, and either a
+ *  destination file or a count. Only the absolute notations need them. */
+export interface XiangqiCoordLabels {
+  red: readonly string[];
+  black: readonly string[];
+  ranks?: readonly string[];
+}
+
+/** Coordinate labels drawn in the reserved gutter. Returns '' when the board
+ *  reserves no gutter, so a board that never shows coordinates costs nothing.
+ *
+ *  Each side's labels sit on ITS OWN edge and rotate with the board, so a
+ *  player always reads their own numbering along the edge nearest them. That
+ *  is the whole point for a learner: the numbering is the thing being taught. */
+export function xiangqiSurfaceCoords(
+  cfg: XiangqiSurfaceConfig,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+  labels: XiangqiCoordLabels,
+): string {
+  const { geo } = cfg;
+  const gutter = geo.coordGutter ?? 0;
+  if (gutter <= 0) return '';
+  const vb = xiangqiBoardViewBox(layout, geo);
+  // The usable band is the gap between the viewBox edge and the nearest PIECE,
+  // not the gutter alone. A piece sits on the outer intersection and overhangs
+  // the margin, but it does not consume all of it, so the label gets the gutter
+  // plus whatever the margin leaves over: 21 units on the standard intersection
+  // board where the gutter alone is 12. Sizing to the gutter made the labels
+  // roughly half the size they had room for.
+  const pieceTop = geo.margin - geo.cell * 0.45;
+  const band = pieceTop - vb.minY;
+  const size = Math.max(6, Math.round(band * 0.68));
+  const topY = vb.minY + band / 2;
+  const bottomY = vb.minY + vb.height - band / 2;
+
+  const parts: string[] = [];
+  for (let file = 0; file < geo.fileCount; file += 1) {
+    const x = xiangqiBoardPoint(file, 1, perspective, layout, geo).x;
+    // The label nearest a player is that player's own numbering. Red sits at the
+    // bottom of its own screen, so red's numbering runs along the bottom edge.
+    parts.push(
+      label(x, bottomY, perspective === 'red' ? labels.red[file] : labels.black[file], size),
+    );
+    parts.push(label(x, topY, perspective === 'red' ? labels.black[file] : labels.red[file], size));
+  }
+  if (labels.ranks) {
+    // Centred in the same clear band the file labels use, not in the gutter
+    // alone: sizing to the gutter put these hard against the board edge.
+    const leftX = vb.minX + band / 2;
+    const rightX = vb.minX + vb.width - band / 2;
+    for (let rank = 1; rank <= geo.rankCount; rank += 1) {
+      const y = xiangqiBoardPoint(0, rank, perspective, layout, geo).y;
+      const text = labels.ranks[rank - 1] ?? '';
+      parts.push(label(leftX, y, text, size));
+      parts.push(label(rightX, y, text, size));
+    }
+  }
+  return parts.join('');
+}
+
+function label(x: number, y: number, text: string | undefined, size: number): string {
+  if (!text) return '';
+  return `<text class="xq-live-coord" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${size}">${text}</text>`;
 }

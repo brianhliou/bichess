@@ -37,11 +37,15 @@ import {
 } from './xiangqi-board-geometry.js';
 import {
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import {
   maybePlayDarkXiangqiSnapshotSound,
@@ -116,7 +120,11 @@ const FOG_GEO: XiangqiBoardGeometry = {
   cell: CELL,
   margin: MARGIN,
   riverGap: Math.round(CELL / 5),
+  // Reserved only while labels are shown, and reclaimed when they are off, so a
+  // reader who never turns coordinates on sees the board exactly as it was.
+  coordGutter: Math.round(CELL / 5),
 };
+const FOG_GEO_NO_COORDS: XiangqiBoardGeometry = { ...FOG_GEO, coordGutter: 0 };
 const FOG_SURFACE: XiangqiSurfaceConfig = {
   geo: FOG_GEO,
   palaces: [
@@ -356,15 +364,26 @@ function boardSvg(
   const fog = options.showFog === false ? '' : fogLayer(view, perspective, maskId);
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
-  const vb = xiangqiBoardViewBox(layout, FOG_GEO);
+  const showCoords = readDisplayPreferences().boardCoordinates;
+  const surface = showCoords ? FOG_SURFACE : { ...FOG_SURFACE, geo: FOG_GEO_NO_COORDS };
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
+  const coords = showCoords
+    ? xiangqiSurfaceCoords(
+        surface,
+        perspective,
+        layout,
+        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILE_COUNT, RANK_COUNT),
+      )
+    : '';
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(FOG_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(FOG_SURFACE, layout)}</g>
-      <g class="xq-live-palace">${xiangqiSurfacePalace(FOG_SURFACE, perspective, layout)}</g>
-      ${layout === 'cell' ? '' : `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>`}
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      ${layout === 'cell' ? '' : `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`}
       <g class="xq-live-fog">${fog}</g>
+      ${coords ? `<g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${
         // The square grid's river is a 12-unit strip BETWEEN two rows of cells,
         // so it overlaps no square and can sit above the fog: board furniture,
@@ -373,7 +392,7 @@ function boardSvg(
         // lines and a piece on rank 5 occupies 27 of those units -- lifting the
         // fog there would show the top half of every piece on that rank.
         layout === 'cell'
-          ? `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>`
+          ? `<g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>`
           : ''
       }
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>

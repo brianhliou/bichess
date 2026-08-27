@@ -37,11 +37,15 @@ import {
 } from './xiangqi-board-geometry.js';
 import {
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -63,7 +67,16 @@ const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
   cell: CELL,
   margin: MARGIN,
   riverGap: CELL_RIVER_GAP,
+  // Reserved always, so turning coordinates on never resizes the board. A fifth
+  // of a cell puts the label clear of a piece sitting on the outer intersection
+  // (radius 0.45 cells) with room to breathe.
+  coordGutter: Math.round(CELL / 5),
 };
+// Same board with NO reserved gutter, for surfaces that are not interactive
+// boards and whose framing is authored: video frames, and anything else that
+// composites the board into a fixed layout. Coordinates are a playing aid, so
+// they and the space they need stop at the edge of the interactive surfaces.
+const LIVE_BOARD_GEO_NO_COORDS: XiangqiBoardGeometry = { ...LIVE_BOARD_GEO, coordGutter: 0 };
 // Board-specific facts for the shared surface renderer. Jieqi supplies the same
 // shape at its own scale; fortress supplies a 7x8 board with no river.
 const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
@@ -98,6 +111,11 @@ export function renderXiangqiBoardSvg(
 }
 
 export interface XiangqiBoardSvgState {
+  /** false = draw no coordinates AND reserve no space for them. For surfaces
+   *  whose framing is authored rather than played on (video frames). Interactive
+   *  boards leave this alone: they reserve the gutter always, so toggling the
+   *  coordinate preference never resizes the board. */
+  coordinates?: boolean;
   interactive: boolean;
   selectedSquare: XiangqiSquare | null;
   draggingFrom: XiangqiSquare | null;
@@ -143,15 +161,32 @@ export function xiangqiBoardSvg(
   state: XiangqiBoardSvgState,
 ): string {
   const layout = state.layout ?? readStoredXiangqiBoardLayout();
-  const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_GEO);
+  // The gutter is reclaimed when labels are off, so a reader who never turns
+  // coordinates on sees exactly the board they saw before this shipped. The
+  // trade is that the board resizes when the setting changes -- which happens
+  // once, in settings, where a reflow is expected.
+  const showCoords = state.coordinates !== false && readDisplayPreferences().boardCoordinates;
+  const surface = showCoords
+    ? LIVE_BOARD_SURFACE
+    : { ...LIVE_BOARD_SURFACE, geo: LIVE_BOARD_GEO_NO_COORDS };
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
+  const coords = showCoords
+    ? xiangqiSurfaceCoords(
+        LIVE_BOARD_SURFACE,
+        perspective,
+        layout,
+        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILE_COUNT, RANK_COUNT),
+      )
+    : '';
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
-      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(LIVE_BOARD_SURFACE, layout)}</g>
-      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(LIVE_BOARD_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-palace">${xiangqiSurfacePalace(LIVE_BOARD_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(LIVE_BOARD_SURFACE, perspective, layout)}</g>
+      <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}</g>
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
+      <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>

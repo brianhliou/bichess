@@ -22,11 +22,15 @@ import {
 } from './xiangqi-board-geometry.js';
 import {
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -81,7 +85,11 @@ const FXQ_GEO: XiangqiBoardGeometry = {
   cell: CELL,
   margin: MARGIN,
   riverGap: Math.round(CELL / 5),
+  // Reserved only while labels are shown, and reclaimed when they are off, so a
+  // reader who never turns coordinates on sees the board exactly as it was.
+  coordGutter: Math.round(CELL / 5),
 };
+const FXQ_GEO_NO_COORDS: XiangqiBoardGeometry = { ...FXQ_GEO, coordGutter: 0 };
 let activeLayout: XiangqiBoardLayout = 'intersection';
 const RED_PALACE: Palace = { fileLo: 0, fileHi: 2, rankLo: 1, rankHi: 3 };
 const BLACK_PALACE: Palace = { fileLo: 4, fileHi: 6, rankLo: 6, rankHi: 8 };
@@ -137,7 +145,17 @@ export function renderFortressXiangqiBoardSvg(
   const targets = options.targets ?? [];
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
-  const vb = xiangqiBoardViewBox(layout, FXQ_GEO);
+  const showCoords = readDisplayPreferences().boardCoordinates;
+  const surface = showCoords ? FXQ_SURFACE : { ...FXQ_SURFACE, geo: FXQ_GEO_NO_COORDS };
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
+  const coords = showCoords
+    ? xiangqiSurfaceCoords(
+        surface,
+        perspective,
+        layout,
+        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILES, RANKS),
+      )
+    : '';
   const cell = layout === 'cell';
   return `
     <svg class="fxq-board fxq-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress board">
@@ -148,9 +166,10 @@ export function renderFortressXiangqiBoardSvg(
            they are filled rects, so anything under them is invisible. The
            intersection layout keeps its original order, where the grid is only
            lines and the bands must sit beneath. -->
-      <g class="fxq-grid">${xiangqiSurfaceGrid(FXQ_SURFACE, layout)}${xiangqiSurfacePalace(FXQ_SURFACE, perspective, layout)}</g>
-      ${cell ? xiangqiSurfaceRiver(FXQ_SURFACE, perspective, layout) : ''}
-      ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(FXQ_SURFACE, perspective, layout)}</g>` : ''}
+      <g class="fxq-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      ${cell ? xiangqiSurfaceRiver(surface, perspective, layout) : ''}
+      ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
+      ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
@@ -614,6 +633,21 @@ export function installFortressXiangqiBoardStyles(): void {
     }
     :root[data-xiangqi-board-layout='cell'] .fortress-xiangqi-live-board {
       aspect-ratio: 504 / 590;
+    }
+    /* Coordinates on reserves a gutter of a fifth of a cell each side, so each
+       layout/coordinate combination is its own rectangle. The host clips with
+       overflow:hidden, which is what ate this board's bottom rank once already. */
+    :root[data-board-coordinates='on'] .live-route--fortress-xiangqi {
+      --uni-board-aspect: calc(544 / 616);
+    }
+    :root[data-board-coordinates='on'] .fortress-xiangqi-live-board {
+      aspect-ratio: 544 / 616;
+    }
+    :root[data-board-coordinates='on'][data-xiangqi-board-layout='cell'] .live-route--fortress-xiangqi {
+      --uni-board-aspect: calc(532 / 618);
+    }
+    :root[data-board-coordinates='on'][data-xiangqi-board-layout='cell'] .fortress-xiangqi-live-board {
+      aspect-ratio: 532 / 618;
     }
     .fortress-xiangqi-live-board--disabled {
       background: repeating-linear-gradient(135deg, #ece7dc, #ece7dc 16px, #ddd5c5 16px, #ddd5c5 32px);

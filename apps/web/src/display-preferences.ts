@@ -10,12 +10,12 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
   { id: 'materialDifference', kind: 'boolean', defaultValue: true },
   { id: 'boardHighlights', kind: 'boolean', defaultValue: true },
   { id: 'pieceDestinations', kind: 'boolean', defaultValue: true },
-  {
-    id: 'boardCoordinates',
-    kind: 'select',
-    defaultValue: 'inside',
-    options: ['inside', 'outside', 'none'],
-  },
+  // On/off, not lichess's four modes. Their pieces sit INSIDE squares and leave
+  // corner room, so 'inside' costs them nothing; ours sit ON intersections and
+  // overhang the margin, so the only workable placement is the reserved gutter.
+  // With the gutter always reserved, an 'outside' mode would just draw a smaller
+  // board in the same space.
+  { id: 'boardCoordinates', kind: 'boolean', defaultValue: false },
   { id: 'moveListWhilePlaying', kind: 'boolean', defaultValue: true },
   {
     id: 'moveNotation',

@@ -18,6 +18,11 @@ export interface XiangqiBoardGeometry {
   cell: number;
   margin: number;
   riverGap: number;
+  /** Space reserved OUTSIDE the board for coordinate labels, in board units.
+   *  Reserved permanently rather than added when labels are switched on, so
+   *  toggling the preference never resizes the board or reflows the page around
+   *  it. Omit (or 0) for a board that shows no coordinates. */
+  coordGutter?: number;
 }
 
 /** The 0-indexed row (from the top) that a 1-indexed rank occupies under a given
@@ -73,18 +78,21 @@ export function xiangqiBoardViewBox(
   layout: XiangqiBoardLayout,
   geo: XiangqiBoardGeometry,
 ): { minX: number; minY: number; width: number; height: number } {
+  const g = geo.coordGutter ?? 0;
   if (layout === 'cell') {
     return {
-      minX: geo.margin - geo.cell / 2,
-      minY: geo.margin - geo.cell / 2,
-      width: geo.fileCount * geo.cell,
-      height: geo.rankCount * geo.cell + geo.riverGap,
+      minX: geo.margin - geo.cell / 2 - g,
+      minY: geo.margin - geo.cell / 2 - g,
+      width: geo.fileCount * geo.cell + g * 2,
+      height: geo.rankCount * geo.cell + geo.riverGap + g * 2,
     };
   }
   return {
-    minX: 0,
-    minY: 0,
-    width: geo.margin * 2 + (geo.fileCount - 1) * geo.cell,
-    height: geo.margin * 2 + (geo.rankCount - 1) * geo.cell,
+    // `|| 0` because -0 is not 0 to Object.is, and a gutterless board must
+    // report the same origin it always did rather than a negative zero.
+    minX: -g || 0,
+    minY: -g || 0,
+    width: geo.margin * 2 + (geo.fileCount - 1) * geo.cell + g * 2,
+    height: geo.margin * 2 + (geo.rankCount - 1) * geo.cell + g * 2,
   };
 }

@@ -41,6 +41,9 @@ describe('standard Xiangqi board SVG', () => {
     const view = getStandardXiangqiPlayerView(state, 'red');
     const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
     expect(svg).toContain('data-xiangqi-layout="cell"');
+    // Coordinates default to off, and the label gutter is reclaimed when they
+    // are: a reader who never turns them on sees exactly the board that shipped
+    // before they existed.
     expect(svg).toContain('viewBox="6 6 540 612"');
     expect(svg.match(/class="xq-live-cell xq-live-cell--/g)).toHaveLength(90);
     expect(svg.match(/class="xq-live-cell-line"/g)).toHaveLength(24);
@@ -84,6 +87,8 @@ describe('standard Xiangqi board SVG', () => {
     const view = getStandardXiangqiPlayerView(createInitialXiangqiState('xq-board-corners'), 'red');
     const svg = renderSharedXiangqiBoardSvg(view);
 
+    // Full bleed means the whole viewBox, whatever it currently is. With
+    // coordinates off there is no gutter, so this is the original rectangle.
     expect(svg).toContain('<rect class="xq-live-bg" x="0" y="0" width="552" height="612"/>');
     expect(svg).not.toMatch(/class="xq-live-bg"[^>]*\srx=/);
   });

@@ -1,6 +1,7 @@
 import './theme.css';
 import type { GameFamilyId } from '@mistboard/game';
 import type { ConnectionStatus } from './connection-status.js';
+import { readDisplayPreferences } from './display-preferences.js';
 import type { Locale } from './i18n/locale.js';
 import {
   readStoredShogiBoardTheme,
@@ -162,6 +163,7 @@ export function initializeThemeSettings(): void {
   applyFogTheme(defaultFogTheme);
   applyPieceSet(readStoredPieceSet());
   applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
+  applyBoardCoordinates(readDisplayPreferences().boardCoordinates);
   applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   applyShogiBoardTheme(readStoredShogiBoardTheme());
@@ -214,6 +216,15 @@ function applyXiangqiBoardTheme(theme: XiangqiBoardTheme): void {
 
 function applyXiangqiBoardLayout(layout: XiangqiBoardLayout): void {
   document.documentElement.dataset.xiangqiBoardLayout = layout;
+}
+
+/** Mirrors the coordinate preference onto the root so CSS can pick the matching
+ *  board aspect. The label gutter is only reserved when labels are shown, so the
+ *  board is a different rectangle in each state and the host slot has to agree
+ *  with the SVG viewBox -- it clips with overflow:hidden, and a stale ratio eats
+ *  the outer rank. */
+export function applyBoardCoordinates(on: boolean): void {
+  document.documentElement.dataset.boardCoordinates = on ? 'on' : 'off';
 }
 
 function applyXiangqiPieceSet(pieceSet: XiangqiPieceSet): void {

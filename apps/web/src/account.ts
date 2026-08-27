@@ -55,6 +55,7 @@ const accountSettingsSections = accountSettingsSectionGroups.flat();
 const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>([
   'pieceAnimation',
   'playerFlairs',
+  'boardCoordinates',
 ]);
 const pieceAnimationSaveQueues = new WeakMap<AuthUser, Promise<void>>();
 
@@ -1667,18 +1668,13 @@ function displayPreferenceOptionLabel(
       normal: 'account.displayOption.pieceAnimation.normal',
       slow: 'account.displayOption.pieceAnimation.slow',
     },
-    boardCoordinates: {
-      inside: 'account.displayOption.boardCoordinates.inside',
-      outside: 'account.displayOption.boardCoordinates.outside',
-      none: 'account.displayOption.boardCoordinates.none',
-    },
     moveNotation: {
       symbols: 'account.displayOption.moveNotation.symbols',
       letters: 'account.displayOption.moveNotation.letters',
       coordinates: 'account.displayOption.moveNotation.coordinates',
     },
   } as const;
-  if (id !== 'pieceAnimation' && id !== 'boardCoordinates' && id !== 'moveNotation') {
+  if (id !== 'pieceAnimation' && id !== 'moveNotation') {
     return value;
   }
   const key = keys[id][value as keyof (typeof keys)[typeof id]];

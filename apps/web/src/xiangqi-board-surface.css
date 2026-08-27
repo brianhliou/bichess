@@ -39,3 +39,11 @@
 .xq-surface--cell .xq-live-palace-band {
   fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
 }
+
+.xq-surface .xq-live-coord {
+  fill: var(--xq-coord-ink, color-mix(in srgb, var(--xq-live-ink, #5a3a14) 72%, transparent));
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

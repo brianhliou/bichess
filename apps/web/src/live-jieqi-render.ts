@@ -15,11 +15,15 @@ import {
 } from './xiangqi-board-geometry.js';
 import {
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -60,7 +64,11 @@ const JIEQI_GEO: XiangqiBoardGeometry = {
   cell: CELL,
   margin: MARGIN,
   riverGap: Math.round(CELL / 5),
+  // Reserved only while labels are shown, and reclaimed when they are off, so a
+  // reader who never turns coordinates on sees the board exactly as it was.
+  coordGutter: Math.round(CELL / 5),
 };
+const JIEQI_GEO_NO_COORDS: XiangqiBoardGeometry = { ...JIEQI_GEO, coordGutter: 0 };
 const JIEQI_SURFACE: XiangqiSurfaceConfig = {
   geo: JIEQI_GEO,
   palaces: [
@@ -137,7 +145,17 @@ export function renderJieqiBoardSvg(
   const legalMoves = options.legalMoves ?? [];
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
-  const vb = xiangqiBoardViewBox(layout, JIEQI_GEO);
+  const showCoords = readDisplayPreferences().boardCoordinates;
+  const surface = showCoords ? JIEQI_SURFACE : { ...JIEQI_SURFACE, geo: JIEQI_GEO_NO_COORDS };
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
+  const coords = showCoords
+    ? xiangqiSurfaceCoords(
+        surface,
+        perspective,
+        layout,
+        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILES, RANKS),
+      )
+    : '';
   // The square grid paints its own cells, so the board-coloured backdrop only
   // applies to the intersection layout; on 'cell' it would tint the river gap.
   const backdrop =
@@ -151,21 +169,22 @@ export function renderJieqiBoardSvg(
   // river tint nor palace bands (the gap and the diagonals are its cues), and an
   // empty <g> would still put its class in the markup, which reads as a tint
   // that is not there.
-  const riverInner = xiangqiSurfaceRiver(JIEQI_SURFACE, perspective, layout);
+  const riverInner = xiangqiSurfaceRiver(surface, perspective, layout);
   const river = riverInner
     ? `<g class="jieqi-river xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
     : '';
   const bandsInner =
-    layout === 'cell' ? xiangqiSurfacePalaceBands(JIEQI_SURFACE, perspective, layout) : '';
+    layout === 'cell' ? xiangqiSurfacePalaceBands(surface, perspective, layout) : '';
   const palaceBands = bandsInner
     ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
     : '';
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
-      <g class="jieqi-grid">${xiangqiSurfaceGrid(JIEQI_SURFACE, layout)}${xiangqiSurfacePalace(JIEQI_SURFACE, perspective, layout)}</g>
+      <g class="jieqi-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       ${river}
       ${palaceBands}
+      ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
