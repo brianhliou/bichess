@@ -254,7 +254,7 @@ export const ZH_HANS_CONTENT = {
   'patron.intro':
     'Mistboard 是一个独立、无广告的项目。核心的对弈与学习功能始终免费。如果它对你有价值，赞助能帮忙付服务器的钱，也能让这项工作继续下去。',
   'patron.perkTitle': '赞助包含什么',
-  'patron.perk': '赞助者的资料页上会有一个小爪印徽章。赞助不解锁功能，也不带来对局上的优势。',
+  'patron.perk': '赞助者的资料页上会有一个小红心徽章。赞助不解锁功能，也不带来对局上的优势。',
   'patron.supportLine': 'Mistboard 是一个人的项目，你的支持能起很大作用。',
   'patron.chooseTitle': '选择金额',
   'patron.monthlySuffix': '/ 月',

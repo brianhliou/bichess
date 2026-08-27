@@ -254,7 +254,7 @@ export const ZH_HANT_CONTENT = {
   'patron.intro':
     'Mistboard 是一個獨立、無廣告的專案。核心的對弈與學習功能始終免費。如果它對你有價值，贊助能幫忙付伺服器的錢，也能讓這項工作繼續下去。',
   'patron.perkTitle': '贊助包含什麼',
-  'patron.perk': '贊助者的資料頁上會有一個小爪印徽章。贊助不解鎖功能，也不帶來對局上的優勢。',
+  'patron.perk': '贊助者的資料頁上會有一個小紅心徽章。贊助不解鎖功能，也不帶來對局上的優勢。',
   'patron.supportLine': 'Mistboard 是一個人的專案，你的支持能起很大作用。',
   'patron.chooseTitle': '選擇金額',
   'patron.monthlySuffix': '/ 月',

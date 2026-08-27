@@ -1946,7 +1946,7 @@ function buildRoleBadge(
   return null;
 }
 
-// Cosmetic Patron badge ("wings"): shown when the account has an active
+// Cosmetic Patron badge (the mist-heart icon): shown when the account has an active
 // donation. Purely a thank-you; carries no gameplay meaning. Links to /patron.
 function buildPatronBadge(
   patronSince: string | null | undefined,

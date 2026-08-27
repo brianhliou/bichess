@@ -90,7 +90,7 @@ export const EN_CONTENT = {
     'Mistboard is an independent, ad-free project. Core play and learning stay free. If it is worth something to you, Patron support helps keep the servers running and the work going.',
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
-    'Patrons get a small paw badge on their profile. Patron support does not unlock features or gameplay advantages.',
+    'Patrons get a small heart badge on their profile. Patron support does not unlock features or gameplay advantages.',
   'patron.supportLine': 'Mistboard is a one-person project, so your support goes a long way.',
   'patron.chooseTitle': 'Choose an amount',
   'patron.monthlySuffix': '/ month',
