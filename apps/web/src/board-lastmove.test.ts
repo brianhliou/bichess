@@ -128,6 +128,16 @@ describe('shared last-move language', () => {
       expect(svg).not.toContain('jieqi-last"');
       expect(svg).not.toContain('mini-xq-last"');
       expect(svg).not.toContain('fxq-last"');
+      expect(svg).not.toContain('banqi-last-from');
+      expect(svg).not.toContain('banqi-last-ring');
+    });
+
+    it(`${board.name} wraps pieces in square-keyed slots so the glide can find them`, () => {
+      // glideSvgPiece and drawMarkerOnArrival both locate the settled piece by
+      // [data-piece-square]. A board that paints pieces without slots renders
+      // correctly and silently never animates, which is how jieqi and banqi sat
+      // un-animated until 2026-08-27.
+      expect(board.svg()).toMatch(/data-piece-square="[a-z]\d+"/);
     });
   }
 });

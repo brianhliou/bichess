@@ -8,7 +8,9 @@ import {
   type BanqiSquare,
   banqiCoordOf,
 } from '@mistboard/game';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import {
+  BOARD_LASTMOVE_MARKER_SELECTOR,
   boardLastMoveMarkersSvg,
   boardLastMoveOuterRadius,
   boardLastMoveStyleAttr,
@@ -182,18 +184,50 @@ function pieceLayer(
     if (!entry) return '';
     const dragSource = square === draggingFrom;
     const { x, y } = cellCenter(square);
-    if (entry.faceDown) {
-      return faceDownDisc(x, y, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back');
-    }
-    return renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
-      ariaLabel: `${entry.color} ${entry.role}`,
-      className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
-      shrouded: false,
-      x: x - PIECE_SIZE / 2,
-      y: y - PIECE_SIZE / 2,
-      size: PIECE_SIZE,
-    });
+    const pieceSvg = entry.faceDown
+      ? faceDownDisc(x, y, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
+      : renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
+          ariaLabel: `${entry.color} ${entry.role}`,
+          className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
+          shrouded: false,
+          x: x - PIECE_SIZE / 2,
+          y: y - PIECE_SIZE / 2,
+          size: PIECE_SIZE,
+        });
+    return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
   }).join('');
+}
+
+/**
+ * Glide the piece that settled on `move.to` from its origin (or with `reverse`
+ * the piece back on `move.from`), then draw the destination halo on as it lands.
+ * Call AFTER the innerHTML swap that rendered the final position.
+ *
+ * Flips are self-moves with nothing to travel, so they are a no-op here: the
+ * reveal is the tile changing face in place, and the marker layer already says
+ * where. Banqi has no per-seat flip (both seats see the same board), so unlike
+ * the xiangqi family there is no perspective to pass.
+ */
+export function animateBanqiBoardMove(
+  host: HTMLElement,
+  move: { from: BanqiSquare; to: BanqiSquare },
+  opts: { reverse?: boolean } = {},
+): void {
+  if (move.from === move.to) return;
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settleSquare = opts.reverse ? move.from : move.to;
+  const originSquare = opts.reverse ? move.to : move.from;
+  const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
+  if (!slot) return;
+  const from = cellCenter(originSquare);
+  const to = cellCenter(settleSquare);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // A reverse step renders the prior move's marker at a different square, so
+  // fading it in would not track the reverse glide.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+  }
 }
 
 function selectionRing(selection: BanqiSquare | null): string {

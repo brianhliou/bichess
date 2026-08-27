@@ -90,7 +90,7 @@ export const EN_CONTENT = {
     'Mistboard is an independent, ad-free project. Core play and learning stay free. If it is worth something to you, Patron support helps keep the servers running and the work going.',
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
-    'Patrons get a small paw badge on their profile. Patron support does not unlock features or gameplay advantages. Separate paid tools or products may exist later.',
+    'Patrons get a small paw badge on their profile. Patron support does not unlock features or gameplay advantages.',
   'patron.supportLine': 'Mistboard is a one-person project, so your support goes a long way.',
   'patron.chooseTitle': 'Choose an amount',
   'patron.monthlySuffix': '/ month',
@@ -103,8 +103,11 @@ export const EN_CONTENT = {
   'patron.unavailable': 'Checkout is not open yet, so nothing is charged. Check back soon.',
   'patron.checkoutError': 'Something went wrong starting checkout. Please try again.',
   'patron.transparencyTitle': 'Where the money goes',
+  // The dollar figure is measured, not estimated: it reconciles to the Railway
+  // invoice in docs-private/COSTS.md. Refresh both together when infra changes,
+  // because a stale number on a transparency page is worse than no number.
   'patron.transparency':
-    'Patron support pays for hosting (servers, database, and bandwidth) and the time to keep building. Mistboard is run by one person.',
+    'Mistboard costs about $22 a month to run: servers, database, and bandwidth. Patron support covers that, plus the time to keep building. Mistboard is run by one person.',
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
@@ -114,7 +117,7 @@ export const EN_CONTENT = {
     'No. Mistboard is not a registered charity, so Patron support is not tax-deductible.',
   'patron.faqCancelQuestion': 'How do I cancel or change my support?',
   'patron.faqCancelAnswer':
-    'Open the billing portal from this page anytime to change the amount or cancel. Recurring support stops at the end of the current period.',
+    'Open the billing portal from this page anytime to change the amount or cancel. Recurring support stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
   'patron.termsPrefix': 'Billing, cancellation, and refunds are covered in the ',
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',
@@ -197,7 +200,7 @@ export const EN_CONTENT = {
     'Forks and derivatives should present their own public brand, domain, and hosted service identity.',
   'contribute.heading': 'Contribute',
   'contribute.intro':
-    'Mistboard is free and open source, built in the open by a small team. There is a lot to do and many ways to help, whether or not you write code.',
+    'Mistboard is free and open source, built in the open by one person. There is a lot to do and many ways to help, whether or not you write code.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
     'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else.',
@@ -253,7 +256,7 @@ export const EN_CONTENT = {
     'No. Engines only receive the information allowed by the game they are playing. In hidden-information games, that means the same redacted view a human player receives; the true board stays server-side for adjudication.',
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
-    'No. Live games are not spectatable, so no one can feed a player the full board mid-game. Once a game finishes, anyone can replay it from either side or with the full board revealed.',
+    'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
     'Rated play is account-backed human-vs-human play in supported ladder variants. During beta, ladders may be provisional while ratings calibrate. Engine games and casual games do not count.',

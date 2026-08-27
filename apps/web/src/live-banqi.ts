@@ -28,6 +28,7 @@ import './live-xiangqi.css';
 import { banqiEnabled } from './feature-flags.js';
 import { banqiClickResult } from './live-banqi-interaction.js';
 import {
+  animateBanqiBoardMove,
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
@@ -174,6 +175,27 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     pveEngineId = null;
   },
   renderBoard,
+  // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
+  // move already re-rendered synchronously at input time, so animating the server
+  // echo would double-play it. Scrubs glide the stepped-into move forward and
+  // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
+  // drag ghost, and a no-op for flips, which travel nowhere.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view || draggingFrom) return;
+    const pending = takePendingAnimation();
+    if (!pending) return;
+    if (pending.kind === 'live') {
+      if (pending.color === core?.state.seat) return;
+      animateBanqiBoardMove(liveRefs.board, pending.move);
+      return;
+    }
+    if (pending.direction === 'forward') {
+      if (view.lastMove) animateBanqiBoardMove(liveRefs.board, view.lastMove);
+      return;
+    }
+    const undone = pending.prevView?.lastMove;
+    if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+  },
   renderExtras: (refs, view) => renderCapturedPools(refs, view),
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
