@@ -30,6 +30,16 @@ export function xiangqiDisplayRow(
   return perspective === 'red' ? rankCount - rank : rank - 1;
 }
 
+/** The 0-indexed column a 0-indexed file occupies under a given perspective.
+ *  Black sees the board rotated, so its own right-hand file sits on the left. */
+export function xiangqiDisplayFile(
+  file: number,
+  perspective: XiangqiColor,
+  fileCount: number,
+): number {
+  return perspective === 'red' ? file : fileCount - 1 - file;
+}
+
 /** Pixel center of a (file, rank) point. In 'cell' layout the bottom half is
  *  pushed down by `riverGap` to open the river band; `originX/Y` shifts the whole
  *  board (used when several boards are composited into one SVG). */
@@ -43,9 +53,15 @@ export function xiangqiBoardPoint(
   originY = 0,
 ): { x: number; y: number } {
   const row = xiangqiDisplayRow(rank, perspective, geo.rankCount);
+  // Flipping the board is a 180 degree ROTATION, so the file mirrors along with
+  // the rank. This board mirrored only the rank until 2026-08-27, which put
+  // black's own right-hand file on the reader's right instead of their left --
+  // the opposite of a real board, and the opposite of what every other renderer
+  // here does (jieqi, fortress, and grid-board all mirror the file).
+  const col = xiangqiDisplayFile(file, perspective, geo.fileCount);
   const riverShift = layout === 'cell' && row >= geo.rankCount / 2 ? geo.riverGap : 0;
   return {
-    x: originX + geo.margin + file * geo.cell,
+    x: originX + geo.margin + col * geo.cell,
     y: originY + geo.margin + row * geo.cell + riverShift,
   };
 }
