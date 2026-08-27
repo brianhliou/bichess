@@ -124,6 +124,14 @@ export interface XiangqiPgnExportMeta {
   black?: string;
   result?: XiangqiPgnResult;
   date?: string;
+  /** Canonical URL of what this came from. This is the attribution: a study's
+   *  moves may be public-domain facts, but its selection, translation and
+   *  commentary are not, and they ride along in the comments. A file that does
+   *  not say where it came from cannot be credited. */
+  site?: string;
+  /** Terms the commentary is offered under. Matches the header the server's
+   *  game export has always written (game-export.ts LICENSE). */
+  license?: string;
 }
 
 /** Render a stored chapter tree back to PGN text. Nodes whose UCI no longer
@@ -140,6 +148,11 @@ export function exportXiangqiPgnChapter(
   if (meta.red) tags.Red = meta.red;
   if (meta.black) tags.Black = meta.black;
   if (meta.date) tags.Date = meta.date;
+  if (meta.site) tags.Site = meta.site;
+  if (meta.license) {
+    tags.License = meta.license;
+    tags.Source = 'Mistboard';
+  }
   return writeXiangqiPgn(
     {
       tags,
@@ -188,15 +201,35 @@ export interface XiangqiPgnStudyChapter {
   root: SerializedTree;
 }
 
+/** Attribution terms for exported study content. CC BY 4.0 is the portfolio's
+ *  standing choice and the one the server's game export already writes: the
+ *  point is citation, not restriction. */
+export const STUDY_EXPORT_LICENSE = 'CC BY 4.0';
+
+export interface XiangqiPgnStudyMeta {
+  name: string;
+  /** Study id, used to build the [Site] URL every exported game carries. */
+  id?: string;
+  /** Origin for that URL. Defaults to the page's own, so a dev export points at
+   *  dev and a prod export at prod rather than at a hardcoded host. */
+  origin?: string;
+}
+
 /** The whole study as one multi-game PGN, one game per chapter. That is the
  *  shape lichess exports, and the shape our own reader splits back apart. */
 export function buildStudyPgn(
-  studyName: string,
+  study: XiangqiPgnStudyMeta,
   chapters: readonly XiangqiPgnStudyChapter[],
 ): string {
+  const origin = study.origin ?? (typeof window !== 'undefined' ? window.location.origin : '');
+  const site = study.id && origin ? `${origin}/study/${study.id}` : undefined;
   return chapters
     .map((chapter) =>
-      exportXiangqiPgnChapter(chapter.root, { event: `${studyName}: ${chapter.name}` }),
+      exportXiangqiPgnChapter(chapter.root, {
+        event: `${study.name}: ${chapter.name}`,
+        ...(site ? { site } : {}),
+        license: STUDY_EXPORT_LICENSE,
+      }),
     )
     .join('\n');
 }
@@ -204,16 +237,16 @@ export function buildStudyPgn(
 /** Hand the reader a .pgn file. Object URL rather than a data: URI so a large
  *  study does not have to fit in a URL. */
 export function downloadStudyPgn(
-  studyName: string,
+  study: XiangqiPgnStudyMeta,
   chapters: readonly XiangqiPgnStudyChapter[],
 ): void {
-  const blob = new Blob([buildStudyPgn(studyName, chapters)], {
+  const blob = new Blob([buildStudyPgn(study, chapters)], {
     type: 'application/x-chess-pgn',
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${safeFileName(studyName)}.pgn`;
+  link.download = `${safeFileName(study.name)}.pgn`;
   document.body.append(link);
   link.click();
   link.remove();

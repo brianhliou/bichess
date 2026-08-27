@@ -1,5 +1,11 @@
+import { parseXiangqiPgn } from '@mistboard/game';
 import { describe, expect, test } from 'vitest';
-import { exportXiangqiPgnChapter, importXiangqiPgnChapters } from './xiangqi-pgn-chapter.js';
+import {
+  buildStudyPgn,
+  exportXiangqiPgnChapter,
+  importXiangqiPgnChapters,
+  STUDY_EXPORT_LICENSE,
+} from './xiangqi-pgn-chapter.js';
 
 describe('importXiangqiPgnChapters', () => {
   test('turns each game in a file into its own chapter, named from its tags', () => {
@@ -100,4 +106,46 @@ test('a re-imported export names chapters from the event, not from "?" placehold
   const pgn = exportXiangqiPgnChapter(chapter!.root, { event: 'Cannon manual: Central Cannon' });
   const again = importXiangqiPgnChapters(pgn).chapters[0];
   expect(again?.name).toBe('Cannon manual: Central Cannon');
+});
+
+describe('attribution', () => {
+  const chapters = () => {
+    const one = importXiangqiPgnChapters('1. h3e3 h8e8 *').chapters[0]!;
+    const two = importXiangqiPgnChapters('1. b1c3 *').chapters[0]!;
+    return [
+      { name: 'Central Cannon', root: one.root },
+      { name: 'Horse Opening', root: two.root },
+    ];
+  };
+
+  test('every exported game names where it came from and under what terms', () => {
+    const pgn = buildStudyPgn(
+      { name: 'Cannon manual', id: 'abc123', origin: 'https://mistboard.com' },
+      chapters(),
+    );
+    // Both games, not just the first: a reader who splits the file keeps the
+    // attribution on whichever game they took.
+    expect(pgn.match(/\[Site "https:\/\/mistboard\.com\/study\/abc123"\]/g)).toHaveLength(2);
+    expect(pgn.match(new RegExp(`\\[License "${STUDY_EXPORT_LICENSE}"\\]`, 'g'))).toHaveLength(2);
+    expect(pgn.match(/\[Source "Mistboard"\]/g)).toHaveLength(2);
+  });
+
+  test('the attribution survives a round trip back through our own reader', () => {
+    const pgn = buildStudyPgn(
+      { name: 'Cannon manual', id: 'abc123', origin: 'https://mistboard.com' },
+      chapters(),
+    );
+    const games = parseXiangqiPgn(pgn);
+    expect(games).toHaveLength(2);
+    expect(games[0]?.tags.Site).toBe('https://mistboard.com/study/abc123');
+    expect(games[0]?.tags.License).toBe(STUDY_EXPORT_LICENSE);
+  });
+
+  test('a study with no id still exports, just without a Site URL', () => {
+    // Belt and braces: an id is always present in the app, but a missing one
+    // must not produce [Site "/study/undefined"].
+    const pgn = buildStudyPgn({ name: 'Scratch' }, chapters());
+    expect(pgn).not.toContain('undefined');
+    expect(pgn).toContain(`[License "${STUDY_EXPORT_LICENSE}"]`);
+  });
 });

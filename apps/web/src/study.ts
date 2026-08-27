@@ -299,7 +299,7 @@ function renderStudy(
           return;
         }
         downloadStudyPgn(
-          study.name,
+          { name: study.name, id: study.id },
           chapters.map((chapter) => ({ name: chapter.name, root: chapter.root })),
         );
         button.textContent = 'Downloaded';
