@@ -233,6 +233,7 @@ export const ZH_HANT_COMMUNITY = {
   'streamer.heading': '實況主',
   'streamer.intro': '值得關注的象棋與變體實況主，可看直播與重播。',
   'streamer.empty': '目前還沒有收錄實況主。請稍後再來。',
+  'streamer.profileLink': 'Mistboard 主頁',
   'challenge.button': '挑戰',
   'challenge.title': '挑戰 {name}',
   'challenge.daysPerMove': '每步天數',

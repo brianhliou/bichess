@@ -78,6 +78,7 @@ import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js'
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini-xiangqi-replay.js';
+import { prependTitleBadge } from './player-titles.js';
 import { mountShogiReplay, type ShogiReplayController } from './shogi-replay.js';
 import {
   boardAppearanceChangedEvent,
@@ -718,6 +719,27 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     badge.className = `article-status-badge article-status-${article.status}`;
     badge.textContent = t(ARTICLE_STATUS_KEYS[article.status], {}, locale);
     metaRow.append(badge);
+  }
+  // Guest byline leads the meta row, before the dates: who wrote it matters
+  // more to a reader than when. Absent on everything Mistboard wrote itself.
+  if (article.author) {
+    const byline = document.createElement('span');
+    byline.className = 'article-meta-byline';
+    byline.append(`${t('articles.by', {}, locale)} `);
+    const nameEl = article.author.handle
+      ? document.createElement('a')
+      : document.createElement('span');
+    if (nameEl instanceof HTMLAnchorElement) {
+      nameEl.href = `/@/${encodeURIComponent(article.author.handle ?? '')}`;
+    }
+    nameEl.className = 'article-meta-author';
+    prependTitleBadge(nameEl, article.author.title, locale);
+    const name = document.createElement('span');
+    name.className = 'article-meta-author-name';
+    name.textContent = article.author.displayName;
+    nameEl.append(name);
+    byline.append(nameEl);
+    metaRow.append(byline);
   }
   if (article.publishedAt) {
     const dates = document.createElement('span');

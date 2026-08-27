@@ -54,6 +54,7 @@ export const ZH_HANT_CONTENT = {
   'articles.moreArticles': '更多文章',
   'articles.news': '新聞',
   'articles.articleKind': '文章',
+  'articles.by': '作者',
   'articles.published': '發布於',
   'articles.updated': '更新於',
   'articles.tocTitle': '本頁內容',

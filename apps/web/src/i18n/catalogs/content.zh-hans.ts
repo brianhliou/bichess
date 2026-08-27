@@ -54,6 +54,7 @@ export const ZH_HANS_CONTENT = {
   'articles.moreArticles': '更多文章',
   'articles.news': '新闻',
   'articles.articleKind': '文章',
+  'articles.by': '作者',
   'articles.published': '发布于',
   'articles.updated': '更新于',
   'articles.tocTitle': '本页内容',

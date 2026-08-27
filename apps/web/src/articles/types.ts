@@ -13,6 +13,7 @@ import type {
   Square,
 } from '@mistboard/game';
 import type { ChessReplaySpec } from '../chess-replay.js';
+import type { PlayerTitle } from '../player-titles.js';
 import type { CrossroadsReplaySpec } from '../crossroads-chess-replay.js';
 import type { DropMiniXiangqiReplaySpec } from '../drop-mini-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
@@ -384,6 +385,18 @@ type ArticleBase = {
    */
   seoTitle?: string;
   summary: string;
+  /**
+   * Guest byline. Set when someone other than Mistboard wrote the piece: a
+   * verified titled player sends prose, we edit it and publish it under their
+   * name. Absent means the site is the author and no byline renders, which is
+   * every existing article. `handle` links to the player's profile when they
+   * have an account here; `title` renders their verified badge beside the name.
+   */
+  author?: {
+    displayName: string;
+    handle?: string;
+    title?: PlayerTitle;
+  };
   showSummaryOnPage?: boolean;
   // Non-variant guest pages only. Variant rules listings are controlled in
   // variant-public-surfaces.ts so one switch covers every public rail/widget.

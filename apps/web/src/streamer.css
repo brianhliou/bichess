@@ -13,3 +13,50 @@
   color: var(--site-muted);
   margin: 12px 0;
 }
+
+.streamer-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.streamer-card {
+  padding: 14px 16px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.streamer-card-head {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.streamer-card-name {
+  color: var(--site-accent);
+  font-weight: 600;
+}
+
+.streamer-card-platform,
+.streamer-card-meta {
+  color: var(--site-muted);
+  font-size: 0.9em;
+}
+
+.streamer-card-blurb {
+  margin: 6px 0 0;
+  color: var(--site-text);
+}
+
+.streamer-card-meta {
+  margin: 6px 0 0;
+}
+
+.streamer-card-profile {
+  color: var(--site-accent);
+}

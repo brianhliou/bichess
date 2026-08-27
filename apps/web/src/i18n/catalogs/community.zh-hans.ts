@@ -233,6 +233,7 @@ export const ZH_HANS_COMMUNITY = {
   'streamer.heading': '主播',
   'streamer.intro': '值得关注的象棋与变体主播，可看直播与录播。',
   'streamer.empty': '暂时还没有收录主播。请稍后再来。',
+  'streamer.profileLink': 'Mistboard 主页',
   'challenge.button': '挑战',
   'challenge.title': '挑战 {name}',
   'challenge.daysPerMove': '每步天数',

@@ -212,6 +212,7 @@ export const EN_COMMUNITY = {
   'streamer.heading': 'Streamers',
   'streamer.intro': 'Xiangqi and variant streamers to watch live and on demand.',
   'streamer.empty': 'No streamers are listed yet. Check back soon.',
+  'streamer.profileLink': 'Mistboard profile',
   'profile.coachProfile': 'Coach profile',
   'profile.earlier': 'Earlier',
   'profile.activity': 'Activity',

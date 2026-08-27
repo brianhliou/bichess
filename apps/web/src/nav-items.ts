@@ -1,4 +1,5 @@
 import type { I18nKey } from './i18n/catalog.js';
+import { STREAMERS } from './streamers-data.js';
 
 export const SHOW_ENGINE_LAB_LINKS = import.meta.env.VITE_SHOW_ENGINE_LAB_NAV === 'true';
 
@@ -86,9 +87,12 @@ export function watchNavItems(): NavItem[] {
     // it holds: other people's finished games, from broadcasts, from the
     // archive, and from play here. It was reachable only by URL until now.
     { label: 'Games', labelKey: 'nav.games', href: '/games' },
-    // No Streamers entry: /streamer is a shell with no backend, so linking it
-    // from the nav sends visitors to a permanently empty page. The route and its
-    // strings stay; restore this line when there is a streamer directory to show.
+    // Streamers appears only once the curated directory has someone in it.
+    // Deriving the link from the data means an empty /streamer is never
+    // reachable from the nav, and seeding the first entry needs no second edit.
+    ...(STREAMERS.length > 0
+      ? [{ label: 'Streamers', labelKey: 'nav.streamers' as const, href: '/streamer' }]
+      : []),
     { label: 'Video library', labelKey: 'nav.videoLibrary', href: '/videos' },
   ];
 }

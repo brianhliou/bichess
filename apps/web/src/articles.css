@@ -1916,3 +1916,18 @@
 [data-article-slug="mini-xiangqi"] .xq-replay-slider {
   width: min(440px, 100%);
 }
+
+/* Guest byline in the article meta row. The author name carries the same gold
+   title badge as every other list of people on the site. */
+.article-meta-byline {
+  color: var(--site-muted);
+}
+
+.article-meta-author {
+  color: inherit;
+  font-weight: 600;
+}
+
+a.article-meta-author:hover .article-meta-author-name {
+  text-decoration: underline;
+}
