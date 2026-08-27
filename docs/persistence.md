@@ -49,7 +49,7 @@ migration-owned table family:
 - **Studies**: studies, chapters (serialized move trees), likes.
 - **Broadcasts + historical corpus**: xiangqi broadcast tours/rounds/boards
   and sync logs; historical xiangqi sources, import batches, players, games.
-- **Forum / DM / social**: forum categories, topics, posts, reports; DM
+- **Forum / DM / social**: forum categories, topics, posts, reports, topic watches, post quotes; DM
   threads and messages; chat lines; follow/block relations; titles; coaches.
 - **Patron**: Stripe subscription projections and webhook events.
 

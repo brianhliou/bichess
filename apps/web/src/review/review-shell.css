@@ -415,6 +415,12 @@
 .review-move-times__bar--black {
   background: #34302e;
 }
+/* Chess-family reviews: the first seat plays white, so its bars read as white. */
+.dark-chess-review .review-move-times__bar--red {
+  background: #e9e5dc;
+  border: 1px solid #b8b1a5;
+  box-sizing: border-box;
+}
 .review-move-times__caption {
   margin: 6px 0 0;
   font-size: 12px;
@@ -430,7 +436,7 @@
 }
 .review-share__row {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: 60px 1fr auto;
   align-items: center;
   gap: 8px;
 }
@@ -475,6 +481,23 @@
 
 .review-share__copy:hover {
   background: var(--site-surface);
+}
+
+/* File downloads in the Share & export tab (lichess "Download PGN"): the link
+   group spans the field + button columns; each link is dressed as a button. */
+.review-share__downloads {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.review-share__download {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.review-share__download:hover {
+  text-decoration: none;
 }
 
 /* Always-visible FEN + moves-import block under the underboard tools panel (the

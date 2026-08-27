@@ -12,6 +12,7 @@ import { t } from './i18n/catalog.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { reviewOutcomeLine } from './review/game-review-meta.js';
 import { buildSpectatorChat } from './review/spectator-chat.js';
+import { downloadRow } from './review/underboard-tabs.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves, type XiangqiReplay } from './review/xiangqi-review-model.js';
@@ -37,6 +38,8 @@ export type HistoricalXiangqiGameDetail = {
   tags: Record<string, unknown>;
   qualityFlags: string[];
   visibility: string;
+  // True when the source is license-cleared, so the PGN download would serve.
+  pgnExport?: boolean;
 };
 
 type LoadResult =
@@ -121,6 +124,9 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
       label: resultStatus(game),
     },
     showCrosstable: true,
+    // Share & export: the archive PGN, only where the source is cleared for
+    // republication (the server gates the endpoint the same way).
+    ...(game.pgnExport ? { shareExtra: [downloadRow([historicalPgnLink(game.id)])] } : {}),
     // Same one-click study as the played-game surface. This is the one that
     // matters most for the archive: it is how a reader turns a game they found
     // in the database into something they can annotate.
@@ -280,4 +286,16 @@ function archiveStudyName(game: {
   const event = game.eventName?.trim() || null;
   if (players) return event ? `${players} (${event})` : players;
   return event ?? game.sourceName?.trim() ?? 'Xiangqi game';
+}
+
+export function historicalPgnLink(gameId: string): {
+  text: string;
+  href: string;
+  filename: string;
+} {
+  return {
+    text: 'PGN',
+    href: `/api/historical-xiangqi/games/${encodeURIComponent(gameId)}/export.pgn`,
+    filename: `mistboard-historical-${gameId}.pgn`,
+  };
 }

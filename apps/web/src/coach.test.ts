@@ -136,6 +136,12 @@ describe('coach directory page', () => {
     const untitledCta = untitled.querySelector<HTMLAnchorElement>('.coach-become a');
     expect(untitledCta?.getAttribute('href')).toBe('/verify-title');
     expect(untitledCta?.textContent).toBe('Are you a titled player? Verify your title to coach');
+    // An unconvinced visitor also gets the case for verifying, beside the CTA.
+    const pitch = untitled.querySelector<HTMLAnchorElement>('.coach-cta-pitch');
+    expect(pitch?.getAttribute('href')).toBe('/blog/titled-players');
+    expect(pitch?.textContent).toBe('What titled players get on Mistboard');
+    // A titled player is already sold; the pitch would be noise.
+    expect(withProfile.querySelector('.coach-cta-pitch')).toBeNull();
   });
 });
 

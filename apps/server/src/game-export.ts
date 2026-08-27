@@ -1,10 +1,25 @@
 import { algebraicMoveLabels, type Color, type GameEvent, type Move } from '@mistboard/game';
+import {
+  DEFAULT_SITE_HOST,
+  escapePgnHeader,
+  LICENSE,
+  normalizeJsonResult,
+  type PublicationTimeControl,
+  pgnDate,
+  pgnEventName,
+  pgnResult,
+  pgnStandardTermination,
+  SCHEMA_VERSION,
+  SITE_NAME,
+  timeControlFromSummary,
+} from './game-export-shared.js';
 import type { GameParticipant, RecentEveGameRecord } from './persistence.js';
 
-export const SCHEMA_VERSION = '1.0';
-export const LICENSE = 'CC BY 4.0';
-export const DEFAULT_SITE_HOST = 'https://mistboard.com';
-export const SITE_NAME = 'Mistboard';
+// Chess-family (Fog Chess) exporters: SAN via the chess move labeler, players
+// keyed white/black, reviewed at the legacy /game/:id. Variant tenants export
+// through game-export-tenant.ts; the vocabulary both share lives in
+// game-export-shared.ts and is re-exported here for existing importers.
+export { DEFAULT_SITE_HOST, LICENSE, SCHEMA_VERSION, SITE_NAME } from './game-export-shared.js';
 
 export type PublicationPly = {
   ply: number;
@@ -25,11 +40,7 @@ export type GamePublication = {
   };
   variant: string;
   mode: string;
-  time_control: {
-    initial_ms: number | null;
-    increment_ms: number | null;
-    label: string;
-  };
+  time_control: PublicationTimeControl;
   players: {
     white: { handle: string | null };
     black: { handle: string | null };
@@ -64,37 +75,6 @@ function moveToUci(move: Move): string {
     ? ({ queen: 'q', rook: 'r', bishop: 'b', knight: 'n' }[move.promotion] ?? '')
     : '';
   return `${move.from}${move.to}${promo}`;
-}
-
-function timeControlFromSummary(summary: RecentEveGameRecord): {
-  initial_ms: number | null;
-  increment_ms: number | null;
-  label: string;
-} {
-  // PvP/PvE games store time control in games.initial_ms / games.increment_ms.
-  // EvE games carry an additional eve_games.time_control JSON. Prefer the
-  // games-table values when present, fall back to the EvE JSON otherwise.
-  let initial = summary.initialMs ?? null;
-  let increment = summary.incrementMs ?? null;
-  if (initial == null) {
-    const raw = summary.timeControl ?? {};
-    const initialMsValue = (raw as Record<string, unknown>).initialMs;
-    const incrementMsValue = (raw as Record<string, unknown>).incrementMs;
-    if (typeof initialMsValue === 'number') initial = initialMsValue;
-    if (typeof incrementMsValue === 'number') increment = incrementMsValue;
-  }
-  return {
-    initial_ms: initial,
-    increment_ms: increment,
-    label: timeControlLabel(initial, increment),
-  };
-}
-
-function timeControlLabel(initialMs: number | null, incrementMs: number | null): string {
-  if (initialMs == null) return 'untimed';
-  const initialS = Math.round(initialMs / 1000);
-  const incS = Math.round((incrementMs ?? 0) / 1000);
-  return `${initialS}+${incS}`;
 }
 
 function plyListFromEvents(events: GameEvent[], roomId: string): PublicationPly[] {
@@ -145,72 +125,19 @@ export function buildGamePublicationJson(
   };
 }
 
-function pgnResult(result: string): string {
-  if (result === 'white-wins') return '1-0';
-  if (result === 'black-wins') return '0-1';
-  if (result === 'draw') return '1/2-1/2';
-  return '*';
-}
-
-function normalizeJsonResult(result: string): string {
-  if (result === 'white-wins') return 'white';
-  if (result === 'black-wins') return 'black';
-  if (result === 'draw') return 'draw';
-  return result;
-}
-
 function pgnVariantName(variant: string): string {
   if (variant === 'dark-chess') return 'Fog Chess';
   if (variant === 'draft960') return 'Draft960 (Fog Chess + Chess960)';
   return variant;
 }
 
-// Map Mistboard's internal termination vocabulary onto the PGN standard set
-// (the original value is preserved in [MistboardTermination "..."]).
-// Standard PGN values: normal, abandoned, time forfeit, adjudication, death,
-// emergency, rules infraction, unterminated.
-function pgnStandardTermination(termination: string): string {
-  switch (termination) {
-    case 'king-captured':
-    case 'checkmate':
-    case 'resignation':
-    case 'draw':
-    case 'no-legal-moves':
-      return 'normal';
-    case 'timeout':
-      return 'time forfeit';
-    case 'engine-failure':
-      return 'adjudication';
-    case 'worker-aborted':
-    case 'server-restarted':
-    case 'abandoned':
-      return 'abandoned';
-    case 'truncated':
-      return 'unterminated';
-    default:
-      return 'normal';
-  }
-}
-
-function pgnEventName(mode: string): string {
-  if (mode === 'pvp') return 'Mistboard Casual';
-  if (mode === 'pve') return 'Mistboard PvE';
-  if (mode === 'eve') return 'Mistboard EvE';
-  return `Mistboard ${mode}`;
-}
-
-function escapePgnHeader(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
 function buildPgnHeaders(summary: RecentEveGameRecord, siteOrigin: string): string[] {
-  const date = summary.startedAt.toISOString().slice(0, 10).replace(/-/g, '.');
   const tc = timeControlFromSummary(summary);
   const termination = summary.termination ?? '';
   const headers: Array<[string, string]> = [
     ['Event', pgnEventName(summary.mode)],
     ['Site', `${siteOrigin}/game/${summary.roomId}`],
-    ['Date', date],
+    ['Date', pgnDate(summary)],
     ['Round', '-'],
     ['White', displayNameForColor(summary, 'white') ?? '?'],
     ['Black', displayNameForColor(summary, 'black') ?? '?'],

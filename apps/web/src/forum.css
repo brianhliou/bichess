@@ -64,7 +64,8 @@
 }
 
 .forum-topic-edit,
-.forum-topic-report {
+.forum-topic-report,
+.forum-topic-watch {
   border: 0;
   background: transparent;
   color: var(--site-accent-strong);
@@ -78,9 +79,28 @@
 .forum-topic-edit:hover,
 .forum-topic-edit:focus-visible,
 .forum-topic-report:hover,
-.forum-topic-report:focus-visible {
+.forum-topic-report:focus-visible,
+.forum-topic-watch:hover,
+.forum-topic-watch:focus-visible {
   color: var(--site-link);
   text-decoration: underline;
+}
+
+.forum-topic-watch {
+  white-space: nowrap;
+}
+
+.forum-topic-watch[aria-pressed="true"] {
+  color: var(--site-muted);
+}
+
+.forum-topic-watch[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+.forum-topic-watch:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .forum-topic-edit-form {

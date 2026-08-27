@@ -4,6 +4,7 @@ import {
   challengesNotificationSource,
   clearNotificationBells,
   correspondenceNotificationSource,
+  type ForumWatchNotification,
   followersNotificationSource,
   forumNotificationSource,
   inboxNotificationSource,
@@ -18,12 +19,25 @@ const NO_COUNTS: NotificationCounts = {
   inboxUnread: 0,
   correspondenceYourMove: 0,
   newFollowers: 0,
-  forumReplies: 0,
+  forumTopics: 0,
+  forumWatched: [],
   incomingChallenges: 0,
 };
 
 function counts(overrides: Partial<NotificationCounts> = {}): NotificationCounts {
   return { ...NO_COUNTS, ...overrides };
+}
+
+function watchedRow(overrides: Partial<ForumWatchNotification> = {}): ForumWatchNotification {
+  return {
+    topicId: 'topic_strategy',
+    slug: 'scouting-the-center',
+    title: 'Scouting the center',
+    unread: 2,
+    firstUnreadPostId: 'post_strategy_reply',
+    quote: null,
+    ...overrides,
+  };
 }
 
 describe('notification nav', () => {
@@ -86,6 +100,44 @@ describe('notification nav', () => {
     expect(nav.querySelector<HTMLElement>('.notif-nav-badge')?.hidden).toBe(true);
   });
 
+  // Opening the panel is the read receipt, and the refresh that follows clears
+  // the count. The rows must survive that refresh while the panel stays open,
+  // or a per-topic deep link vanishes before it can be clicked.
+  it("keeps an open panel's rows after the seen refresh clears the badge", async () => {
+    let seen = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        if (String(input) === '/api/notifications/seen') {
+          seen = true;
+          return new Response('{"ok":true}', { status: 200 });
+        }
+        const payload = seen ? {} : { forumTopics: 1, forumWatched: [watchedRow({ unread: 1 })] };
+        return new Response(JSON.stringify(counts(payload)), { status: 200 });
+      }),
+    );
+    registerNotificationSource(forumNotificationSource);
+    const nav = document.createElement('nav');
+    nav.innerHTML = '<div class="site-nav-utilities"><div data-account-nav></div></div>';
+    document.body.append(nav);
+    mountNotificationBell(nav);
+    await refreshNotifications();
+
+    const badge = nav.querySelector<HTMLElement>('.notif-nav-badge');
+    const trigger = nav.querySelector<HTMLButtonElement>('.notif-nav-trigger');
+    const rows = () =>
+      Array.from(nav.querySelectorAll('.notif-nav-item'), (row) => row.textContent);
+    expect(badge?.textContent).toBe('1');
+    expect(rows()).toEqual(['1 new reply in Scouting the center']);
+
+    trigger?.click();
+    await vi.waitFor(() => expect(badge?.hidden).toBe(true));
+    expect(rows()).toEqual(['1 new reply in Scouting the center']);
+
+    trigger?.click();
+    expect(rows()).toEqual([]);
+  });
+
   it('surfaces nothing from the inbox source when the DM bell is disabled', () => {
     writeAccountPreference('inboxBell', false);
     expect(inboxNotificationSource.read(counts({ inboxUnread: 4 }))).toEqual({
@@ -112,13 +164,62 @@ describe('notification nav', () => {
     expect(snapshot.entries[0]?.href).toBe('/following');
   });
 
+  it('lists watched forum topics one row each, deep-linked to the first unread reply', () => {
+    const snapshot = forumNotificationSource.read(
+      counts({
+        forumTopics: 7,
+        forumWatched: [
+          watchedRow({ unread: 40 }),
+          watchedRow({
+            topicId: 'topic_endgame',
+            slug: 'endgame-practice',
+            title: 'Endgame practice',
+            unread: 1,
+            firstUnreadPostId: 'post_endgame_reply',
+          }),
+        ],
+      }),
+    );
+    // The badge counts conversations, not replies: a 40-reply thread is a 1.
+    expect(snapshot.count).toBe(7);
+    expect(snapshot.entries.map((entry) => entry.label)).toEqual([
+      '40 new replies in Scouting the center',
+      '1 new reply in Endgame practice',
+      '5 more topics with new replies',
+    ]);
+    expect(snapshot.entries[0]?.href).toBe('/forum/redirect/post/post_strategy_reply');
+    expect(snapshot.entries[2]?.href).toBe('/forum');
+  });
+
+  it('says who quoted you and links to the quoting post', () => {
+    const snapshot = forumNotificationSource.read(
+      counts({
+        forumTopics: 1,
+        forumWatched: [watchedRow({ unread: 3, quote: { postId: 'post_quoting', by: 'Bob' } })],
+      }),
+    );
+    expect(snapshot.entries[0]?.label).toBe('Bob quoted you in Scouting the center');
+    expect(snapshot.entries[0]?.href).toBe('/forum/redirect/post/post_quoting');
+    // A quoter whose account is gone still produces a usable row.
+    expect(
+      forumNotificationSource.read(
+        counts({
+          forumTopics: 1,
+          forumWatched: [watchedRow({ quote: { postId: 'post_quoting', by: null } })],
+        }),
+      ).entries[0]?.label,
+    ).toBe('Someone quoted you in Scouting the center');
+  });
+
   it('singularizes the follower, reply and challenge rows', () => {
     expect(followersNotificationSource.read(counts({ newFollowers: 1 })).entries[0]?.label).toBe(
       '1 new follower',
     );
-    expect(forumNotificationSource.read(counts({ forumReplies: 1 })).entries[0]?.label).toBe(
-      '1 new reply on your topics',
-    );
+    expect(
+      forumNotificationSource.read(
+        counts({ forumTopics: 1, forumWatched: [watchedRow({ unread: 1 })] }),
+      ).entries[0]?.label,
+    ).toBe('1 new reply in Scouting the center');
     expect(
       challengesNotificationSource.read(counts({ incomingChallenges: 1 })).entries[0]?.label,
     ).toBe('1 challenge waiting for you');

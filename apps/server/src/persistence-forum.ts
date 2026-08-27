@@ -1,8 +1,13 @@
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import { ensureForumTopicWatch, isWatchingForumTopic } from './persistence-forum-watches.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
 export type ForumTopicWritePolicy = 'account' | 'admin';
+
+// How many earlier posts one reply may link as quotes (124). A cap, not a
+// rule about the text: the body may quote more, only the first few link.
+export const MAX_QUOTED_POSTS = 5;
 
 export type ForumCategory = {
   id: string;
@@ -75,6 +80,9 @@ export type ForumPost = {
 
 export type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
+  // The signed-in reader's own watch state (123); null for anonymous reads,
+  // which keep the pre-123 shape.
+  viewer: { watching: boolean } | null;
 };
 
 export type ForumPostSearchPage = {
@@ -446,7 +454,7 @@ export async function getForumPostLocation(
 
 export async function getForumTopic(
   id: string,
-  options: { postLimit?: number; postOffset?: number } = {},
+  options: { postLimit?: number; postOffset?: number; viewerAccountId?: string | null } = {},
 ): Promise<ForumTopicDetail | null> {
   const { rows } = await getPool().query<ForumTopicRow>(
     `${FORUM_TOPIC_SELECT}
@@ -455,8 +463,13 @@ export async function getForumTopic(
   );
   const topic = rows[0] ? topicFromRow(rows[0]) : null;
   if (!topic) return null;
-  const posts = await listForumPosts(id, { limit: options.postLimit, offset: options.postOffset });
-  return { ...topic, posts };
+  const [posts, watching] = await Promise.all([
+    listForumPosts(id, { limit: options.postLimit, offset: options.postOffset }),
+    options.viewerAccountId
+      ? isWatchingForumTopic(options.viewerAccountId, id)
+      : Promise.resolve(null),
+  ]);
+  return { ...topic, posts, viewer: watching === null ? null : { watching } };
 }
 
 export async function createForumTopic(input: {
@@ -500,6 +513,12 @@ export async function createForumTopic(input: {
        VALUES ($1, $2, $3, $4, $5, $5)`,
       [input.postId, input.id, input.authorAccountId, input.bodyText, input.now],
     );
+    // Starting a thread watches it (123): replies land in the author's bell.
+    await ensureForumTopicWatch(client, {
+      accountId: input.authorAccountId,
+      topicId: input.id,
+      now: input.now,
+    });
     return { ok: true };
   });
   if (!result.ok) return result;
@@ -514,6 +533,10 @@ export async function addForumPost(input: {
   authorAccountId: string;
   bodyText: string;
   now: Date;
+  // Earlier posts this reply quotes (124), as sent by the Quote button.
+  // Validated here to visible posts in the same topic; anything else is
+  // dropped silently, since the quoted text stands on its own either way.
+  quotedPostIds?: readonly string[];
 }): Promise<AddForumPostResult> {
   return withTransaction(async (client) => {
     const { rows: topics } = await client.query<{
@@ -552,6 +575,26 @@ export async function addForumPost(input: {
        WHERE id = $1`,
       [input.topicId, input.now],
     );
+    // Replying watches the thread (123), and counts as having read it up to
+    // this moment. Overrides a prior unwatch on purpose: replying is opting in.
+    await ensureForumTopicWatch(client, {
+      accountId: input.authorAccountId,
+      topicId: input.topicId,
+      now: input.now,
+    });
+    const quotedPostIds = [...new Set(input.quotedPostIds ?? [])].slice(0, MAX_QUOTED_POSTS);
+    if (quotedPostIds.length > 0) {
+      await client.query(
+        `INSERT INTO forum_post_quotes (post_id, quoted_post_id, created_at)
+         SELECT $1, q.id, $4
+         FROM forum_posts q
+         WHERE q.id = ANY($2::text[])
+           AND q.topic_id = $3
+           AND q.hidden_at IS NULL
+         ON CONFLICT DO NOTHING`,
+        [input.id, quotedPostIds, input.topicId, input.now],
+      );
+    }
     const post = postFromRow(rows[0]!);
     return { ok: true, post };
   });

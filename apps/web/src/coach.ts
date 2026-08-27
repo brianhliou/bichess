@@ -166,6 +166,13 @@ async function hydrateCoachCta(intro: HTMLElement, locale: Locale): Promise<void
     link.textContent = t('coach.verifyToCoach', {}, locale);
   }
   cta.append(link);
+  if (!titled) {
+    const pitch = document.createElement('a');
+    pitch.className = 'coach-cta-pitch';
+    pitch.href = '/blog/titled-players';
+    pitch.textContent = t('verifyTitle.whatYouGet', {}, locale);
+    cta.append(pitch);
+  }
   intro.after(cta);
 }
 

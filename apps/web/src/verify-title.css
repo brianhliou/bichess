@@ -92,3 +92,18 @@
   color: var(--site-muted);
   min-height: 1.2em;
 }
+
+/* The "why verify" link under the intro, above the form. */
+.verify-title-pitch {
+  margin: -4px 0 18px;
+}
+
+.verify-title-pitch a {
+  color: var(--site-accent);
+  text-decoration: none;
+}
+
+.verify-title-pitch a:hover,
+.verify-title-pitch a:focus-visible {
+  text-decoration: underline;
+}

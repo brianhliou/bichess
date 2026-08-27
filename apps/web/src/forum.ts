@@ -75,6 +75,8 @@ type ForumPost = {
 
 type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
+  // The signed-in reader's own watch state; null (or absent) when anonymous.
+  viewer?: { watching: boolean } | null;
 };
 
 type ForumPostSearchResult = {
@@ -328,6 +330,8 @@ export async function mountForumTopic(root: HTMLElement, topicId: string): Promi
   else panel.append(user ? replyForm(topic, user) : signInBox(t('forum.signInToReply')));
 
   shell.append(panel);
+  // Read receipt for the bell: the watcher has now seen this page of replies.
+  if (user && topic.viewer?.watching) markTopicSeen(topic.id);
 }
 
 export async function mountForumPostRedirect(root: HTMLElement, postId: string): Promise<void> {
@@ -676,6 +680,7 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
     forumBackLink(categoryHref(topic.category), `Back to ${topic.category.name}`),
     heading,
   );
+  if (user) titleRow.append(topicWatchButton(topic));
   if (canReportForumContent(topic.author, user)) titleRow.append(topicReportButton(topic));
   const meta = document.createElement('p');
   meta.className = 'forum-sub';
@@ -1077,6 +1082,37 @@ function replyCount(topic: ForumTopicSummary): number {
   return Math.max(0, topic.postCount - 1);
 }
 
+// Watch toggle: replies in a watched topic land in the nav bell. aria-pressed
+// carries the state so the label stays a plain verb; the title says what
+// watching does, since the bell is its only visible effect.
+function topicWatchButton(topic: ForumTopicDetail): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'forum-topic-watch';
+  let watching = topic.viewer?.watching === true;
+  const render = () => {
+    button.textContent = watching ? t('forum.watching') : t('forum.watch');
+    button.title = watching ? t('forum.watchingHint') : t('forum.watchHint');
+    button.setAttribute('aria-pressed', watching ? 'true' : 'false');
+  };
+  render();
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    void submitTopicWatch(topic.id, !watching)
+      .then((next) => {
+        watching = next;
+        render();
+      })
+      .catch((err) => {
+        window.alert(err instanceof Error ? err.message : t('forum.watchCouldNotChange'));
+      })
+      .finally(() => {
+        button.disabled = false;
+      });
+  });
+  return button;
+}
+
 function topicReportButton(topic: ForumTopicDetail): HTMLButtonElement {
   return forumReportButton({
     className: 'forum-topic-report',
@@ -1243,11 +1279,46 @@ function insertPostQuote(post: ForumPost): void {
   textarea.value = nextValue.slice(0, maxLength);
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  const form = textarea.closest('form');
+  if (form) recordQuotedPost(form, post);
+}
+
+function quoteHeader(post: ForumPost): string {
+  return `> ${authorLabel(post.author)} wrote:`;
 }
 
 function quoteText(post: ForumPost): string {
   const lines = post.bodyText.split(/\r?\n/).map((line) => `> ${line}`);
-  return `> ${authorLabel(post.author)} wrote:\n${lines.join('\n')}\n\n`;
+  return `${quoteHeader(post)}\n${lines.join('\n')}\n\n`;
+}
+
+// Quote links (124): one hidden input per quoted post, carrying the header
+// line the quote inserted so submit can drop a link whose quote the writer
+// deleted again. The quoted author is told "X quoted you" from these.
+function recordQuotedPost(form: HTMLFormElement, post: ForumPost): void {
+  const existing = Array.from(
+    form.querySelectorAll<HTMLInputElement>('input[name="quotedPostIds"]'),
+  );
+  if (existing.some((input) => input.value === post.id)) return;
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'quotedPostIds';
+  input.value = post.id;
+  input.dataset.quoteHeader = quoteHeader(post);
+  form.append(input);
+}
+
+function quotedPostIdsStillInBody(form: HTMLFormElement, body: string): string[] {
+  return Array.from(form.querySelectorAll<HTMLInputElement>('input[name="quotedPostIds"]'))
+    .filter((input) => {
+      const header = input.dataset.quoteHeader ?? '';
+      return header.length > 0 && body.includes(header);
+    })
+    .map((input) => input.value);
+}
+
+function clearQuotedPosts(form: HTMLFormElement): void {
+  for (const input of form.querySelectorAll('input[name="quotedPostIds"]')) input.remove();
 }
 
 function renderPostBodyInto(body: HTMLElement, text: string): void {
@@ -1482,7 +1553,10 @@ function replyForm(topic: ForumTopicDetail, _user: AuthUser): HTMLElement {
   const submit = submitButton(t('forum.reply'), { check: true });
   // Cancel clears the draft and returns to the Write tab (the reply box is
   // always shown, so there is nothing to collapse — lichess clears the same way).
-  const cancel = forumCancelLink(() => resetBodyComposer(bodyComposer));
+  const cancel = forumCancelLink(() => {
+    resetBodyComposer(bodyComposer);
+    clearQuotedPosts(form);
+  });
   const footer = document.createElement('div');
   footer.className = 'forum-reply-footer';
   footer.append(cancel, error, submit);
@@ -1637,11 +1711,15 @@ async function submitReply(
   submit.disabled = true;
   error.textContent = '';
   const data = new FormData(form);
+  const bodyText = String(data.get('body') ?? '');
   try {
     const resp = await fetch(`/api/forum/topics/${encodeURIComponent(topic.id)}/posts`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ body: String(data.get('body') ?? '') }),
+      body: JSON.stringify({
+        body: bodyText,
+        quotedPostIds: quotedPostIdsStillInBody(form, bodyText),
+      }),
     });
     if (!resp.ok) throw new Error(errorMessageForStatus(resp.status));
     const payload = (await resp.json()) as { post: ForumPost };
@@ -2218,6 +2296,25 @@ function errorMessageForReportStatus(status: number): string {
   if (status === 409) return t('forum.errAlreadyReported');
   if (status >= 500) return t('forum.errUnavailable');
   return t('forum.reportCouldNotBeSent');
+}
+
+async function submitTopicWatch(topicId: string, watching: boolean): Promise<boolean> {
+  const resp = await fetch(`/api/forum/topics/${encodeURIComponent(topicId)}/watch`, {
+    method: watching ? 'PUT' : 'DELETE',
+    headers: { accept: 'application/json' },
+  });
+  if (!resp.ok) throw new Error(errorMessageForStatus(resp.status));
+  const data = (await resp.json()) as { watching: boolean };
+  return data.watching === true;
+}
+
+// Fire-and-forget: the server no-ops for non-watchers, and a lost call only
+// means the badge clears one visit later.
+function markTopicSeen(topicId: string): void {
+  void fetch(`/api/forum/topics/${encodeURIComponent(topicId)}/seen`, {
+    method: 'POST',
+    headers: { accept: 'application/json' },
+  }).catch(() => null);
 }
 
 async function submitTopicReport(topicId: string, reason: string): Promise<void> {

@@ -6,6 +6,7 @@
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
+import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import type { JungleCreatorPreference, JungleRuntimeRoom } from './jungle-runtime.js';
 import { jungleTenant } from './jungle-tenant.js';
 import * as persistence from './persistence.js';
@@ -106,6 +107,11 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // JSON only: jungle has no move notation beyond coordinates.
+  export: tenantExportBinding(jungleTenant, {
+    gameRouteBase: '/jungle/game',
+    uci: boardMoveUci,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

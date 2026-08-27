@@ -15,6 +15,7 @@ import { fortressXiangqiEnabled } from './feature-flags.js';
 import { installFortressXiangqiBoardStyles } from './fortress-xiangqi-render.js';
 import { mountFortressXiangqiReview } from './review/fortress-xiangqi-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -180,6 +181,7 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('fortress-xiangqi', fortressXiangqiEngineFen(truth)),
     boardEditorHref: (truth) => editorHref('fortress-xiangqi', fortressXiangqiEngineFen(truth)),
+    ...gameExportShareExtra('fortress-xiangqi', postgame.game.roomId),
     // Server whole-game FSF analysis, DB-cached: an already-analysed game loads from
     // cache on open (a GET that never computes). Requesting a fresh compute is
     // account-gated (the server rejects anon POSTs), so a signed-out visitor gets a

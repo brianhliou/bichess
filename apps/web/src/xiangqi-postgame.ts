@@ -21,6 +21,7 @@ import './xiangqi-postgame.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { xiangqiEnabled } from './feature-flags.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -171,6 +172,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),
     boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
+    ...gameExportShareExtra('xiangqi', postgame.game.roomId),
     // "Study" in the review menu: one click turns the game you are looking at
     // into a private study you can annotate. Same path /analysis/xiangqi has
     // used since it shipped; the game surfaces were just never given it.

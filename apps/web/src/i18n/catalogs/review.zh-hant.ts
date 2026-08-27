@@ -374,6 +374,7 @@ export const ZH_HANT_REVIEW = {
   'underboard.moveTimes': '用時',
   'underboard.crosstable': '對陣表',
   'underboard.shareExport': '分享與匯出',
+  'underboard.download': '下載',
   'annotate.comment': '評註',
   'annotate.glyphs': '符號',
   'annotate.lesson': '教學',

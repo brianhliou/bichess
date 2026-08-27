@@ -33,6 +33,7 @@ import { miniXiangqiArticle } from './articles/content/mini-xiangqi.js';
 import { mistyArticle } from './articles/content/misty.js';
 import { revealChessArticle } from './articles/content/reveal-chess.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
+import { titledPlayersArticle } from './articles/content/titled-players.js';
 import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog.js';
 import { shogiArticle } from './articles/content/shogi.js';
 import { shogi4Article } from './articles/content/shogi4.js';
@@ -66,6 +67,7 @@ export const articles: Article[] = [
   banqiLuckArticle,
   puzzleMiningArticle,
   riverbankCannonArticle,
+  titledPlayersArticle,
   revealChessArticle,
   darkCrossroadsChessArticle,
   crossroadsChessArticle,

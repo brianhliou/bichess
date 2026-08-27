@@ -6,6 +6,7 @@ import './game-route.css';
 // variants ride; the board renderer + its fog theme live in our own files.
 import './dark-xiangqi-postgame.css';
 import { mountDarkChessReview } from './review/dark-chess-review.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -43,6 +44,50 @@ type FeaturedGame = {
   }>;
 };
 
+type MovePlayedEvent = Extract<GameEvent, { type: 'move-played' }>;
+
+function isMovePlayed(event: GameEvent): event is MovePlayedEvent {
+  return event.type === 'move-played';
+}
+
+// Per-ply think time for the Move times tab. The live stack stamps thinkTimeMs
+// on every move; older logs fall back to consecutive event timestamps, the
+// first ply measured from the earliest event, as the xiangqi siblings do.
+function moveTimesFromEvents(
+  events: GameEvent[],
+  moveEvents: MovePlayedEvent[],
+): number[] | undefined {
+  let prevAt = events[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const times = moveEvents.map((event) => {
+    const delta =
+      typeof event.thinkTimeMs === 'number' ? event.thinkTimeMs : Math.max(0, event.at - prevAt);
+    prevAt = event.at;
+    return delta;
+  });
+  return times.some((ms) => ms > 0) ? times : undefined;
+}
+
+function playerName(game: FeaturedGame, color: 'white' | 'black'): string | undefined {
+  const seat = game.players?.find((player) => player.color === color)?.name;
+  if (seat) return seat;
+  return (color === 'white' ? game.whiteName : game.blackName) ?? undefined;
+}
+
+// The shell names its seats red/black (first mover first); for chess the first
+// seat plays white, so white's name goes under the `red` key.
+function reviewPlayers(game: FeaturedGame): { red?: string; black?: string } {
+  const white = playerName(game, 'white');
+  const black = playerName(game, 'black');
+  return { ...(white ? { red: white } : {}), ...(black ? { black } : {}) };
+}
+
+function resultScore(result: string): string {
+  if (result === 'white-wins') return '1-0';
+  if (result === 'black-wins') return '0-1';
+  if (result === 'draw') return '½-½';
+  return '*';
+}
+
 export function mountDarkChessPostgame(
   root: HTMLElement,
   game: FeaturedGame,
@@ -53,11 +98,8 @@ export function mountDarkChessPostgame(
   // colors (var(--site-heading)) apply on this dark-themed review page.
   root.classList.add('landing-page', 'game-route', 'dark-chess-postgame-route');
 
-  const moves: Move[] = events
-    .filter((event): event is Extract<GameEvent, { type: 'move-played' }> => {
-      return event.type === 'move-played';
-    })
-    .map((event) => event.move);
+  const moveEvents = events.filter(isMovePlayed);
+  const moves: Move[] = moveEvents.map((event) => event.move);
 
   const status = reviewOutcomeLine(reviewResultLabel(game.result), game.termination);
   const { metaCard, details } = buildReviewMeta({
@@ -79,6 +121,15 @@ export function mountDarkChessPostgame(
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('dark-chess', darkChessFen(truth)),
     boardEditorHref: (truth) => editorHref('dark-chess', darkChessFen(truth)),
+    // Underboard parity with the xiangqi-family siblings (lichess anatomy):
+    // Move times, Crosstable, and Share & export carrying the PGN/JSON downloads.
+    moveTimes: moveTimesFromEvents(events, moveEvents),
+    players: reviewPlayers(game),
+    result: { score: resultScore(game.result), label: status },
+    showCrosstable: true,
+    // Draft960 is absent from the export table (its PGN needs [SetUp]/[FEN]), so
+    // the row is omitted there rather than offering a broken file.
+    ...gameExportShareExtra(game.variant, game.roomId),
     // No client/server whole-game analysis for fog yet (the fog engine is a
     // separate worker piece); the review is the interactive triptych + tree.
     analysis: null,

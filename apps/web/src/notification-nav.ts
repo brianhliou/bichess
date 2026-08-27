@@ -15,12 +15,27 @@ import { readAccountPreferences } from './account-preferences.js';
 export type NotificationEntry = { label: string; href: string };
 export type NotificationSnapshot = { count: number; entries: NotificationEntry[] };
 
+export type ForumWatchNotification = {
+  topicId: string;
+  slug: string;
+  title: string;
+  unread: number;
+  firstUnreadPostId: string;
+  // Set when one of the unread posts quotes the user: the row says who and
+  // links to the quoting post instead of the oldest unread reply.
+  quote: { postId: string; by: string | null } | null;
+};
+
 // Mirrors the payload of GET /api/notifications (apps/server/src/routes/notifications.ts).
 export type NotificationCounts = {
   inboxUnread: number;
   correspondenceYourMove: number;
   newFollowers: number;
-  forumReplies: number;
+  // Watched forum topics with unread replies: topics, not replies, so one
+  // busy thread is a 1 on the badge, not a 40.
+  forumTopics: number;
+  // The rows behind forumTopics, capped server-side, most recent first.
+  forumWatched: ForumWatchNotification[];
   incomingChallenges: number;
 };
 
@@ -28,7 +43,8 @@ const EMPTY_COUNTS: NotificationCounts = {
   inboxUnread: 0,
   correspondenceYourMove: 0,
   newFollowers: 0,
-  forumReplies: 0,
+  forumTopics: 0,
+  forumWatched: [],
   incomingChallenges: 0,
 };
 
@@ -118,21 +134,29 @@ export const followersNotificationSource: NotificationSource = {
   markSeen: () => markKindSeen('followers'),
 };
 
-// Replies on topics the user started, since they last opened the bell.
+// Unread replies in topics the user watches (their own threads, threads they
+// replied in, threads they chose to follow). One row per topic, deep-linked to
+// the first unread reply, plus a single overflow row when the server capped
+// the list. Never a row per reply.
 export const forumNotificationSource: NotificationSource = {
   read: (counts) => {
     if (!readAccountPreferences().forumBell) return { count: 0, entries: [] };
-    const count = counts.forumReplies;
+    const count = counts.forumTopics;
     if (count === 0) return { count: 0, entries: [] };
-    return {
-      count,
-      entries: [
-        {
-          label: `${count} new ${plural(count, 'reply', 'replies')} on your topics`,
-          href: '/forum',
-        },
-      ],
-    };
+    const entries: NotificationEntry[] = counts.forumWatched.map((row) => ({
+      label: row.quote
+        ? `${row.quote.by ?? 'Someone'} quoted you in ${row.title}`
+        : `${row.unread} new ${plural(row.unread, 'reply', 'replies')} in ${row.title}`,
+      href: `/forum/redirect/post/${encodeURIComponent(row.quote?.postId ?? row.firstUnreadPostId)}`,
+    }));
+    const more = count - entries.length;
+    if (more > 0) {
+      entries.push({
+        label: `${more} ${entries.length > 0 ? 'more ' : ''}${plural(more, 'topic', 'topics')} with new replies`,
+        href: '/forum',
+      });
+    }
+    return { count, entries };
   },
   markSeen: () => markKindSeen('forum-replies'),
 };
@@ -186,13 +210,16 @@ export function mountNotificationBell(nav: HTMLElement): void {
   panel.setAttribute('aria-label', 'Notifications');
 
   trigger.addEventListener('click', () => {
-    const open = !control.classList.contains('notif-nav-open');
+    if (control.classList.contains('notif-nav-open')) {
+      closeBell(control);
+      return;
+    }
     for (const other of document.querySelectorAll<HTMLElement>('.notif-nav-open')) {
       if (other !== control) closeBell(other);
     }
-    control.classList.toggle('notif-nav-open', open);
-    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) void markOpenedSourcesSeen();
+    control.classList.add('notif-nav-open');
+    trigger.setAttribute('aria-expanded', 'true');
+    void markOpenedSourcesSeen();
   });
 
   control.append(trigger, panel);
@@ -251,9 +278,48 @@ async function fetchNotificationCounts(): Promise<NotificationCounts> {
     inboxUnread: read(data.inboxUnread),
     correspondenceYourMove: read(data.correspondenceYourMove),
     newFollowers: read(data.newFollowers),
-    forumReplies: read(data.forumReplies),
+    forumTopics: read(data.forumTopics),
+    forumWatched: readForumWatched(data.forumWatched),
     incomingChallenges: read(data.incomingChallenges),
   };
+}
+
+// Defensive parse of the per-topic rows: a malformed row is dropped rather
+// than rendered as a link to nowhere.
+function readForumWatched(value: unknown): ForumWatchNotification[] {
+  if (!Array.isArray(value)) return [];
+  const rows: ForumWatchNotification[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.topicId !== 'string' ||
+      typeof row.slug !== 'string' ||
+      typeof row.title !== 'string' ||
+      typeof row.firstUnreadPostId !== 'string' ||
+      typeof row.unread !== 'number' ||
+      !Number.isFinite(row.unread) ||
+      row.unread <= 0
+    ) {
+      continue;
+    }
+    rows.push({
+      topicId: row.topicId,
+      slug: row.slug,
+      title: row.title,
+      unread: Math.floor(row.unread),
+      firstUnreadPostId: row.firstUnreadPostId,
+      quote: readQuote(row.quote),
+    });
+  }
+  return rows;
+}
+
+function readQuote(value: unknown): ForumWatchNotification['quote'] {
+  if (!value || typeof value !== 'object') return null;
+  const quote = value as Record<string, unknown>;
+  if (typeof quote.postId !== 'string') return null;
+  return { postId: quote.postId, by: typeof quote.by === 'string' ? quote.by : null };
 }
 
 // Opening the panel is the read receipt for every watermarked source. Fires
@@ -271,6 +337,11 @@ function applySnapshot(control: HTMLElement): void {
     badge.textContent = String(lastSnapshot.count);
     badge.hidden = lastSnapshot.count === 0;
   }
+  // An open panel keeps the rows it opened with. Opening is the read receipt,
+  // and the refresh that follows must not pull a row out from under the cursor
+  // before it can be clicked; closing re-renders from the latest snapshot, so
+  // the next open starts fresh.
+  if (control.classList.contains('notif-nav-open')) return;
   const panel = control.querySelector<HTMLElement>('.notif-nav-panel');
   if (!panel) return;
   panel.replaceChildren();
@@ -294,6 +365,7 @@ function applySnapshot(control: HTMLElement): void {
 function closeBell(control: HTMLElement): void {
   control.classList.remove('notif-nav-open');
   control.querySelector('.notif-nav-trigger')?.setAttribute('aria-expanded', 'false');
+  applySnapshot(control);
 }
 
 function ensureDismiss(): void {

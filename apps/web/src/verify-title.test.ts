@@ -19,6 +19,10 @@ describe('verify-title page', () => {
 
     expect(root.textContent).toContain('Sign in to verify your title');
     expect(root.querySelector('form.verify-title-form')).toBeNull();
+    // The least convinced visitor still gets the case for verifying.
+    expect(
+      root.querySelector<HTMLAnchorElement>('.verify-title-pitch a')?.getAttribute('href'),
+    ).toBe('/blog/titled-players');
   });
 
   it('renders the full title select and evidence guidance for a fresh visitor', async () => {
@@ -49,6 +53,11 @@ describe('verify-title page', () => {
 
     expect(root.querySelector('textarea[name="evidence"]')).not.toBeNull();
     expect(root.querySelector('.verify-title-help')?.textContent).toContain('federation profile');
+
+    // The form answers "how"; the pitch link answers "why".
+    const pitch = root.querySelector<HTMLAnchorElement>('.verify-title-pitch a');
+    expect(pitch?.getAttribute('href')).toBe('/blog/titled-players');
+    expect(pitch?.textContent).toBe('What titled players get on Mistboard');
   });
 
   it('submits a request and flips to the pending status view', async () => {

@@ -7,6 +7,7 @@
 
 import type { RoomTimeControl } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
+import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { handleXiangqiCreate, requestsXiangqi } from './routes/xiangqi-rooms.js';
@@ -31,6 +32,12 @@ import {
 } from './variant-tenant/registry.js';
 import { createTenantCorrespondenceGameForSeek } from './variant-tenant/room-factory.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import {
+  xiangqiExportUci,
+  xiangqiPgnStyle,
+  xiangqiPgnWriter,
+  xiangqiWxfLabels,
+} from './xiangqi-game-export.js';
 import type { XiangqiCreatorPreference, XiangqiRuntimeRoom } from './xiangqi-runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -166,6 +173,14 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // WXF movetext + `san` when the line replays under standard rules (it always
+  // should for this tenant); ICCS coordinates otherwise. See xiangqi-game-export.ts.
+  export: tenantExportBinding(xiangqiTenant, {
+    gameRouteBase: '/xiangqi/game',
+    uci: xiangqiExportUci,
+    san: xiangqiWxfLabels,
+    writePgn: (moves) => xiangqiPgnWriter(moves, xiangqiPgnStyle(moves)),
+  }),
   sweepDueDeadline: sweepXiangqiDueDeadline,
   createCorrespondenceGameForSeek: createXiangqiCorrespondenceGameForSeek,
 });

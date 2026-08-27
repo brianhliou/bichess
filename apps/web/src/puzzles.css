@@ -30,6 +30,11 @@
      and the same persisted setting as the room, review and analysis boards. */
   --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 10px));
   --puzzle-surface-size: calc(var(--puzzle-surface-fit) * var(--uni-board-scale, 1));
+  /* Tallest a side column may grow before it scrolls: the shell's content box
+     (page height minus its 8px + 12px vertical padding). Deliberately not the
+     board size, so a short viewport or a zoomed-out board does not force the
+     sidebar to scroll while the page still has room for it. */
+  --puzzle-column-max-height: calc(var(--puzzle-page-height) - 20px);
   --puzzle-drop-surface-size: min(
     var(--puzzle-surface-size),
     calc((var(--puzzle-page-height) - 58px) * 82 / 100)
@@ -264,7 +269,7 @@
   order: 1;
   align-content: start;
   gap: 14px;
-  max-height: var(--puzzle-surface-size);
+  max-height: var(--puzzle-column-max-height);
   overflow: auto;
 }
 
@@ -1033,9 +1038,31 @@
   font-size: 14px;
 }
 
-@media (min-width: 981px) {
+@media (min-width: 981px) and (min-height: 740px) {
   body:has(.puzzles-shell) {
     overflow: hidden;
+  }
+}
+
+/* Short desktop viewports (a laptop with the bookmarks bar and a banner open, a
+   half-height window): the side columns cannot fit inside the viewport-locked
+   shell, and the fallback of scrolling each column inside its own box reads as
+   broken. Below 740px (the ~640px sidebar plus nav and shell padding, with a
+   little margin) give up the no-page-scroll lock and let the page scroll, the
+   way the narrow layout below already does. The board keeps its viewport fit:
+   28px is the shell's 20px vertical padding plus the ~8px the site nav runs
+   over the flat --puzzle-nav-height constant, so the board on its own never
+   forces a page scroll. Only a column taller than the viewport does. */
+@media (min-width: 981px) and (max-height: 739px) {
+  .puzzles-shell {
+    --puzzle-surface-fit: calc(var(--puzzle-page-height) - 28px);
+    height: auto;
+    overflow: visible;
+  }
+
+  .puzzles-sidebar,
+  .puzzle-side-panel--analysis {
+    max-height: none;
   }
 }
 

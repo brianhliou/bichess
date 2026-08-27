@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { PGN_CONTENT_TYPE } from './../game-export-shared.js';
+import { buildHistoricalXiangqiPgn } from './../historical-xiangqi-export.js';
 import * as persistence from './../persistence.js';
 import { type HttpApiContext, requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -76,6 +78,33 @@ export async function tryHandle(
   pathname: string,
   parsedUrl: URL,
 ): Promise<boolean> {
+  const exportMatch = pathname.match(/^\/api\/historical-xiangqi\/games\/([^/]+)\/export\.pgn$/);
+  if (exportMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const game = await persistence.getHistoricalXiangqiGame(decodeURIComponent(exportMatch[1]!));
+    // Same by-id gate as the detail route below: unlisted games are linked and
+    // serve, only 'private' stays hidden.
+    if (!game || game.visibility === 'private') {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    // A download republishes the source's game verbatim, so, like the opening
+    // explorer's aggregates (listAggregatableXiangqiGames), it waits on the
+    // source being license-cleared. Fail-closed: an unknown source is not cleared.
+    const source = await persistence.getHistoricalXiangqiSource(game.sourceId);
+    if (source?.licenseStatus !== 'cleared') {
+      writeJson(response, 403, { error: 'source_not_cleared' });
+      return true;
+    }
+    response.writeHead(200, {
+      'content-type': PGN_CONTENT_TYPE,
+      'content-disposition': `inline; filename="mistboard-historical-${game.id}.pgn"`,
+    });
+    response.end(buildHistoricalXiangqiPgn(game, source));
+    return true;
+  }
+
   const detailMatch = pathname.match(/^\/api\/historical-xiangqi\/games\/([^/]+)$/);
   if (detailMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -89,7 +118,17 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { game: { ...game, tags: publicTags(game.tags) } });
+    // `pgnExport` tells the review page whether the PGN download above would
+    // answer 200, so it renders the link only for license-cleared sources
+    // instead of offering one that 403s.
+    const source = await persistence.getHistoricalXiangqiSource(game.sourceId);
+    writeJson(response, 200, {
+      game: {
+        ...game,
+        tags: publicTags(game.tags),
+        pgnExport: source?.licenseStatus === 'cleared',
+      },
+    });
     return true;
   }
 

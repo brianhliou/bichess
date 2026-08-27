@@ -163,6 +163,7 @@ export {
   listForumReports,
   listForumTopics,
   listLatestForumPosts,
+  MAX_QUOTED_POSTS,
   moderateForumTopic,
   moveForumTopic,
   resolveForumReport,
@@ -171,6 +172,13 @@ export {
   updateForumPost,
   updateForumTopic,
 } from './persistence-forum.js';
+export type { WatchForumTopicResult } from './persistence-forum-watches.js';
+export {
+  isWatchingForumTopic,
+  markForumTopicSeen,
+  unwatchForumTopic,
+  watchForumTopic,
+} from './persistence-forum-watches.js';
 export type { StoredPlyEval } from './persistence-game-analysis.js';
 export {
   deleteGameAnalysisProgress,
@@ -278,6 +286,7 @@ export {
   createHistoricalXiangqiImportBatch,
   finishHistoricalXiangqiImportBatch,
   getHistoricalXiangqiGame,
+  getHistoricalXiangqiSource,
   insertHistoricalXiangqiGame,
   listAggregatableXiangqiGames,
   normalizeHistoricalXiangqiPlayerName,
@@ -300,13 +309,18 @@ export {
   getLeaderboardSummary,
   getMostActivePlayers,
 } from './persistence-leaderboards.js';
-export type { NotificationWatermarkKind } from './persistence-notifications.js';
+export type {
+  ForumWatchNotification,
+  NotificationWatermarkKind,
+  UnreadWatchedForumTopics,
+} from './persistence-notifications.js';
 export {
-  countForumReplies,
   countIncomingChallenges,
   countNewFollowers,
+  FORUM_UNREAD_WINDOW_DAYS,
   isNotificationWatermarkKind,
   markNotificationsSeen,
+  unreadWatchedForumTopics,
 } from './persistence-notifications.js';
 export type { PatronSubscriptionInput, PatronTransaction } from './persistence-patron.js';
 export {

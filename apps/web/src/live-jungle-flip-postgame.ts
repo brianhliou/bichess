@@ -15,6 +15,7 @@ import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { jungleFlipResultLabel, jungleFlipSeatInk } from './jungle-flip-result-label.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import {
   fetchCachedJungleFlipDecisions,
@@ -199,6 +200,7 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     // public fen (it edits what is visible).
     analyseFromHere: (truth) => analysisHref('jungle-flip', jungleFlipStateToDealtFen(truth)),
     boardEditorHref: (truth) => editorHref('jungle-flip', jungleFlipStateToEngineFen(truth)),
+    ...gameExportShareExtra('jungle-flip', postgame.game.roomId),
     // Server-side MistyJungleFlip whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh
     // compute is account-gated (the server rejects anon POSTs), so a signed-out visitor gets
