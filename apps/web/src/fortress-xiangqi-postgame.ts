@@ -13,6 +13,7 @@ import { fortressXiangqiEnabled } from './feature-flags.js';
 import { installFortressXiangqiBoardStyles } from './fortress-xiangqi-render.js';
 import { mountFortressXiangqiReview } from './review/fortress-xiangqi-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -175,6 +176,7 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     showCrosstable: true,
+    ...gameExportShareExtra('fortress-xiangqi', postgame.game.roomId),
     // Server whole-game FSF analysis, DB-cached: an already-analysed game loads from
     // cache on open (a GET that never computes). Requesting a fresh compute is
     // account-gated (the server rejects anon POSTs), so a signed-out visitor gets a

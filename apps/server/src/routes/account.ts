@@ -31,6 +31,9 @@ const booleanAccountPreferenceKeys = new Set<persistence.AccountPreferenceKey>([
   'confirmGameActions',
   'inboxBell',
   'correspondenceBell',
+  'challengesBell',
+  'forumBell',
+  'followersBell',
   'correspondenceDeadlineEmail',
 ]);
 

@@ -808,6 +808,27 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
     ),
     buildNotificationPreferenceRow(
       user,
+      t('account.notificationChallenges', {}, locale),
+      'challengesBell',
+      null,
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationForum', {}, locale),
+      'forumBell',
+      null,
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationFollowers', {}, locale),
+      'followersBell',
+      null,
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
       t('account.notificationCorrespondenceDeadline', {}, locale),
       null,
       'correspondenceDeadlineEmail',
@@ -826,10 +847,24 @@ function notificationHeading(text: string): HTMLTableCellElement {
   return heading;
 }
 
+type BellPreferenceId =
+  | 'inboxBell'
+  | 'correspondenceBell'
+  | 'challengesBell'
+  | 'forumBell'
+  | 'followersBell';
+const BELL_PREFERENCE_IDS = new Set<string>([
+  'inboxBell',
+  'correspondenceBell',
+  'challengesBell',
+  'forumBell',
+  'followersBell',
+]);
+
 function buildNotificationPreferenceRow(
   user: AuthUser,
   labelText: string,
-  bell: 'inboxBell' | 'correspondenceBell' | null,
+  bell: BellPreferenceId | null,
   email: 'correspondenceDeadlineEmail' | null,
   locale: Locale,
 ): HTMLTableRowElement {
@@ -847,7 +882,7 @@ function buildNotificationPreferenceRow(
 
 function notificationPreferenceCell(
   user: AuthUser,
-  id: 'inboxBell' | 'correspondenceBell' | 'correspondenceDeadlineEmail' | null,
+  id: BellPreferenceId | 'correspondenceDeadlineEmail' | null,
   labelText: string,
   locale: Locale,
 ): HTMLTableCellElement {
@@ -897,7 +932,7 @@ async function saveAccountPreference<Id extends AccountPreferenceId>(
     user.accountPreferences = next;
     replaceAccountPreferences(next);
     setDisplayPreferenceStatus(statusHost, t('account.preferenceSaved', {}, locale));
-    if (id === 'inboxBell' || id === 'correspondenceBell') void refreshNotifications();
+    if (BELL_PREFERENCE_IDS.has(id)) void refreshNotifications();
   } catch (err) {
     console.warn(err);
     restorePreferenceGroup(group, previous);

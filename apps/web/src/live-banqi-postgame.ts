@@ -16,6 +16,7 @@ import {
 import { mountBanqiReview } from './review/banqi-review.js';
 import { recoverBanqiDeal } from './review/banqi-tree-adapter.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -192,6 +193,7 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     players: playerNames,
     seatColors,
     showCrosstable: true,
+    ...gameExportShareExtra('banqi', postgame.game.roomId),
     // Server-side MistyBanqi whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh
     // compute is account-gated (the server rejects anon POSTs), so a signed-out visitor

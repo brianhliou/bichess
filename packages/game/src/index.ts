@@ -6,6 +6,7 @@ export * from './chess960.js';
 export * from './clocks.js';
 export * from './engine-protocol.js';
 export * from './events.js';
+export * from './export-formats.js';
 export * from './game-specs.js';
 export * from './jieqi-fen.js';
 export * from './jungle-fen.js';

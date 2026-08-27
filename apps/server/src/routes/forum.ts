@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
+import { createAuthRateLimiter } from './../auth-rate-limit.js';
 import * as persistence from './../persistence.js';
 import { onlinePresence } from './../presence.js';
 import {
@@ -20,6 +21,9 @@ const topicWindowMs = 10 * 60 * 1000;
 const topicLimitPerWindow = 3;
 const postWindowMs = 10 * 60 * 1000;
 const postLimitPerWindow = 12;
+// Watch toggles and topic read receipts: one click or one page view each. Per
+// account, in memory; generous for a human, tight enough to stop a toggle loop.
+const forumWatchLimiter = createAuthRateLimiter(120, 60 * 60 * 1000);
 
 type ForumTopicJson = {
   id: string;
@@ -216,6 +220,19 @@ export async function tryHandle(
     return createTopicReport(request, response, decodeURIComponent(topicReportMatch[1]!));
   }
 
+  const topicWatchMatch = pathname.match(/^\/api\/forum\/topics\/([^/]+)\/watch$/);
+  if (topicWatchMatch) {
+    if (!requirePersistence(response)) return true;
+    return setTopicWatch(request, response, decodeURIComponent(topicWatchMatch[1]!));
+  }
+
+  const topicSeenMatch = pathname.match(/^\/api\/forum\/topics\/([^/]+)\/seen$/);
+  if (topicSeenMatch) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (!requirePersistence(response)) return true;
+    return markTopicSeen(request, response, decodeURIComponent(topicSeenMatch[1]!));
+  }
+
   const postsMatch = pathname.match(/^\/api\/forum\/topics\/([^/]+)\/posts$/);
   if (postsMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
@@ -283,9 +300,13 @@ export async function tryHandle(
     const topicId = decodeURIComponent(topicMatch[1]!);
     if (method === 'GET') {
       const postLimitParam = parsedUrl.searchParams.get('limit');
+      // Public read, but a signed-in viewer also gets their own watch state so
+      // the topic page can render the Watch button without a second request.
+      const viewer = await currentAccountUser(request);
       const topic = await persistence.getForumTopic(topicId, {
         postLimit: postLimitParam === null ? undefined : clampInt(postLimitParam, 100, 1, 100),
         postOffset: clampInt(parsedUrl.searchParams.get('offset'), 0, 0, 10_000),
+        viewerAccountId: viewer?.id ?? null,
       });
       if (!topic) {
         writeJson(response, 404, { error: 'not_found' });
@@ -382,12 +403,68 @@ async function createPost(
     authorAccountId: user.id,
     bodyText,
     now: new Date(),
+    quotedPostIds: parseQuotedPostIds(body.quotedPostIds),
   });
   if (!result.ok) {
     writeJson(response, result.error === 'topic_not_found' ? 404 : 423, { error: result.error });
     return true;
   }
   writeJson(response, 201, { post: serializePost(result.post) });
+  return true;
+}
+
+// PUT = watch, DELETE = unwatch, both idempotent. Returns the viewer's fresh
+// state so the button can render without refetching the topic.
+async function setTopicWatch(
+  request: IncomingMessage,
+  response: ServerResponse,
+  topicId: string,
+): Promise<boolean> {
+  const method = request.method ?? 'GET';
+  if (method !== 'PUT' && method !== 'DELETE') {
+    writeJson(response, 405, { error: 'method_not_allowed' });
+    return true;
+  }
+  const user = await currentAccountUser(request);
+  if (!user) {
+    writeJson(response, 401, { error: 'not_signed_in' });
+    return true;
+  }
+  if (!forumWatchLimiter.check(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
+    return true;
+  }
+  const result =
+    method === 'PUT'
+      ? await persistence.watchForumTopic({ accountId: user.id, topicId, now: new Date() })
+      : await persistence.unwatchForumTopic({ accountId: user.id, topicId });
+  if (!result.ok) {
+    writeJson(response, 404, { error: result.error });
+    return true;
+  }
+  writeJson(response, 200, { watching: result.watching });
+  return true;
+}
+
+// The topic page's read receipt: advances the viewer's per-topic watermark so
+// the bell stops counting the replies they have now scrolled past. A no-op for
+// non-watchers, so the client may call it unconditionally.
+async function markTopicSeen(
+  request: IncomingMessage,
+  response: ServerResponse,
+  topicId: string,
+): Promise<boolean> {
+  const user = await currentAccountUser(request);
+  if (!user) {
+    writeJson(response, 401, { error: 'not_signed_in' });
+    return true;
+  }
+  if (!forumWatchLimiter.check(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
+    return true;
+  }
+  await persistence.markForumTopicSeen({ accountId: user.id, topicId, now: new Date() });
+  writeJson(response, 200, { ok: true });
   return true;
 }
 
@@ -672,11 +749,13 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
 
 function serializeTopicDetail(topic: persistence.ForumTopicDetail): ForumTopicJson & {
   posts: ForumPostJson[];
+  viewer: { watching: boolean } | null;
 } {
   const online = onlineHandleSet();
   return {
     ...serializeTopicSummary(topic),
     posts: topic.posts.map((post) => serializePost(post, online)),
+    viewer: topic.viewer,
   };
 }
 
@@ -776,6 +855,22 @@ function serializeReport(report: persistence.ForumReport): ForumReportJson {
         }
       : null,
   };
+}
+
+// Quote links (124) as sent by the Quote button: ids only, deduped, capped.
+// Existence and same-topic checks happen in persistence.
+const QUOTED_POST_ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+function parseQuotedPostIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const ids: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string' || !QUOTED_POST_ID_PATTERN.test(item) || ids.includes(item)) {
+      continue;
+    }
+    ids.push(item);
+    if (ids.length >= persistence.MAX_QUOTED_POSTS) break;
+  }
+  return ids;
 }
 
 function normalizeSlug(value: string): string | null {

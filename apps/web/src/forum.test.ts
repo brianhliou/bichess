@@ -522,6 +522,64 @@ describe('forum pages', () => {
     expect(select?.value).toBe('feedback');
   });
 
+  it('lets a signed-in reader watch and unwatch a topic', async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url === '/api/forum/topics/topic_strategy/watch') {
+        return json({ watching: init?.method === 'PUT' });
+      }
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({ topic: { ...topic, posts: [], viewer: { watching: false } } });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    const button = root.querySelector<HTMLButtonElement>('button.forum-topic-watch');
+    expect(button?.textContent).toBe('Watch');
+    expect(button?.getAttribute('aria-pressed')).toBe('false');
+    // Not watching, so this visit sends no read receipt.
+    expect(calls.some((call) => call.endsWith('/seen'))).toBe(false);
+
+    button?.click();
+    await vi.waitFor(() => expect(button?.textContent).toBe('Watching'));
+    expect(button?.getAttribute('aria-pressed')).toBe('true');
+    expect(calls).toContain('PUT /api/forum/topics/topic_strategy/watch');
+
+    button?.click();
+    await vi.waitFor(() => expect(button?.textContent).toBe('Watch'));
+    expect(calls).toContain('DELETE /api/forum/topics/topic_strategy/watch');
+  });
+
+  it('sends a read receipt when a watcher opens the topic', async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url === '/api/forum/topics/topic_strategy/seen') return json({ ok: true });
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({ topic: { ...topic, posts: [], viewer: { watching: true } } });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    expect(root.querySelector('button.forum-topic-watch')?.textContent).toBe('Watching');
+    expect(calls).toContain('POST /api/forum/topics/topic_strategy/seen');
+  });
+
   it('renders topic moderation controls for admins', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -1151,9 +1209,76 @@ describe('forum pages', () => {
       ([input]) => String(input) === '/api/forum/topics/topic_strategy/posts',
     );
     expect(postCall?.[1]?.method).toBe('POST');
-    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({ body: 'A sharper reply.' });
+    expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
+      body: 'A sharper reply.',
+      quotedPostIds: [],
+    });
     expect(window.location.pathname).toBe('/forum/t/topic_strategy/scouting-the-center');
     expect(window.location.hash).toBe('#post_post_created');
+  });
+
+  it('links the quoted post on submit, unless the writer deleted the quote again', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url === '/api/forum/topics/topic_strategy/posts') {
+        return json({
+          post: {
+            id: 'post_created',
+            author: { handle: 'bob', displayName: 'Bob' },
+            bodyText: 'Reply.',
+            createdAt: '2026-06-01T00:05:00.000Z',
+            updatedAt: '2026-06-01T00:05:00.000Z',
+          },
+        });
+      }
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({
+          topic: {
+            ...topic,
+            posts: [
+              {
+                id: 'post_1',
+                author: { handle: 'alice', displayName: 'Alice' },
+                bodyText: 'Opening post.',
+                createdAt: '2026-06-01T00:00:00.000Z',
+                updatedAt: '2026-06-01T00:00:00.000Z',
+              },
+              {
+                id: 'post_2',
+                author: { handle: 'carol', displayName: 'Carol' },
+                bodyText: 'Second post.',
+                createdAt: '2026-06-01T00:01:00.000Z',
+                updatedAt: '2026-06-01T00:01:00.000Z',
+              },
+            ],
+          },
+        });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: adminUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+    const quotes = root.querySelectorAll<HTMLButtonElement>('.forum-post-quote');
+    const body = root.querySelector<HTMLTextAreaElement>('.forum-reply-form textarea[name="body"]');
+    const form = root.querySelector<HTMLFormElement>('form.forum-reply-form');
+    if (quotes.length !== 2 || !body || !form) throw new Error('missing quote controls');
+
+    quotes[0]?.click();
+    quotes[1]?.click();
+    // Carol's quote is deleted again before sending; only Alice stays linked.
+    body.value = `${body.value.split('> Carol wrote:')[0]}My answer.`;
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    const postCall = fetchSpy.mock.calls.find(
+      ([input]) => String(input) === '/api/forum/topics/topic_strategy/posts',
+    );
+    expect(JSON.parse(String(postCall?.[1]?.body)).quotedPostIds).toEqual(['post_1']);
   });
 
   it('paginates topic posts with stable page URLs', async () => {

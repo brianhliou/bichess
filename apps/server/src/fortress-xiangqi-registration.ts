@@ -13,6 +13,7 @@ import type {
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { type FortressXiangqiEvent, fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { fortressXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import {
   handleFortressXiangqiCreate,
@@ -154,6 +155,11 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // JSON only: drops ("R@d4") have no notation standard on this board.
+  export: tenantExportBinding(fortressXiangqiTenant, {
+    gameRouteBase: '/fortress-xiangqi/game',
+    uci: fortressXiangqiExportUci,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

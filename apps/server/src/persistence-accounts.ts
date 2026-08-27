@@ -38,6 +38,9 @@ export type AccountPreferenceKey =
   | 'confirmGameActions'
   | 'inboxBell'
   | 'correspondenceBell'
+  | 'challengesBell'
+  | 'forumBell'
+  | 'followersBell'
   | 'correspondenceDeadlineEmail';
 export type AccountPreferences = {
   clockTenths: ClockTenthsPreference;
@@ -46,6 +49,11 @@ export type AccountPreferences = {
   confirmGameActions: boolean;
   inboxBell: boolean;
   correspondenceBell: boolean;
+  // Bell mutes for the sources that arrived after the first two: pending
+  // challenges, forum replies/quotes, new followers. All default on.
+  challengesBell: boolean;
+  forumBell: boolean;
+  followersBell: boolean;
   correspondenceDeadlineEmail: boolean;
 };
 
@@ -56,6 +64,9 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   confirmGameActions: true,
   inboxBell: true,
   correspondenceBell: true,
+  challengesBell: true,
+  forumBell: true,
+  followersBell: true,
   correspondenceDeadlineEmail: true,
 };
 
@@ -315,6 +326,15 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
     correspondenceBell: booleanOrDefault(
       parsed.correspondenceBell,
       DEFAULT_ACCOUNT_PREFERENCES.correspondenceBell,
+    ),
+    challengesBell: booleanOrDefault(
+      parsed.challengesBell,
+      DEFAULT_ACCOUNT_PREFERENCES.challengesBell,
+    ),
+    forumBell: booleanOrDefault(parsed.forumBell, DEFAULT_ACCOUNT_PREFERENCES.forumBell),
+    followersBell: booleanOrDefault(
+      parsed.followersBell,
+      DEFAULT_ACCOUNT_PREFERENCES.followersBell,
     ),
     correspondenceDeadlineEmail: booleanOrDefault(
       parsed.correspondenceDeadlineEmail,
