@@ -496,7 +496,13 @@ describe('profile ratings rail', () => {
   function stubLeaderboardFetch(options?: {
     ladders?: { variant: string; leaderboard: unknown[] }[];
     activePlayers?: unknown[];
-    players?: { handle: string; displayName: string; rating?: unknown; playing?: boolean }[];
+    players?: {
+      handle: string;
+      displayName: string;
+      title?: string | null;
+      rating?: unknown;
+      playing?: boolean;
+    }[];
     anonymousOnline?: number;
   }) {
     return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
@@ -590,6 +596,52 @@ describe('profile ratings rail', () => {
       'Playing now',
     );
     expect(root.querySelector('.leaderboard-online-anon')?.textContent).toBe('+3 anonymous online');
+  });
+
+  it('badges titled players in the ladder rows and the online rail', async () => {
+    vi.stubEnv('DEV', false);
+    stubLeaderboardFetch({
+      ladders: [
+        {
+          variant: 'fog',
+          leaderboard: [
+            {
+              rank: 1,
+              handle: 'misty',
+              displayName: 'Misty',
+              title: 'xgm',
+              eloRating: 1710,
+              provisional: false,
+            },
+            {
+              rank: 2,
+              handle: 'plain',
+              displayName: 'Plain',
+              title: null,
+              eloRating: 1500,
+              provisional: false,
+            },
+          ],
+        },
+      ],
+      players: [{ handle: 'misty', displayName: 'Misty', title: 'gm' }],
+    });
+    const root = document.createElement('div');
+    const { mountLeaderboard } = await import('./profile.js');
+
+    await mountLeaderboard(root);
+
+    const rows = [...root.querySelectorAll('.leaderboard-table tbody tr')];
+    const badge = rows[0]?.querySelector('.title-badge');
+    expect(badge?.textContent).toBe('XGM');
+    // Presence dot stays leftmost; the badge sits between it and the name.
+    expect(badge?.previousElementSibling?.className).toContain('leaderboard-presence');
+    expect(badge?.nextElementSibling?.className).toBe('leaderboard-player-name');
+    expect(rows[1]?.querySelector('.title-badge')).toBeNull();
+
+    const onlineBadge = root.querySelector('.leaderboard-online-list .title-badge');
+    expect(onlineBadge?.textContent).toBe('GM');
+    expect(onlineBadge?.getAttribute('title')).toBe('Grandmaster');
   });
 
   it('shows the empty online state when nobody is online', async () => {

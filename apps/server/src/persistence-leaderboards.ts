@@ -4,12 +4,16 @@
 // of persistence-accounts.ts.
 import { PROVISIONAL_RD } from './glicko.js';
 import { getPool } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
 import type { RatingTimeClass, RatingVariant } from './rating-buckets.js';
 
 export type LeaderboardEntry = {
   rank: number;
   handle: string;
   displayName: string;
+  // Verified player title (088), null for everyone else. Additive: the ladder
+  // renders a badge beside the name where one is held.
+  title: PlayerTitle | null;
   eloRating: number;
   gamesPlayed: number;
   // RD still above the provisional threshold — rating not yet settled. Shown on
@@ -30,6 +34,7 @@ export async function getLeaderboard(query: LeaderboardQuery): Promise<Leaderboa
     rank: string;
     handle: string;
     display_name: string;
+    title: PlayerTitle | null;
     elo_rating: number;
     rating_deviation: number;
     games_played: number;
@@ -40,7 +45,7 @@ export async function getLeaderboard(query: LeaderboardQuery): Promise<Leaderboa
     // the board isn't barren at low liquidity; their low conservative rating
     // keeps them out of the top until they settle. Only never-played rows hide.
     `SELECT RANK() OVER (ORDER BY (r.elo_rating - 2 * r.rating_deviation) DESC) AS rank,
-            u.handle, u.display_name, r.elo_rating, r.rating_deviation, r.games_played
+            u.handle, u.display_name, u.title, r.elo_rating, r.rating_deviation, r.games_played
      FROM user_ratings r
      JOIN users u ON u.id = r.user_id
      WHERE r.variant = $1 AND r.time_class = $2
@@ -54,6 +59,7 @@ export async function getLeaderboard(query: LeaderboardQuery): Promise<Leaderboa
     rank: Number(row.rank),
     handle: row.handle,
     displayName: row.display_name,
+    title: row.title,
     eloRating: row.elo_rating,
     gamesPlayed: row.games_played,
     provisional: row.rating_deviation > PROVISIONAL_RD,
@@ -81,11 +87,12 @@ export async function getLeaderboardSummary(query: {
     rank: string;
     handle: string;
     display_name: string;
+    title: PlayerTitle | null;
     elo_rating: number;
     rating_deviation: number;
     games_played: number;
   }>(
-    `SELECT variant, rank, handle, display_name, elo_rating, rating_deviation, games_played
+    `SELECT variant, rank, handle, display_name, title, elo_rating, rating_deviation, games_played
      FROM (
        SELECT r.variant,
               RANK() OVER (
@@ -96,7 +103,7 @@ export async function getLeaderboardSummary(query: {
                 PARTITION BY r.variant
                 ORDER BY (r.elo_rating - 2 * r.rating_deviation) DESC
               ) AS row_number,
-              u.handle, u.display_name, r.elo_rating, r.rating_deviation, r.games_played
+              u.handle, u.display_name, u.title, r.elo_rating, r.rating_deviation, r.games_played
        FROM user_ratings r
        JOIN users u ON u.id = r.user_id
        WHERE r.time_class = $1
@@ -118,6 +125,7 @@ export async function getLeaderboardSummary(query: {
       rank: Number(row.rank),
       handle: row.handle,
       displayName: row.display_name,
+      title: row.title,
       eloRating: row.elo_rating,
       gamesPlayed: row.games_played,
       provisional: row.rating_deviation > PROVISIONAL_RD,
@@ -130,6 +138,7 @@ export type ActivePlayerEntry = {
   rank: number;
   handle: string;
   displayName: string;
+  title: PlayerTitle | null;
   gamesPlayed: number;
 };
 
@@ -141,16 +150,17 @@ export async function getMostActivePlayers(limit = 10): Promise<ActivePlayerEntr
   const { rows } = await getPool().query<{
     handle: string;
     display_name: string;
+    title: PlayerTitle | null;
     games_played: string;
   }>(
-    `SELECT u.handle, u.display_name, COUNT(*) AS games_played
+    `SELECT u.handle, u.display_name, u.title, COUNT(*) AS games_played
      FROM game_participants p
      JOIN games g ON g.room_id = p.game_id
      JOIN users u ON u.id = p.subject_id
      WHERE p.subject_type = 'user'
        AND g.status = 'completed'
        AND u.profile_visibility IN ('public', 'unlisted')
-     GROUP BY u.id, u.handle, u.display_name
+     GROUP BY u.id, u.handle, u.display_name, u.title
      ORDER BY COUNT(*) DESC, u.handle
      LIMIT $1`,
     [bounded],
@@ -159,6 +169,7 @@ export async function getMostActivePlayers(limit = 10): Promise<ActivePlayerEntr
     rank: index + 1,
     handle: row.handle,
     displayName: row.display_name,
+    title: row.title,
     gamesPlayed: Number(row.games_played),
   }));
 }

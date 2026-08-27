@@ -1,5 +1,6 @@
 import './forum.css';
 import { t } from './i18n/catalog.js';
+import { prependTitleBadge } from './player-titles.js';
 import { type AuthUser, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
 
@@ -30,6 +31,9 @@ type ForumCategory = {
 type ForumAuthor = {
   handle: string;
   displayName: string;
+  // Verified player title (088), null for everyone else. On the AUTHOR, never
+  // to be confused with the topic's own title.
+  title?: string | null;
   // Soft presence signal; only populated on post authors in the topic detail
   // payload. Undefined everywhere it is not computed (treated as offline).
   online?: boolean;
@@ -2138,7 +2142,11 @@ function authorProfileLink(author: ForumAuthor, className: string): HTMLElement 
   const link = document.createElement('a');
   link.className = className;
   link.href = `/@/${encodeURIComponent(author.handle)}`;
-  link.textContent = author.displayName;
+  prependTitleBadge(link, author.title);
+  const name = document.createElement('span');
+  name.className = 'forum-author-name';
+  name.textContent = author.displayName;
+  link.append(name);
   return link;
 }
 

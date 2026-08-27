@@ -10,12 +10,17 @@
 // Deliberately process-local: presence is a soft signal, losing it on restart
 // is fine (the next authed request repopulates it).
 
+import type { PlayerTitle } from './persistence-titles.js';
+
 export type PresenceVisibility = 'public' | 'unlisted' | 'private';
 
 export type PresenceEntry = {
   userId: string;
   handle: string;
   displayName: string;
+  // Verified player title (088), null for everyone else. Carried so the online
+  // rails can badge a titled player without a second lookup per row.
+  title: PlayerTitle | null;
   profileVisibility: PresenceVisibility;
   lastSeenMs: number;
 };
@@ -33,6 +38,7 @@ export function touchPresence(
     id: string;
     handle: string;
     displayName: string;
+    title?: PlayerTitle | null;
     profileVisibility: PresenceVisibility;
   },
   nowMs: number = Date.now(),
@@ -41,6 +47,7 @@ export function touchPresence(
     userId: user.id,
     handle: user.handle,
     displayName: user.displayName,
+    title: user.title ?? null,
     profileVisibility: user.profileVisibility,
     lastSeenMs: nowMs,
   });

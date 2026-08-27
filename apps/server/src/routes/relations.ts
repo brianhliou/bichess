@@ -120,6 +120,7 @@ export async function tryHandle(
     const players = listed.map((entry) => ({
       handle: entry.handle,
       displayName: entry.displayName,
+      title: entry.title,
       rating: ratings.get(entry.userId) ?? null,
       playing: stats.playingUserIds.has(entry.userId),
     }));
@@ -156,6 +157,7 @@ export async function tryHandle(
         entries: page.entries.map((entry) => ({
           handle: entry.handle,
           displayName: entry.displayName,
+          title: entry.title,
           createdAt: entry.createdAt.toISOString(),
           bestRating: ratings.get(entry.targetId) ?? null,
           gamesTotal: totals.get(entry.targetId) ?? 0,

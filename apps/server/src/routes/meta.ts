@@ -132,6 +132,7 @@ export async function tryHandle(
     const players = listed.map((entry) => ({
       handle: entry.handle,
       displayName: entry.displayName,
+      title: entry.title,
       rating: ratings.get(entry.userId) ?? null,
       playing: stats.playingUserIds.has(entry.userId),
     }));

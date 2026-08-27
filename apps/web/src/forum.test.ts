@@ -908,6 +908,52 @@ describe('forum pages', () => {
     expect(window.location.pathname).toBe('/forum/t/topic_strategy/scouting-the-center');
   });
 
+  it('badges a titled post author before the name', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({
+          topic: {
+            ...topic,
+            posts: [
+              {
+                id: 'post_1',
+                author: { handle: 'alice', displayName: 'Alice', title: 'xim' },
+                bodyText: 'Opening post.',
+                createdAt: '2026-06-01T00:00:00.000Z',
+                updatedAt: '2026-06-01T00:00:00.000Z',
+              },
+              {
+                id: 'post_2',
+                author: { handle: 'bob', displayName: 'Bob', title: null },
+                bodyText: 'Reply.',
+                createdAt: '2026-06-01T00:01:00.000Z',
+                updatedAt: '2026-06-01T00:01:00.000Z',
+              },
+            ],
+          },
+        });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    const links = [...root.querySelectorAll('.forum-post-author-name')];
+    const badge = links[0]?.querySelector('.title-badge');
+    expect(badge?.textContent).toBe('XIM');
+    expect(badge?.getAttribute('title')).toBe('Xiangqi International Master');
+    expect(links[0]?.firstElementChild).toBe(badge);
+    expect(links[0]?.querySelector('.forum-author-name')?.textContent).toBe('Alice');
+    // An untitled author renders exactly as before.
+    expect(links[1]?.querySelector('.title-badge')).toBeNull();
+    expect(links[1]?.textContent).toBe('Bob');
+  });
+
   it('renders topic back navigation and post author metadata', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);

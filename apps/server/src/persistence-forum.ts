@@ -1,5 +1,6 @@
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
 
 export type ForumTopicWritePolicy = 'account' | 'admin';
 
@@ -18,6 +19,9 @@ export type ForumCategory = {
 export type ForumAuthor = {
   handle: string;
   displayName: string;
+  // Verified player title (088), null for everyone else. Named `title` on the
+  // AUTHOR, never on the topic: forum topics have their own unrelated title.
+  title: PlayerTitle | null;
 } | null;
 
 export type ForumCategoryLatestPost = {
@@ -195,7 +199,8 @@ export async function listForumCategories(): Promise<ForumCategory[]> {
             latest.post_id AS latest_post_id,
             latest.created_at AS latest_post_created_at,
             latest.author_handle AS latest_post_author_handle,
-            latest.author_display_name AS latest_post_author_display_name
+            latest.author_display_name AS latest_post_author_display_name,
+            latest.author_title AS latest_post_author_title
      FROM forum_categories c
      LEFT JOIN forum_topics t ON t.category_id = c.id AND t.hidden_at IS NULL
      LEFT JOIN LATERAL (
@@ -206,7 +211,7 @@ export async function listForumCategories(): Promise<ForumCategory[]> {
               latest_post.id AS post_id,
               latest_post.created_at AS created_at,
               u.handle AS author_handle,
-              COALESCE(u.display_name, u.handle) AS author_display_name
+              COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title
        FROM forum_topics latest_topic
        LEFT JOIN LATERAL (
          SELECT p.id, p.author_account_id, p.created_at
@@ -222,7 +227,7 @@ export async function listForumCategories(): Promise<ForumCategory[]> {
      ) latest ON TRUE
      GROUP BY c.id, latest.topic_id, latest.topic_slug, latest.topic_title,
               latest.topic_post_count, latest.post_id, latest.created_at,
-              latest.author_handle, latest.author_display_name
+              latest.author_handle, latest.author_display_name, latest.author_title
      ORDER BY c.sort_order ASC, c.name ASC`,
   );
   return rows.map(categoryFromRow);
@@ -293,7 +298,7 @@ export async function searchForumPosts(options: {
               p.body_text,
               p.created_at AS post_created_at,
               u.handle AS author_handle,
-              COALESCE(u.display_name, u.handle) AS author_display_name,
+              COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title,
               t.id AS topic_id,
               t.slug AS topic_slug,
               t.title AS topic_title,
@@ -360,7 +365,7 @@ export async function listLatestForumPosts(
             p.body_text,
             p.created_at AS post_created_at,
             u.handle AS author_handle,
-            COALESCE(u.display_name, u.handle) AS author_display_name,
+            COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title,
             t.id AS topic_id,
             t.slug AS topic_slug,
             t.title AS topic_title,
@@ -534,7 +539,7 @@ export async function addForumPost(input: {
          RETURNING id, author_account_id, body_text, created_at, updated_at, hidden_at
        )
        SELECT i.id, i.body_text, i.created_at, i.updated_at, i.hidden_at,
-              u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name
+              u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title
        FROM inserted i
        LEFT JOIN users u ON u.id = i.author_account_id`,
       [input.id, input.topicId, input.authorAccountId, input.bodyText, input.now],
@@ -588,7 +593,7 @@ export async function updateForumPost(input: {
          RETURNING id, author_account_id, body_text, created_at, updated_at, hidden_at
        )
        SELECT p.id, p.body_text, p.created_at, p.updated_at, p.hidden_at,
-              u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name
+              u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title
        FROM updated p
        LEFT JOIN users u ON u.id = p.author_account_id`,
       [input.postId, input.bodyText, input.now],
@@ -925,7 +930,7 @@ async function listForumPosts(
     `SELECT p.id,
             CASE WHEN p.hidden_at IS NULL THEN p.body_text ELSE '' END AS body_text,
             p.created_at, p.updated_at, p.hidden_at,
-            u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name
+            u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title
      FROM forum_posts p
      LEFT JOIN users u ON u.id = p.author_account_id
      WHERE p.topic_id = $1
@@ -939,11 +944,11 @@ async function listForumPosts(
 const FORUM_TOPIC_SELECT = `SELECT t.id, t.slug, t.title, t.post_count, t.pinned_at, t.locked_at,
           t.created_at, t.updated_at, t.last_post_at,
           c.slug AS category_slug, c.name AS category_name,
-          u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name,
+          u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title,
           latest_post.id AS latest_post_id,
           latest_post.created_at AS latest_post_created_at,
           latest_u.handle AS latest_post_author_handle,
-          COALESCE(latest_u.display_name, latest_u.handle) AS latest_post_author_display_name
+          COALESCE(latest_u.display_name, latest_u.handle) AS latest_post_author_display_name, latest_u.title AS latest_post_author_title
    FROM forum_topics t
    JOIN forum_categories c ON c.id = t.category_id
    LEFT JOIN users u ON u.id = t.author_account_id
@@ -959,9 +964,9 @@ const FORUM_TOPIC_SELECT = `SELECT t.id, t.slug, t.title, t.post_count, t.pinned
 const FORUM_REPORT_SELECT = `SELECT r.id, r.status, r.target_type, r.reason, r.resolution_note,
           r.created_at, r.updated_at, r.resolved_at,
           reporter.handle AS reporter_handle,
-          COALESCE(reporter.display_name, reporter.handle) AS reporter_display_name,
+          COALESCE(reporter.display_name, reporter.handle) AS reporter_display_name, reporter.title AS reporter_title,
           resolver.handle AS resolver_handle,
-          COALESCE(resolver.display_name, resolver.handle) AS resolver_display_name,
+          COALESCE(resolver.display_name, resolver.handle) AS resolver_display_name, resolver.title AS resolver_title,
           t.id AS topic_id,
           t.slug AS topic_slug,
           t.title AS topic_title,
@@ -973,7 +978,7 @@ const FORUM_REPORT_SELECT = `SELECT r.id, r.status, r.target_type, r.reason, r.r
           p.created_at AS post_created_at,
           p.hidden_at AS post_hidden_at,
           post_author.handle AS post_author_handle,
-          COALESCE(post_author.display_name, post_author.handle) AS post_author_display_name,
+          COALESCE(post_author.display_name, post_author.handle) AS post_author_display_name, post_author.title AS post_author_title,
           CASE
             WHEN p.id IS NULL THEN NULL
             ELSE GREATEST(1, (
@@ -1040,6 +1045,7 @@ type ForumCategoryRow = {
   latest_post_created_at: Date | null;
   latest_post_author_handle: string | null;
   latest_post_author_display_name: string | null;
+  latest_post_author_title: PlayerTitle | null;
 };
 
 type ForumTopicRow = {
@@ -1056,10 +1062,12 @@ type ForumTopicRow = {
   category_name: string;
   author_handle: string | null;
   author_display_name: string | null;
+  author_title: PlayerTitle | null;
   latest_post_id: string | null;
   latest_post_created_at: Date | null;
   latest_post_author_handle: string | null;
   latest_post_author_display_name: string | null;
+  latest_post_author_title: PlayerTitle | null;
 };
 
 type ForumPostRow = {
@@ -1070,6 +1078,7 @@ type ForumPostRow = {
   hidden_at: Date | null;
   author_handle: string | null;
   author_display_name: string | null;
+  author_title: PlayerTitle | null;
 };
 
 type ForumPostSearchRow = {
@@ -1079,6 +1088,7 @@ type ForumPostSearchRow = {
   post_created_at: Date;
   author_handle: string | null;
   author_display_name: string | null;
+  author_title: PlayerTitle | null;
   topic_id: string;
   topic_slug: string;
   topic_title: string;
@@ -1099,8 +1109,10 @@ type ForumReportRow = {
   resolved_at: Date | null;
   reporter_handle: string | null;
   reporter_display_name: string | null;
+  reporter_title: PlayerTitle | null;
   resolver_handle: string | null;
   resolver_display_name: string | null;
+  resolver_title: PlayerTitle | null;
   topic_id: string;
   topic_slug: string;
   topic_title: string;
@@ -1113,6 +1125,7 @@ type ForumReportRow = {
   post_hidden_at: Date | null;
   post_author_handle: string | null;
   post_author_display_name: string | null;
+  post_author_title: PlayerTitle | null;
   post_page: number | null;
 };
 
@@ -1145,6 +1158,7 @@ function categoryFromRow(row: ForumCategoryRow): ForumCategory {
             author: authorFromRow(
               row.latest_post_author_handle,
               row.latest_post_author_display_name,
+              row.latest_post_author_title,
             ),
             createdAt: row.latest_post_created_at,
           }
@@ -1161,7 +1175,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
       slug: row.category_slug,
       name: row.category_name,
     },
-    author: authorFromRow(row.author_handle, row.author_display_name),
+    author: authorFromRow(row.author_handle, row.author_display_name, row.author_title),
     latestPost:
       row.latest_post_id && row.latest_post_created_at
         ? {
@@ -1171,6 +1185,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
             author: authorFromRow(
               row.latest_post_author_handle,
               row.latest_post_author_display_name,
+              row.latest_post_author_title,
             ),
             createdAt: row.latest_post_created_at,
           }
@@ -1187,7 +1202,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
 function postFromRow(row: ForumPostRow): ForumPost {
   return {
     id: row.id,
-    author: authorFromRow(row.author_handle, row.author_display_name),
+    author: authorFromRow(row.author_handle, row.author_display_name, row.author_title),
     bodyText: row.body_text,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1215,7 +1230,7 @@ function postSearchResultFromRow(row: ForumPostSearchRow, query?: string): Forum
         name: row.category_name,
       },
     },
-    author: authorFromRow(row.author_handle, row.author_display_name),
+    author: authorFromRow(row.author_handle, row.author_display_name, row.author_title),
     createdAt: row.post_created_at,
   };
 }
@@ -1227,8 +1242,8 @@ function reportFromRow(row: ForumReportRow): ForumReport {
     targetType: row.target_type,
     reason: row.reason,
     resolutionNote: row.resolution_note,
-    reporter: authorFromRow(row.reporter_handle, row.reporter_display_name),
-    resolver: authorFromRow(row.resolver_handle, row.resolver_display_name),
+    reporter: authorFromRow(row.reporter_handle, row.reporter_display_name, row.reporter_title),
+    resolver: authorFromRow(row.resolver_handle, row.resolver_display_name, row.resolver_title),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     resolvedAt: row.resolved_at,
@@ -1247,7 +1262,11 @@ function reportFromRow(row: ForumReportRow): ForumReport {
           id: row.post_id,
           page: row.post_page ?? 1,
           snippet: forumPlainSnippet(row.post_body_text ?? ''),
-          author: authorFromRow(row.post_author_handle, row.post_author_display_name),
+          author: authorFromRow(
+            row.post_author_handle,
+            row.post_author_display_name,
+            row.post_author_title,
+          ),
           createdAt: row.post_created_at ?? row.created_at,
           hiddenAt: row.post_hidden_at,
         }
@@ -1255,9 +1274,13 @@ function reportFromRow(row: ForumReportRow): ForumReport {
   };
 }
 
-function authorFromRow(handle: string | null, displayName: string | null): ForumAuthor {
+function authorFromRow(
+  handle: string | null,
+  displayName: string | null,
+  title: PlayerTitle | null = null,
+): ForumAuthor {
   if (!handle) return null;
-  return { handle, displayName: displayName ?? handle };
+  return { handle, displayName: displayName ?? handle, title };
 }
 
 function clampInt(value: number, min: number, max: number): number {

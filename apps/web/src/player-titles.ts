@@ -67,6 +67,24 @@ export function titleFullName(title: PlayerTitle, locale: Locale = currentLocale
   return t(TITLE_NAME_KEYS[title], {}, locale);
 }
 
+// Put the badge in front of a name, the one way every list of people on the
+// site renders a title. Callers that hold a name element append the badge
+// themselves; this exists so a new surface does not become another inline copy
+// of the same three lines.
+//
+// The badge goes INSIDE the name link, lichess-style, so a titled player reads
+// as "XGM Alice" rather than a badge floating beside the row. Give the name its
+// own span when a test or a style needs the handle without the abbreviation
+// glued to it.
+export function prependTitleBadge(
+  parent: HTMLElement,
+  title: unknown,
+  locale: Locale = currentLocale(),
+): void {
+  const badge = buildTitleBadge(title, locale);
+  if (badge) parent.append(badge);
+}
+
 // The compact gold abbreviation badge (h1 lead on the profile, name lead on the
 // user card). Returns null for unknown values so callers can pass wire data
 // straight through without re-validating.

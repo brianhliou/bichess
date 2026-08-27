@@ -1,4 +1,5 @@
 import { t } from './i18n/catalog.js';
+import { prependTitleBadge } from './player-titles.js';
 import { buildSiteBox } from './site-box.js';
 import { localizedStudyName } from './study-i18n.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
@@ -18,6 +19,7 @@ type PublicStudy = {
 type LeaderboardEntry = {
   handle: string;
   displayName: string;
+  title?: string | null;
   eloRating: number;
   provisional: boolean;
 };
@@ -122,9 +124,15 @@ function leaderboardRow(category: string, leader: LeaderboardEntry): HTMLElement
   const row = document.createElement('a');
   row.className = 'site-box-row landing-leaderboard-row';
   row.href = `/@/${encodeURIComponent(leader.handle)}`;
+  // Built by hand rather than through text(), which sets textContent and would
+  // wipe a badge appended before the name.
+  const player = document.createElement('span');
+  player.className = 'landing-leaderboard-player';
+  prependTitleBadge(player, leader.title);
+  player.append(leader.displayName);
   row.append(
     text('landing-leaderboard-category', category),
-    text('landing-leaderboard-player', leader.displayName),
+    player,
     text('landing-leaderboard-rating', `${leader.eloRating}${leader.provisional ? '?' : ''}`),
   );
   return row;

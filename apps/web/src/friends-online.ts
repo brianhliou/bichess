@@ -10,6 +10,7 @@
 import './friends-online.css';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { prependTitleBadge } from './player-titles.js';
 import { fetchCurrentUser } from './site-shell.js';
 import { attachUserCard } from './user-card.js';
 import { ratingVariantLabel } from './variants.js';
@@ -17,6 +18,7 @@ import { ratingVariantLabel } from './variants.js';
 type OnlineFriend = {
   handle: string;
   displayName: string;
+  title?: string | null;
   rating: { variant: string; eloRating: number; provisional: boolean } | null;
   playing: boolean;
 };
@@ -146,7 +148,9 @@ function buildRow(friend: OnlineFriend, locale: Locale): HTMLElement {
   name.className = 'friends-online-name';
   name.textContent = friend.displayName;
 
-  link.append(dot, name);
+  link.append(dot);
+  prependTitleBadge(link, friend.title, locale);
+  link.append(name);
 
   if (friend.playing) {
     const mark = document.createElement('span');

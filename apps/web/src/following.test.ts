@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 type FollowingEntry = {
   handle: string;
   displayName: string;
+  title?: string | null;
   createdAt: string;
   bestRating: { variant: string; eloRating: number; provisional: boolean } | null;
   gamesTotal: number;
@@ -105,7 +106,7 @@ describe('following page', () => {
     const rows = [...root.querySelectorAll('.following-row')];
     expect(rows).toHaveLength(2);
 
-    const names = rows.map((row) => row.querySelector('.following-player-link')?.textContent);
+    const names = rows.map((row) => row.querySelector('.following-player-name')?.textContent);
     expect(names).toEqual(['Conan_The_Barbarian8', 'Newbie']);
     expect(rows[0]?.querySelector('.following-player-link')?.getAttribute('href')).toBe('/@/conan');
 
@@ -117,6 +118,20 @@ describe('following page', () => {
     expect(rows[1]?.querySelector('.following-last-seen')?.textContent).toBe('a while ago');
 
     expect(root.querySelector('.following-sub')?.textContent).toBe('2 players');
+  });
+
+  it('badges a titled player inside the name link, before the name', async () => {
+    stubFetch({ entries: [entry({ title: 'xgm' }), entry({ handle: 'plain', title: null })] });
+    const root = await mount();
+    const rows = [...root.querySelectorAll('.following-row')];
+
+    const badge = rows[0]?.querySelector('.following-player-link .title-badge');
+    expect(badge?.textContent).toBe('XGM');
+    expect(badge?.getAttribute('title')).toBe('Xiangqi Grandmaster');
+    // Badge precedes the name, so the row reads "XGM Conan_The_Barbarian8".
+    expect(rows[0]?.querySelector('.following-player-link')?.firstElementChild).toBe(badge);
+    // An untitled player gets no badge and no empty node in its place.
+    expect(rows[1]?.querySelector('.title-badge')).toBeNull();
   });
 
   it('renders a dash when a player has no rated pool yet', async () => {

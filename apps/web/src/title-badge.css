@@ -30,3 +30,16 @@
   background: color-mix(in srgb, #e0a94b 20%, var(--site-panel));
   color: #b9832f;
 }
+
+/* In a row of people (leaderboard ladders, the online rails, /following, and
+   the landing leaderboard box) the badge sits inside the name link, before the
+   name. One rule for all of them: a slightly smaller mark with a gap, so a
+   titled row reads "XGM Alice" without the abbreviation crowding the handle. */
+.leaderboard-table .title-badge,
+.leaderboard-online-list .title-badge,
+.following-player-link .title-badge,
+.friends-online-link .title-badge,
+.landing-leaderboard-player .title-badge {
+  font-size: 0.85em;
+  margin-right: 5px;
+}

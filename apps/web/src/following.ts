@@ -9,6 +9,7 @@ import './following.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
+import { prependTitleBadge } from './player-titles.js';
 import { buildLoadingState, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
 import { attachUserCard } from './user-card.js';
 import { ratingVariantLabel } from './variants.js';
@@ -16,6 +17,7 @@ import { ratingVariantLabel } from './variants.js';
 type FollowingEntry = {
   handle: string;
   displayName: string;
+  title?: string | null;
   createdAt: string;
   bestRating: { variant: string; eloRating: number; provisional: boolean } | null;
   gamesTotal: number;
@@ -182,7 +184,11 @@ function buildRow(
   const link = document.createElement('a');
   link.className = 'following-player-link';
   link.href = `/@/${encodeURIComponent(entry.handle)}`;
-  link.textContent = entry.displayName;
+  prependTitleBadge(link, entry.title, locale);
+  const name = document.createElement('span');
+  name.className = 'following-player-name';
+  name.textContent = entry.displayName;
+  link.append(name);
   attachUserCard(link, entry.handle);
   playerCell.append(link);
 

@@ -10,6 +10,7 @@
 // hasBlock().
 
 import { getPool } from './persistence-db.js';
+import type { PlayerTitle } from './persistence-titles.js';
 
 export type UserRelationKind = 'follow' | 'block';
 
@@ -19,6 +20,8 @@ export type RelationListEntry = {
   targetId: string;
   handle: string;
   displayName: string;
+  // Verified player title (088), null for everyone else.
+  title: PlayerTitle | null;
   createdAt: Date;
   // Durable users.last_seen_at (087). NULL for accounts with no recorded
   // activity since the column landed; clients render a quiet fallback.
@@ -174,11 +177,12 @@ export async function listRelations(
     target_id: string;
     handle: string;
     display_name: string;
+    title: PlayerTitle | null;
     created_at: Date;
     last_seen_at: Date | null;
     total_count: string;
   }>(
-    `SELECT users.id AS target_id, users.handle, users.display_name,
+    `SELECT users.id AS target_id, users.handle, users.display_name, users.title,
             user_relations.created_at, users.last_seen_at,
             COUNT(*) OVER() AS total_count
      FROM user_relations
@@ -193,6 +197,7 @@ export async function listRelations(
       targetId: row.target_id,
       handle: row.handle,
       displayName: row.display_name,
+      title: row.title,
       createdAt: row.created_at,
       lastSeenAt: row.last_seen_at,
     })),

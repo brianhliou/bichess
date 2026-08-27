@@ -9,7 +9,12 @@ import { buildFlairIconIfSet } from './flair.js';
 import type { FeaturedGame } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
-import { buildTitleBadge, isPlayerTitle, titleFullName } from './player-titles.js';
+import {
+  buildTitleBadge,
+  isPlayerTitle,
+  prependTitleBadge,
+  titleFullName,
+} from './player-titles.js';
 import {
   buildProfileDashboard,
   buildProfileGameRow,
@@ -104,6 +109,7 @@ type LeaderboardEntry = {
   rank: number;
   handle: string;
   displayName: string;
+  title?: string | null;
   eloRating: number;
   gamesPlayed: number;
   provisional: boolean;
@@ -115,6 +121,7 @@ type ActivePlayerEntry = {
   rank: number;
   handle: string;
   displayName: string;
+  title?: string | null;
   gamesPlayed: number;
 };
 
@@ -131,6 +138,7 @@ type LeaderboardResult = {
 type OnlinePlayerEntry = {
   handle: string;
   displayName: string;
+  title?: string | null;
   rating: { variant: string; eloRating: number; provisional: boolean } | null;
   playing?: boolean;
 };
@@ -147,6 +155,7 @@ type LeaderboardTableRow = {
   rank: number;
   handle: string;
   displayName: string;
+  title?: string | null;
   value: number;
   provisional: boolean;
 };
@@ -416,6 +425,7 @@ export async function mountLeaderboard(root: HTMLElement): Promise<void> {
             rank: entry.rank,
             handle: entry.handle,
             displayName: entry.displayName,
+            title: entry.title,
             value: entry.eloRating,
             provisional: entry.provisional,
           }))
@@ -643,7 +653,9 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
       const name = document.createElement('span');
       name.className = 'leaderboard-online-name';
       name.textContent = player.displayName;
-      link.append(dot, name);
+      link.append(dot);
+      prependTitleBadge(link, player.title, locale);
+      link.append(name);
       if (player.playing) {
         const playingMark = document.createElement('span');
         playingMark.className = 'leaderboard-online-playing';
@@ -763,7 +775,7 @@ function renderLeaderboardPanelBody(
   locale: Locale = currentLocale(),
 ): void {
   if (rows && rows.length > 0) {
-    body.replaceChildren(renderLeaderboardTable(rows, onlineHandles));
+    body.replaceChildren(renderLeaderboardTable(rows, onlineHandles, locale));
     return;
   }
   const msg = document.createElement('p');
@@ -775,6 +787,7 @@ function renderLeaderboardPanelBody(
 function renderLeaderboardTable(
   rows: LeaderboardTableRow[],
   onlineHandles: Set<string>,
+  locale: Locale = currentLocale(),
 ): HTMLTableElement {
   // Compact, header-less list in the lichess/playstrategy idiom: rank, player,
   // value only — no column headings. Every row carries a presence circle
@@ -803,7 +816,9 @@ function renderLeaderboardTable(
     const name = document.createElement('span');
     name.className = 'leaderboard-player-name';
     name.textContent = row.displayName;
-    link.append(presence, name);
+    link.append(presence);
+    prependTitleBadge(link, row.title, locale);
+    link.append(name);
     nameTd.append(link);
 
     const valueTd = document.createElement('td');
