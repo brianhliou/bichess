@@ -13,8 +13,20 @@ import './board-lastmove.css';
 
 /** Piece size the canonical radii/stroke were tuned against (xiangqi, CELL 60). */
 const CANONICAL_PIECE_SIZE = 54;
-const CANONICAL_RING_INSET = 1;
 const CANONICAL_STROKE = 4;
+/**
+ * How far the destination ring's CENTRE line sits outside the piece radius. The
+ * marker layer is painted UNDER the pieces, so what the eye sees is only the
+ * part of the stroke clearing the disc: at +2 with a 4-wide stroke the ring
+ * spans 27..31 against a 27 piece radius, showing a full 4-unit halo.
+ *
+ * This was r=29 (a 4-unit halo) when the treatment shipped, went to r=26 in a
+ * broad polish commit on 2026-07-10, and nobody noticed because the CSS comment
+ * still described r=29: at 26 the ring spans 24..28, so 1 unit of a 4-unit
+ * stroke clears the piece and the destination marker is ~0.6px of gold at
+ * homepage size. Restored 2026-08-27 — a marker you cannot see is not a marker.
+ */
+const CANONICAL_RING_OUTSET = 2;
 
 /**
  * What `drawMarkerOnArrival` targets. `-to` is the square-grid layout's
@@ -49,7 +61,7 @@ export function boardLastMoveMarkersSvg(
 ): string {
   const scale = pieceSize / CANONICAL_PIECE_SIZE;
   const originRadius = round2(pieceSize / 2);
-  const ringRadius = round2(pieceSize / 2 - CANONICAL_RING_INSET * scale);
+  const ringRadius = round2(pieceSize / 2 + CANONICAL_RING_OUTSET * scale);
   const parts: string[] = [];
   if (endpoints.from) {
     parts.push(

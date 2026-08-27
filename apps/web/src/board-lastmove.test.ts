@@ -30,17 +30,18 @@ import { renderXiangqiBoardSvg } from './xiangqi-board.js';
 // inside it, and no private per-variant marker class.
 describe('shared last-move language', () => {
   it('scales the radii and the ring stroke with the board piece size', () => {
-    // Canonical (xiangqi, piece 54): r=27 origin, r=26 ring, CSS-default stroke.
+    // Canonical (xiangqi, piece 54): r=27 origin disc, r=29 ring (outer edge 31
+    // against a 27 piece radius, so a 4-unit halo clears the disc), default stroke.
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: { x: 30, y: 40 } }, 54)).toBe(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="27"/>' +
-        '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="26"/>',
+        '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="29"/>',
     );
     expect(boardLastMoveStyleAttr(54)).toBe('');
 
     // A 72-unit-cell board (piece 65) renders the same picture at its own scale.
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: { x: 30, y: 40 } }, 65)).toBe(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="32.5"/>' +
-        '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="31.3"/>',
+        '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="34.91"/>',
     );
     expect(boardLastMoveStyleAttr(65)).toBe(' style="--board-lastmove-stroke:4.81"');
   });
@@ -48,7 +49,7 @@ describe('shared last-move language', () => {
   it('marks only the endpoints it is given', () => {
     // A drop has no origin square: destination halo only, never a stray disc.
     expect(boardLastMoveMarkersSvg({ from: null, to: { x: 30, y: 40 } }, 54)).toBe(
-      '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="26"/>',
+      '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="29"/>',
     );
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: null }, 54)).toBe(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="27"/>',

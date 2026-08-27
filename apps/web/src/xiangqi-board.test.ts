@@ -103,7 +103,7 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toContain(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="27"/>',
     );
-    expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="26"/>');
+    expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"/>');
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
@@ -112,7 +112,7 @@ describe('standard Xiangqi board SVG', () => {
     expect(flipped).toContain(
       '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="156" r="27"/>',
     );
-    expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="26"/>');
+    expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="29"/>');
   });
 
   it('marks the last move with complete source and destination cells on a square grid', () => {

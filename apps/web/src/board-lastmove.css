@@ -23,8 +23,9 @@
 }
 
 /* Destination: a gold halo around the last-moved piece. Drawn under the piece
-   layer just inside the piece radius, so only the ring's outer half shows around
-   the disc. Gold rides the shared board-highlight token (contrast/colorblind
+   layer with its centre line just OUTSIDE the piece radius, so the full stroke
+   clears the disc (see CANONICAL_RING_OUTSET — an inset ring is a ring you
+   cannot see). Gold rides the shared board-highlight token (contrast/colorblind
    board themes override it); the tight drop-shadow keeps the ring legible on the
    pale tan board skins where flat gold would wash out. Boards whose cell is not
    the canonical 60 units set --board-lastmove-stroke to keep the RENDERED ring
