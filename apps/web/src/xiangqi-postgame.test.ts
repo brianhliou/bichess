@@ -95,7 +95,7 @@ describe('Xiangqi postgame page', () => {
     const board = root.querySelector('.dxq-postgame__board');
     expect(board).not.toBeNull();
     expect(board!.innerHTML).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="27"',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="31"',
     );
     expect(board!.innerHTML).toContain(
       '<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"',

@@ -30,20 +30,23 @@ import { renderXiangqiBoardSvg } from './xiangqi-board.js';
 // inside it, and no private per-variant marker class.
 describe('shared last-move language', () => {
   it('scales the radii and the ring stroke with the board piece size', () => {
-    // Canonical (xiangqi, piece 54): r=27 origin disc, r=29 ring (outer edge 31
-    // against a 27 piece radius, so a 4-unit halo clears the disc), default stroke.
+    // Canonical (xiangqi, piece 54): the origin wash sits 4 units outside the
+    // piece radius (r=31) and the destination ring's outer edge lands on the same
+    // 31, so the pair reads as one size with two treatments. Default strokes.
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: { x: 30, y: 40 } }, 54)).toBe(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="27"/>' +
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="31"/>' +
         '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="29"/>',
     );
     expect(boardLastMoveStyleAttr(54)).toBe('');
 
     // A 72-unit-cell board (piece 65) renders the same picture at its own scale.
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: { x: 30, y: 40 } }, 65)).toBe(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="32.5"/>' +
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="37.31"/>' +
         '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="34.91"/>',
     );
-    expect(boardLastMoveStyleAttr(65)).toBe(' style="--board-lastmove-stroke:4.81"');
+    expect(boardLastMoveStyleAttr(65)).toBe(
+      ' style="--board-lastmove-stroke:4.81;--board-lastmove-origin-stroke:2.41"',
+    );
   });
 
   it('marks only the endpoints it is given', () => {
@@ -52,7 +55,7 @@ describe('shared last-move language', () => {
       '<circle class="xq-live-lastmove-ring" cx="30" cy="40" r="29"/>',
     );
     expect(boardLastMoveMarkersSvg({ from: { x: 10, y: 20 }, to: null }, 54)).toBe(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="27"/>',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="10" cy="20" r="31"/>',
     );
     expect(boardLastMoveMarkersSvg({}, 54)).toBe('');
   });

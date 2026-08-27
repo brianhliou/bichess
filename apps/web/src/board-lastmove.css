@@ -14,12 +14,18 @@
   pointer-events: none;
 }
 
-/* Origin marker: noticeably darker than the shared -cell wash so it reads as
-   "the piece came from here" at a glance. The fog boards (live-dark-xiangqi.ts)
-   render plain -cell circles on both endpoints and keep the lighter wash. */
+/* Origin marker: a pale wash with a thin amber outline, drawn a little wider
+   than the piece that left. This is the treatment the jieqi board carried before
+   the boards were unified; picked for all of them on 2026-08-27 over the darker
+   piece-sized disc, which read as heavy and small next to the destination ring.
+   The outline is what makes it legible on the tan skins without going dark.
+   The fog boards (live-dark-xiangqi.ts) render plain -cell circles on both
+   endpoints and keep the bare wash above. */
 .xq-live-lastmove-cell.xq-live-lastmove-from {
-  fill: #a16207;
-  opacity: 0.34;
+  fill: rgba(250, 204, 21, 0.22);
+  opacity: 1;
+  stroke: rgba(180, 83, 9, 0.55);
+  stroke-width: var(--board-lastmove-origin-stroke, 2);
 }
 
 /* Destination: a gold halo around the last-moved piece. Drawn under the piece

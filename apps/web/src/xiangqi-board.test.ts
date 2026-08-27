@@ -101,7 +101,7 @@ describe('standard Xiangqi board SVG', () => {
     // destination = the gold ring around the moved piece (r=29 > piece r=27).
     const svg = renderSharedXiangqiBoardSvg(view);
     expect(svg).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="27"/>',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="31"/>',
     );
     expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"/>');
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
@@ -110,7 +110,7 @@ describe('standard Xiangqi board SVG', () => {
     // Black perspective flips ranks: rank 3 lands at y = 36 + 2*60 = 156.
     const flipped = renderSharedXiangqiBoardSvg(view, 'black');
     expect(flipped).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="156" r="27"/>',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="156" r="31"/>',
     );
     expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="29"/>');
   });

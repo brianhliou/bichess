@@ -27,6 +27,16 @@ const CANONICAL_STROKE = 4;
  * homepage size. Restored 2026-08-27 — a marker you cannot see is not a marker.
  */
 const CANONICAL_RING_OUTSET = 2;
+/**
+ * The origin marker sits OUTSIDE where the piece stood, not flush with it: the
+ * square is empty now, so a piece-sized disc read as a smaller, heavier mark
+ * than the ring opposite it. +4 with the pale fill below is the treatment the
+ * jieqi board carried before the 2026-08-27 unification, chosen for every board
+ * on 2026-08-27 because it is the one that reads at a glance.
+ */
+const CANONICAL_ORIGIN_OUTSET = 4;
+/** Outline weight on the origin marker, in canonical units (see the CSS). */
+const CANONICAL_ORIGIN_STROKE = 2;
 
 /**
  * What `drawMarkerOnArrival` targets. `-to` is the square-grid layout's
@@ -46,8 +56,10 @@ export type BoardPoint = { x: number; y: number };
  */
 export function boardLastMoveStyleAttr(pieceSize: number): string {
   if (pieceSize === CANONICAL_PIECE_SIZE) return '';
-  const stroke = round2((CANONICAL_STROKE * pieceSize) / CANONICAL_PIECE_SIZE);
-  return ` style="--board-lastmove-stroke:${stroke}"`;
+  const scale = pieceSize / CANONICAL_PIECE_SIZE;
+  const ring = round2(CANONICAL_STROKE * scale);
+  const origin = round2(CANONICAL_ORIGIN_STROKE * scale);
+  return ` style="--board-lastmove-stroke:${ring};--board-lastmove-origin-stroke:${origin}"`;
 }
 
 /**
@@ -60,7 +72,7 @@ export function boardLastMoveMarkersSvg(
   pieceSize: number,
 ): string {
   const scale = pieceSize / CANONICAL_PIECE_SIZE;
-  const originRadius = round2(pieceSize / 2);
+  const originRadius = round2(pieceSize / 2 + CANONICAL_ORIGIN_OUTSET * scale);
   const ringRadius = round2(pieceSize / 2 + CANONICAL_RING_OUTSET * scale);
   const parts: string[] = [];
   if (endpoints.from) {
