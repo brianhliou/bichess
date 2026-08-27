@@ -69,7 +69,7 @@ function chapterName(game: XiangqiPgnGame, index: number, total: number): string
   const { red, black } = xiangqiPgnPlayers(game.tags);
   if (red && black) {
     const event = game.tags.Event?.trim();
-    const heading = `${red} - ${black}`;
+    const heading = `${red} vs ${black}`;
     return event && event !== '?' ? `${heading} (${event})` : heading;
   }
   const event = game.tags.Event?.trim();

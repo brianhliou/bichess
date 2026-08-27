@@ -4,6 +4,7 @@
 // renderXiangqiBoardSvg with no fog mask.
 
 import type { StandardXiangqiPlayerView, XiangqiColor, XiangqiMove } from '@mistboard/game';
+import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import { variantDisplayLabel } from './game-display.js';
@@ -161,6 +162,13 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     players: playerNames,
     result: { score: resultScore(postgame.game.result), label: status },
     showCrosstable: true,
+    // "Study" in the review menu: one click turns the game you are looking at
+    // into a private study you can annotate. Same path /analysis/xiangqi has
+    // used since it shipped; the game surfaces were just never given it.
+    studyExport: {
+      variant: DEFAULT_STUDY_VARIANT,
+      name: studyName(playerNames.red, playerNames.black),
+    },
     // Server Pikafish whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a
     // fresh compute is account-gated (the server rejects anon POSTs), so a
@@ -250,4 +258,10 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
   } catch {
     return null;
   }
+}
+
+/** Name a study made from a game after its players, the way a reader would
+ *  name it. Falls back to the variant when a seat has no name (a guest game). */
+function studyName(red: string | undefined, black: string | undefined): string {
+  return red && black ? `${red} vs ${black}` : 'Xiangqi game';
 }

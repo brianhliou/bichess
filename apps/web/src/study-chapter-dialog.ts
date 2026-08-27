@@ -5,14 +5,16 @@
 // submit). PGN import lives here as a TAB rather than as its own dialog and its
 // own rail button: both create chapters, so splitting them into two entry points
 // puts the same decision in two places and leaves the rail a stack of buttons.
-// Our tabs are Empty / Position / PGN; lichess also has a board editor and a
-// game-URL importer, neither of which we have yet.
+// Our tabs are Empty / Position / Game / PGN; lichess also has a board editor,
+// which we have no equivalent of yet.
 
+import { type XiangqiMove, xiangqiMoveToFsfUci } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
-import type { SerializedTree } from './review/tree-serialize.js';
+import type { SerializedNode, SerializedTree } from './review/tree-serialize.js';
+import { fetchXiangqiGameSource, parseXiangqiGameSource } from './review/xiangqi-game-source.js';
 import { importXiangqiPgnChapters, type XiangqiPgnChapter } from './review/xiangqi-pgn-chapter.js';
 
-type TabId = 'empty' | 'position' | 'pgn';
+type TabId = 'empty' | 'position' | 'game' | 'pgn';
 
 const PGN_ACCEPT = '.pgn,.txt,application/x-chess-pgn,text/plain';
 // One study's worth. A bigger paste is a corpus import and belongs in the admin
@@ -62,7 +64,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
   // --- tab strip --------------------------------------------------------------
   const tabs: Array<{ id: TabId; label: string }> = [{ id: 'empty', label: 'Empty' }];
   if (host.composable) tabs.push({ id: 'position', label: 'Position' });
-  if (host.importable) tabs.push({ id: 'pgn', label: 'PGN' });
+  if (host.importable) tabs.push({ id: 'game', label: 'Game' }, { id: 'pgn', label: 'PGN' });
 
   const strip = document.createElement('div');
   strip.className = 'study-chapter-dialog__tabs';
@@ -95,6 +97,19 @@ export function openChapterDialog(host: ChapterDialogHost): void {
   fenHint.className = 'study-chapter-dialog__hint';
   fenHint.textContent = 'Paste a FEN to start from a composed or mid-game position.';
   positionPanel.append(fenInput, fenHint);
+
+  const gamePanel = document.createElement('div');
+  gamePanel.className = 'study-chapter-dialog__panel';
+  const gameInput = document.createElement('input');
+  gameInput.type = 'text';
+  gameInput.className = 'study-create-dialog__control';
+  gameInput.placeholder = 'https://mistboard.com/xiangqi/game/…';
+  gameInput.setAttribute('aria-label', 'Mistboard game link');
+  const gameHint = document.createElement('p');
+  gameHint.className = 'study-chapter-dialog__hint';
+  gameHint.textContent =
+    'Paste a link to a game played here, a game from the database, or a broadcast board.';
+  gamePanel.append(gameInput, gameHint);
 
   const pgnPanel = document.createElement('div');
   pgnPanel.className = 'study-chapter-dialog__panel';
@@ -153,6 +168,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
     }
     emptyPanel.hidden = id !== 'empty';
     positionPanel.hidden = id !== 'position';
+    gamePanel.hidden = id !== 'game';
     pgnPanel.hidden = id !== 'pgn';
     // The PGN panel needs a readable line length; the other two do not, and a
     // dialog that stays wide for a single FEN field looks empty.
@@ -199,7 +215,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
 
   form.append(nameField);
   if (tabs.length > 1) form.append(strip);
-  form.append(emptyPanel, positionPanel, pgnPanel, feedback, actions);
+  form.append(emptyPanel, positionPanel, gamePanel, pgnPanel, feedback, actions);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     feedback.textContent = '';
@@ -208,6 +224,42 @@ export function openChapterDialog(host: ChapterDialogHost): void {
       submit.disabled = false;
       refreshSubmit();
     };
+
+    if (active === 'game') {
+      const source = parseXiangqiGameSource(gameInput.value);
+      if (!source) {
+        feedback.textContent = 'Paste a Mistboard game link, for example /xiangqi/game/xq_…';
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Loading game…';
+      void fetchXiangqiGameSource(source)
+        .then(async (result: Awaited<ReturnType<typeof fetchXiangqiGameSource>>) => {
+          if (!result.ok) {
+            feedback.textContent = result.error;
+            restore();
+            return;
+          }
+          // The chapter name the author typed wins; the derived one is only a
+          // default, so an untouched default gets replaced by the real players.
+          const chapterName = name && name !== host.defaultName ? name : result.game.name;
+          const error = await host.createChapter(chapterName, undefined, {
+            version: 1,
+            root: { children: linearTree(result.game.moves) },
+          });
+          if (error) {
+            feedback.textContent = error;
+            restore();
+            return;
+          }
+          dialog.close('create');
+        })
+        .catch(() => {
+          feedback.textContent = t('study.requestFailed');
+          restore();
+        });
+      return;
+    }
 
     if (active === 'pgn') {
       const parsed = importXiangqiPgnChapters(area.value.trim());
@@ -268,6 +320,16 @@ export function openChapterDialog(host: ChapterDialogHost): void {
   dialog.showModal();
   nameInput.focus();
   nameInput.select();
+}
+
+/** A game with no variations is a spine: one child all the way down. Built back
+ *  to front so each node can own the one already made. */
+function linearTree(moves: readonly XiangqiMove[]): SerializedNode[] {
+  let children: SerializedNode[] = [];
+  for (let i = moves.length - 1; i >= 0; i -= 1) {
+    children = [{ uci: xiangqiMoveToFsfUci(moves[i]!), children }];
+  }
+  return children;
 }
 
 /** Cheap game count for the submit label. Counts tag blocks, falling back to

@@ -18,9 +18,9 @@ describe('importXiangqiPgnChapters', () => {
 `);
     expect(skipped).toEqual([]);
     expect(chapters).toHaveLength(2);
-    expect(chapters[0]?.name).toBe('Hu Ronghua - Yang Guanlin (City Open)');
+    expect(chapters[0]?.name).toBe('Hu Ronghua vs Yang Guanlin (City Open)');
     // [White] is what chess-shaped tools emit for the first player.
-    expect(chapters[1]?.name).toBe('Li Laiqun - Liu Dahua (City Open)');
+    expect(chapters[1]?.name).toBe('Li Laiqun vs Liu Dahua (City Open)');
     expect(chapters[0]?.plyCount).toBe(2);
   });
 

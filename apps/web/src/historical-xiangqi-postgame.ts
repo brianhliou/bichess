@@ -1,4 +1,5 @@
 import type { XiangqiMove } from '@mistboard/game';
+import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
@@ -120,6 +121,13 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
       label: resultStatus(game),
     },
     showCrosstable: true,
+    // Same one-click study as the played-game surface. This is the one that
+    // matters most for the archive: it is how a reader turns a game they found
+    // in the database into something they can annotate.
+    studyExport: {
+      variant: DEFAULT_STUDY_VARIANT,
+      name: archiveStudyName(game),
+    },
     // Roomless archive game: whole-game analysis is the shared client ceval sweep
     // (same as /analysis/xiangqi), computed on request. No server Pikafish cache.
     analysis: buildXiangqiClientAnalysisSource(replay),
@@ -256,4 +264,20 @@ function formatDate(value: string | null): string {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** Name a study made from an archive game after its players, adding the event
+ *  when there is one. An anonymized corpus game has neither, so it falls back
+ *  to the source rather than to an empty string. */
+function archiveStudyName(game: {
+  redNameRaw?: string | null;
+  blackNameRaw?: string | null;
+  eventName?: string | null;
+  sourceName?: string | null;
+}): string {
+  const players =
+    game.redNameRaw && game.blackNameRaw ? `${game.redNameRaw} vs ${game.blackNameRaw}` : null;
+  const event = game.eventName?.trim() || null;
+  if (players) return event ? `${players} (${event})` : players;
+  return event ?? game.sourceName?.trim() ?? 'Xiangqi game';
 }
