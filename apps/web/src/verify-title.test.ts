@@ -19,6 +19,10 @@ describe('verify-title page', () => {
 
     expect(root.textContent).toContain('Sign in to verify your title');
     expect(root.querySelector('form.verify-title-form')).toBeNull();
+    // The least convinced visitor still gets the case for verifying.
+    expect(
+      root.querySelector<HTMLAnchorElement>('.verify-title-pitch a')?.getAttribute('href'),
+    ).toBe('/blog/titled-players');
   });
 
   it('renders the full title select and evidence guidance for a fresh visitor', async () => {
