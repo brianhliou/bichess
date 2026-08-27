@@ -1,12 +1,16 @@
 import {
+  applyBanqiMove,
   applyFortressXiangqiMove,
   applyJieqiMove,
   applyMiniXiangqiOpenMove,
   applyMove as applyXiangqiMove,
+  createInitialBanqiState,
   createInitialFortressXiangqiState,
   createInitialJieqiState,
   createInitialMiniXiangqiState,
   createInitialXiangqiState,
+  getBanqiLegalMoves,
+  getBanqiPlayerView,
   getFortressXiangqiLegalMoves,
   getFortressXiangqiPlayerView,
   getJieqiLegalMoves,
@@ -19,6 +23,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { boardLastMoveMarkersSvg, boardLastMoveStyleAttr } from './board-lastmove.js';
 import { renderFortressXiangqiBoardSvg } from './fortress-xiangqi-render.js';
+import { renderBanqiBoardSvg } from './live-banqi-render.js';
 import { renderJieqiBoardSvg } from './live-jieqi-render.js';
 import { renderMiniXiangqiBoardSvg } from './live-mini-xiangqi-render.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
@@ -87,6 +92,21 @@ describe('shared last-move language', () => {
         return renderMiniXiangqiBoardSvg(getMiniXiangqiOpenPlayerView(state, 'red'), 'red', {
           showFog: false,
         });
+      },
+    },
+    {
+      name: 'banqi',
+      svg: () => {
+        // Banqi opens face-down, so the first legal move is a flip (a self-move).
+        // Play two: the second is a board move, which is the case with an origin.
+        let state = createInitialBanqiState('lastmove-bq');
+        for (let i = 0; i < 24; i += 1) {
+          const move = getBanqiLegalMoves(state).find((m) => m.from !== m.to);
+          if (move)
+            return renderBanqiBoardSvg(getBanqiPlayerView(applyBanqiMove(state, move), 'red'));
+          state = applyBanqiMove(state, getBanqiLegalMoves(state)[0]!);
+        }
+        throw new Error('no banqi board move found');
       },
     },
     {

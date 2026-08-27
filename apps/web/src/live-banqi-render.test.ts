@@ -42,14 +42,17 @@ describe('renderBanqiBoardSvg', () => {
     expect(hidden).toContain('banqi-back banqi-drag-source');
   });
 
-  it('uses a disc shadow and destination halo for a board move', () => {
+  it('uses the shared origin wash and destination halo for a board move', () => {
     const svg = renderBanqiBoardSvg(
       { ...view, lastMove: { from: 'a1', to: 'c1' } } as never,
       'red',
     );
 
-    expect(svg.match(/<circle class="banqi-last-from"/g)).toHaveLength(1);
-    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
+    // The private marks this board used to draw are gone, not renamed alongside.
+    expect(svg).not.toContain('banqi-last-from');
+    expect(svg).not.toContain('banqi-last-ring');
     expect(svg).not.toContain('<rect class="banqi-last');
     expect(svg).not.toContain('banqi-last-collision');
   });
@@ -60,8 +63,9 @@ describe('renderBanqiBoardSvg', () => {
       'red',
     );
 
-    expect(svg).not.toContain('class="banqi-last-from"');
-    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    // A flip has no origin square, so the origin wash must not appear.
+    expect(svg).not.toContain('xq-live-lastmove-from');
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
     expect(svg.match(/<circle class="banqi-last-reveal"/g)).toHaveLength(1);
   });
 
@@ -75,8 +79,8 @@ describe('renderBanqiBoardSvg', () => {
       'red',
     );
 
-    expect(svg.match(/<circle class="banqi-last-from"/g)).toHaveLength(1);
-    expect(svg.match(/<circle class="banqi-last-ring"/g)).toHaveLength(1);
+    expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
     expect(svg).not.toContain('banqi-last-collision');
   });
 });

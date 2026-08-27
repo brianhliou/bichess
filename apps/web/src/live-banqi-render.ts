@@ -8,6 +8,12 @@ import {
   type BanqiSquare,
   banqiCoordOf,
 } from '@mistboard/game';
+import {
+  boardLastMoveMarkersSvg,
+  boardLastMoveOuterRadius,
+  boardLastMoveStyleAttr,
+  boardLastMoveUnit,
+} from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -42,9 +48,17 @@ const PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
-const LAST_MOVE_FROM_RADIUS = CELL * 0.45;
-const LAST_MOVE_RING_RADIUS = CELL * (26 / 60);
-const LAST_MOVE_REVEAL_RADIUS = CELL * 0.475;
+// The origin wash and destination halo are the shared marks (board-lastmove.ts).
+// The reveal ring is banqi's alone -- a flip is a self-move, so there is no
+// origin to wash -- and sits just outside where the shared marks end, making a
+// revealed-in-place tile read as a double ring against a move's single one.
+// Engine candidate marker. Was sharing the last-move ring's radius, which tied an
+// unrelated mark to that ring's geometry; the other boards size it from the piece
+// like their selection ring, so do the same here.
+const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
+const LAST_MOVE_REVEAL_RADIUS =
+  Math.round((boardLastMoveOuterRadius(PIECE_SIZE) + 2.5 * boardLastMoveUnit(PIECE_SIZE)) * 100) /
+  100;
 
 export const BANQI_PIECE_PX = PIECE_SIZE;
 
@@ -131,7 +145,7 @@ export function banqiMarkerSvg(marker: BanqiBoardMarker): string {
       },
     );
   }
-  return svgBoardCircleMarker(marker, center, LAST_MOVE_RING_RADIUS, {
+  return svgBoardCircleMarker(marker, center, ENGINE_MARKER_RADIUS, {
     baseClassName: 'xq-marker engine-marker',
   });
 }
@@ -205,21 +219,15 @@ function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
 function lastMoveMarkers(view: BanqiPlayerView): string {
   if (!view.lastMove) return '';
   const to = cellCenter(view.lastMove.to);
-  const destination = `<circle class="banqi-last-ring" cx="${to.x}" cy="${to.y}" r="${LAST_MOVE_RING_RADIUS}"/>`;
-  // Flips are self-moves. A single destination halo marks the revealed piece
-  // without inventing an origin. Board moves retain xiangqi's origin-shadow plus
-  // destination-halo grammar.
+  // Flips are self-moves: mark the destination only, never invent an origin to
+  // wash, and add the reveal ring so a flip is distinguishable from a move.
   if (view.lastMove.from === view.lastMove.to) {
     return (
-      destination +
+      boardLastMoveMarkersSvg({ to }, PIECE_SIZE) +
       `<circle class="banqi-last-reveal" cx="${to.x}" cy="${to.y}" r="${LAST_MOVE_REVEAL_RADIUS}"/>`
     );
   }
-  const from = cellCenter(view.lastMove.from);
-  return (
-    `<circle class="banqi-last-from" cx="${from.x}" cy="${from.y}" r="${LAST_MOVE_FROM_RADIUS}"/>` +
-    destination
-  );
+  return boardLastMoveMarkersSvg({ from: cellCenter(view.lastMove.from), to }, PIECE_SIZE);
 }
 
 function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView): string {
@@ -257,7 +265,7 @@ export function renderBanqiBoardSvg(
     ? (options.legalMoves ?? []).filter((m) => m.from === options.selectedSquare)
     : [];
   return `
-    <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
+    <svg class="banqi-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
       <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="6"/>
       <g class="banqi-grid">${gridLines()}</g>
       ${lastMoveMarkers(view)}
@@ -316,21 +324,12 @@ export const BANQI_BOARD_CSS = `
     .banqi-hit--target:hover .banqi-hint-capture {
       opacity: 0;
     }
-    .banqi-last-from {
-      fill: rgba(161, 98, 7, 0.34);
-      pointer-events: none;
-    }
-    .banqi-last-ring {
-      fill: none;
-      stroke: var(--board-highlight, #d6af4e);
-      stroke-width: ${CELL * (4 / 60)};
-      filter: drop-shadow(0 0 1px rgba(70, 45, 8, 0.5));
-      pointer-events: none;
-    }
+    /* Origin wash and destination halo now come from board-lastmove.css, shared
+       with the xiangqi family. Only the reveal ring is this board's own. */
     .banqi-last-reveal {
       fill: none;
       stroke: var(--board-highlight, #d6af4e);
-      stroke-width: ${CELL * 0.045};
+      stroke-width: var(--board-lastmove-origin-stroke, 2);
       opacity: 0.9;
       pointer-events: none;
     }

@@ -63,6 +63,23 @@ export function boardLastMoveStyleAttr(pieceSize: number): string {
 }
 
 /**
+ * One canonical unit at this board's scale. Lets a renderer place a mark of its
+ * own just outside the shared ones (banqi's reveal ring) without copying the
+ * constants above.
+ */
+export function boardLastMoveUnit(pieceSize: number): number {
+  return round2(pieceSize / CANONICAL_PIECE_SIZE);
+}
+
+/**
+ * Where both shared marks end: the origin wash's rim and the destination ring's
+ * outer stroke edge land on the same radius, so the pair reads as one size.
+ */
+export function boardLastMoveOuterRadius(pieceSize: number): number {
+  return round2(pieceSize / 2 + CANONICAL_ORIGIN_OUTSET * (pieceSize / CANONICAL_PIECE_SIZE));
+}
+
+/**
  * Origin disc + destination halo for one move. Either endpoint may be null: a
  * drop has no origin, and a fog board passes only the endpoints the viewer can
  * actually see. Returns '' when there is nothing to mark.
