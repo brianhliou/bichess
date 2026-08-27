@@ -89,7 +89,7 @@ export type Room = {
   // are in (or the game isn't in a pre-move window).
   abortTimer: ReturnType<typeof setTimeout> | null;
   abortDeadline: number | null;
-  abortPhase: 'white-1' | 'black-1' | null;
+  abortPhase: 'white-1' | 'black-1' | 'unjoined' | null;
   // Post-move-1 leaver forfeit. When a seated player disconnects from an
   // in-progress game and their opponent is present, the absent side has
   // FORFEIT_WINDOW_MS to return or it forfeits (opponent wins by abandonment).

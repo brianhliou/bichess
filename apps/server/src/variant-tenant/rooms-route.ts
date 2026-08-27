@@ -24,7 +24,11 @@
 
 import { randomBytes } from 'node:crypto';
 import type { ServerResponse } from 'node:http';
-import type { RoomTimeControl } from '@mistboard/game';
+import {
+  defaultClockIncrementMs,
+  defaultClockInitialMs,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { ratedEnabled } from '../feature-flags.js';
 import { gateGameSpecRequest } from '../game-spec-request-gate.js';
 import type { UserAccount } from '../persistence.js';
@@ -180,9 +184,22 @@ export function createTenantRoomsRoute<
 
     const mode = parseMode(body);
     const preferredColor = parsePreferred(body.preferredColor);
-    const timeControl =
+    // Omitting timeControl used to yield a room with NO clock at all
+    // (createTenantRuntimeRoom only emits `clock-started` when one is supplied).
+    // A clockless room past move 1 with both players gone is reachable by no
+    // reaper -- nothing can flag it, the pregame window has passed, and the
+    // leaver-forfeit needs exactly one seat absent -- so it sat in `playing`
+    // until the process restarted. Defaulting rather than rejecting keeps the
+    // long-standing "omit for a casual room" API shape working; it just gets the
+    // same default clock the legacy stack already applies. Engine self-play is
+    // untimed by design and runs headless in the worker, never through here.
+    const parsedTimeControl =
       body.timeControl === undefined ? undefined : parseRoomTimeControl(body.timeControl);
-    const invalidTimeControl = body.timeControl !== undefined && !timeControl;
+    const timeControl =
+      body.timeControl === undefined
+        ? { initialMs: defaultClockInitialMs, incrementMs: defaultClockIncrementMs }
+        : parsedTimeControl;
+    const invalidTimeControl = body.timeControl !== undefined && !parsedTimeControl;
 
     // Supported-surface gate. Returns true when it has written a response.
     const runSurfaceGate = (): boolean => {
@@ -252,7 +269,12 @@ export function createTenantRoomsRoute<
         writeJson(response, 401, { error: 'rated_requires_account' });
         return;
       }
-      if (wantsRated && timeControl && !isAllowedRatedTimeControl(timeControl)) {
+      // Fail CLOSED on a missing time control too. This used to read
+      // `wantsRated && timeControl && !isAllowed...`, so omitting timeControl
+      // skipped the check and produced a RATED room with no clock -- which is
+      // incoherent (rated requires a real time control) and, until the
+      // 'unjoined' window landed, unreapable as well.
+      if (wantsRated && (!timeControl || !isAllowedRatedTimeControl(timeControl))) {
         writeJson(response, 400, { error: 'rated_time_control_unsupported' });
         return;
       }

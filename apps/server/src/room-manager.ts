@@ -20,7 +20,7 @@ import {
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import { engineVersionDisplayName, loadEngine } from './engine-registry.js';
 import { firstPartyBotForEngine, firstPartyBotForId } from './first-party-bots.js';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS } from './lifecycle-windows.js';
+import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
 import { chooseLiveEngineMove, type LiveEngineFallbackEvent } from './live-engine.js';
 import { engineCounters, logger } from './obs.js';
 import { computeConnectedSeats, eventAppendedPayload, snapshotPayload } from './payloads.js';
@@ -607,14 +607,32 @@ export async function expireActiveClock(
   });
 }
 
-// Which pre-move abort window (if any) is live for the current state. Returns
-// null once both players have completed their first move (moveNumber >= 2),
-// when not playing. The clock is frozen throughout this phase, so this timer
-// is the only thing that resolves a game where a player never moves.
-function abortPhaseFor(state: GameProjection['state']): 'white-1' | 'black-1' | null {
+// Which pre-move abort window (if any) is live for this room. Returns null once
+// both players have completed their first move (moveNumber >= 2), or when not
+// playing. The clock is frozen throughout this phase, so this timer is the only
+// thing that resolves a game where a player never moves.
+//
+// 'unjoined' = a seat is still open, so nobody owes a move yet. It carries its
+// own, much longer window (JOIN_WINDOW_MS): waiting for a friend to click an
+// invite link is normal. Without it a Fog Chess invite link nobody joined was
+// claimed by NOTHING — the room has no clock until startLiveClockIfReady fires
+// (which needs both seats), so the untimed-room guard below skipped it, the
+// clock timer had no armed clock, and the forfeit timer needs moveNumber >= 2.
+// It sat in `playing` until the process restarted. See
+// variant-tenant/reaper-coverage.test.ts for the same gap on the tenant stack.
+function abortPhaseFor(room: Room): 'white-1' | 'black-1' | 'unjoined' | null {
+  const state = room.projection.state;
   if (state.status.type !== 'playing') return null;
   if (state.moveNumber >= 2) return null;
+  if (!room.projection.seats.white || !room.projection.seats.black) return 'unjoined';
   return state.lastMove === undefined ? 'white-1' : 'black-1';
+}
+
+// Is anyone actually sitting in this room right now? Tells "waiting for an
+// opponent" apart from "abandoned", which are identical in the projection.
+function someSeatConnected(room: Room): boolean {
+  const connected = computeConnectedSeats(room.clients);
+  return connected.white || connected.black;
 }
 
 export function clearAbortTimer(room: Room): void {
@@ -624,25 +642,44 @@ export function clearAbortTimer(room: Room): void {
 
 export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void {
   clearAbortTimer(room);
-  const phase = abortPhaseFor(room.projection.state);
-  // No window once both first moves are in, while paused, or on an untimed
-  // room (no clock → no pre-move timing pressure).
-  if (phase === null || room.projection.paused || !room.projection.state.clock) {
+  const phase = abortPhaseFor(room);
+  // No window once both first moves are in, or while paused. An untimed room
+  // gets no PRE-MOVE window either (no clock → no pre-move timing pressure),
+  // but 'unjoined' is exempt from that: those rooms have no clock yet by
+  // construction, and skipping them is what leaked them.
+  const untimedAndOwesAMove = phase !== 'unjoined' && !room.projection.state.clock;
+  // Somebody is sitting in the room with the page open, waiting for an
+  // opponent. Never abort under them, however long they wait — the leak being
+  // closed is the room nobody is in.
+  const stillWaitingWithSomeonePresent = phase === 'unjoined' && someSeatConnected(room);
+  if (
+    phase === null ||
+    room.projection.paused ||
+    untimedAndOwesAMove ||
+    stillWaitingWithSomeonePresent
+  ) {
     room.abortDeadline = null;
     room.abortPhase = null;
     return;
   }
   // Only (re)start the deadline when the phase changes. Re-broadcasts and
   // reconnects re-run this, but must not extend a window already counting down;
-  // white completing move 1 flips the phase and starts black a fresh window.
+  // white completing move 1 flips the phase and starts black a fresh window,
+  // and a seat filling flips 'unjoined' so the long join window collapses to
+  // the short pregame one instead of continuing to run.
   if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
-    room.abortDeadline = Date.now() + ABORT_WINDOW_MS;
+    room.abortDeadline = Date.now() + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
   }
   const delay = Math.max(0, room.abortDeadline - Date.now());
   room.abortTimer = setTimeout(() => {
-    if (abortPhaseFor(room.projection.state) === null) return;
+    const currentPhase = abortPhaseFor(room);
+    if (currentPhase === null) return;
     if (room.projection.paused) return;
+    // Re-check presence at fire time, not just at schedule time: a player can
+    // reclaim a seat via seat token without appending an event, so the
+    // scheduler does not always re-run on reconnect.
+    if (currentPhase === 'unjoined' && someSeatConnected(room)) return;
     const fromSeq = room.events.length;
     void appendEvent(ctx, room, {
       type: 'game-aborted',

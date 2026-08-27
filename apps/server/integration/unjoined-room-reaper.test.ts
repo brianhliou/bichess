@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ABORT_WINDOW_MS, JOIN_WINDOW_MS } from '../src/lifecycle-windows.js';
 import { registeredVariantTenants } from '../src/variant-tenant/registry.js';
-import { connectClient, startTestServer, type TestServer } from './harness.js';
+import { connectClient, startTestServer, type TestServer, waitUntil } from './harness.js';
 
 const jungleKey = 'MISTBOARD_JUNGLE_ENABLED';
 
@@ -127,6 +127,86 @@ test('the join window is cancelled when the opponent actually arrives', async ()
     await opponent.disconnect();
   } finally {
     restoreEnv(jungleKey, before);
+    await server.close();
+  }
+});
+
+// ── Legacy stack (Fog Chess) ────────────────────────────────────────────────
+// dark-chess still runs on the legacy room-manager map, NOT a variant tenant
+// (game-specs.ts declares legacyLiveRoom for it), and it had the identical leak
+// by a different route: a legacy room has NO clock until startLiveClockIfReady
+// fires, which needs both seats, so the abort scheduler's untimed-room guard
+// skipped exactly the rooms that needed claiming.
+
+async function createFogChessRoom(server: TestServer): Promise<string> {
+  const response = await fetch(`http://127.0.0.1:${server.port}/api/rooms`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      mode: 'pvp',
+      gameSpecId: 'dark-chess',
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    }),
+  });
+  assert.equal(response.status, 201);
+  return ((await response.json()) as { roomId: string }).roomId;
+}
+
+test('Fog Chess: an invite link nobody joined is claimed once its creator leaves', async () => {
+  const server = await startTestServer();
+  try {
+    const roomId = await createFogChessRoom(server);
+    const legacyRoom = () =>
+      server.rooms.get(roomId) as unknown as {
+        abortPhase: string | null;
+        abortDeadline: number | null;
+        projection: { state: { clock: unknown } };
+      };
+    assert.ok(legacyRoom(), 'dark-chess must still be served by the legacy room map');
+
+    const white = await connectClient({ url: server.url, room: roomId });
+    assert.equal(white.seat, 'white');
+    // The room genuinely has no clock yet: that is what made the old untimed
+    // guard skip it, so the fix must not depend on a clock existing.
+    assert.equal(legacyRoom().projection.state.clock, undefined);
+    assert.equal(legacyRoom().abortPhase, null, 'never abort a room someone is sitting in');
+
+    await white.disconnect();
+    await waitUntil(() => legacyRoom().abortPhase === 'unjoined', 2_000);
+    assert.equal(legacyRoom().abortPhase, 'unjoined');
+    assert.notEqual(legacyRoom().abortDeadline, null);
+  } finally {
+    await server.close();
+  }
+});
+
+test('Fog Chess: a fully seated room uses the short pregame window, not the join window', async () => {
+  const server = await startTestServer();
+  try {
+    const roomId = await createFogChessRoom(server);
+    const legacyRoom = () =>
+      server.rooms.get(roomId) as unknown as {
+        abortPhase: string | null;
+        abortDeadline: number | null;
+      };
+
+    const white = await connectClient({ url: server.url, room: roomId });
+    const black = await connectClient({ url: server.url, room: roomId });
+    assert.equal(black.seat, 'black');
+
+    // Both seats filled: the room leaves 'unjoined' and owes a first move, so
+    // the window must be the short pregame one. If 'unjoined' leaked through
+    // here, two players sitting at a board would be on a 15-minute timer.
+    await waitUntil(() => legacyRoom().abortPhase === 'white-1', 2_000);
+    const remaining = (legacyRoom().abortDeadline ?? 0) - Date.now();
+    assert.ok(
+      remaining > 0 && remaining <= ABORT_WINDOW_MS,
+      `expected the short pregame window, got ${remaining}ms`,
+    );
+
+    await white.disconnect();
+    await black.disconnect();
+  } finally {
     await server.close();
   }
 });

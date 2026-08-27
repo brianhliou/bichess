@@ -78,20 +78,22 @@ const CELLS: Cell[] = [
     reaped: true,
   },
   {
-    // KNOWN GAP, deliberately left open. Reachable from the product: the tenant
-    // create route has no timeControl default (rooms-route.ts:183) and
-    // createTenantRuntimeRoom only emits `clock-started` when one is supplied,
-    // so omitting the field yields a room with no clock at all. Engine
-    // self-play is untimed by design and `timeControl: null` propagates through
-    // play-again.
+    // KNOWN GAP, deliberately left open -- but no longer reachable by creating
+    // one. A room with no clock at all is claimed by nothing once it is past
+    // move 1 with both players gone: nothing can flag it, the pregame window has
+    // passed, and the leaver-forfeit needs exactly one seat absent.
     //
-    // Not closed here because there is no correct terminal event to write. The
-    // game has real moves and no winner, so aborting it would erase a played
-    // game from the record and forfeiting it would award a win to nobody. The
-    // honest end is a draw by abandonment, which is a PRODUCT decision (it has
-    // rating implications) and does not belong in a bug fix. Until then these
-    // rooms stay in memory but no longer inflate the public count, because
-    // isGameInPlay classifies them 'idle'.
+    // Rather than invent a terminal event for it (the game has real moves and no
+    // winner, so aborting would erase a played game and forfeiting would award a
+    // win to nobody -- the honest end is a draw by abandonment, a product
+    // decision), the SOURCE is closed: the create route now defaults the time
+    // control instead of yielding a clockless room. Engine self-play stays
+    // untimed by design and runs headless in the worker, never through that
+    // route or these maps.
+    //
+    // The row stays because the state is still expressible -- an old clockless
+    // room hydrating from its event log would land here -- and because deleting
+    // the row would hide that this cell has no reaper.
     name: 'NO clock, both seated, past move 1, both gone (known gap)',
     timeControl: undefined,
     seats: 'both',

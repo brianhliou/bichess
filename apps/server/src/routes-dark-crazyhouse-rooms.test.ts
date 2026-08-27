@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import type { ServerResponse } from 'node:http';
 import test from 'node:test';
-import { DARK_CRAZYHOUSE_SPEC_ID } from '@mistboard/game';
+import {
+  DARK_CRAZYHOUSE_SPEC_ID,
+  defaultClockIncrementMs,
+  defaultClockInitialMs,
+} from '@mistboard/game';
 import type { DarkCrazyhouseRuntimeRoom } from './dark-crazyhouse-runtime.js';
 import {
   type DarkCrazyhouseCreateContext,
@@ -171,6 +175,11 @@ test('Dark Crazyhouse room route creates a direct PvP room response', async () =
       mode: 'pvp',
       gameSpecId: DARK_CRAZYHOUSE_SPEC_ID,
       region: 'global',
+      // A create that omits timeControl now gets the shared default clock
+      // instead of no clock at all: a clockless room past move 1 with both
+      // players gone is claimed by no reaper, so it sat in `playing` until the
+      // process restarted (see variant-tenant/reaper-coverage.test.ts).
+      timeControl: { initialMs: defaultClockInitialMs, incrementMs: defaultClockIncrementMs },
     });
   } finally {
     restoreFlag(before);

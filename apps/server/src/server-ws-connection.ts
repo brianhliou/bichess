@@ -190,6 +190,11 @@ export async function handleWebSocketConnection(
     // already refused guests, so a rated seat-holder is always a signed-in
     // account.
     scheduleForfeitTimeout(ctx.roomMgrCtx, room);
+    // The pregame window depends on seat PRESENCE now (a room nobody is in and
+    // nobody has joined is abandoned; one with its creator waiting is not), and
+    // the seat-assigned event that re-runs the scheduler is appended before the
+    // client lands in room.clients. Re-derive here, where presence is true.
+    scheduleAbortTimeout(ctx.roomMgrCtx, room);
   }
 
   // If the room is paused (post-restart hydration), let resumeRoomIfReady
@@ -377,6 +382,9 @@ async function handleClose(
   // displaced early-out higher up means a same-account device switch never
   // reaches here, so it can't trigger a phantom forfeit.
   scheduleForfeitTimeout(ctx.roomMgrCtx, room);
+  // Same reason as the connect path: pre-move-1, the departure of the last
+  // person in an unjoined room is what starts its join window running.
+  scheduleAbortTimeout(ctx.roomMgrCtx, room);
   broadcastSnapshot(ctx.roomMgrCtx, room);
 }
 

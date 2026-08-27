@@ -189,7 +189,7 @@ definePersistenceTests('lifecycle', () => {
     assert.equal(timeline.audit[0]?.kind, 'pause_on_shutdown');
   });
 
-  test('abortStaleGuestPrestartGames aborts only guest rooms that never started', async () => {
+  test('abortStaleGuestPrestartGames aborts guest rooms where no move was ever played', async () => {
     const now = new Date('2026-05-09T12:00:00.000Z');
     const stale = new Date(now.getTime() - 20 * 60_000);
     const fresh = new Date(now.getTime() - 2 * 60_000);
@@ -218,7 +218,9 @@ definePersistenceTests('lifecycle', () => {
            ('stale-started-clock', 'dark-chess', NULL, NULL, 0, $1, NULL,
             'clock-white', 'clock-black', NULL, NULL, 'pvp', 'running'),
            ('stale-started-move', 'dark-chess', NULL, NULL, 0, $1, NULL,
-            'move-white', 'move-black', NULL, NULL, 'pvp', 'running')`,
+            'move-white', 'move-black', NULL, NULL, 'pvp', 'running'),
+           ('stale-correspondence', 'dark-chess', NULL, NULL, 0, $1, NULL,
+            NULL, NULL, NULL, NULL, 'pvp', 'running')`,
         [stale, fresh],
       );
       await client.query(
@@ -230,7 +232,8 @@ definePersistenceTests('lifecycle', () => {
            ('stale-started-clock', 0, 'room-created', $4),
            ('stale-started-clock', 1, 'clock-started', $5),
            ('stale-started-move', 0, 'room-created', $6),
-           ('stale-started-move', 1, 'move-played', $7)`,
+           ('stale-started-move', 1, 'move-played', $7),
+           ('stale-correspondence', 0, 'room-created', $8)`,
         [
           {
             type: 'room-created',
@@ -286,7 +289,23 @@ definePersistenceTests('lifecycle', () => {
             color: 'white',
             move: { from: 'e2', to: 'e4' },
           },
+          {
+            type: 'room-created',
+            at: stale.getTime(),
+            roomId: 'stale-correspondence',
+            variant: 'dark-chess',
+            offer: [],
+          },
         ],
+      );
+      // room_deadlines holds exactly one row per in-flight correspondence
+      // room, so its presence is how this sweep recognises days-per-move and
+      // leaves it alone: an open correspondence challenge sitting unfilled for
+      // days is normal, and the deadline sweeper owns its enforcement.
+      await client.query(
+        `INSERT INTO room_deadlines (room_id, game_spec_id, seat, due_at)
+         VALUES ('stale-correspondence', 'dark-chess', 'white', $1)`,
+        [new Date(now.getTime() + 3 * 24 * 60 * 60_000)],
       );
       await client.query(
         `INSERT INTO room_seat_tokens
@@ -300,7 +319,15 @@ definePersistenceTests('lifecycle', () => {
     }
 
     const result = await abortStaleGuestPrestartGames(now, 15 * 60_000);
-    assert.deepEqual(result, { aborted: 1, roomIds: ['stale-guest-prestart'] });
+    // 'stale-started-clock' is the room this sweep used to miss. A clock-started
+    // event meant "both seats filled" on the legacy stack, but the tenant
+    // runtime emits it at ROOM CREATION, so excluding on it disarmed the sweep
+    // for every timed tenant room. The predicate keys on move-played now, so a
+    // stale guest room with a clock but no moves is correctly abandoned.
+    assert.deepEqual(result, {
+      aborted: 2,
+      roomIds: ['stale-guest-prestart', 'stale-started-clock'],
+    });
 
     const verifyClient = new pg.Client({ connectionString: TEST_DATABASE_URL });
     await verifyClient.connect();
@@ -312,14 +339,17 @@ definePersistenceTests('lifecycle', () => {
       }>(
         `SELECT room_id, status, termination
          FROM games
-         WHERE room_id LIKE '%prestart' OR room_id LIKE 'stale-started-%'
+         WHERE room_id LIKE '%prestart'
+            OR room_id LIKE 'stale-started-%'
+            OR room_id = 'stale-correspondence'
          ORDER BY room_id`,
       );
       assert.deepEqual(rows, [
         { room_id: 'fresh-guest-prestart', status: 'running', termination: null },
+        { room_id: 'stale-correspondence', status: 'running', termination: null },
         { room_id: 'stale-guest-prestart', status: 'aborted', termination: 'abandoned' },
         { room_id: 'stale-signed-in-prestart', status: 'running', termination: null },
-        { room_id: 'stale-started-clock', status: 'running', termination: null },
+        { room_id: 'stale-started-clock', status: 'aborted', termination: 'abandoned' },
         { room_id: 'stale-started-move', status: 'running', termination: null },
       ]);
     } finally {

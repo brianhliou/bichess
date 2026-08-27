@@ -365,12 +365,33 @@ export async function abortStaleGuestPrestartGames(
        WHERE games.status = 'running'
          AND games.mode IN ('pvp', 'pve')
          AND games.started_at < $1
+         -- "the game never actually began" = no move was ever played.
+         --
+         -- This used to also exclude rooms carrying a 'clock-started' event,
+         -- which meant "both seats filled" on the legacy chess stack. The
+         -- variant-tenant runtime emits the SAME event at ROOM CREATION for any
+         -- room with a time control, so that exclusion fired at birth and this
+         -- sweep could never claim a timed tenant room -- a safety net that
+         -- read as working and did nothing. Key on move-played, which means the
+         -- same thing on both stacks.
          AND NOT EXISTS (
            SELECT 1
            FROM events
            WHERE events.room_id = games.room_id
-             AND events.type IN ('clock-started', 'move-played')
+             AND events.type = 'move-played'
          )
+         -- Correspondence is exempt: an open days-per-move challenge sitting
+         -- unfilled for days is normal, and room_deadlines holds exactly one
+         -- row per in-flight correspondence room. Their enforcement is the
+         -- deadline sweeper's job, not this one's.
+         AND NOT EXISTS (
+           SELECT 1
+           FROM room_deadlines
+           WHERE room_deadlines.room_id = games.room_id
+         )
+         -- Still guest-scoped. A room somebody signed in actually sat down in
+         -- is handled in memory by the 'unjoined' join window, which knows
+         -- about live socket presence; this query cannot see that.
          AND NOT EXISTS (
            SELECT 1
            FROM room_seat_tokens
