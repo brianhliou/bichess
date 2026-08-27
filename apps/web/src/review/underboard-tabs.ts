@@ -34,8 +34,10 @@ export type UnderboardOptions = {
   seatColors?: ReviewSeatColors;
   /** Present = show the Crosstable tab; the names label its stub. */
   players?: { red?: string; black?: string };
-  /** Live-FEN share input, refreshed by the caller on every navigation. */
-  shareFenInput: HTMLInputElement;
+  /** Live-FEN share input, refreshed by the caller on every navigation. Absent
+   *  when the variant has no engine FEN (the fog reviews), so the row is
+   *  omitted rather than shown empty. */
+  shareFenInput?: HTMLInputElement;
   /** Live move-export textarea, refreshed by the caller on every navigation. */
   shareMovesInput: HTMLTextAreaElement;
   gameUrl: string;
@@ -156,7 +158,7 @@ function crosstableBody(players: { red?: string; black?: string }): HTMLElement 
 }
 
 function shareExportBody(
-  fenInput: HTMLInputElement,
+  fenInput: HTMLInputElement | undefined,
   movesInput: HTMLTextAreaElement,
   gameUrl: string,
   extra?: readonly HTMLElement[],
@@ -165,9 +167,11 @@ function shareExportBody(
   const grid = document.createElement('div');
   grid.className = 'review-share';
 
-  fenInput.className = 'review-share__field';
-  fenInput.readOnly = true;
-  grid.append(shareRow('FEN', fenInput));
+  if (fenInput) {
+    fenInput.className = 'review-share__field';
+    fenInput.readOnly = true;
+    grid.append(shareRow('FEN', fenInput));
+  }
 
   const urlInput = document.createElement('input');
   urlInput.className = 'review-share__field';
@@ -214,4 +218,30 @@ function formatDuration(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+export type DownloadLink = { text: string; href: string; filename: string };
+
+/** A Share & export row of file downloads (lichess "Download PGN"): the row label
+ *  plus one link per format, dressed like the Copy buttons beside them. Postgame
+ *  surfaces pass the result through `shareExtra`, so the downloads sit with the
+ *  other ways of getting the game out instead of in a stray row under the board. */
+export function downloadRow(links: readonly DownloadLink[]): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'review-share__row review-share__row--downloads';
+  const name = document.createElement('span');
+  name.className = 'review-share__label';
+  name.textContent = t('underboard.download');
+  const group = document.createElement('div');
+  group.className = 'review-share__downloads';
+  for (const link of links) {
+    const anchor = document.createElement('a');
+    anchor.className = 'review-share__copy review-share__download';
+    anchor.href = link.href;
+    anchor.textContent = link.text;
+    anchor.setAttribute('download', link.filename);
+    group.append(anchor);
+  }
+  row.append(name, group);
+  return row;
 }

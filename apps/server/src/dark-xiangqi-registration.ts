@@ -12,6 +12,7 @@ import type {
   DarkXiangqiRuntimeRoom,
 } from './dark-xiangqi-runtime.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
+import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDarkXiangqiCreate, requestsDarkXiangqi } from './routes/dark-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
@@ -33,6 +34,7 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { xiangqiExportUci, xiangqiPgnWriter } from './xiangqi-game-export.js';
 
 export const darkXiangqiRooms = new Map<string, DarkXiangqiLiveRoom>();
 
@@ -113,6 +115,14 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // Fog moves may be illegal under standard rules (walking into check, taking
+  // the general), so the movetext is ICCS coordinates and there is no WXF `san`;
+  // position-relative notation would silently go wrong. See xiangqi-game-export.ts.
+  export: tenantExportBinding(darkXiangqiTenant, {
+    gameRouteBase: '/dark-xiangqi/game',
+    uci: xiangqiExportUci,
+    writePgn: (moves) => xiangqiPgnWriter(moves, 'iccs'),
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

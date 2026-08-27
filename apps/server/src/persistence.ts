@@ -278,6 +278,7 @@ export {
   createHistoricalXiangqiImportBatch,
   finishHistoricalXiangqiImportBatch,
   getHistoricalXiangqiGame,
+  getHistoricalXiangqiSource,
   insertHistoricalXiangqiGame,
   listAggregatableXiangqiGames,
   normalizeHistoricalXiangqiPlayerName,

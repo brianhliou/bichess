@@ -546,6 +546,16 @@ export async function getHistoricalXiangqiGame(id: string): Promise<HistoricalXi
   return rows[0] ? gameFromRow(rows[0]) : null;
 }
 
+export async function getHistoricalXiangqiSource(
+  id: string,
+): Promise<HistoricalXiangqiSource | null> {
+  const { rows } = await getPool().query<SourceRow>(
+    `SELECT * FROM historical_xiangqi_sources WHERE id = $1 LIMIT 1`,
+    [id],
+  );
+  return rows[0] ? sourceFromRow(rows[0]) : null;
+}
+
 export type AggregatableXiangqiGame = {
   id: string;
   sourceSlug: string;

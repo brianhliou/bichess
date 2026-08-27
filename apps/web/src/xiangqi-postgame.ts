@@ -15,6 +15,7 @@ import './xiangqi-postgame.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { xiangqiEnabled } from './feature-flags.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -162,6 +163,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     players: playerNames,
     result: { score: resultScore(postgame.game.result), label: status },
     showCrosstable: true,
+    ...gameExportShareExtra('xiangqi', postgame.game.roomId),
     // "Study" in the review menu: one click turns the game you are looking at
     // into a private study you can annotate. Same path /analysis/xiangqi has
     // used since it shipped; the game surfaces were just never given it.

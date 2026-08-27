@@ -8,6 +8,7 @@ import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { installJieqiBoardStyles } from './live-jieqi-render.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
@@ -194,6 +195,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     showCrosstable: true,
+    ...gameExportShareExtra('jieqi', postgame.game.roomId),
     // Server-side PikaJieQi whole-game analysis, DB-cached: an already-analysed game loads
     // straight from cache on open (a GET that never computes). Requesting a fresh compute is
     // account-gated (the server rejects anon POSTs), so a signed-out visitor gets a sign-in CTA

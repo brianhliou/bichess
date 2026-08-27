@@ -6,6 +6,7 @@
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
+import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import type { JungleFlipCreatorPreference, JungleFlipRuntimeRoom } from './jungle-flip-runtime.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import * as persistence from './persistence.js';
@@ -104,6 +105,13 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // JSON only. As in banqi, results are by SEAT and the first seat's bound ink
+  // rides along.
+  export: tenantExportBinding(jungleFlipTenant, {
+    gameRouteBase: '/jungle-flip/game',
+    uci: flipOrBoardMoveUci,
+    firstMoverInk: (state) => state.firstColor,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

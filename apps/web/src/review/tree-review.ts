@@ -1013,7 +1013,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     moveTimes: config.moveTimes,
     seatColors: config.seatColors,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
-    shareFenInput,
+    // No engine = no FEN for this variant (the fog reviews): drop the row.
+    ...(presentation.engine ? { shareFenInput } : {}),
     shareMovesInput,
     gameUrl: typeof window !== 'undefined' ? window.location.href : '',
     shareExtra: config.shareExtra,
