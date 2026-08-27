@@ -1,5 +1,22 @@
 import type { Article } from '../types.js';
 
+// Card art for the articles index. Not a board position: this page is about
+// titles, so the art is the badge itself, in the same gold the real badge uses
+// (#b9832f, see title-badge.css). The lead abbreviation is xiangqi because the
+// page is xiangqi-first; the row beneath shows the vocabulary is wider.
+const TITLED_PLAYERS_THUMBNAIL = [
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 192" width="320" height="192" role="img" aria-label="A gold XGM title badge above the other accepted titles">',
+  // Fill inline rather than via .xq-diagram-bg: that rule is scoped to
+  // .xq-article-svg, which this standalone thumbnail is not inside, so the class
+  // alone leaves the rect unfilled (it rendered black). The var keeps the card
+  // theme-aware and the fallback matches the xiangqi board.
+  '<rect x="0" y="0" width="320" height="192" rx="10" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+  '<text x="160" y="96" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="2" fill="#b9832f">XGM</text>',
+  '<text x="160" y="132" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="17" font-weight="600" letter-spacing="1.5" fill="#b9832f" opacity="0.62">XIM · XNM · GM · IM · FM</text>',
+  '<text x="160" y="158" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">VERIFIED TITLES</text>',
+  '</svg>',
+].join('');
+
 // Supply-side recruitment page for verified titled players. Deliberately
 // describes only what already ships (badge, coach listing, featurable study,
 // video library, streamer directory, guest byline); every line here should stay
@@ -23,12 +40,9 @@ export const titledPlayersArticle: Article = {
   summary:
     'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.',
   showSummaryOnPage: false,
-  // A standing recruitment page, not a post: it is linked to directly and kept
-  // current, so it stays out of the chronological blog index rather than aging
-  // down it.
-  showInIndex: false,
   status: 'published',
   publishedAt: '2026-08-27',
+  thumbnail: { kind: 'svg', svg: TITLED_PLAYERS_THUMBNAIL },
   audience:
     'Titled xiangqi players (WXF, CXA, national federations) and titled chess players curious about xiangqi.',
   intro: [
