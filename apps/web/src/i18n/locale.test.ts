@@ -7,6 +7,7 @@ import {
   localeFromLanguageTag,
   localeFromPath,
   localizedHref,
+  resolveLocale,
   stripLocalePrefix,
 } from './locale.js';
 
@@ -36,6 +37,77 @@ describe('locale helpers', () => {
     expect(localeFromLanguageTag('zh-CN')).toBe('zh-Hans');
     expect(localeFromLanguageTag('ja-JP')).toBeNull();
     expect(localeFromLanguageTag('fr-FR')).toBeNull();
+  });
+
+  // Regression: these all fell through an exact-match allowlist to Simplified.
+  // zh-Hant-HK is the canonical BCP-47 tag for Hong Kong Traditional, so the
+  // readers most likely to notice the wrong script were the ones getting it.
+  it('reads the Traditional script from any subtag position', () => {
+    expect(localeFromLanguageTag('zh-Hant-HK')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('zh-Hant-MO')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('zh-Hant')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('zh-cht')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('zh-HK')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('zh-MO')).toBe('zh-Hant');
+  });
+
+  it('prefers an explicit script over the region', () => {
+    expect(localeFromLanguageTag('zh-Hans-HK')).toBe('zh-Hans');
+    expect(localeFromLanguageTag('zh-Hant-CN')).toBe('zh-Hant');
+  });
+
+  it('defaults unmarked Chinese tags to Simplified', () => {
+    expect(localeFromLanguageTag('zh')).toBe('zh-Hans');
+    expect(localeFromLanguageTag('zh-SG')).toBe('zh-Hans');
+    expect(localeFromLanguageTag('zh-MY')).toBe('zh-Hans');
+    expect(localeFromLanguageTag('zh-Hans-CN')).toBe('zh-Hans');
+  });
+
+  // Cantonese readers are concentrated in HK/MO, where the written form is
+  // Traditional. Bare `yue` therefore defaults the opposite way to bare `zh`.
+  it('routes Cantonese to Chinese rather than the English fallback', () => {
+    expect(localeFromLanguageTag('yue')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('yue-HK')).toBe('zh-Hant');
+    expect(localeFromLanguageTag('yue-Hant-HK')).toBe('zh-Hant');
+  });
+
+  it('lets an explicit script or mainland region override the Cantonese default', () => {
+    expect(localeFromLanguageTag('yue-Hans')).toBe('zh-Hans');
+    expect(localeFromLanguageTag('yue-CN')).toBe('zh-Hans');
+  });
+
+  it('maps English tags including irregular suffixes', () => {
+    expect(localeFromLanguageTag('en')).toBe('en');
+    expect(localeFromLanguageTag('en-GB-oxendict')).toBe('en');
+    expect(localeFromLanguageTag('en-US@posix')).toBe('en');
+  });
+
+  it('reports which input decided the locale', () => {
+    stubBrowserLanguages(['zh-Hant-HK']);
+
+    expect(resolveLocale()).toEqual({
+      browserTag: 'zh-Hant-HK',
+      locale: 'zh-Hant',
+      source: 'browser',
+    });
+
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'zh-Hans');
+    expect(resolveLocale().source).toBe('stored');
+    expect(resolveLocale().locale).toBe('zh-Hans');
+
+    window.history.replaceState(null, '', '/zh-hant/blog');
+    expect(resolveLocale().source).toBe('path');
+    expect(resolveLocale().locale).toBe('zh-Hant');
+  });
+
+  it('reports the default source when nothing matches', () => {
+    stubBrowserLanguages(['fr-FR']);
+
+    expect(resolveLocale()).toEqual({
+      browserTag: 'fr-FR',
+      locale: 'en',
+      source: 'default',
+    });
   });
 
   it('persists a locale from localized content URLs', () => {
@@ -101,4 +173,15 @@ function memoryStorage(): Storage {
       values.set(key, value);
     },
   };
+}
+
+function stubBrowserLanguages(languages: string[]): void {
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: languages,
+  });
+  Object.defineProperty(window.navigator, 'language', {
+    configurable: true,
+    value: languages[0] ?? '',
+  });
 }

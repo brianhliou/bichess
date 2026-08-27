@@ -77,25 +77,77 @@ export function browserLocale(): Locale | null {
   return null;
 }
 
+// Regions that pin a script regardless of the language subtag. Neither list is
+// exhaustive; an unlisted region falls through to the per-language default.
+const ZH_HANT_REGIONS = new Set(['tw', 'hk', 'mo']);
+const ZH_HANS_REGIONS = new Set(['cn', 'sg', 'my']);
+
+// Matched against any subtag, not just the script position: `zh-Hant-HK` is the
+// canonical BCP-47 tag for Hong Kong Traditional, and the legacy `zh-cht` /
+// `zh-chs` forms put the script where a region would normally sit. An earlier
+// exact-match allowlist missed both and fell through to Simplified, so a Hong
+// Kong reader was served the wrong script.
+const ZH_HANT_SCRIPTS = new Set(['hant', 'cht']);
+const ZH_HANS_SCRIPTS = new Set(['hans', 'chs']);
+
+// Cantonese resolves to a Chinese locale rather than the English fallback: its
+// readers are concentrated in Hong Kong and Macau, and written Cantonese there
+// is Traditional. Only the default differs from `zh` — an explicit script or a
+// mainland region still decides, so `yue-CN` is Simplified.
+const DEFAULT_SCRIPT_BY_LANGUAGE: Record<string, Locale> = {
+  yue: 'zh-Hant',
+  zh: 'zh-Hans',
+};
+
 export function localeFromLanguageTag(language: string | null | undefined): Locale | null {
   if (!language) return null;
-  const tag = language.toLowerCase();
-  if (tag === 'zh-hans' || tag === 'zh-cn' || tag === 'zh-sg') return 'zh-Hans';
-  if (
-    tag === 'zh-hant' ||
-    tag === 'zh-tw' ||
-    tag === 'zh-hk' ||
-    tag === 'zh-mo' ||
-    tag === 'zh-hant-tw'
-  )
-    return 'zh-Hant';
-  if (tag === 'zh' || tag.startsWith('zh-')) return 'zh-Hans';
-  if (tag === 'en' || tag.startsWith('en-')) return 'en';
-  return null;
+  const subtags = language.toLowerCase().split('-');
+  const primary = subtags[0];
+  if (primary === 'en') return 'en';
+  const fallback = primary ? DEFAULT_SCRIPT_BY_LANGUAGE[primary] : undefined;
+  if (!fallback) return null;
+  // An explicit script wins over the region: `zh-Hans-HK` is Simplified.
+  if (subtags.some((subtag) => ZH_HANT_SCRIPTS.has(subtag))) return 'zh-Hant';
+  if (subtags.some((subtag) => ZH_HANS_SCRIPTS.has(subtag))) return 'zh-Hans';
+  if (subtags.some((subtag) => ZH_HANT_REGIONS.has(subtag))) return 'zh-Hant';
+  if (subtags.some((subtag) => ZH_HANS_REGIONS.has(subtag))) return 'zh-Hans';
+  return fallback;
+}
+
+// Which input decided the locale. Reported with the resolution so we can tell a
+// visitor we routed from their browser (a guess we might be getting wrong) apart
+// from one who picked a language themselves (a guess they already corrected).
+export type LocaleSource = 'path' | 'stored' | 'browser' | 'default';
+
+export type LocaleResolution = {
+  browserTag: string | null;
+  locale: Locale;
+  source: LocaleSource;
+};
+
+// The raw first entry of navigator.languages, unmapped. Carried through so the
+// tag distribution is visible in telemetry: localeFromLanguageTag above folds
+// unknown tags into a supported locale silently, and the raw tag is the only way
+// to catch a fold that is wrong.
+function primaryBrowserTag(): string | null {
+  if (typeof navigator === 'undefined') return null;
+  const languages = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+  return languages[0] ?? null;
+}
+
+export function resolveLocale(): LocaleResolution {
+  const browserTag = primaryBrowserTag();
+  const fromPath = localeFromPath();
+  if (fromPath) return { browserTag, locale: fromPath, source: 'path' };
+  const fromStorage = storedLocale();
+  if (fromStorage) return { browserTag, locale: fromStorage, source: 'stored' };
+  const fromBrowser = browserLocale();
+  if (fromBrowser) return { browserTag, locale: fromBrowser, source: 'browser' };
+  return { browserTag, locale: DEFAULT_LOCALE, source: 'default' };
 }
 
 export function currentLocale(): Locale {
-  return localeFromPath() ?? storedLocale() ?? browserLocale() ?? DEFAULT_LOCALE;
+  return resolveLocale().locale;
 }
 
 export function applyAccountLocalePreference(locale: string | null | undefined): boolean {

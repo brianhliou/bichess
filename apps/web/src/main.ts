@@ -3,7 +3,7 @@ import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import { captureException, setPostHogInstance } from './analytics.js';
+import { captureException, setPostHogInstance, trackLocaleResolved } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
   clearChunkReloadAttempt,
@@ -12,7 +12,7 @@ import {
 } from './chunk-load-recovery.js';
 import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
-import { currentLocale, initializeLocaleFromCurrentUrl } from './i18n/locale.js';
+import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
   challengesNotificationSource,
   correspondenceNotificationSource,
@@ -34,7 +34,12 @@ import {
 // post-bootstrap lazy loads on long-lived tabs (/watch) that no per-mount guard
 // wraps — gets the one-shot stale-chunk reload after a deploy.
 installGlobalChunkLoadRecovery();
+// Resolved before the initializer, which writes a URL-prefixed locale into
+// storage: reading the source after that write would report every /zh-hans
+// visit as 'stored' and hide how the visitor actually arrived.
+const bootLocaleResolution = resolveLocale();
 const bootLocale = initializeLocaleFromCurrentUrl();
+trackLocaleResolved(bootLocaleResolution);
 // zh catalogs live in lazy per-locale chunks (see i18n/catalog.ts). Kick the
 // load off now and hold localized rendering (nav, page mounts, localized
 // titles) on this one promise, so zh visitors get zh copy on first paint; for

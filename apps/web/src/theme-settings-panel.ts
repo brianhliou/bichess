@@ -6,6 +6,7 @@
 // tile previews stay out of the entry chunk. theme.ts keeps the applied-theme
 // bootstrap, the storage readers, the change events, and the high-level
 // preference setters this panel calls — the panel is a dumb view over that API.
+import { trackLocaleChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -294,6 +295,7 @@ function createLanguageField(
     if (optionLocale === locale) option.classList.add('selected');
     option.addEventListener('click', () => {
       onSelect?.(optionLocale);
+      if (optionLocale !== locale) trackLocaleChanged(locale, optionLocale);
       setStoredLocale(optionLocale);
       const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       window.location.href = localizedHref(currentHref, optionLocale);

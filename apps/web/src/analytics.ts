@@ -6,6 +6,7 @@ import {
   timeClassFromTimeControl,
   type VariantId,
 } from '@mistboard/game';
+import type { Locale, LocaleResolution } from './i18n/locale.js';
 
 export type GameSpecAnalyticsProps = {
   game_spec: GameSpec['id'];
@@ -186,4 +187,29 @@ export function resetIdentity(): void {
     console.log('[reset]');
   }
   enqueue((ph) => ph.reset());
+}
+
+// Which locale the app actually rendered in, and which input decided it. The
+// site had no record of this: every event carried the visitor's browser language
+// (an input) and none carried the locale served (the output), so "is automatic
+// language selection working" was unanswerable.
+//
+// `source` is what makes it answerable. A person resolving 'browser' and later
+// resolving 'stored' at a different locale overrode our guess, which is the
+// signal that the detection is wrong for them.
+export function trackLocaleResolved(resolution: LocaleResolution): void {
+  track('locale_resolved', {
+    locale: resolution.locale,
+    locale_source: resolution.source,
+    browser_tag: resolution.browserTag,
+  });
+}
+
+// The explicit override, captured directly rather than inferred. This fires
+// immediately before a navigation, so it can be lost in flight; the
+// 'stored'-sourced locale_resolved on the very next page load is the durable
+// record of the same switch. Treat this event as the convenience signal and
+// locale_resolved as the source of truth.
+export function trackLocaleChanged(from: Locale, to: Locale): void {
+  track('locale_changed', { from_locale: from, to_locale: to });
 }
