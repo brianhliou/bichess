@@ -103,12 +103,13 @@ export function utilityNavItems(): NavItem[] {
   return items;
 }
 
-// Tools dropdown (lichess parity): the analysis board is the anchor tool; the
-// engine Lab link folds in after it when enabled. Board editor / import / search
-// are deferred until those surfaces exist.
+// Tools dropdown (lichess parity): the analysis board is the anchor tool, the
+// board editor sits beside it, and the engine Lab link folds in after them when
+// enabled. Import / search are deferred until those surfaces exist.
 export function toolsNavItems(): NavItem[] {
   return [
     { label: 'Analysis board', labelKey: 'nav.analysis', href: '/analysis/xiangqi' },
+    { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
     ...utilityNavItems(),
   ];
 }

@@ -57,11 +57,14 @@ export async function mountVerifyTitle(root: HTMLElement): Promise<void> {
   try {
     const resp = await fetch('/api/titles/my-request');
     if (resp.status === 401) {
+      // The signed-out visitor is the least convinced person who reaches this
+      // page, so the case for verifying belongs here most of all.
       shell.append(
         buildNotice(
           t('verifyTitle.signInTitle', {}, locale),
           t('verifyTitle.signInBody', {}, locale),
         ),
+        buildPitchLink(locale),
       );
       return;
     }
@@ -119,7 +122,22 @@ function renderPage(shell: HTMLElement, payload: MyRequestPayload, locale: Local
   const intro = document.createElement('p');
   intro.className = 'verify-title-intro';
   intro.textContent = t('verifyTitle.intro', {}, locale);
-  shell.append(intro, buildForm(shell, payload, locale, request?.status === 'rejected'));
+  // The form answers "how"; this answers "why".
+  shell.append(
+    intro,
+    buildPitchLink(locale),
+    buildForm(shell, payload, locale, request?.status === 'rejected'),
+  );
+}
+
+function buildPitchLink(locale: Locale): HTMLElement {
+  const pitch = document.createElement('p');
+  pitch.className = 'verify-title-pitch';
+  const link = document.createElement('a');
+  link.href = '/blog/titled-players';
+  link.textContent = t('verifyTitle.whatYouGet', {}, locale);
+  pitch.append(link);
+  return pitch;
 }
 
 function buildStatusCard(

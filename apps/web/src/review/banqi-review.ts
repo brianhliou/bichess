@@ -33,8 +33,10 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 
-/** Config for a banqi review mount. */
-export type BanqiReviewConfig = TreeReviewConfig<BanqiMove>;
+/** Config for a banqi review mount. Truth-typed so a caller can root the tree
+ *  at a parsed dealt position (`root`) and read the current truth back from the
+ *  position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
+export type BanqiReviewConfig = TreeReviewConfig<BanqiMove, BanqiGameState>;
 
 /** Handle returned by mountBanqiReview: snapshot the current tree to persist it. */
 export type BanqiReviewHandle = TreeReviewHandle;
@@ -128,10 +130,13 @@ function makeBanqiPresentation(
   };
 }
 
+/** `deal` is the recovered postgame deal, or null for a surface that roots the
+ *  tree at a parsed position (`config.root`, the analysis board): a null deal
+ *  with no root throws at mount, never a silently different deal. */
 export function mountBanqiReview(
   root: HTMLElement,
   gameId: string,
-  deal: BanqiDeal,
+  deal: BanqiDeal | null,
   config: BanqiReviewConfig,
 ): BanqiReviewHandle {
   const adapter = makeBanqiTreeAdapter(gameId, deal);

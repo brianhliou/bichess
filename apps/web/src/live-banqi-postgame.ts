@@ -1,4 +1,11 @@
-import type { BanqiColor, BanqiGameStatus, BanqiMove, BanqiPlayerView } from '@mistboard/game';
+import {
+  type BanqiColor,
+  type BanqiGameStatus,
+  type BanqiMove,
+  type BanqiPlayerView,
+  banqiStateToDealtFen,
+  banqiStateToEngineFen,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
@@ -19,6 +26,7 @@ import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { analysisHref, editorHref } from './review/position-links.js';
 import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -194,6 +202,11 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     players: playerNames,
     seatColors,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // Position hand-offs. The analysis link carries the DEALT fen (the exact
+    // reveals of this game continue there); the editor link carries only the
+    // public fen (it edits what is visible).
+    analyseFromHere: (truth) => analysisHref('banqi', banqiStateToDealtFen(truth)),
+    boardEditorHref: (truth) => editorHref('banqi', banqiStateToEngineFen(truth)),
     ...gameExportShareExtra('banqi', postgame.game.roomId),
     // Server-side MistyBanqi whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh

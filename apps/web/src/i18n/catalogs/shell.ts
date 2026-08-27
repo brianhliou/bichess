@@ -29,6 +29,7 @@ export const EN_SHELL = {
   'nav.lab': 'Lab',
   'nav.tv': 'Mistboard TV',
   'nav.analysis': 'Analysis board',
+  'nav.editor': 'Board editor',
   'nav.studies': 'Study',
   'nav.streamers': 'Streamers',
   'nav.videoLibrary': 'Video library',

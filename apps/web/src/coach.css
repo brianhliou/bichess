@@ -11,6 +11,15 @@
 
 .coach-become {
   margin: 0 0 18px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Secondary to the verify-title CTA beside it: same colour, lighter weight, so
+   the primary action still reads first. */
+.coach-cta-pitch {
+  opacity: 0.78;
 }
 
 .coach-become a {

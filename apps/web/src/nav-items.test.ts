@@ -47,3 +47,14 @@ describe('watch nav', () => {
     expect(items.find((item) => item.label === 'Streamers')?.href).toBe('/streamer');
   });
 });
+
+describe('tools nav', () => {
+  it('lists the analysis board first and the board editor beside it', async () => {
+    const { toolsNavItems } = await import('./nav-items.js');
+    const items = toolsNavItems();
+    expect(items.slice(0, 2).map((item) => item.label)).toEqual(['Analysis board', 'Board editor']);
+    expect(items[0]?.href).toBe('/analysis/xiangqi');
+    expect(items[1]?.href).toBe('/editor/xiangqi');
+    expect(items[1]?.labelKey).toBe('nav.editor');
+  });
+});

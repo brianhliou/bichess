@@ -7,6 +7,7 @@
 import { ZH_HANS_ACCOUNT } from '../catalogs/account.zh-hans.js';
 import { ZH_HANS_COMMUNITY } from '../catalogs/community.zh-hans.js';
 import { ZH_HANS_CONTENT } from '../catalogs/content.zh-hans.js';
+import { ZH_HANS_EDITOR } from '../catalogs/editor.zh-hans.js';
 import { ZH_HANS_PLAY } from '../catalogs/play.zh-hans.js';
 import { ZH_HANS_REVIEW } from '../catalogs/review.zh-hans.js';
 import { ZH_HANS_SHELL } from '../catalogs/shell.zh-hans.js';
@@ -18,4 +19,5 @@ export const domains = {
   community: ZH_HANS_COMMUNITY,
   play: ZH_HANS_PLAY,
   review: ZH_HANS_REVIEW,
+  editor: ZH_HANS_EDITOR,
 } as const;

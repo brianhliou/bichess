@@ -21,6 +21,7 @@ import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
+import { editorHref } from './review/position-links.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
 import { importXiangqiGame } from './review/xiangqi-import.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
@@ -101,6 +102,8 @@ export function mountXiangqiAnalysis(
     // current line as a study, and wipe the moves back to the root position.
     studyExport: { variant: DEFAULT_STUDY_VARIANT, name: opts.title ?? 'Xiangqi analysis' },
     allowClearMoves: true,
+    // Hand the current position to the board editor (/editor/xiangqi?fen=).
+    boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     // A hand-set start roots the tree + engine at the composition's position.
     root: opts.startState
       ? { truth: opts.startState, fen: standardXiangqiFen(opts.startState) }
@@ -114,6 +117,16 @@ export function mountXiangqiAnalysis(
     // Underboard FEN + moves boxes (lichess.org/analysis): a successful import
     // re-mounts via the shareable ?moves= / ?fen= link, so the seeded board has
     // a URL.
+    // The line on screen is always in the address bar (coordinate `from-to`
+    // tokens, the same spelling the import path accepts).
+    onLineChange: (moves) => {
+      const url = new URL(window.location.href);
+      if (moves.length === 0) url.searchParams.delete('moves');
+      else url.searchParams.set('moves', moves.map((m) => `${m.from}-${m.to}`).join(' '));
+      if (url.toString() !== window.location.href) {
+        window.history.replaceState(window.history.state, '', url.toString());
+      }
+    },
     importPanel: {
       onImport: (text) => {
         const trimmed = text.trim();

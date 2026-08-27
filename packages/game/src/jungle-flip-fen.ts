@@ -31,15 +31,25 @@
 // face-down-on-board multiset with no own-captured-while-dark over-disclosure.
 
 import {
+  type DealtFenParseOptions,
+  type FlipFenSpec,
+  flipHiddenField,
+  parseFlipFen,
+} from './dealt-fen.js';
+import {
+  JUNGLE_FLIP_HEIGHT,
+  JUNGLE_FLIP_WIDTH,
   type JungleFlipBoard,
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleFlipPiece,
   type JungleFlipPieceRole,
+  type JungleFlipSeat,
   type JungleFlipSquare,
   jungleFlipCoordOf,
   jungleFlipMoverInk,
   jungleFlipSquareOf,
+  oppositeJungleFlipColor,
 } from './variants-jungle-flip.js';
 
 const RED_ROLE_CHAR: Record<JungleFlipPieceRole, string> = {
@@ -184,4 +194,72 @@ export function engineUciToJungleFlipMove(uci: string): JungleFlipMove | null {
   const sq = (f: string, r: string): JungleFlipSquare =>
     jungleFlipSquareOf(f.charCodeAt(0) - 97, Number(r) + 1);
   return { from: sq(m[1]!, m[2]!), to: sq(m[3]!, m[4]!) };
+}
+
+// ── Dealt FEN (engine FEN + hidden identities) ───────────────────────────────
+// The reverse direction, for seeding an analysis board or an editor from a
+// pasted position. The five public fields are the engine FEN above; an optional
+// sixth field pins the deal (see dealt-fen.ts for the grammar). A public FEN
+// samples the face-down identities from the pool.
+
+const JUNGLE_FLIP_PIECE_COUNTS: Record<JungleFlipPieceRole, number> = {
+  rat: 1,
+  cat: 1,
+  dog: 1,
+  wolf: 1,
+  leopard: 1,
+  tiger: 1,
+  lion: 1,
+  elephant: 1,
+};
+
+const JUNGLE_FLIP_FLIP_SPEC: FlipFenSpec<JungleFlipPieceRole, JungleFlipSquare> = {
+  width: JUNGLE_FLIP_WIDTH,
+  height: JUNGLE_FLIP_HEIGHT,
+  roleChar: RED_ROLE_CHAR,
+  pieceCounts: JUNGLE_FLIP_PIECE_COUNTS,
+  roleOrder: POOL_ROLES,
+  squareOf: jungleFlipSquareOf,
+};
+
+export type ParseJungleFlipFenResult =
+  | { ok: true; state: JungleFlipGameState; sampled: boolean }
+  | { ok: false; error: string };
+
+/** Engine FEN + the sixth `hidden` field: the exact deal, reproducible on reload. */
+export function jungleFlipStateToDealtFen(state: JungleFlipGameState): string {
+  return `${jungleFlipStateToEngineFen(state)} ${flipHiddenField(state.board, JUNGLE_FLIP_FLIP_SPEC)}`;
+}
+
+/** Parse a public (5-field) or dealt (6-field) Flip Jungle FEN into canonical
+ *  state. The movenum slot is the absolute ply (as the writer emits it): its
+ *  parity picks the seat to move, and `firstColor` is solved so that seat owns
+ *  the FEN's turn ink. */
+export function parseJungleFlipFen(
+  fen: string,
+  options: DealtFenParseOptions = {},
+): ParseJungleFlipFenResult {
+  const parsed = parseFlipFen(fen, JUNGLE_FLIP_FLIP_SPEC, options.rng ?? Math.random);
+  if (!parsed.ok) return parsed;
+  const { board, turn, clock, movenum: ply, captures, sampled } = parsed.parse;
+  if (turn === null && (ply !== 0 || clock !== 0)) {
+    return { ok: false, error: 'Before the first flip the clock and the ply must both be 0.' };
+  }
+  const seat: JungleFlipSeat = ply % 2 === 0 ? 'red' : 'black';
+  const firstColor = turn === null ? null : seat === 'red' ? turn : oppositeJungleFlipColor(turn);
+  return {
+    ok: true,
+    sampled,
+    state: {
+      id: options.gameId ?? 'fen-import',
+      board,
+      status: { type: 'playing', turn: seat },
+      ply,
+      firstColor,
+      moveNumber: Math.floor(ply / 2) + 1,
+      noProgressClock: clock,
+      repCounts: {},
+      captures,
+    },
+  };
 }

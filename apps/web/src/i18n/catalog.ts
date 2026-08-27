@@ -7,6 +7,7 @@
 import { CRITICAL_ACCOUNT_I18N_KEYS, EN_ACCOUNT } from './catalogs/account.js';
 import { CRITICAL_COMMUNITY_I18N_KEYS, EN_COMMUNITY } from './catalogs/community.js';
 import { CRITICAL_CONTENT_I18N_KEYS, EN_CONTENT } from './catalogs/content.js';
+import { CRITICAL_EDITOR_I18N_KEYS, EN_EDITOR } from './catalogs/editor.js';
 import { CRITICAL_PLAY_I18N_KEYS, EN_PLAY } from './catalogs/play.js';
 import { CRITICAL_REVIEW_I18N_KEYS, EN_REVIEW } from './catalogs/review.js';
 import { CRITICAL_SHELL_I18N_KEYS, EN_SHELL } from './catalogs/shell.js';
@@ -26,7 +27,7 @@ export type AppI18nDomain = {
 
 type AppI18nDomainDef = Omit<AppI18nDomain, 'locales'> & { name: DomainName };
 
-type DomainName = 'shell' | 'content' | 'account' | 'community' | 'play' | 'review';
+type DomainName = 'shell' | 'content' | 'account' | 'community' | 'play' | 'review' | 'editor';
 
 const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
   {
@@ -130,6 +131,15 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
     english: EN_REVIEW,
     critical: CRITICAL_REVIEW_I18N_KEYS,
   },
+  {
+    // The board editor (/editor) is its own surface: it has no engine, no
+    // move list, and none of the review chrome, so its copy is its own chunk
+    // rather than a ride on the review one.
+    name: 'editor',
+    prefixes: ['editor'],
+    english: EN_EDITOR,
+    critical: CRITICAL_EDITOR_I18N_KEYS,
+  },
 ];
 
 const EN = {
@@ -139,6 +149,7 @@ const EN = {
   ...EN_COMMUNITY,
   ...EN_PLAY,
   ...EN_REVIEW,
+  ...EN_EDITOR,
 } as const;
 
 export type I18nKey = keyof typeof EN;
@@ -217,6 +228,7 @@ export const CRITICAL_I18N_KEYS = [
   ...CRITICAL_COMMUNITY_I18N_KEYS,
   ...CRITICAL_PLAY_I18N_KEYS,
   ...CRITICAL_REVIEW_I18N_KEYS,
+  ...CRITICAL_EDITOR_I18N_KEYS,
 ] as const satisfies readonly I18nKey[];
 
 export function t(key: I18nKey, params: I18nParams = {}, locale: Locale = currentLocale()): string {

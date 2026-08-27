@@ -44,11 +44,17 @@ export function recoverJungleFlipDeal(revealed: JungleFlipPlayerView): JungleFli
 
 export function makeJungleFlipTreeAdapter(
   gameId: string,
-  deal: JungleFlipDeal,
+  // Null when the caller roots the tree at a parsed position (TreeReviewConfig
+  // `root`), in which case initialTruth is never consulted; asking anyway is a
+  // wiring bug, so it throws rather than minting a deal the URL does not carry.
+  deal: JungleFlipDeal | null,
 ): VariantTreeAdapter<JungleFlipMove, JungleFlipGameState, JungleFlipPlayerView> {
   return {
     mode: 'perfect-info',
-    initialTruth: () => createInitialJungleFlipState(gameId, deal),
+    initialTruth: () => {
+      if (!deal) throw new Error('jungle-flip tree adapter: no deal; mount with config.root');
+      return createInitialJungleFlipState(gameId, deal);
+    },
     isLegal: (truth, move) => truth.status.type === 'playing' && isJungleFlipLegalMove(truth, move),
     applyMove: (truth, move) => applyJungleFlipMove(truth, move),
     project: (truth): ProjectedView<JungleFlipPlayerView>[] => [

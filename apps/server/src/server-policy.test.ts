@@ -555,6 +555,9 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/analysis/xiangqi'), true); // standalone analysis board
   assert.equal(isClientRoute('/analysis/jungle-flip'), true); // every catalog variant slug
   assert.equal(isClientRoute('/analysis'), true); // bare /analysis opens the flagship
+  assert.equal(isClientRoute('/editor/xiangqi'), true); // board editor
+  assert.equal(isClientRoute('/editor/jungle-flip'), true); // every catalog variant slug
+  assert.equal(isClientRoute('/editor'), true); // bare /editor opens the flagship
   assert.equal(isClientRoute('/games'), true); // games database index
   // The old index paths are 301s now (server-http), not client routes; the
   // per-game detail path is untouched and still serves the archive review shell.
@@ -604,6 +607,10 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isReviewShellRoute('/analysis/xiangqi'), true);
   assert.equal(isReviewShellRoute('/analysis/banqi'), true);
   assert.equal(isReviewShellRoute('/analysis'), true);
+  // The board editor has no engine: a plain client page, never cross-origin
+  // isolated.
+  assert.equal(isReviewShellRoute('/editor'), false);
+  assert.equal(isReviewShellRoute('/editor/xiangqi'), false);
   // The puzzle trainer mounts the same ceval engine after a puzzle is completed.
   // Both the list and a specific puzzle must be isolated, because the isolation
   // is fixed at document load and pushState nav between puzzles never reloads.

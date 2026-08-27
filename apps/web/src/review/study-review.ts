@@ -28,7 +28,19 @@ export type StudyReviewConfig = Omit<
   // never/unknown-typed one from this generic-erased config would not assign to
   // a concrete variant's mount. Dropped here because the variant branch builds
   // its own (xiangqi studies DO get the explorer, just not via this config).
-  'moves' | 'root' | 'analysis' | 'decisions' | 'explorer'
+  // The position hand-offs are Truth-typed too (they read the current node's
+  // state); a study has no continue-elsewhere affordance, so they are dropped
+  // rather than threaded through as `never`. `onLineChange` is Move-typed and
+  // only the analysis surfaces mirror the line into the URL (a study chapter's
+  // URL is the chapter, not the line).
+  | 'moves'
+  | 'root'
+  | 'analysis'
+  | 'decisions'
+  | 'explorer'
+  | 'analyseFromHere'
+  | 'boardEditorHref'
+  | 'onLineChange'
 > & {
   /** SerializedTree.rootFen — the chapter's hand-set start, if it has one. */
   rootFen?: string;

@@ -5,15 +5,20 @@ import type { Article } from '../types.js';
 // (#b9832f, see title-badge.css). The lead abbreviation is xiangqi because the
 // page is xiangqi-first; the row beneath shows the vocabulary is wider.
 const TITLED_PLAYERS_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 192" width="320" height="192" role="img" aria-label="A gold XGM title badge above the other accepted titles">',
+  // 320x200 is exactly the card's 16/10 media box. An inline SVG letterboxes by
+  // default (preserveAspectRatio meet), so a mismatched viewBox leaves the card
+  // background showing as bands; `slice` fills instead of fitting if a caller
+  // ever uses a different box. No rounded corners either: the card clips its
+  // own, and a radius here notched the fill at the corners.
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" aria-label="A gold XGM title badge above the other accepted titles">',
   // Fill inline rather than via .xq-diagram-bg: that rule is scoped to
   // .xq-article-svg, which this standalone thumbnail is not inside, so the class
   // alone leaves the rect unfilled (it rendered black). The var keeps the card
   // theme-aware and the fallback matches the xiangqi board.
-  '<rect x="0" y="0" width="320" height="192" rx="10" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="96" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="2" fill="#b9832f">XGM</text>',
-  '<text x="160" y="132" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="17" font-weight="600" letter-spacing="1.5" fill="#b9832f" opacity="0.62">XIM · XNM · GM · IM · FM</text>',
-  '<text x="160" y="158" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">VERIFIED TITLES</text>',
+  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+  '<text x="160" y="100" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="2" fill="#b9832f">XGM</text>',
+  '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="17" font-weight="600" letter-spacing="1.5" fill="#b9832f" opacity="0.62">XIM \u00b7 XNM \u00b7 GM \u00b7 IM \u00b7 FM</text>',
+  '<text x="160" y="166" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">VERIFIED TITLES</text>',
   '</svg>',
 ].join('');
 

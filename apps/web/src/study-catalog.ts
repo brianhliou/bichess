@@ -79,9 +79,9 @@ export function selectedStudyVariant(select: HTMLSelectElement): StudyVariantId 
 /** Whether a chapter of this variant can be rooted at a hand-set position. Reads
  *  the same list normalizeStartFen dispatches on, so the box is offered exactly
  *  where a pasted FEN can actually be parsed back and replayed. Every current
- *  study variant qualifies; the check stays because the variants Tier 2 adds
- *  (banqi, jieqi, jungle-flip) carry a hidden DEAL, which no placement string
- *  can express. */
+ *  study variant qualifies; the check stays as the seam for the variants Tier 2
+ *  adds (banqi, jieqi, jungle-flip), whose start is a DEALT fen (dealt-fen.ts)
+ *  that a chapter would have to persist with its deal pinned. */
 export function studyVariantSupportsComposition(id: StudyVariantId): boolean {
   return hasStartFen(id);
 }

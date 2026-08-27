@@ -160,6 +160,7 @@ export const EN_COMMUNITY = {
   'verifyTitle.errAlreadyTitled': 'You already hold this title.',
   'verifyTitle.errRequestPending': 'You already have a request waiting for review.',
   'verifyTitle.coachCta': 'Create your coach profile',
+  'verifyTitle.whatYouGet': 'What titled players get on Mistboard',
   'coach.heading': 'Coaches',
   'coach.intro':
     'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',

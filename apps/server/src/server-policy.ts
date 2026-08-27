@@ -290,6 +290,10 @@ export function isClientRoute(pathname: string): boolean {
     // review SPA shell and mounts the ceval engine, so it must also be a
     // review-shell route (COOP/COEP) below.
     /^\/analysis(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // Board editor: bare /editor (the flagship) or /editor/:variant, the same
+    // catalog as /analysis. Plain client page: no engine, so not a review-shell
+    // route.
+    /^\/editor(?:\/[a-z0-9-]+)?$/.test(normalized) ||
     // /engine/:id is the admin engine-profile SPA page (single segment). Deeper
     // paths like /engine/fairy-stockfish/stockfish.js are vendored ceval assets
     // and MUST fall through to the static handler, not the index.html rewrite.

@@ -140,6 +140,8 @@ export const EN_REVIEW = {
   'analysis.playAMove': 'Play a move',
   'analysis.pasteGameToImport': 'Paste a game to import.',
   'analysis.pasteFenToSet': 'Paste a FEN to set the position.',
+  'analysis.openBoardEditor': 'Set up a position in the board editor',
+  'analysis.dealtFenHint': 'X marks a face-down piece; the pool field lists what is still hidden.',
   // Historical xiangqi archive: search page + postgame.
   'historical.heading': 'Xiangqi game search',
   'historical.loading': 'Loading',
@@ -430,6 +432,9 @@ export const EN_REVIEW = {
   'review.setDefaultView': 'Set as default view',
   'review.revealIdentities': 'Reveal identities',
   'review.hideIdentities': 'Hide identities',
+  'review.analyseFromHere': 'Analyse from here',
+  'review.boardEditor': 'Board editor',
+  'review.newDeal': 'New deal',
   'review.defaultViewSaved': 'Default view saved',
 } as const;
 

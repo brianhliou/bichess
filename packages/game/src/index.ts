@@ -4,6 +4,7 @@ export * from './bughouse.js';
 export * from './bughouse-engine-protocol.js';
 export * from './chess960.js';
 export * from './clocks.js';
+export * from './dealt-fen.js';
 export * from './engine-protocol.js';
 export * from './events.js';
 export * from './export-formats.js';

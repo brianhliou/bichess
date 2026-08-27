@@ -1,4 +1,4 @@
-import type { GameEvent, Move } from '@mistboard/game';
+import { darkChessFen, type GameEvent, type Move } from '@mistboard/game';
 import './game-shell.css';
 import './landing.css';
 import './game-route.css';
@@ -13,6 +13,7 @@ import {
   reviewOutcomeLine,
   reviewResultLabel,
 } from './review/game-review-meta.js';
+import { analysisHref, editorHref } from './review/position-links.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 
@@ -118,6 +119,9 @@ export function mountDarkChessPostgame(
     metaCard,
     details,
     moves,
+    // Position hand-offs: continue this node on /analysis, or open it in the editor.
+    analyseFromHere: (truth) => analysisHref('dark-chess', darkChessFen(truth)),
+    boardEditorHref: (truth) => editorHref('dark-chess', darkChessFen(truth)),
     // Underboard parity with the xiangqi-family siblings (lichess anatomy):
     // Move times, Crosstable, and Share & export carrying the PGN/JSON downloads.
     moveTimes: moveTimesFromEvents(events, moveEvents),

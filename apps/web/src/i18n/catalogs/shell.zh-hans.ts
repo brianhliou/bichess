@@ -35,6 +35,7 @@ export const ZH_HANS_SHELL = {
   'nav.lab': '实验室',
   'nav.tv': 'Mistboard 电视',
   'nav.analysis': '分析棋盘',
+  'nav.editor': '棋盘编辑器',
   'nav.studies': '研习',
   'nav.streamers': '主播',
   'nav.videoLibrary': '视频库',

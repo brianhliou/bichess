@@ -105,6 +105,38 @@ describe('Banqi postgame page', () => {
     expect(analyseLink?.textContent).toContain('Sign in to request analysis');
   });
 
+  it('hands the current node to /analysis with its exact deal, and to the editor without it', async () => {
+    const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+
+    mountBanqiPostgame(root, 'bq_postgame');
+    await flushPromises();
+
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    const item = (label: string) =>
+      [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find(
+        (b) => b.textContent?.trim() === label,
+      );
+    // "Analyse from here" carries the six-field DEALT fen: the analysis board
+    // continues THIS game's reveals (the a1 flip already played), not a new deal.
+    item('Analyse from here')!.click();
+    const analysis = new URL(String(assign.mock.calls.at(-1)?.[0]), 'http://x');
+    expect(analysis.pathname).toBe('/analysis/banqi');
+    const dealt = analysis.searchParams.get('fen')!;
+    expect(dealt.split(' ')).toHaveLength(6);
+    // The fixture's opening flip on a1 revealed a black tile, so the ink is bound
+    // and a1 is no longer face-down: 31 hidden identities remain.
+    expect(dealt.split(' ')[5]).toHaveLength(31);
+    expect(/^[a-z]XXXXXXX$/.test(dealt.split(' ')[0]!.split('/')[3]!)).toBe(true);
+    // The editor link carries only the public fen.
+    item('Board editor')!.click();
+    const editor = new URL(String(assign.mock.calls.at(-1)?.[0]), 'http://x');
+    expect(editor.pathname).toBe('/editor/banqi');
+    expect(editor.searchParams.get('fen')).toBe(dealt.split(' ').slice(0, 5).join(' '));
+    assign.mockRestore();
+  });
+
   it('steps through plies with the arrow keys', async () => {
     const fetchSpy = vi.fn(async () => jsonResponse(postgameFixture()));
     vi.stubGlobal('fetch', fetchSpy);

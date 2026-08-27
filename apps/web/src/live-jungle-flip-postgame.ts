@@ -1,8 +1,10 @@
-import type {
-  JungleFlipGameStatus,
-  JungleFlipMove,
-  JungleFlipPlayerView,
-  JungleFlipSeat,
+import {
+  type JungleFlipGameStatus,
+  type JungleFlipMove,
+  type JungleFlipPlayerView,
+  type JungleFlipSeat,
+  jungleFlipStateToDealtFen,
+  jungleFlipStateToEngineFen,
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { variantDisplayLabel } from './game-display.js';
@@ -23,6 +25,7 @@ import {
 } from './review/jungle-flip-decisions.js';
 import { mountJungleFlipReview } from './review/jungle-flip-review.js';
 import { recoverJungleFlipDeal } from './review/jungle-flip-tree-adapter.js';
+import { analysisHref, editorHref } from './review/position-links.js';
 import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -193,6 +196,11 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     players: playerNames,
     seatColors,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // Position hand-offs. The analysis link carries the DEALT fen (the exact
+    // reveals of this game continue there); the editor link carries only the
+    // public fen (it edits what is visible).
+    analyseFromHere: (truth) => analysisHref('jungle-flip', jungleFlipStateToDealtFen(truth)),
+    boardEditorHref: (truth) => editorHref('jungle-flip', jungleFlipStateToEngineFen(truth)),
     ...gameExportShareExtra('jungle-flip', postgame.game.roomId),
     // Server-side MistyJungleFlip whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh
