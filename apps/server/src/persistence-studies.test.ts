@@ -14,6 +14,7 @@ import {
   renameChapter,
   reorderStudyChapters,
   setChapterGamebook,
+  setChapterOrientation,
   setStudyFeatured,
   setStudyLike,
   updateChapterTree,
@@ -289,6 +290,15 @@ definePersistenceTests('studies', () => {
     assert.ok(gb.ok && gb.chapter.gamebook === true);
     const gbBad = await setChapterGamebook(added.chapter.id, stranger.id, false);
     assert.ok(!gbBad.ok && gbBad.error === 'forbidden');
+
+    // Orientation is the chapter's own, so it survives a reload rather than
+    // living in whoever-opened-it's session.
+    const flipped = await setChapterOrientation(added.chapter.id, owner.id, 'black');
+    assert.ok(flipped.ok && flipped.chapter.orientation === 'black');
+    const reloaded = await getStudyById(studyId);
+    assert.equal(reloaded?.chapters.find((c) => c.id === added.chapter.id)?.orientation, 'black');
+    const flipBad = await setChapterOrientation(added.chapter.id, stranger.id, 'red');
+    assert.ok(!flipBad.ok && flipBad.error === 'forbidden');
 
     assert.ok((await deleteChapter(added.chapter.id, owner.id)).ok);
     full = await getStudyById(studyId);

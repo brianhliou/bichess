@@ -751,6 +751,31 @@ export async function renameChapter(
 }
 
 /** Flip a chapter between vanilla and gamebook (interactive-lesson) mode (owner). */
+/** Set which side the chapter's board faces on open. Stored per chapter rather
+ *  than per reader: a black repertoire is authored to be read from black's side,
+ *  so the orientation belongs to the document, not to whoever opened it. */
+export async function setChapterOrientation(
+  chapterId: string,
+  ownerId: string,
+  orientation: 'red' | 'black',
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET orientation = $1, updated_at = now() WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
+    [orientation, chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
 export async function setChapterGamebook(
   chapterId: string,
   ownerId: string,

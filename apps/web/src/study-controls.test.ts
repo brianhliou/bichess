@@ -79,8 +79,8 @@ describe('study chapter rail', () => {
         canFeature: false,
       },
       [
-        { id: 'one', name: 'Central cannon', gamebook: false },
-        { id: 'two', name: 'Wing attack', gamebook: true },
+        { id: 'one', name: 'Central cannon', gamebook: false, orientation: 'red' },
+        { id: 'two', name: 'Wing attack', gamebook: true, orientation: 'red' },
       ],
       'one',
       document.createElement('span'),
@@ -130,7 +130,7 @@ describe('study chapter rail', () => {
         featuredAt: null,
         canFeature: false,
       },
-      [{ id: 'one', name: 'Central cannon', gamebook: false }],
+      [{ id: 'one', name: 'Central cannon', gamebook: false, orientation: 'red' }],
       'one',
       document.createElement('span'),
       {

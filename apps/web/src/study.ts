@@ -239,6 +239,7 @@ function renderStudy(
     name: string,
     rootFen?: string,
     sourceRoot?: SerializedTree,
+    orientation?: 'red' | 'black',
   ): Promise<string | null> => {
     if (!(await flushActive())) return t('study.resolveFirst');
     // rootFen rides inside the tree blob (SerializedTree.rootFen). Duplicating a
@@ -254,6 +255,7 @@ function renderStudy(
       body: JSON.stringify({
         name: name || `Chapter ${chapters.length + 1}`,
         root: chapterRoot,
+        ...(orientation ? { orientation } : {}),
       }),
     });
     if (!response.ok) return responseError(response, t('study.createChapterFailed'));
@@ -272,7 +274,8 @@ function renderStudy(
       // without the tab rather than a tab that cannot work.
       importable: studyVariant() === 'xiangqi',
       normalizeFen: (raw) => normalizeStartFen(studyVariant(), raw),
-      createChapter: (name, rootFen, root) => createChapter(name, rootFen, root),
+      createChapter: (name, rootFen, root, orientation) =>
+        createChapter(name, rootFen, root, orientation),
     });
 
   const pgnExportable = (): boolean => studyVariant() === 'xiangqi';
@@ -423,6 +426,24 @@ function renderStudy(
     return null;
   };
 
+  /** Persist a chapter's default board facing. Shared by the settings dialog and
+   *  the under-board menu, so the two can never disagree about what "default"
+   *  means or how a failure surfaces. */
+  const saveOrientation = async (
+    chapter: ChapterDto,
+    orientation: 'red' | 'black',
+  ): Promise<string | null> => {
+    if (orientation === chapter.orientation) return null;
+    const response = await fetch(`/api/studies/${study.id}/chapters/${chapter.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orientation }),
+    });
+    if (!response.ok) return responseError(response, t('study.updateChapterFailed'));
+    chapter.orientation = orientation;
+    return null;
+  };
+
   const saveChapterSettings = async (
     chapter: ChapterDto,
     patch: ChapterSettingsPatch,
@@ -437,6 +458,8 @@ function renderStudy(
       if (!response.ok) return responseError(response, t('study.renameChapterFailed'));
       chapter.name = patch.name;
     }
+    const orientationError = await saveOrientation(chapter, patch.orientation);
+    if (orientationError) return orientationError;
     if (patch.gamebook !== chapter.gamebook) {
       const error = await setGamebook(chapter.id, patch.gamebook, false);
       if (error) return error;
@@ -488,7 +511,12 @@ function renderStudy(
       onSave: (patch) => saveChapterSettings(chapter, patch),
       onDuplicate: () => {
         snapshotActive();
-        return createChapter(`${chapter.name} copy`, undefined, chapter.root);
+        return createChapter(
+          `${chapter.name} copy`,
+          undefined,
+          chapter.root,
+          chapter.orientation === 'black' ? 'black' : 'red',
+        );
       },
       onClearAnnotations: () => {
         snapshotActive();
@@ -645,6 +673,21 @@ function renderStudy(
       // A study is read forward. Landing on the final position of a 60-ply
       // annotated game means rewinding before you can start.
       initialPosition: 'start',
+      // The chapter's own orientation, not the reader's last flip: a black
+      // repertoire is authored to be read from black's side, and the Flip
+      // button resets on every chapter switch because the board remounts.
+      initialFlipped: chapter.orientation === 'black',
+      // Owner-only: the under-board menu's "Set as default view" saves whichever
+      // way the board is currently facing, so Flip board composes with it.
+      ...(study.isOwner
+        ? {
+            saveDefaultOrientation: async (flipped: boolean): Promise<string | null> => {
+              const error = await saveOrientation(chapter, flipped ? 'black' : 'red');
+              setStatus(status, error ? 'error' : 'saved', error ?? t('review.defaultViewSaved'));
+              return error;
+            },
+          }
+        : {}),
       initialTree: autosave?.initialTree ?? chapter.root,
       // A composition chapter (SerializedTree.rootFen) roots the board at its
       // hand-set position; an invalid FEN degrades to the standard start, same

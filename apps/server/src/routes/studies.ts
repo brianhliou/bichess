@@ -453,6 +453,18 @@ async function patchChapter(
   ownerId: string,
 ): Promise<boolean> {
   const body = await readJsonBody(request, TREE_JSON_BODY_LIMIT);
+  // Orientation is applied first and does NOT return, so a body carrying both a
+  // rename and a flip lands both. Returning here would reproduce the combined
+  // name+root bug described above with different fields.
+  let reorientedChapter: persistence.StudyChapterRecord | null = null;
+  if (body.orientation === 'red' || body.orientation === 'black') {
+    const result = await persistence.setChapterOrientation(chapterId, ownerId, body.orientation);
+    if (!result.ok) {
+      writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });
+      return true;
+    }
+    reorientedChapter = result.chapter;
+  }
   if ('root' in body && (typeof body.name === 'string' || parseI18nField(body.i18n))) {
     const combinedI18n = parseI18nField(body.i18n);
     const combinedName = typeof body.name === 'string' ? body.name.trim() : null;
@@ -512,6 +524,10 @@ async function patchChapter(
       return true;
     }
     writeJson(response, 200, { chapter: chapterView(result.chapter) });
+    return true;
+  }
+  if (reorientedChapter) {
+    writeJson(response, 200, { chapter: chapterView(reorientedChapter) });
     return true;
   }
   writeJson(response, 400, { error: 'nothing_to_update' });

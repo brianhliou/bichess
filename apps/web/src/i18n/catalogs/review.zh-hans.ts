@@ -73,6 +73,9 @@ export const ZH_HANS_REVIEW = {
   'study.newStudy': '新建研习',
   'study.createTitle': '创建研习',
   'study.fieldName': '名称',
+  'study.fieldOrientation': '棋盘朝向',
+  'study.orientationRed': '红方',
+  'study.orientationBlack': '黑方',
   'study.untitled': '未命名研习',
   'study.nameAria': '研习名称',
   'study.fieldVisibility': '可见性',
@@ -391,4 +394,6 @@ export const ZH_HANS_REVIEW = {
   'engine.effortDeep': '深入',
   'review.analysisBoard': '分析棋盘',
   'review.flipBoard': '翻转棋盘',
+  'review.setDefaultView': '设为默认视角',
+  'review.defaultViewSaved': '已保存默认视角',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

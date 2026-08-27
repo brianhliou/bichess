@@ -30,7 +30,12 @@ export interface ChapterDialogHost {
   /** Canonicalize a pasted start position, or explain why it will not parse. */
   normalizeFen(raw: string): { ok: true; fen: string } | { ok: false; error: string };
   /** Create one chapter. Resolves to an error message, or null on success. */
-  createChapter(name: string, rootFen?: string, root?: SerializedTree): Promise<string | null>;
+  createChapter(
+    name: string,
+    rootFen?: string,
+    root?: SerializedTree,
+    orientation?: 'red' | 'black',
+  ): Promise<string | null>;
 }
 
 export function openChapterDialog(host: ChapterDialogHost): void {
@@ -60,6 +65,29 @@ export function openChapterDialog(host: ChapterDialogHost): void {
   nameInput.value = host.defaultName;
   nameInput.setAttribute('aria-label', t('study.chapterNameAria'));
   nameField.append(nameLabel, nameInput);
+
+  // --- orientation ------------------------------------------------------------
+  // Above the tab strip because it applies to whatever the tab creates, a
+  // multi-game PGN's chapters included. A black repertoire is read from black's
+  // side, and setting that once at creation beats flipping every chapter.
+  const orientationField = document.createElement('label');
+  orientationField.className = 'study-create-dialog__field';
+  const orientationLabel = document.createElement('span');
+  orientationLabel.className = 'study-create-dialog__label';
+  orientationLabel.textContent = t('study.fieldOrientation');
+  const orientationInput = document.createElement('select');
+  orientationInput.className = 'study-create-dialog__control';
+  for (const [value, label] of [
+    ['red', t('study.orientationRed')],
+    ['black', t('study.orientationBlack')],
+  ] as const) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    orientationInput.append(option);
+  }
+  orientationField.append(orientationLabel, orientationInput);
+  const orientation = (): 'red' | 'black' => (orientationInput.value === 'black' ? 'black' : 'red');
 
   // --- tab strip --------------------------------------------------------------
   const tabs: Array<{ id: TabId; label: string }> = [{ id: 'empty', label: 'Empty' }];
@@ -213,7 +241,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
     readFile(event.dataTransfer?.files?.[0]);
   });
 
-  form.append(nameField);
+  form.append(nameField, orientationField);
   if (tabs.length > 1) form.append(strip);
   form.append(emptyPanel, positionPanel, gamePanel, pgnPanel, feedback, actions);
   form.addEventListener('submit', (event) => {
@@ -243,10 +271,12 @@ export function openChapterDialog(host: ChapterDialogHost): void {
           // The chapter name the author typed wins; the derived one is only a
           // default, so an untouched default gets replaced by the real players.
           const chapterName = name && name !== host.defaultName ? name : result.game.name;
-          const error = await host.createChapter(chapterName, undefined, {
-            version: 1,
-            root: { children: linearTree(result.game.moves) },
-          });
+          const error = await host.createChapter(
+            chapterName,
+            undefined,
+            { version: 1, root: { children: linearTree(result.game.moves) } },
+            orientation(),
+          );
           if (error) {
             feedback.textContent = error;
             restore();
@@ -268,7 +298,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
         return;
       }
       submit.disabled = true;
-      void runImport(host, parsed.chapters, submit, feedback)
+      void runImport(host, parsed.chapters, submit, feedback, orientation())
         .then((failed) => (failed === 0 ? dialog.close('create') : restore()))
         .catch(() => {
           feedback.textContent = t('study.requestFailed');
@@ -294,7 +324,7 @@ export function openChapterDialog(host: ChapterDialogHost): void {
     submit.disabled = true;
     submit.textContent = 'Adding…';
     void host
-      .createChapter(name, rootFen)
+      .createChapter(name, rootFen, undefined, orientation())
       .then((error) => {
         if (!error) {
           dialog.close('create');
@@ -349,13 +379,14 @@ async function runImport(
   chapters: readonly XiangqiPgnChapter[],
   submit: HTMLButtonElement,
   feedback: HTMLElement,
+  orientation: 'red' | 'black',
 ): Promise<number> {
   let done = 0;
   let failed = 0;
   let lastError: string | null = null;
   for (const chapter of chapters) {
     submit.textContent = `Importing ${done + failed + 1}/${chapters.length}…`;
-    const error = await host.createChapter(chapter.name, undefined, chapter.root);
+    const error = await host.createChapter(chapter.name, undefined, chapter.root, orientation);
     if (error) {
       failed += 1;
       lastError = error;

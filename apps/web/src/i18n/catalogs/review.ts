@@ -256,6 +256,9 @@ export const EN_REVIEW = {
   'study.newStudy': 'New study',
   'study.createTitle': 'Create study',
   'study.fieldName': 'Name',
+  'study.fieldOrientation': 'Orientation',
+  'study.orientationRed': 'Red',
+  'study.orientationBlack': 'Black',
   'study.untitled': 'Untitled study',
   'study.nameAria': 'Study name',
   'study.fieldVisibility': 'Visibility',
@@ -413,6 +416,8 @@ export const EN_REVIEW = {
   'engine.effortDeep': 'Deep',
   'review.analysisBoard': 'Analysis board',
   'review.flipBoard': 'Flip board',
+  'review.setDefaultView': 'Set as default view',
+  'review.defaultViewSaved': 'Default view saved',
 } as const;
 
 export type ReviewI18nKey = keyof typeof EN_REVIEW;

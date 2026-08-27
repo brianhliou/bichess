@@ -73,6 +73,9 @@ export const ZH_HANT_REVIEW = {
   'study.newStudy': '新增研習',
   'study.createTitle': '建立研習',
   'study.fieldName': '名稱',
+  'study.fieldOrientation': '棋盤朝向',
+  'study.orientationRed': '紅方',
+  'study.orientationBlack': '黑方',
   'study.untitled': '未命名研習',
   'study.nameAria': '研習名稱',
   'study.fieldVisibility': '可見性',
@@ -391,4 +394,6 @@ export const ZH_HANT_REVIEW = {
   'engine.effortDeep': '深入',
   'review.analysisBoard': '分析棋盤',
   'review.flipBoard': '翻轉棋盤',
+  'review.setDefaultView': '設為預設視角',
+  'review.defaultViewSaved': '已儲存預設視角',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

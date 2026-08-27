@@ -19,6 +19,9 @@ export type ChapterControlModel = {
   name: string;
   i18n?: unknown;
   gamebook: boolean;
+  /** Server-validated on write, typed loose here to match the chapter DTO;
+   *  normalized where it is read. */
+  orientation: string;
 };
 
 export type StudyRailActions = {
@@ -379,6 +382,7 @@ export function openStudySettingsDialog(
 export type ChapterSettingsPatch = {
   name: string;
   gamebook: boolean;
+  orientation: 'red' | 'black';
 };
 
 export type ChapterSettingsActions = {
@@ -401,6 +405,8 @@ export function openChapterSettingsDialog(
   form.className = 'study-settings__form';
   const name = textInput(chapter.name, 80);
   form.append(field(t('study.fieldName'), name));
+  const orientation = orientationSelect(chapter.orientation === 'black' ? 'black' : 'red');
+  form.append(field(t('study.fieldOrientation'), orientation));
 
   const gamebook = document.createElement('input');
   gamebook.type = 'checkbox';
@@ -480,7 +486,11 @@ export function openChapterSettingsDialog(
     }
     setPending(save, t('study.saving'));
     void actions
-      .onSave({ name: name.value.trim(), gamebook: gamebook.checked })
+      .onSave({
+        name: name.value.trim(),
+        gamebook: gamebook.checked,
+        orientation: orientation.value === 'black' ? 'black' : 'red',
+      })
       .then((error) => {
         if (error) {
           setFeedback(feedback, error, 'error');
@@ -629,6 +639,24 @@ function textInput(value: string, maxLength: number): HTMLInputElement {
   input.value = value;
   input.maxLength = maxLength;
   return input;
+}
+
+/** Which side the chapter's board faces on open. A select rather than a radio
+ *  pair so it sits on the same row shape as Name and Visibility. */
+function orientationSelect(selected: 'red' | 'black'): HTMLSelectElement {
+  const select = document.createElement('select');
+  select.className = 'study-create-dialog__control';
+  for (const [value, label] of [
+    ['red', t('study.orientationRed')],
+    ['black', t('study.orientationBlack')],
+  ] as const) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
+    select.append(option);
+  }
+  return select;
 }
 
 function visibilitySelect(selected: StudyVisibility): HTMLSelectElement {

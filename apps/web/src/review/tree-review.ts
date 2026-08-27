@@ -310,6 +310,11 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  annotated game on its final position asks the reader to rewind before they
    *  can begin. */
   initialPosition?: 'start' | 'end';
+  /** Which way the board faces on mount. False (default) puts the first player
+   *  at the bottom. A study chapter passes its stored orientation here: a black
+   *  repertoire read from red's side asks the reader to mentally mirror every
+   *  line, and the Flip button only fixes it until the next chapter remounts. */
+  initialFlipped?: boolean;
   /** Fired after any tree mutation (move, annotation, promote, delete). The study
    *  page uses it to autosave; the analysis/postgame pages ignore it. */
   onChange?: () => void;
@@ -388,6 +393,11 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  current tree. Absent = the item is omitted (the study page itself omits it —
    *  you are already in a study). */
   studyExport?: { variant: StudyVariantId; name: string };
+  /** Persist the board's CURRENT facing as the chapter's default, for an owner.
+   *  Sits under Flip board in the same menu because that is where an author
+   *  looks when they think about orientation, and the pair reads as what it is:
+   *  flip for now, or keep it. Omitted for readers and non-study surfaces. */
+  saveDefaultOrientation?: (flipped: boolean) => Promise<string | null>;
   /** Enable the menu's "Clear moves" action: drop every move back to the root
    *  position, keeping a FEN-seeded root. Only the analysis board sets it; wiping
    *  the moves of a game that was actually played is meaningless. */
@@ -424,7 +434,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const notifyChange = (): void => config.onChange?.();
 
   let currentPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
-  let flipped = false;
+  let flipped = config.initialFlipped === true;
 
   const currentNode = (): Node => tree.nodeAt(currentPath) ?? tree.root;
   const orientation = (): Color => presentation.perspective(flipped);
@@ -823,6 +833,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const menuItems: ReviewMenuItem[] = [
     { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
   ];
+  if (config.saveDefaultOrientation) {
+    menuItems.push({
+      label: t('review.setDefaultView'),
+      icon: REVIEW_MENU_ICONS.pinView,
+      onClick: () => {
+        void config.saveDefaultOrientation?.(flipped);
+      },
+    });
+  }
   if (config.studyExport) {
     menuItems.push({ label: 'Study', icon: REVIEW_MENU_ICONS.study, onClick: () => saveAsStudy() });
   }
