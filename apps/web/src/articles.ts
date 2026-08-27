@@ -1840,7 +1840,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const headRow = document.createElement('tr');
   for (const h of block.headers) {
     const th = document.createElement('th');
-    th.textContent = h;
+    appendRichText(th, h);
     headRow.append(th);
   }
   thead.append(headRow);
@@ -1851,7 +1851,10 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     if (highlight.has(i)) tr.className = 'article-table-row-emphasis';
     for (const cell of row) {
       const td = document.createElement('td');
-      td.textContent = cell;
+      // Cells take the same inline markdown as paragraphs. They rendered as raw
+      // textContent until 2026-08-27, so a [label](/href) in a cell showed its
+      // own brackets.
+      appendRichText(td, cell);
       tr.append(td);
     }
     tbody.append(tr);
