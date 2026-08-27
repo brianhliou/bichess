@@ -132,6 +132,9 @@ export interface XiangqiPgnExportMeta {
   /** Terms the commentary is offered under. Matches the header the server's
    *  game export has always written (game-export.ts LICENSE). */
   license?: string;
+  /** Who wrote the commentary. PGN's own tag for it, so a reader offline (or in
+   *  another tool) sees the credit without following the [Site] URL. */
+  annotator?: string;
 }
 
 /** Render a stored chapter tree back to PGN text. Nodes whose UCI no longer
@@ -149,6 +152,7 @@ export function exportXiangqiPgnChapter(
   if (meta.black) tags.Black = meta.black;
   if (meta.date) tags.Date = meta.date;
   if (meta.site) tags.Site = meta.site;
+  if (meta.annotator) tags.Annotator = meta.annotator;
   if (meta.license) {
     tags.License = meta.license;
     tags.Source = 'Mistboard';
@@ -208,6 +212,8 @@ export const STUDY_EXPORT_LICENSE = 'CC BY 4.0';
 
 export interface XiangqiPgnStudyMeta {
   name: string;
+  /** The study's author, credited as [Annotator]. */
+  author?: string;
   /** Study id, used to build the [Site] URL every exported game carries. */
   id?: string;
   /** Origin for that URL. Defaults to the page's own, so a dev export points at
@@ -228,6 +234,7 @@ export function buildStudyPgn(
       exportXiangqiPgnChapter(chapter.root, {
         event: `${study.name}: ${chapter.name}`,
         ...(site ? { site } : {}),
+        ...(study.author ? { annotator: study.author } : {}),
         license: STUDY_EXPORT_LICENSE,
       }),
     )

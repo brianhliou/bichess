@@ -149,3 +149,19 @@ describe('attribution', () => {
     expect(pgn).toContain(`[License "${STUDY_EXPORT_LICENSE}"]`);
   });
 });
+
+test('the author is credited as [Annotator] on every exported game', () => {
+  const one = importXiangqiPgnChapters('1. h3e3 *').chapters[0]!;
+  const pgn = buildStudyPgn(
+    { name: 'Cannon manual', id: 'abc123', origin: 'https://mistboard.com', author: 'mistboard' },
+    [{ name: 'Central Cannon', root: one.root }],
+  );
+  expect(pgn).toContain('[Annotator "mistboard"]');
+  expect(parseXiangqiPgn(pgn)[0]?.tags.Annotator).toBe('mistboard');
+});
+
+test('an unknown author leaves the tag off rather than inventing one', () => {
+  const one = importXiangqiPgnChapters('1. h3e3 *').chapters[0]!;
+  const pgn = buildStudyPgn({ name: 'Scratch', id: 'x' }, [{ name: 'c', root: one.root }]);
+  expect(pgn).not.toContain('[Annotator');
+});

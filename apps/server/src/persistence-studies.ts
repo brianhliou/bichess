@@ -38,6 +38,10 @@ export type StudyChapterRecord = {
 export type StudyRecord = {
   id: string;
   ownerId: string;
+  /** Present only where the query joined `users`. The detail read does (so an
+   *  export can credit the author); the owner's own listing does not need it. */
+  ownerHandle?: string;
+  ownerDisplayName?: string;
   name: string;
   description: string;
   /** Per-locale overrides for `name`/`description` (see migration 115). */
@@ -109,6 +113,8 @@ function shortId(len = 8): string {
 type StudyRow = {
   id: string;
   owner_id: string;
+  owner_handle?: string;
+  owner_display_name?: string;
   name: string;
   description: string;
   i18n: Record<string, unknown>;
@@ -138,6 +144,8 @@ function mapStudy(row: StudyRow): StudyRecord {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    ...(row.owner_handle ? { ownerHandle: row.owner_handle } : {}),
+    ...(row.owner_display_name ? { ownerDisplayName: row.owner_display_name } : {}),
     name: row.name,
     description: row.description,
     i18n: row.i18n ?? {},
@@ -280,9 +288,19 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
 
 export async function getStudyById(id: string): Promise<StudyWithChapters | null> {
   if (!isInitialized()) return null;
-  const study = await getPool().query<StudyRow>(`SELECT ${STUDY_COLS} FROM studies WHERE id = $1`, [
-    id,
-  ]);
+  // Joined to `users` so the detail view can name the author: an exported PGN
+  // credits whoever wrote the commentary, and a URL alone cannot do that offline.
+  const study = await getPool().query<StudyRow>(
+    `SELECT ${STUDY_COLS.split(', ')
+      .map((column) => `s.${column}`)
+      .join(', ')},
+            u.handle AS owner_handle,
+            u.display_name AS owner_display_name
+       FROM studies s
+       JOIN users u ON u.id = s.owner_id
+      WHERE s.id = $1`,
+    [id],
+  );
   const row = study.rows[0];
   if (!row) return null;
   const chapters = await getPool().query<ChapterRow>(

@@ -64,7 +64,8 @@
     "pretest": "node ../../scripts/ensure-packages-built.mjs && node ../../scripts/prune-orphan-dist.mjs .",
     "pretest:persistent": "node ../../scripts/ensure-packages-built.mjs && node ../../scripts/prune-orphan-dist.mjs .",
     "pretest:integration": "node ../../scripts/ensure-packages-built.mjs",
-    "build:xiangqi-explorer": "tsx src/build-xiangqi-explorer.ts"
+    "build:xiangqi-explorer": "tsx src/build-xiangqi-explorer.ts",
+    "rehash:historical-xiangqi": "tsx src/rehash-historical-xiangqi.ts"
   },
   "dependencies": {
     "@mistboard/board-render": "0.0.0",

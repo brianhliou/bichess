@@ -65,6 +65,16 @@ function studyView(study: persistence.StudyRecord, isOwner: boolean) {
     isOwner,
     createdAt: study.createdAt.toISOString(),
     updatedAt: study.updatedAt.toISOString(),
+    // Public identity, already shown on every study card. The detail view needs
+    // it so an exported PGN can name the author of the commentary it carries.
+    ...(study.ownerHandle
+      ? {
+          owner: {
+            handle: study.ownerHandle,
+            displayName: study.ownerDisplayName ?? study.ownerHandle,
+          },
+        }
+      : {}),
   };
 }
 

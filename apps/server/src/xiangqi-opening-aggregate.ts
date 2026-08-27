@@ -39,6 +39,10 @@ export type AggregateGameInput = {
    * collide. Defaults to 'historical'.
    */
   kind?: 'historical' | 'broadcast';
+  /** True only for a corpus game that is publicly listable in its own right.
+   *  Gates whether the game may be LINKED as an example; it never affects the
+   *  counts, which every cleared game contributes to. */
+  publiclyListed?: boolean;
   result: AggregateResult;
   moves: readonly XiangqiMove[];
   /** Average player rating, when the source records one. Drives "Top games";
@@ -121,7 +125,12 @@ export function accumulateGame(
     else if (game.result === '0-1') stats.blackWins += 1;
     else if (game.result === '1/2-1/2') stats.draws += 1;
     else stats.unknowns += 1;
-    retainSample(stats.sampleGames, game, options.sampleLimit);
+    // Counted always, LINKED only when the game is one a reader may walk. An
+    // aggregate may report position statistics from a yellow source; it may not
+    // become a browsable front door onto a single game of it, which is what a
+    // clickable "Top games" row is (xiangqi-content-integrity.md). Broadcast
+    // boards are published in full elsewhere, so linking one republishes nothing.
+    if (isLinkableSample(game)) retainSample(stats.sampleGames, game, options.sampleLimit);
   }
   return true;
 }
@@ -174,6 +183,15 @@ export function accumulatorPositionCount(accumulator: XiangqiOpeningMoveAccumula
  * "Top games", so keeping the best few per move is what makes the position-level
  * list exact rather than a sample of a sample.
  */
+/** Whether a folded game may appear as a clickable example. Broadcast boards
+ *  are already public in full at /broadcast/xiangqi. A corpus game is linkable
+ *  only once it has been made publicly listable in its own right; `unlisted`
+ *  rows are aggregate fuel, not content. */
+function isLinkableSample(game: AggregateGameInput): boolean {
+  if ((game.kind ?? 'historical') === 'broadcast') return true;
+  return game.publiclyListed === true;
+}
+
 function retainSample(
   samples: XiangqiOpeningSample[],
   game: AggregateGameInput,

@@ -44,7 +44,12 @@ function moves(...pairs: string[]): XiangqiMove[] {
 
 test('folds a game into per-position move counts split by result', () => {
   const acc = createAccumulator();
-  const ok = accumulateGame(acc, { id: 'g1', result: '1-0', moves: moves('h3e3', 'h10g8') });
+  const ok = accumulateGame(acc, {
+    id: 'g1',
+    publiclyListed: true,
+    result: '1-0',
+    moves: moves('h3e3', 'h10g8'),
+  });
 
   assert.equal(ok, true);
   const stats = statsFor(acc, START, 'h3e3');
@@ -81,17 +86,30 @@ test('folds a game into per-position move counts split by result', () => {
 test('named games lead the sample list, then rated ones, then the anonymous tail', () => {
   const acc = createAccumulator();
   const line = moves('h3e3', 'h10g8');
-  accumulateGame(acc, { id: 'anon', result: '1-0', moves: line });
-  accumulateGame(acc, { id: 'club', result: '1-0', moves: line, rating: 1100 });
+  accumulateGame(acc, { id: 'anon', publiclyListed: true, result: '1-0', moves: line });
+  accumulateGame(acc, {
+    id: 'club',
+    publiclyListed: true,
+    result: '1-0',
+    moves: line,
+    rating: 1100,
+  });
   accumulateGame(acc, {
     id: 'named',
+    publiclyListed: true,
     kind: 'broadcast',
     result: '1-0',
     moves: line,
     redName: 'Meng Chen',
     blackName: 'Li Yanyang',
   });
-  accumulateGame(acc, { id: 'strong', result: '1-0', moves: line, rating: 2400 });
+  accumulateGame(acc, {
+    id: 'strong',
+    publiclyListed: true,
+    result: '1-0',
+    moves: line,
+    rating: 2400,
+  });
 
   assert.deepEqual(
     statsFor(acc, START, 'h3e3')?.sampleGames.map((sample) => sample.id),
@@ -104,8 +122,22 @@ test('named games lead the sample list, then rated ones, then the anonymous tail
 test('named games order by rating among themselves', () => {
   const acc = createAccumulator();
   const line = moves('h3e3', 'h10g8');
-  accumulateGame(acc, { id: 'weaker', result: '1-0', moves: line, rating: 2000, redName: 'A' });
-  accumulateGame(acc, { id: 'stronger', result: '1-0', moves: line, rating: 2600, redName: 'B' });
+  accumulateGame(acc, {
+    id: 'weaker',
+    publiclyListed: true,
+    result: '1-0',
+    moves: line,
+    rating: 2000,
+    redName: 'A',
+  });
+  accumulateGame(acc, {
+    id: 'stronger',
+    publiclyListed: true,
+    result: '1-0',
+    moves: line,
+    rating: 2600,
+    redName: 'B',
+  });
 
   assert.deepEqual(
     statsFor(acc, START, 'h3e3')?.sampleGames.map((sample) => sample.id),
@@ -115,7 +147,7 @@ test('named games order by rating among themselves', () => {
 
 test('an unknown result is counted, never guessed', () => {
   const acc = createAccumulator();
-  accumulateGame(acc, { id: 'g1', result: '*', moves: moves('h3e3') });
+  accumulateGame(acc, { id: 'g1', publiclyListed: true, result: '*', moves: moves('h3e3') });
 
   const stats = statsFor(acc, START, 'h3e3');
   assert.equal(stats?.games, 1);
@@ -130,11 +162,13 @@ test('different move orders reaching one position share its statistics', () => {
   const acc = createAccumulator();
   accumulateGame(acc, {
     id: 'g1',
+    publiclyListed: true,
     result: '1-0',
     moves: moves('h3e3', 'h10g8', 'b1c3', 'b10c8', 'h1g3'),
   });
   accumulateGame(acc, {
     id: 'g2',
+    publiclyListed: true,
     result: '0-1',
     moves: moves('b1c3', 'b10c8', 'h3e3', 'h10g8', 'h1g3'),
   });
@@ -153,7 +187,12 @@ test('different move orders reaching one position share its statistics', () => {
 test('an illegal move list contributes nothing, not a valid prefix', () => {
   const acc = createAccumulator();
   // First move is legal, second is not (that horse cannot reach a1).
-  const ok = accumulateGame(acc, { id: 'bad', result: '1-0', moves: moves('h3e3', 'h10a1') });
+  const ok = accumulateGame(acc, {
+    id: 'bad',
+    publiclyListed: true,
+    result: '1-0',
+    moves: moves('h3e3', 'h10a1'),
+  });
 
   assert.equal(ok, false);
   assert.equal(acc.size, 0, 'a rejected game must leave no partial statistics behind');
@@ -175,7 +214,7 @@ test('caps retained sample game ids', () => {
   for (let i = 0; i < 5; i += 1) {
     accumulateGame(
       acc,
-      { id: `g${i}`, result: '1-0', moves: moves('h3e3') },
+      { id: `g${i}`, publiclyListed: true, result: '1-0', moves: moves('h3e3') },
       { ...DEFAULT_AGGREGATE_OPTIONS, sampleLimit: 2 },
     );
   }
@@ -196,6 +235,7 @@ test('a game that revisits a position counts once, not once per visit', () => {
   const acc = createAccumulator();
   const ok = accumulateGame(acc, {
     id: 'shuffle',
+    publiclyListed: true,
     result: '1-0',
     moves: moves('h1g3', 'h10g8', 'g3h1', 'g8h10', 'h1g3'),
   });
@@ -213,8 +253,8 @@ test('mirror-image openings fold into one row', () => {
   // 炮二平五 and 炮八平五 are one opening played from either side. Splitting them
   // halves the apparent popularity of the most common opening in the game.
   const acc = createAccumulator();
-  accumulateGame(acc, { id: 'right', result: '1-0', moves: moves('h3e3') });
-  accumulateGame(acc, { id: 'left', result: '0-1', moves: moves('b3e3') });
+  accumulateGame(acc, { id: 'right', publiclyListed: true, result: '1-0', moves: moves('h3e3') });
+  accumulateGame(acc, { id: 'left', publiclyListed: true, result: '0-1', moves: moves('b3e3') });
 
   assert.equal(acc.size, 1, 'one position');
   const rows = [...acc.values()][0]!;
@@ -235,7 +275,7 @@ test('keeps the highest-rated example games first', () => {
   ] as const) {
     accumulateGame(
       acc,
-      { id, result: '1-0', moves: moves('h3e3'), rating },
+      { id, publiclyListed: true, result: '1-0', moves: moves('h3e3'), rating },
       { ...DEFAULT_AGGREGATE_OPTIONS, sampleLimit: 3 },
     );
   }
@@ -247,4 +287,42 @@ test('keeps the highest-rated example games first', () => {
     ['high', 'mid', 'low'],
     'samples are the best three, unrated games last',
   );
+});
+
+test('an unlisted corpus game is counted but never offered as a clickable example', () => {
+  // The rights line the explorer has to hold: an aggregate may report position
+  // statistics drawn from a yellow source, but must not become a browsable front
+  // door onto one game of it. Counting is fine; linking is the republication.
+  const accumulator = createAccumulator();
+  accumulateGame(
+    accumulator,
+    {
+      id: 'hxq_unlisted',
+      kind: 'historical',
+      result: '1-0',
+      moves: [{ from: 'h3', to: 'e3' }] as never,
+      publiclyListed: false,
+    },
+    DEFAULT_AGGREGATE_OPTIONS,
+  );
+  const stats = [...accumulator.values()][0]!;
+  const move = [...stats.values()][0]!;
+  assert.equal(move.games, 1, 'the game still counts toward the statistics');
+  assert.deepEqual(move.sampleGames, [], 'but it is not linkable');
+});
+
+test('broadcast boards and publicly-listed corpus games stay linkable', () => {
+  for (const game of [
+    { id: 'b1', kind: 'broadcast' as const, publiclyListed: undefined },
+    { id: 'hxq_public', kind: 'historical' as const, publiclyListed: true },
+  ]) {
+    const accumulator = createAccumulator();
+    accumulateGame(
+      accumulator,
+      { ...game, result: '1-0', moves: [{ from: 'h3', to: 'e3' }] as never },
+      DEFAULT_AGGREGATE_OPTIONS,
+    );
+    const move = [...[...accumulator.values()][0]!.values()][0]!;
+    assert.equal(move.sampleGames.length, 1, `${game.id} should be linkable`);
+  }
 });

@@ -26,6 +26,7 @@ import {
   type XiangqiMoveFormat,
 } from '@mistboard/game';
 import pg from 'pg';
+import { historicalXiangqiDigest } from './historical-xiangqi-digest.js';
 import { runMigrations } from './migrate.js';
 import {
   close,
@@ -556,21 +557,6 @@ function recordRejection(stats: ElephantChessImportStats, reason: string): void 
   stats.rejectionSamples[category] = samples;
 }
 
-function gameDigest(game: ElephantChessGame): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify({
-        sourceGameId: game.sourceGameId,
-        red: game.redNameRaw,
-        black: game.blackNameRaw,
-        playedOn: game.playedOn,
-        result: game.result,
-        moves: game.moves.map((move) => `${move.from}${move.to}`),
-      }),
-    )
-    .digest('hex');
-}
-
 export async function scanElephantChessInputs(
   inputs: readonly CsvInput[],
   options: {
@@ -598,7 +584,7 @@ export async function scanElephantChessInputs(
         const category = String(plan.game.tags.timeControlCategory ?? 'unknown') || 'unknown';
         increment(stats.timeControlCategories, category);
         if (plan.game.tags.ratingMode === 'rated') stats.ratedGames += 1;
-        const digest = gameDigest(plan.game);
+        const digest = historicalXiangqiDigest(plan.game);
         if (gameDigests.has(digest)) {
           stats.duplicates += 1;
         } else {

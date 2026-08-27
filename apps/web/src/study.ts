@@ -64,6 +64,7 @@ type StudyDto = {
   canFeature: boolean;
   likeCount: number;
   likedByViewer: boolean;
+  owner?: { handle: string; displayName: string };
 };
 
 type ChapterDto = {
@@ -299,7 +300,11 @@ function renderStudy(
           return;
         }
         downloadStudyPgn(
-          { name: study.name, id: study.id },
+          {
+            name: study.name,
+            id: study.id,
+            ...(study.owner ? { author: study.owner.displayName || study.owner.handle } : {}),
+          },
           chapters.map((chapter) => ({ name: chapter.name, root: chapter.root })),
         );
         button.textContent = 'Downloaded';

@@ -267,7 +267,15 @@ definePersistenceTests('xiangqi opening explorer', () => {
   // to club games and the broadcast games were invisible at every position.
   test('the route orders top games the way the samples were built', async () => {
     const acc = createAccumulator();
-    accumulateGame(acc, { id: 'club-1', result: '1-0', moves: MOVES, rating: 1200 });
+    // publiclyListed so it is eligible to be a SAMPLE at all; this test is about
+    // the ordering of the merge, not about the rights gate that precedes it.
+    accumulateGame(acc, {
+      id: 'club-1',
+      publiclyListed: true,
+      result: '1-0',
+      moves: MOVES,
+      rating: 1200,
+    });
     accumulateGame(acc, {
       id: 'pro-1',
       kind: 'broadcast',

@@ -584,8 +584,10 @@ export async function listAggregatableXiangqiGames(opts: {
     moves: XiangqiMove[];
     tags: Record<string, unknown>;
     played_on: Date | string | null;
+    visibility: HistoricalXiangqiVisibility;
   }>(
-    `SELECT games.id, sources.slug, games.result, games.moves, games.tags, games.played_on
+    `SELECT games.id, sources.slug, games.result, games.moves, games.tags, games.played_on,
+            games.visibility
      FROM historical_xiangqi_games games
      JOIN historical_xiangqi_sources sources ON sources.id = games.source_id
      WHERE sources.license_status = 'cleared'
@@ -606,6 +608,10 @@ export async function listAggregatableXiangqiGames(opts: {
       redRating: ratings.red,
       blackRating: ratings.black,
       playedOn: dateOnlyFromRow(row.played_on),
+      // Only a publicly-listed corpus game may be shown as a clickable example.
+      // Unlisted rows still count toward the statistics; they just never become
+      // a front door onto a single game (xiangqi-content-integrity.md).
+      publiclyListed: row.visibility === 'public',
     };
   });
 }
