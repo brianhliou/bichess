@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountXiangqiAnalysis } from './xiangqi-analysis.js';
 import { mountXiangqiAnalysisPage } from './xiangqi-analysis-page.js';
 
@@ -73,6 +73,11 @@ describe('mountXiangqiAnalysis', () => {
     clickSquare('e8');
     expect(root.querySelector('.move-tree')?.textContent).toContain('h8-e8');
     expect(root.querySelector('.review-move-list__move--current')?.textContent).toContain('h8-e8');
+    // The line on screen is mirrored into the address bar as it is played.
+    expect(new URLSearchParams(window.location.search).get('moves')).toBe('h3-e3 h8-e8');
+    root.querySelector<HTMLButtonElement>('[aria-label="First move"]')?.click();
+    expect(new URLSearchParams(window.location.search).get('moves')).toBeNull();
+    window.history.replaceState(null, '', '/');
     root.remove();
   });
 });
@@ -145,13 +150,37 @@ describe('mountXiangqiAnalysisPage', () => {
   });
 
   it('offers only menu actions that are actually wired', () => {
-    // The four muted placeholders (Board editor / Learn from your mistakes /
-    // Continue from here / Settings) were cut; what is left must be live.
+    // The muted placeholders (Learn from your mistakes / Continue from here /
+    // Settings) were cut; Board editor came back WITH its route. What is
+    // listed must be live.
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);
     const items = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')];
-    expect(items.map((b) => b.textContent?.trim())).toEqual(['Flip board', 'Study', 'Clear moves']);
+    expect(items.map((b) => b.textContent?.trim())).toEqual([
+      'Flip board',
+      'Study',
+      'Clear moves',
+      'Board editor',
+    ]);
     expect(items.every((b) => !b.disabled)).toBe(true);
+    root.remove();
+  });
+
+  it('Board editor hands the current position to /editor/xiangqi', () => {
+    const root = freshRoot();
+    mountXiangqiAnalysis(root, [...OPENING]);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    const editor = [...root.querySelectorAll<HTMLButtonElement>('.review-menu__item')].find((b) =>
+      b.textContent?.includes('Board editor'),
+    );
+    editor?.click();
+    const href = String(assign.mock.calls.at(-1)?.[0]);
+    expect(href.startsWith('/editor/xiangqi?fen=')).toBe(true);
+    // The current node is the last seeded move, so the fen is not the start.
+    const fen = new URL(href, 'http://x').searchParams.get('fen')!;
+    expect(fen).not.toContain('rnbakabnr/9/1c5c1');
+    expect(fen).toContain('1c2c4');
+    assign.mockRestore();
     root.remove();
   });
 

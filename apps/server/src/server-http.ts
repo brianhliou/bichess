@@ -3,10 +3,16 @@ import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { serveArticleOgImage, serveGameOgImage, serveStudyOgImage } from './og-image.js';
+import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
 import type { DrainController } from './server-drain.js';
-import { isClientRoute, isReviewShellRoute, legacyPageRedirect } from './server-policy.js';
+import {
+  clientIpForRateLimit,
+  isClientRoute,
+  isReviewShellRoute,
+  legacyPageRedirect,
+} from './server-policy.js';
 import {
   ARTICLE_META,
   serveArticlePage,
@@ -148,6 +154,26 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
           response.end(
             JSON.stringify({ error: tooLarge ? 'request_body_too_large' : 'internal_error' }),
           );
+        }
+      });
+      return;
+    }
+
+    // /og/position/:variant.png?fen=… — the card for a shared analysis or
+    // editor position. Needs no persistence: the position is in the query.
+    const positionOgMatch = pathname.match(/^\/og\/position\/([a-z0-9-]+)\.png$/);
+    if (positionOgMatch) {
+      const fen = new URLSearchParams(url.slice(pathname.length)).get('fen');
+      void servePositionOgImage({
+        variant: positionOgMatch[1]!,
+        fen,
+        response,
+        renderKey: clientIpForRateLimit(request),
+      }).catch((err: Error) => {
+        console.warn('position og render failed', err.message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
         }
       });
       return;
@@ -438,6 +464,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         response,
         staticDir: options.staticDir,
         pathname,
+        // The query string rides along for the position routes, whose share
+        // meta depends on ?fen=.
+        search: url.slice(pathname.length),
         publicHost: options.publicHost,
       })
         .catch(() => false)

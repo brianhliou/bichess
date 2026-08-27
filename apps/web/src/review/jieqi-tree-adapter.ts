@@ -70,7 +70,10 @@ function projectJieqiView(truth: JieqiGameState, revealAll: boolean): JieqiPlaye
 
 export function makeJieqiTreeAdapter(
   gameId: string,
-  deal: JieqiDeal,
+  // Null when the caller roots the tree at a parsed position (TreeReviewConfig
+  // `root`), in which case initialTruth is never consulted; asking anyway is a
+  // wiring bug, so it throws rather than minting a deal the URL does not carry.
+  deal: JieqiDeal | null,
   // Read at PROJECTION time, not at construction: the review menu's Reveal toggle
   // flips the caller's flag and re-renders, and the adapter picks it up on the next
   // project() rather than being rebuilt (which would drop the tree).
@@ -78,7 +81,10 @@ export function makeJieqiTreeAdapter(
 ): VariantTreeAdapter<JieqiMove, JieqiGameState, JieqiPlayerView> {
   return {
     mode: 'perfect-info',
-    initialTruth: () => createInitialJieqiState(gameId, deal),
+    initialTruth: () => {
+      if (!deal) throw new Error('jieqi tree adapter: no deal; mount with config.root');
+      return createInitialJieqiState(gameId, deal);
+    },
     isLegal: (truth, move) => truth.status.type === 'playing' && isJieqiLegalMove(truth, move),
     applyMove: (truth, move) => applyJieqiMove(truth, move),
     project: (truth): ProjectedView<JieqiPlayerView>[] => [

@@ -17,16 +17,22 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { banqiStateToDealtFen } from './banqi-fen.js';
+import { jieqiStateToDealtFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
+import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
 import { hasStartFen, normalizeStartFen, START_FEN_SPEC_IDS } from './start-fen.js';
 import { darkChessVariant, parseDarkChessFen } from './variants.js';
+import { createInitialBanqiState } from './variants-banqi.js';
 import {
   createInitialFortressXiangqiState,
   type FortressXiangqiGameState,
   fortressXiangqiEngineFen,
   parseFortressXiangqiFen,
 } from './variants-fortress-xiangqi.js';
+import { createInitialJieqiState } from './variants-jieqi.js';
 import { createInitialJungleState } from './variants-jungle.js';
+import { createInitialJungleFlipState } from './variants-jungle-flip.js';
 import { createInitialXiangqiState } from './variants-xiangqi.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
@@ -37,6 +43,10 @@ test('every start-fen spec round-trips its own standard start', () => {
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    // Hidden-deal variants: the canonical spelling is the six-field DEALT fen.
+    banqi: banqiStateToDealtFen(createInitialBanqiState('t')),
+    jieqi: jieqiStateToDealtFen(createInitialJieqiState('t')),
+    'jungle-flip': jungleFlipStateToDealtFen(createInitialJungleFlipState('t')),
   };
   for (const spec of START_FEN_SPEC_IDS) {
     const fen = starts[spec];
@@ -52,7 +62,7 @@ test('every start-fen spec round-trips its own standard start', () => {
 });
 
 test('normalizeStartFen is fail-closed off the list', () => {
-  for (const spec of ['banqi', 'jieqi', 'jungle-flip', 'chess', 'not-a-variant', '']) {
+  for (const spec of ['chess', 'dark-shogi', 'not-a-variant', '']) {
     assert.equal(hasStartFen(spec), false, `${spec} should not claim a start FEN`);
     const result = normalizeStartFen(spec, 'anything');
     assert.equal(result.ok, false);
@@ -67,6 +77,34 @@ test('a study start FEN is trimmed and re-spelled, not echoed', () => {
   const result = normalizeStartFen('xiangqi', engineDialect);
   assert.ok(result.ok);
   assert.equal(result.fen, standardXiangqiFen(createInitialXiangqiState('t')));
+});
+
+// ── Hidden-deal variants ─────────────────────────────────────────────────────
+
+test('a public five-field paste for a dealt variant is pinned as a six-field dealt fen', () => {
+  const cases: Array<[string, string]> = [
+    ['banqi', 'XXXXXXXX/XXXXXXXX/XXXXXXXX/XXXXXXXX - G1A2E2R2H2C2S5g1a2e2r2h2c2s5 0 1'],
+    [
+      'jieqi',
+      'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1',
+    ],
+    ['jungle-flip', 'XXXX/XXXX/XXXX/XXXX - R1C1D1W1P1T1L1E1r1c1d1w1p1t1l1e1 0 0'],
+  ];
+  for (const [spec, publicFen] of cases) {
+    assert.equal(hasStartFen(spec), true);
+    const first = normalizeStartFen(spec, `  ${publicFen}  `);
+    assert.ok(first.ok, `${spec} rejected its public start: ${JSON.stringify(first)}`);
+    const fields = first.fen.split(' ');
+    assert.equal(fields.length, 6, `${spec} did not pin a hidden field: ${first.fen}`);
+    // The public prefix is preserved verbatim (sampling is invisible to the engine)
+    // and the pinned form is a fixed point.
+    assert.equal(fields.slice(0, 5).join(' '), publicFen);
+    const second = normalizeStartFen(spec, first.fen);
+    assert.ok(second.ok);
+    assert.equal(second.fen, first.fen);
+    // A structurally broken paste is refused, not defaulted.
+    assert.equal(normalizeStartFen(spec, 'not a fen at all').ok, false);
+  }
 });
 
 // ── Jungle ───────────────────────────────────────────────────────────────────

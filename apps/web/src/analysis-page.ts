@@ -46,9 +46,13 @@ export async function mountAnalysisPage(
 
 // The top-left variant dropdown (lichess analysis anatomy): the ONLY element in
 // the left rail — [variant marker] [select], one bordered card. Switching
-// navigates to the target board fresh (seeded ?moves= links are
-// variant-specific, so the query is dropped deliberately).
-function buildVariantPicker(current: AnalysisVariantId): HTMLElement {
+// navigates to the target board fresh (seeded ?moves= / ?fen= links are
+// variant-specific, so the query is dropped deliberately). The board editor
+// (/editor) shares the picker and the catalog; it passes its own base path.
+export function buildVariantPicker(
+  current: AnalysisVariantId,
+  basePath: '/analysis' | '/editor' = '/analysis',
+): HTMLElement {
   const wrap = document.createElement('label');
   wrap.className = 'analysis-variant-picker';
   const icon = document.createElement('span');
@@ -57,7 +61,10 @@ function buildVariantPicker(current: AnalysisVariantId): HTMLElement {
   if (miniId) icon.innerHTML = renderVariantMarker(miniId, { size: 28 });
   const select = document.createElement('select');
   select.className = 'analysis-variant-picker__select';
-  select.setAttribute('aria-label', t('analysis.variantPicker'));
+  select.setAttribute(
+    'aria-label',
+    t(basePath === '/editor' ? 'editor.variantPicker' : 'analysis.variantPicker'),
+  );
   for (const variant of ANALYSIS_VARIANTS) {
     const option = document.createElement('option');
     option.value = variant.id;
@@ -68,7 +75,7 @@ function buildVariantPicker(current: AnalysisVariantId): HTMLElement {
   // is unreliable (jsdom resolves it to the wrong option entirely).
   select.value = current;
   select.addEventListener('change', () => {
-    window.location.assign(`/analysis/${select.value}`);
+    window.location.assign(`${basePath}/${select.value}`);
   });
   wrap.append(icon, select);
   return wrap;

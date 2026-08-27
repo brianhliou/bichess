@@ -1,6 +1,12 @@
-import type { XiangqiColor, XiangqiGameStatus, XiangqiMove } from '@mistboard/game';
+import {
+  standardXiangqiFen,
+  type XiangqiColor,
+  type XiangqiGameStatus,
+  type XiangqiMove,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { analysisHref, editorHref } from './review/position-links.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
@@ -158,6 +164,9 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     showCrosstable: true,
+    // Position hand-offs: continue this node on /analysis, or open it in the editor.
+    analyseFromHere: (truth) => analysisHref('dark-xiangqi', standardXiangqiFen(truth)),
+    boardEditorHref: (truth) => editorHref('dark-xiangqi', standardXiangqiFen(truth)),
     // No client/server whole-game analysis for fog yet (the fog engine is a
     // separate worker piece); the review is the interactive triptych + tree.
     analysis: null,

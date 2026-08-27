@@ -4,6 +4,13 @@ import { resolve } from 'node:path';
 import type { Color } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
 import { GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
+import {
+  isPositionOgVariant,
+  POSITION_OG_IMAGE_VERSION,
+  type PositionOgVariant,
+  positionOgVariantLabel,
+  publicPositionFen,
+} from './og-position.js';
 import * as persistence from './persistence.js';
 import { isNoindexRoute } from './server-policy.js';
 import { chapterIsSubstantial, chapterPageMeta, renderStudyBody } from './study-page-body.js';
@@ -34,6 +41,11 @@ const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
     description:
       'Analyse xiangqi (Chinese chess) positions with a free engine. Import moves or a FEN, branch variations, review any game. Mistboard variants supported too.',
   },
+  '/editor': {
+    title: 'Xiangqi Board Editor | Mistboard',
+    description:
+      'Set up any xiangqi (Chinese chess) position by hand, get its FEN, and send it to the free analysis board. Mistboard variants supported too.',
+  },
   '/puzzles': {
     title: 'Xiangqi Puzzles | Mistboard',
     description:
@@ -50,6 +62,64 @@ const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
       'Live statistics for Mistboard: total xiangqi and variant games played, activity over time, and a breakdown by variant and game type.',
   },
 };
+
+// Position routes: /analysis[/<variant>] and /editor[/<variant>], the same
+// catalog as apps/web/src/analysis-catalog.ts (bare paths open xiangqi). Each
+// variant gets its own title so the eight boards do not read as duplicates of
+// one another, and a link carrying a valid ?fen= gets a card of that position
+// (og-position.ts) plus an og:url of the shared link itself.
+//
+// Hidden-deal variants: the link may carry the deal in a sixth FEN field. The
+// og:image URL carries the PUBLIC five-field spelling only, so the image URL
+// itself never names a hidden identity; og:url keeps the link as shared, since
+// that is the page the preview is for.
+const POSITION_ROUTE = /^\/(analysis|editor)(?:\/([a-z0-9-]+))?$/;
+
+type PositionRouteMeta = {
+  title: string;
+  description: string;
+  /** Path + query of the canonical link (no host). */
+  urlPath: string;
+  /** Path + query of the position card (no host); absent without a valid FEN. */
+  imagePath?: string;
+};
+
+function positionPageCopy(
+  surface: 'analysis' | 'editor',
+  variant: PositionOgVariant,
+): { title: string; description: string } {
+  // The flagship keeps the wording of its long-standing route entries.
+  if (variant === 'xiangqi') return SPA_ROUTE_META[`/${surface}`]!;
+  const label = positionOgVariantLabel(variant);
+  return surface === 'analysis'
+    ? {
+        title: `${label} Analysis Board | Mistboard`,
+        description: `Analyse ${label} positions on a free interactive board. Import a FEN, branch variations, and share any position by link.`,
+      }
+    : {
+        title: `${label} Board Editor | Mistboard`,
+        description: `Set up any ${label} position by hand, get its FEN, and send it to the free ${label} analysis board.`,
+      };
+}
+
+export function positionRouteMeta(pathname: string, search: string): PositionRouteMeta | null {
+  const match = POSITION_ROUTE.exec(pathname);
+  if (!match) return null;
+  const surface = match[1] as 'analysis' | 'editor';
+  const slug = match[2] ?? 'xiangqi';
+  // Unknown slugs get the plain shell (the client 404s them); never another
+  // variant's meta.
+  if (!isPositionOgVariant(slug)) return null;
+  const copy = positionPageCopy(surface, slug);
+  const fen = new URLSearchParams(search).get('fen')?.trim();
+  const publicFen = fen ? publicPositionFen(slug, fen) : null;
+  if (!fen || !publicFen) return { ...copy, urlPath: pathname };
+  return {
+    ...copy,
+    urlPath: `${pathname}?fen=${encodeURIComponent(fen)}`,
+    imagePath: `/og/position/${slug}.png?fen=${encodeURIComponent(publicFen)}&v=${POSITION_OG_IMAGE_VERSION}`,
+  };
+}
 
 const ARTICLES_INDEX_META: Record<
   'en' | 'zh-hans' | 'zh-hant',
@@ -203,10 +273,13 @@ export async function serveSpaShellWithRoutePreloads(params: {
   response: ServerResponse;
   staticDir: string;
   pathname: string;
+  /** The request's query string ('?…' or ''), read by the position routes. */
+  search?: string;
   publicHost?: string;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
-  const routeMeta = SPA_ROUTE_META[params.pathname];
+  const positionMeta = positionRouteMeta(params.pathname, params.search ?? '');
+  const routeMeta = positionMeta ?? SPA_ROUTE_META[params.pathname];
   const noindex = isNoindexRoute(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
@@ -220,7 +293,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
     html = injectPageMeta(html, {
       title: routeMeta.title,
       description: routeMeta.description,
-      url: `${params.publicHost}${params.pathname}`,
+      url: `${params.publicHost}${positionMeta?.urlPath ?? params.pathname}`,
+      imageUrl: positionMeta?.imagePath
+        ? `${params.publicHost}${positionMeta.imagePath}`
+        : undefined,
     });
   }
   if (noindex) {
@@ -425,6 +501,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/puzzles',
   '/learn/xiangqi',
   '/analysis',
+  '/editor',
   '/study',
   '/videos',
   '/streamer',

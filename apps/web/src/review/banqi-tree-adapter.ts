@@ -60,11 +60,17 @@ export function recoverBanqiDeal(revealed: BanqiPlayerView): BanqiDeal {
  *  engine (there is no client ceval for banqi, so no engine bundle either). */
 export function makeBanqiTreeAdapter(
   gameId: string,
-  deal: BanqiDeal,
+  // Null when the caller roots the tree at a parsed position (TreeReviewConfig
+  // `root`), in which case initialTruth is never consulted; asking anyway is a
+  // wiring bug, so it throws rather than minting a deal the URL does not carry.
+  deal: BanqiDeal | null,
 ): VariantTreeAdapter<BanqiMove, BanqiGameState, BanqiPlayerView> {
   return {
     mode: 'perfect-info',
-    initialTruth: () => createInitialBanqiState(gameId, deal),
+    initialTruth: () => {
+      if (!deal) throw new Error('banqi tree adapter: no deal; mount with config.root');
+      return createInitialBanqiState(gameId, deal);
+    },
     isLegal: (truth, move) => truth.status.type === 'playing' && isBanqiLegalMove(truth, move),
     // applyBanqiMove returns `state` unchanged on an illegal move; the tree only
     // calls this after isLegal, so the successor is always the real move result.

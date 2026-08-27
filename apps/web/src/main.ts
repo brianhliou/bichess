@@ -10,6 +10,7 @@ import {
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
 } from './chunk-load-recovery.js';
+import { editorVariantFromPath } from './editor/editor-catalog.js';
 import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
@@ -256,6 +257,9 @@ const profileHandle = profileHandleFromPath(path);
 // flagship (xiangqi); /analysis/<variant> opens any catalog variant. Unknown
 // slugs return null and fall through to 404 (fail-closed — see analysis-catalog).
 const analysisVariant = analysisVariantFromPath(path);
+// The board editor (lichess.org/editor) covers the same catalog: /editor opens
+// the flagship, /editor/<variant> any catalog variant, unknown slugs 404.
+const editorVariant = editorVariantFromPath(path);
 // The games database is canonically /games. The old /historical-xiangqi index
 // paths named one of the three sources the page lists rather than the page, and
 // server-http 301s them here, so this matcher stays single-valued: a route
@@ -374,6 +378,13 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./analysis-page.js').then(({ mountAnalysisPage }) =>
       mountAnalysisPage(appRoot, analysisVariant),
+    ),
+  );
+} else if (editorVariant) {
+  setTitle(t('editor.pageTitle', { variant: analysisVariantLabel(editorVariant) }));
+  void mountOrReport(() =>
+    import('./editor/editor-page.js').then(({ mountEditorPage }) =>
+      mountEditorPage(appRoot, editorVariant),
     ),
   );
 } else if (wantsStudyIndex) {

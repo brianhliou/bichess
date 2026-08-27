@@ -36,8 +36,10 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 
-/** Config for a jungle-flip review mount. */
-export type JungleFlipReviewConfig = TreeReviewConfig<JungleFlipMove>;
+/** Config for a jungle-flip review mount. Truth-typed so a caller can root the
+ *  tree at a parsed dealt position (`root`) and read the current truth back from
+ *  the position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
+export type JungleFlipReviewConfig = TreeReviewConfig<JungleFlipMove, JungleFlipGameState>;
 
 /** Handle returned by mountJungleFlipReview: snapshot the current tree to persist it. */
 export type JungleFlipReviewHandle = TreeReviewHandle;
@@ -126,10 +128,13 @@ function makeJungleFlipPresentation(
   };
 }
 
+/** `deal` is the recovered postgame deal, or null for a surface that roots the
+ *  tree at a parsed position (`config.root`, the analysis board): a null deal
+ *  with no root throws at mount, never a silently different deal. */
 export function mountJungleFlipReview(
   root: HTMLElement,
   gameId: string,
-  deal: JungleFlipDeal,
+  deal: JungleFlipDeal | null,
   config: JungleFlipReviewConfig,
 ): JungleFlipReviewHandle {
   const adapter = makeJungleFlipTreeAdapter(gameId, deal);

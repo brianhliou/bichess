@@ -7,6 +7,7 @@
 import { ZH_HANT_ACCOUNT } from '../catalogs/account.zh-hant.js';
 import { ZH_HANT_COMMUNITY } from '../catalogs/community.zh-hant.js';
 import { ZH_HANT_CONTENT } from '../catalogs/content.zh-hant.js';
+import { ZH_HANT_EDITOR } from '../catalogs/editor.zh-hant.js';
 import { ZH_HANT_PLAY } from '../catalogs/play.zh-hant.js';
 import { ZH_HANT_REVIEW } from '../catalogs/review.zh-hant.js';
 import { ZH_HANT_SHELL } from '../catalogs/shell.zh-hant.js';
@@ -18,4 +19,5 @@ export const domains = {
   community: ZH_HANT_COMMUNITY,
   play: ZH_HANT_PLAY,
   review: ZH_HANT_REVIEW,
+  editor: ZH_HANT_EDITOR,
 } as const;

@@ -1,4 +1,11 @@
-import type { JieqiColor, JieqiGameStatus, JieqiMove, JieqiPlayerView } from '@mistboard/game';
+import {
+  type JieqiColor,
+  type JieqiGameStatus,
+  type JieqiMove,
+  type JieqiPlayerView,
+  jieqiStateToDealtFen,
+  jieqiStateToPikafishFen,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
@@ -21,6 +28,7 @@ import {
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
 import { formatJieqiBestMove } from './review/move-advice.js';
+import { analysisHref, editorHref } from './review/position-links.js';
 import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -194,6 +202,11 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     showCrosstable: true,
+    // Position hand-offs. The analysis link carries the DEALT fen (the exact
+    // reveals of this game continue there); the editor link carries only the
+    // public fen (it edits what is visible).
+    analyseFromHere: (truth) => analysisHref('jieqi', jieqiStateToDealtFen(truth)),
+    boardEditorHref: (truth) => editorHref('jieqi', jieqiStateToPikafishFen(truth)),
     // Server-side PikaJieQi whole-game analysis, DB-cached: an already-analysed game loads
     // straight from cache on open (a GET that never computes). Requesting a fresh compute is
     // account-gated (the server rejects anon POSTs), so a signed-out visitor gets a sign-in CTA

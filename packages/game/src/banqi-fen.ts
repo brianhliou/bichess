@@ -29,6 +29,15 @@
 // exactly the face-down-on-board multiset with no own-captured-while-dark over-disclosure.
 
 import {
+  type DealtFenParseOptions,
+  type FlipFenSpec,
+  flipHiddenField,
+  parseFlipFen,
+} from './dealt-fen.js';
+import {
+  BANQI_HEIGHT,
+  BANQI_PIECE_COUNTS,
+  BANQI_WIDTH,
   type BanqiBoard,
   type BanqiGameState,
   type BanqiMove,
@@ -143,4 +152,62 @@ export function engineUciToBanqiMove(uci: string): BanqiMove | null {
   const sq = (f: string, r: string): BanqiSquare =>
     banqiSquareOf(f.charCodeAt(0) - 97, Number(r) + 1);
   return { from: sq(m[1], m[2]), to: sq(m[3], m[4]) };
+}
+
+// ── Dealt FEN (engine FEN + hidden identities) ───────────────────────────────
+// The reverse direction, for seeding an analysis board or an editor from a
+// pasted position. The five public fields are the engine FEN above; an optional
+// sixth field pins the deal (see dealt-fen.ts for the grammar). A public FEN
+// samples the face-down identities from the pool.
+
+const BANQI_FLIP_SPEC: FlipFenSpec<BanqiPieceRole, BanqiSquare> = {
+  width: BANQI_WIDTH,
+  height: BANQI_HEIGHT,
+  roleChar: RED_ROLE_CHAR,
+  pieceCounts: BANQI_PIECE_COUNTS,
+  roleOrder: POOL_ROLES,
+  squareOf: banqiSquareOf,
+};
+
+export type ParseBanqiFenResult =
+  | { ok: true; state: BanqiGameState; sampled: boolean }
+  | { ok: false; error: string };
+
+/** Engine FEN + the sixth `hidden` field: the exact deal, reproducible on reload. */
+export function banqiStateToDealtFen(state: BanqiGameState): string {
+  return `${banqiStateToEngineFen(state)} ${flipHiddenField(state.board, BANQI_FLIP_SPEC)}`;
+}
+
+/** Parse a public (5-field) or dealt (6-field) banqi FEN into canonical state.
+ *  The red SEAT is always the side to move in the rebuilt state (`ply` is even),
+ *  and `firstColor` carries the turn ink, so the mover's ink matches the FEN. */
+export function parseBanqiFen(
+  fen: string,
+  options: DealtFenParseOptions = {},
+): ParseBanqiFenResult {
+  const parsed = parseFlipFen(fen, BANQI_FLIP_SPEC, options.rng ?? Math.random);
+  if (!parsed.ok) return parsed;
+  const { board, turn, clock, movenum, captures, sampled } = parsed.parse;
+  if (movenum < 1) return { ok: false, error: 'The move number must be at least 1.' };
+  if (turn === null && (movenum !== 1 || clock !== 0)) {
+    return {
+      ok: false,
+      error: 'Before the first flip the clock must be 0 and the move number 1.',
+    };
+  }
+  return {
+    ok: true,
+    sampled,
+    state: {
+      id: options.gameId ?? 'fen-import',
+      board,
+      status: { type: 'playing', turn: 'red' },
+      ply: 2 * (movenum - 1),
+      firstColor: turn,
+      moveNumber: movenum,
+      noProgressClock: clock,
+      repCounts: {},
+      captures,
+    },
+  };
 }

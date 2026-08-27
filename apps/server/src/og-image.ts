@@ -41,8 +41,8 @@ import { Resvg } from '@resvg/resvg-js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
 import * as persistence from './persistence.js';
 
-const OG_WIDTH = 1200;
-const OG_HEIGHT = 630;
+export const OG_WIDTH = 1200;
+export const OG_HEIGHT = 630;
 export const GAME_OG_IMAGE_VERSION = 4;
 
 // Bounded LRU of rendered per-game PNGs. Each card is rendered once on first
@@ -53,24 +53,48 @@ export const GAME_OG_IMAGE_VERSION = 4;
 // Eviction is simplest-possible LRU: a Map keeps insertion order, so reads
 // re-insert (mark as recent) and writes drop the oldest key when over cap.
 const MAX_CACHE_ENTRIES = 1000;
-const cache = new Map<string, Buffer>();
 
-function cacheGet(roomId: string): Buffer | undefined {
-  const hit = cache.get(roomId);
-  if (hit) {
-    cache.delete(roomId);
-    cache.set(roomId, hit); // move to most-recently-used end
-  }
-  return hit;
+export type PngCache = {
+  get(key: string): Buffer | undefined;
+  set(key: string, png: Buffer): void;
+  readonly size: number;
+};
+
+/** A bounded LRU of rendered PNGs (the cache described above). Shared by the
+ *  card families so each gets the same eviction behaviour under its own cap. */
+export function createPngCache(maxEntries: number): PngCache {
+  const cache = new Map<string, Buffer>();
+  return {
+    get(key) {
+      const hit = cache.get(key);
+      if (hit) {
+        cache.delete(key);
+        cache.set(key, hit); // move to most-recently-used end
+      }
+      return hit;
+    },
+    set(key, png) {
+      cache.set(key, png);
+      while (cache.size > maxEntries) {
+        const oldest = cache.keys().next().value;
+        if (oldest === undefined) break;
+        cache.delete(oldest);
+      }
+    },
+    get size() {
+      return cache.size;
+    },
+  };
 }
 
-function cacheSet(roomId: string, png: Buffer): void {
-  cache.set(roomId, png);
-  while (cache.size > MAX_CACHE_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest === undefined) break;
-    cache.delete(oldest);
-  }
+const cache = createPngCache(MAX_CACHE_ENTRIES);
+
+function cacheGet(key: string): Buffer | undefined {
+  return cache.get(key);
+}
+
+function cacheSet(key: string, png: Buffer): void {
+  cache.set(key, png);
 }
 
 export async function serveGameOgImage(roomId: string, response: ServerResponse): Promise<void> {
@@ -193,7 +217,7 @@ function displayNameForColor(game: persistence.GameRecord, color: 'white' | 'bla
   );
 }
 
-function writePng(response: ServerResponse, png: Buffer, cacheStatus: 'HIT' | 'MISS'): void {
+export function writePng(response: ServerResponse, png: Buffer, cacheStatus: 'HIT' | 'MISS'): void {
   response.writeHead(200, {
     'content-type': 'image/png',
     'cache-control': 'public, max-age=31536000, immutable',
@@ -202,7 +226,7 @@ function writePng(response: ServerResponse, png: Buffer, cacheStatus: 'HIT' | 'M
   response.end(png);
 }
 
-function redirectToDefault(response: ServerResponse): void {
+export function redirectToDefault(response: ServerResponse): void {
   response.writeHead(302, { location: '/og-image.png' });
   response.end();
 }
@@ -849,7 +873,7 @@ function renderStubSvg(game: persistence.GameRecord): string {
 </svg>`;
 }
 
-function escapeXml(s: string): string {
+export function escapeXml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -869,6 +893,7 @@ function escapeXml(s: string): string {
 // apps/web/index.html so scrapers refetch.
 
 const FONT = "'Noto Sans', system-ui, -apple-system, Helvetica, Arial, sans-serif";
+export const OG_FONT = FONT;
 
 export function renderDefaultOgSvg(logoSvg: string): string {
   const logoSize = 224;

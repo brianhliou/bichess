@@ -3,7 +3,13 @@
 // (mountReviewLayout) like every other variant; the board comes from
 // renderXiangqiBoardSvg with no fog mask.
 
-import type { StandardXiangqiPlayerView, XiangqiColor, XiangqiMove } from '@mistboard/game';
+import {
+  type StandardXiangqiPlayerView,
+  standardXiangqiFen,
+  type XiangqiColor,
+  type XiangqiMove,
+} from '@mistboard/game';
+import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -162,6 +168,9 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     players: playerNames,
     result: { score: resultScore(postgame.game.result), label: status },
     showCrosstable: true,
+    // Position hand-offs: continue this node on /analysis, or open it in the editor.
+    analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),
+    boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     // "Study" in the review menu: one click turns the game you are looking at
     // into a private study you can annotate. Same path /analysis/xiangqi has
     // used since it shipped; the game surfaces were just never given it.

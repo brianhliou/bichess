@@ -1,10 +1,12 @@
-import type {
-  JungleColor,
-  JungleGameStatus,
-  JungleMove,
-  JunglePlayerView,
-  JungleSquare,
+import {
+  type JungleColor,
+  type JungleGameStatus,
+  type JungleMove,
+  type JunglePlayerView,
+  type JungleSquare,
+  jungleStateToEngineFen,
 } from '@mistboard/game';
+import { analysisHref, editorHref } from './review/position-links.js';
 import './live-xiangqi.css';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -163,6 +165,9 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     showCrosstable: true,
+    // Position hand-offs: continue this node on /analysis, or open it in the editor.
+    analyseFromHere: (truth) => analysisHref('jungle', jungleStateToEngineFen(truth)),
+    boardEditorHref: (truth) => editorHref('jungle', jungleStateToEngineFen(truth)),
     // Server-side MistyJungle whole-game analysis, DB-cached: an already-analysed
     // game loads straight from cache on open (a GET that never computes). Requesting
     // a fresh compute is account-gated (the server rejects anon POSTs), so a

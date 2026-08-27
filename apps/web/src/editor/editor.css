@@ -1,0 +1,500 @@
+/* /editor (editor-page.ts): the lichess-style board editor. Three columns on
+   desktop (variant picker | palettes + board | controls), stacked on mobile.
+   Cards and buttons use the site tokens so the page matches the analysis
+   board it hands positions to. */
+
+.editor-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 18px 16px 40px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.editor-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.editor-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ── Board + hit layer ───────────────────────────────────────────────────── */
+
+.editor-board {
+  position: relative;
+  /* Viewport fit: the tallest board that leaves room for the nav, the two
+     palettes, the brushes, and the page padding (--editor-chrome), times the
+     user's persisted zoom (--uni-board-scale, set by the corner grip and shared
+     with the analysis board). The column width is the other bound. */
+  --editor-chrome: 330px;
+  width: min(
+    100%,
+    calc(
+      (100svh - var(--editor-chrome)) *
+      var(--editor-board-aspect, 1) *
+      var(--uni-board-scale, 1)
+    )
+  );
+  min-width: 240px;
+  max-width: 100%;
+}
+
+.editor-board__svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.editor-board__hits {
+  position: absolute;
+  inset: 0;
+  /* Percentages of the SVG viewBox; the SVG fills the wrapper edge to edge. */
+}
+
+.editor-square {
+  position: absolute;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.editor-square:focus-visible {
+  outline: 3px solid var(--site-focus);
+  outline-offset: -3px;
+}
+
+.editor-square.is-selected {
+  background: rgba(31, 111, 91, 0.32);
+}
+
+.editor-board__hits[data-brush="pointer"] .editor-square.has-piece {
+  cursor: grab;
+}
+
+.editor-board__hits[data-brush="delete"] .editor-square.has-piece {
+  cursor: cell;
+}
+
+.editor-board__hits[data-brush="piece"] .editor-square {
+  cursor: copy;
+}
+
+/* ── Palettes + brushes ──────────────────────────────────────────────────── */
+
+.editor-palette,
+.editor-brushes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.editor-palette__piece,
+.editor-brush {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 4px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 7px);
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-text);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.editor-palette__piece:hover,
+.editor-brush:hover {
+  background: var(--site-hover);
+}
+
+.editor-palette__piece.is-active,
+.editor-brush.is-active {
+  border-color: var(--site-accent);
+  background: var(--site-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--site-accent);
+}
+
+.editor-palette__piece svg,
+.editor-brush svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.editor-brush svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* The face-down tile brush inherits the board's own disc styling (installed by
+   the variant's board styles), so it reads the same as a tile on the board. */
+.editor-palette__piece[data-role="face-down"] svg {
+  overflow: visible;
+}
+
+.editor-notice {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: #a33a2a;
+  text-align: center;
+}
+
+.editor-notice[hidden] {
+  display: none;
+}
+
+/* ── Right rail ──────────────────────────────────────────────────────────── */
+
+.editor-card {
+  padding: 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 7px);
+  background: var(--site-panel, var(--site-surface));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-card__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.editor-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.editor-segmented__option {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 5px);
+  background: var(--site-bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--site-text);
+  cursor: pointer;
+}
+
+.editor-segmented__option:has(input:checked) {
+  background: var(--site-accent-soft);
+  border-color: var(--site-accent);
+  color: var(--site-heading);
+}
+
+.editor-segmented__option:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-segmented__option input {
+  margin: 0;
+}
+
+.editor-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.editor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 5px);
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.editor-btn:hover:not(:disabled):not(.is-disabled) {
+  background: var(--site-hover);
+}
+
+.editor-btn:disabled {
+  color: var(--site-muted);
+  cursor: not-allowed;
+}
+
+.editor-btn--primary {
+  background: #2e332f;
+  border-color: #2e332f;
+  color: #ebefee;
+  padding: 11px 14px;
+  font-size: 14px;
+}
+
+.editor-btn--primary:hover:not(.is-disabled) {
+  background: #3b413c;
+  transform: translateY(-1px);
+}
+
+.editor-btn--primary.is-disabled {
+  background: #c4c8c2;
+  border-color: #c4c8c2;
+  color: #ebefee;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.editor-fen__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-muted);
+}
+
+.editor-fen__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.editor-fen__field {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 5px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 12px;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.editor-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #a33a2a;
+}
+
+.editor-error[hidden] {
+  display: none;
+}
+
+/* ── Fog chess extras: castling rights + en passant ──────────────────────── */
+
+.editor-extras[hidden] {
+  display: none;
+}
+
+.editor-castling {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+
+.editor-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--site-text);
+  cursor: pointer;
+}
+
+.editor-check:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-check input {
+  margin: 0;
+}
+
+.editor-chess__ep {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.editor-chess__ep-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-muted);
+}
+
+.editor-select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 5px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 13px;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.editor-select:disabled {
+  color: var(--site-muted);
+  cursor: not-allowed;
+}
+
+/* ── Hidden-deal pool (banqi / jieqi / jungle-flip) ──────────────────────── */
+
+.editor-pool__rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.editor-pool__group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.editor-pool__color {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--site-heading);
+}
+
+.editor-pool__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.editor-pool__role {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-pool__remaining {
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+}
+
+.editor-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.editor-stepper__button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.editor-stepper__button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.editor-stepper__count {
+  min-width: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-pool__status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--site-muted);
+}
+
+.editor-pool__status.is-error {
+  color: #a33a2a;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 1040px) {
+  .editor-page {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .editor-rail--left {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .editor-page {
+    grid-template-columns: 1fr;
+    padding: 12px 10px 32px;
+  }
+  .editor-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (pointer: coarse) {
+  .editor-palette__piece,
+  .editor-brush {
+    width: 48px;
+    height: 48px;
+  }
+  .editor-btn,
+  .editor-fen__field,
+  .editor-select,
+  .editor-segmented__option {
+    min-height: 44px;
+  }
+  .editor-check {
+    min-height: 32px;
+  }
+}

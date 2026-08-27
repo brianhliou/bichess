@@ -14,19 +14,29 @@
 // to be `unknown` and would lose exactly the safety the dispatch is for.
 //
 // Membership is not a product call: a variant is here once it HAS a parser. The
-// variants that are missing (banqi, jieqi, jungle-flip) are missing because a
-// hidden deal is not expressible as a placement, not because the box is
-// unwanted.
+// hidden-deal variants (banqi, jieqi, jungle-flip) qualify through their DEALT
+// FEN (dealt-fen.ts): the placement plus the unrevealed pool is a complete public
+// description, and the hidden assignment under the face-down tiles is sampled
+// ONCE here and pinned in the sixth field. So their canonical spelling is always
+// the six-field dealt form, and a stored root replays the same deal every time.
+// (Studies still pin their own eligibility list, STUDY_ELIGIBLE_SPEC_IDS, which
+// does not follow this one.)
 
+import { banqiStateToDealtFen, parseBanqiFen } from './banqi-fen.js';
 import {
+  BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  JIEQI_SPEC_ID,
+  JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
+import { jieqiStateToDealtFen, parseJieqiFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
+import { jungleFlipStateToDealtFen, parseJungleFlipFen } from './jungle-flip-fen.js';
 import { darkChessFen, parseDarkChessFen } from './variants.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
@@ -38,6 +48,9 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   FORTRESS_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
+  BANQI_SPEC_ID,
+  JIEQI_SPEC_ID,
+  JUNGLE_FLIP_SPEC_ID,
 ];
 
 export function hasStartFen(spec: string): boolean {
@@ -72,6 +85,21 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
     case DARK_CHESS_SPEC_ID: {
       const parsed = parseDarkChessFen(fen);
       return parsed.ok ? { ok: true, fen: darkChessFen(parsed.state) } : parsed;
+    }
+    // Hidden-deal variants: the canonical spelling is the six-field DEALT fen.
+    // A public five-field paste samples its hidden identities here, once; the
+    // dealt form then round-trips deterministically.
+    case BANQI_SPEC_ID: {
+      const parsed = parseBanqiFen(fen);
+      return parsed.ok ? { ok: true, fen: banqiStateToDealtFen(parsed.state) } : parsed;
+    }
+    case JIEQI_SPEC_ID: {
+      const parsed = parseJieqiFen(fen);
+      return parsed.ok ? { ok: true, fen: jieqiStateToDealtFen(parsed.state) } : parsed;
+    }
+    case JUNGLE_FLIP_SPEC_ID: {
+      const parsed = parseJungleFlipFen(fen);
+      return parsed.ok ? { ok: true, fen: jungleFlipStateToDealtFen(parsed.state) } : parsed;
     }
     default:
       return { ok: false, error: 'That variant cannot start from a pasted position.' };

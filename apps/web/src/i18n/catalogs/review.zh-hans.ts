@@ -276,6 +276,8 @@ export const ZH_HANS_REVIEW = {
   'analysis.playAMove': '走一步棋',
   'analysis.pasteGameToImport': '粘贴一盘棋以导入。',
   'analysis.pasteFenToSet': '粘贴 FEN 以设置局面。',
+  'analysis.openBoardEditor': '在棋盘编辑器中摆放局面',
+  'analysis.dealtFenHint': 'X 表示尚未翻开的棋子；棋池字段列出仍被隐藏的棋子。',
   'historical.heading': '象棋棋谱检索',
   'historical.loading': '加载中',
   'historical.searchFailed': '检索失败。',
@@ -399,5 +401,8 @@ export const ZH_HANS_REVIEW = {
   'review.setDefaultView': '设为默认视角',
   'review.revealIdentities': '揭示身份',
   'review.hideIdentities': '隐藏身份',
+  'review.analyseFromHere': '从此局面分析',
+  'review.boardEditor': '棋盘编辑器',
+  'review.newDeal': '重新发牌',
   'review.defaultViewSaved': '已保存默认视角',
 } satisfies Partial<Record<ReviewI18nKey, string>>;

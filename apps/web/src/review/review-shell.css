@@ -485,26 +485,79 @@
   gap: 12px;
 }
 /* Unboxed like the underboard panel above it (lichess): the bordered fields carry
-   the visual structure themselves. */
+   the visual structure. One grid for both rows (label | field | action) so the
+   two buttons share a column and their edges align; the foot row (error, hint,
+   editor link) hangs under the field column. */
 .review-import {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 2px;
-}
-.review-import__moves-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: start;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: 4px 2px 2px;
 }
-.review-import__moves-row .review-share__label {
-  padding-top: 7px;
+.review-import__label {
+  align-self: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.review-import__actions {
+.review-import__label--moves {
+  align-self: start;
+  padding-top: 8px;
+}
+.review-import__field {
+  padding: 6px 9px;
+  background: var(--site-bg-soft, var(--site-bg));
+  font-size: 12.5px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.review-import__field:focus {
+  outline: none;
+  border-color: var(--site-accent);
+  box-shadow: 0 0 0 2px var(--site-accent-soft, transparent);
+}
+.review-import__field--moves,
+.review-import textarea.review-import__field {
+  min-height: 0;
+  resize: vertical;
+}
+.review-import__button {
+  align-self: center;
+  padding: 6px 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.review-import__button--moves {
+  align-self: start;
+}
+.review-import__foot {
+  grid-column: 2 / -1;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-height: 0;
+  font-size: 12px;
+  color: var(--site-muted);
+}
+.review-import__foot:empty {
+  display: none;
+}
+.review-import__hint {
+  color: var(--site-muted);
+}
+.review-import__editor-link {
+  color: var(--site-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.review-import__editor-link:hover {
+  text-decoration: underline;
 }
 .review-import__error {
+  flex-basis: 100%;
   font-size: 12px;
   color: #c0392b;
 }

@@ -388,6 +388,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
      *  box turns editable (Enter or the Set position button submits); absent =
      *  the box stays a read-only mirror of the current node. */
     onImportFen?(fen: string): string | null;
+    /** One sentence under the fields explaining the FEN this board expects (the
+     *  dealt variants explain `X` and the pool). Absent = no hint line. */
+    hint?: string;
   };
   /** Enable the control-bar menu's "Study" action: create a study seeded with the
    *  current tree. Absent = the item is omitted (the study page itself omits it —
@@ -407,6 +410,24 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  revealing means — this only carries the flag back to it and re-renders — so a
    *  variant opts in by supplying the setter its own projection reads. */
   revealHidden?: { setRevealed(next: boolean): void };
+  /** Menu action "Analyse from here": continue the CURRENT position on the
+   *  standalone analysis board. Returns the href for the node's truth. A dealt
+   *  variant pins its exact deal in that URL (the dealt FEN), so the analysis
+   *  board continues THIS game's reveals rather than a fresh deal. Postgame
+   *  surfaces set it; the analysis board itself omits it. */
+  analyseFromHere?: (truth: Truth) => string;
+  /** Menu action "Board editor": open the editor at the current position.
+   *  Returns the href for the node's truth, built from the PUBLIC engine FEN:
+   *  the editor edits what is visible and never carries hidden identities. */
+  boardEditorHref?: (truth: Truth) => string;
+  /** Menu action "New deal": re-deal a hidden-deal analysis board (a fresh random
+   *  deal). Only the dealt variants' analysis surfaces set it. */
+  newDeal?: () => void;
+  /** Fired after every render with the moves from the root to the CURRENT node
+   *  (the line on screen, variations included). The analysis surfaces mirror it
+   *  into the URL (`?moves=`), so the address bar is always the share link for
+   *  the position being looked at (lichess keeps its `#ply` the same way). */
+  onLineChange?: (moves: Move[]) => void;
 };
 
 /** Handle returned by mountTreeReview: lets a caller snapshot the current tree
@@ -448,6 +469,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const line: string[] = [];
     for (let n: Node | null = node; n?.parent; n = n.parent) {
       if (n.move) line.unshift(adapter.toEngineUci(n.move));
+    }
+    return line;
+  };
+  const movesTo = (node: Node): Move[] => {
+    const line: Move[] = [];
+    for (let n: Node | null = node; n?.parent; n = n.parent) {
+      if (n.move) line.unshift(n.move);
     }
     return line;
   };
@@ -829,12 +857,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
 
   // ── Control bar (below the move box): nav + a menu overlay. ──
-  // Every item here DOES something. The four permanently-muted placeholders
-  // (Board editor, Learn from your mistakes, Continue from here, Settings) were
-  // cut 2026-07-23: each needed a surface or an API that does not exist (no
-  // editor route; no create-game-from-FEN; no retro-mode controller), and a menu
-  // that is mostly greyed out reads as a broken product, not a roadmap. Re-add an
-  // item WITH its implementation, not ahead of it.
+  // Every item here DOES something. Four permanently-muted placeholders (Board
+  // editor, Learn from your mistakes, Continue from here, Settings) were cut
+  // 2026-07-23 because each needed a surface or an API that did not exist, and a
+  // menu that is mostly greyed out reads as a broken product, not a roadmap.
+  // Board editor came back 2026-08-27 WITH its route (/editor/<variant>, via
+  // `boardEditorHref`), alongside "Analyse from here" (`analyseFromHere`, the
+  // position-input vertical: a postgame node continues on /analysis with its
+  // exact deal). Learn-from-mistakes, Continue-from-here (create a live game
+  // from a FEN), and Settings are still absent. Re-add an item WITH its
+  // implementation, not ahead of it.
   const menuItems: ReviewMenuItem[] = [
     { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
   ];
@@ -855,6 +887,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       label: 'Clear moves',
       icon: REVIEW_MENU_ICONS.clear,
       onClick: () => clearMoves(),
+    });
+  }
+  // Position hand-offs: each is a plain navigation with the CURRENT node's
+  // position in the URL, so the target page has everything it needs on load.
+  const analyseFromHere = config.analyseFromHere;
+  if (analyseFromHere) {
+    menuItems.push({
+      label: t('review.analyseFromHere'),
+      icon: REVIEW_MENU_ICONS.analyse,
+      onClick: () => window.location.assign(analyseFromHere(currentNode().truth)),
+    });
+  }
+  const boardEditorHref = config.boardEditorHref;
+  if (boardEditorHref) {
+    menuItems.push({
+      label: t('review.boardEditor'),
+      icon: REVIEW_MENU_ICONS.editor,
+      onClick: () => window.location.assign(boardEditorHref(currentNode().truth)),
+    });
+  }
+  const newDeal = config.newDeal;
+  if (newDeal) {
+    menuItems.push({
+      label: t('review.newDeal'),
+      icon: REVIEW_MENU_ICONS.newDeal,
+      onClick: () => newDeal(),
     });
   }
   // Spoiler control for a masked board. The default stays masked: the review's job
@@ -943,7 +1001,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // FEN + moves-import block below the underboard tools (analysis board only);
   // its FEN mirrors the current node, its moves box prefills with the current
   // line but never clobbers in-progress typing (see render()).
-  const importPanel = config.importPanel ? createImportPanel(config.importPanel) : null;
+  const importPanel = config.importPanel
+    ? createImportPanel(config.importPanel, { editorLink: config.boardEditorHref !== undefined })
+    : null;
   // Authored comment for the CURRENT node, under the board. The move list shows
   // only a bubble marker per commented move; navigation brings the text here.
   const commentPanelEl = document.createElement('section');
@@ -1248,8 +1308,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       if (document.activeElement !== importPanel.movesInput) {
         importPanel.movesInput.value = lineLabels(node).join(' ');
       }
+      // The editor link follows the current node, like the menu item does.
+      if (importPanel.editorLink && config.boardEditorHref) {
+        importPanel.editorLink.href = config.boardEditorHref(node.truth);
+      }
     }
     chart?.setPly(node.ply);
+    config.onLineChange?.(movesTo(node));
   }
 
   /** Move labels from the root down to `node` (the current line, display notation). */
@@ -1656,32 +1721,42 @@ function composeUnderboard(...parts: Array<HTMLElement | undefined>): HTMLElemen
  *  controller's render(); the import handlers are variant-supplied. With an
  *  onImportFen handler the FEN box is editable (paste a composition → Enter or
  *  Set position); without one it stays a read-only mirror. */
-function createImportPanel(handlers: {
-  onImport(text: string): string | null;
-  onImportFen?(fen: string): string | null;
-}): {
+function createImportPanel(
+  handlers: {
+    onImport(text: string): string | null;
+    onImportFen?(fen: string): string | null;
+    hint?: string;
+  },
+  options: { editorLink: boolean },
+): {
   el: HTMLElement;
   fenInput: HTMLInputElement;
   movesInput: HTMLTextAreaElement;
+  editorLink: HTMLAnchorElement | null;
 } {
-  const { onImport, onImportFen } = handlers;
+  const { onImport, onImportFen, hint } = handlers;
+  // One grid for both rows (label | field | action) so the two action buttons
+  // share a column and their edges line up; the foot row hangs under the
+  // field column.
   const el = document.createElement('section');
   el.className = 'review-import';
 
   const error = document.createElement('span');
   error.className = 'review-import__error';
+  error.setAttribute('role', 'alert');
 
-  const fenRow = document.createElement('div');
-  fenRow.className = 'review-share__row';
-  const fenLabel = document.createElement('span');
-  fenLabel.className = 'review-share__label';
+  const fenLabel = document.createElement('label');
+  fenLabel.className = 'review-share__label review-import__label';
   fenLabel.textContent = 'FEN';
   const fenInput = document.createElement('input');
-  fenInput.className = 'review-share__field';
+  fenInput.className = 'review-share__field review-import__field';
+  fenInput.id = 'review-import-fen';
+  fenLabel.htmlFor = fenInput.id;
   fenInput.readOnly = !onImportFen;
+  fenInput.spellcheck = false;
   fenInput.setAttribute('aria-label', 'Current position FEN');
   fenInput.addEventListener('focus', () => fenInput.select());
-  fenRow.append(fenLabel, fenInput);
+  el.append(fenLabel, fenInput);
   if (onImportFen) {
     const submitFen = (): void => {
       error.textContent = onImportFen(fenInput.value) ?? '';
@@ -1691,37 +1766,54 @@ function createImportPanel(handlers: {
     });
     const setButton = document.createElement('button');
     setButton.type = 'button';
-    setButton.className = 'review-share__copy';
+    setButton.className = 'review-share__copy review-import__button';
     setButton.textContent = 'Set position';
     setButton.addEventListener('click', submitFen);
-    fenRow.append(setButton);
+    el.append(setButton);
+  } else {
+    el.append(document.createElement('span'));
   }
 
-  const movesRow = document.createElement('div');
-  movesRow.className = 'review-share__row review-import__moves-row';
-  const movesLabel = document.createElement('span');
-  movesLabel.className = 'review-share__label';
+  const movesLabel = document.createElement('label');
+  movesLabel.className = 'review-share__label review-import__label review-import__label--moves';
   movesLabel.textContent = 'Moves';
   const movesInput = document.createElement('textarea');
-  movesInput.className = 'review-share__field review-share__field--moves';
-  movesInput.rows = 3;
+  movesInput.className = 'review-share__field review-share__field--moves review-import__field';
+  movesInput.id = 'review-import-moves';
+  movesLabel.htmlFor = movesInput.id;
+  movesInput.rows = 2;
+  movesInput.spellcheck = false;
   movesInput.placeholder = 'Paste a game to import';
   movesInput.setAttribute('aria-label', 'Moves to import');
-  movesRow.append(movesLabel, movesInput);
-
   const importButton = document.createElement('button');
   importButton.type = 'button';
-  importButton.className = 'review-share__copy';
+  importButton.className = 'review-share__copy review-import__button review-import__button--moves';
   importButton.textContent = 'Import moves';
   importButton.addEventListener('click', () => {
     error.textContent = onImport(movesInput.value) ?? '';
   });
-  const actions = document.createElement('div');
-  actions.className = 'review-import__actions';
-  actions.append(error, importButton);
+  el.append(movesLabel, movesInput, importButton);
 
-  el.append(fenRow, movesRow, actions);
-  return { el, fenInput, movesInput };
+  // Foot: the error (when any), the variant's FEN hint, and the way out for
+  // anyone who would rather place pieces than type them.
+  const foot = document.createElement('div');
+  foot.className = 'review-import__foot';
+  foot.append(error);
+  if (hint) {
+    const hintEl = document.createElement('span');
+    hintEl.className = 'review-import__hint';
+    hintEl.textContent = hint;
+    foot.append(hintEl);
+  }
+  let editorLink: HTMLAnchorElement | null = null;
+  if (options.editorLink) {
+    editorLink = document.createElement('a');
+    editorLink.className = 'review-import__editor-link';
+    editorLink.textContent = t('analysis.openBoardEditor');
+    foot.append(editorLink);
+  }
+  el.append(foot);
+  return { el, fenInput, movesInput, editorLink };
 }
 
 function truncationNotice(legal: number): HTMLElement {

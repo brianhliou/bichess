@@ -33,6 +33,10 @@ describe('analysis page', () => {
         expect(root.querySelector('.review-shell--game')).toBeNull();
         // Lichess minimalism: the dropdown IS the left rail — no meta card.
         expect(root.querySelector('.game-meta-card')).toBeNull();
+        // Every analysis board carries the FEN + moves import block, and the
+        // FEN box is editable (position input is a catalog-wide contract).
+        expect(root.querySelector('.review-import'), 'import block').not.toBeNull();
+        expect(root.querySelector<HTMLInputElement>('.review-import input')?.readOnly).toBe(false);
       } finally {
         root.remove();
       }

@@ -4,8 +4,10 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { POSITION_OG_VARIANTS } from './og-position.js';
 import {
   injectPageMeta,
+  positionRouteMeta,
   routePreloadLinksForPath,
   serveArticlePage,
   serveArticlesIndexPage,
@@ -479,7 +481,7 @@ test('every sitemap SPA route that is not prerendered carries its own title', as
   // in the sitemap must be distinguishable to a crawler.
   const staticDir = await staticDirWithPreloadManifest();
   const titles = new Set<string>();
-  for (const route of ['/learn/xiangqi', '/analysis', '/puzzles']) {
+  for (const route of ['/learn/xiangqi', '/analysis', '/editor', '/puzzles']) {
     const response = captureResponse();
     await serveSpaShellWithRoutePreloads({
       response,
@@ -491,7 +493,118 @@ test('every sitemap SPA route that is not prerendered carries its own title', as
     assert.ok(title && title !== 'Mistboard', `${route} still serves the default shell title`);
     titles.add(title);
   }
-  assert.equal(titles.size, 3, 'sitemap SPA routes must not share a title');
+  assert.equal(titles.size, 4, 'sitemap SPA routes must not share a title');
+});
+
+// --- position routes (/analysis, /editor) --------------------------------------
+
+// A mid-game banqi deal: five public fields plus the sixth field naming the
+// identities under the face-down tiles. The og:image URL must carry only the
+// five public fields; the sixth is the one thing a share preview may not name.
+const BANQI_PUBLIC_FEN = 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12';
+const BANQI_DEALT_FEN = `${BANQI_PUBLIC_FEN} AAEERHHCSSSaehc`;
+
+test('a variant analysis link with a FEN gets its own title, og:url, and a position card', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/analysis/banqi',
+    search: `?fen=${encodeURIComponent(BANQI_DEALT_FEN)}`,
+    publicHost: 'https://mistboard.com',
+  });
+
+  assert.equal(served, true);
+  assert.match(response.body, /<title>Banqi Analysis Board \| Mistboard<\/title>/);
+  const image = /<meta property="og:image" content="([^"]*)">/.exec(response.body)?.[1] ?? '';
+  assert.equal(
+    image,
+    `https://mistboard.com/og/position/banqi.png?fen=${encodeURIComponent(BANQI_PUBLIC_FEN).replace(/&/g, '&amp;')}&amp;v=1`,
+  );
+  assert.ok(!image.includes('AAEERHHCSSSaehc'), 'the image URL must not carry the deal');
+  assert.match(
+    response.body,
+    /<meta name="twitter:image" content="https:\/\/mistboard\.com\/og\/position\/banqi\.png/,
+  );
+  // og:url is the link as shared.
+  assert.match(
+    response.body,
+    new RegExp(
+      `<meta property="og:url" content="https://mistboard\\.com/analysis/banqi\\?fen=${encodeURIComponent(BANQI_DEALT_FEN).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}">`,
+    ),
+  );
+  assert.match(response.body, /<div id="app"><\/div>/);
+});
+
+test('the bare analysis and editor routes keep the xiangqi wording and take a FEN too', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const fen = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1';
+
+  for (const [pathname, title] of [
+    ['/analysis', 'Xiangqi Analysis Board | Mistboard'],
+    ['/editor', 'Xiangqi Board Editor | Mistboard'],
+  ] as const) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: `?fen=${encodeURIComponent(fen)}`,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.match(response.body, new RegExp(`<title>${title.replace('|', '\\|')}</title>`));
+    assert.match(
+      response.body,
+      /<meta property="og:image" content="https:\/\/mistboard\.com\/og\/position\/xiangqi\.png\?fen=/,
+    );
+  }
+});
+
+test('a position route without a FEN, or with a bad one, keeps the default card', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+
+  for (const search of ['', '?fen=nonsense', '?moves=e2e4']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: '/editor/jieqi',
+      search,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.match(response.body, /<title>Jieqi Board Editor \| Mistboard<\/title>/, search);
+    assert.match(response.body, /<meta property="og:image" content="old">/, search);
+    assert.match(
+      response.body,
+      /<meta property="og:url" content="https:\/\/mistboard\.com\/editor\/jieqi">/,
+      search,
+    );
+  }
+});
+
+test('every catalog variant gets a distinct analysis and editor title', () => {
+  const titles = new Set<string>();
+  for (const variant of POSITION_OG_VARIANTS) {
+    for (const surface of ['analysis', 'editor']) {
+      const meta = positionRouteMeta(`/${surface}/${variant}`, '');
+      assert.ok(meta, `${surface}/${variant}`);
+      assert.ok(meta.title.endsWith('| Mistboard'));
+      assert.ok(!meta.title.includes('\u2014') && !meta.description.includes('\u2014'));
+      titles.add(meta.title);
+    }
+  }
+  assert.equal(titles.size, POSITION_OG_VARIANTS.length * 2);
+});
+
+test('an unknown variant slug gets no position meta', () => {
+  assert.equal(positionRouteMeta('/analysis/chess', ''), null);
+  assert.equal(positionRouteMeta('/editor/mini-xiangqi', '?fen=x'), null);
+  assert.equal(positionRouteMeta('/analysis/xiangqi/extra', ''), null);
 });
 
 test('serveSpaShellWithRoutePreloads leaves the response untouched when nothing matches', async () => {

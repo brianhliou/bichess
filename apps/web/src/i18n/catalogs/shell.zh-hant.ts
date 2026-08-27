@@ -35,6 +35,7 @@ export const ZH_HANT_SHELL = {
   'nav.lab': '實驗室',
   'nav.tv': 'Mistboard 電視',
   'nav.analysis': '分析棋盤',
+  'nav.editor': '棋盤編輯器',
   'nav.studies': '研習',
   'nav.streamers': '直播主',
   'nav.videoLibrary': '影片庫',
