@@ -18,10 +18,10 @@ export const titledPlayersArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
-  title: 'Titled players are welcome here',
+  title: 'Bring your title to Mistboard',
   seoTitle: 'For titled xiangqi and chess players',
   summary:
-    'Verify a xiangqi or chess title and your badge shows next to your name across the site, along with a coach listing, a study that can reach the front page, and a place in the video library.',
+    'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.',
   showSummaryOnPage: false,
   // A standing recruitment page, not a post: it is linked to directly and kept
   // current, so it stays out of the chronological blog index rather than aging
@@ -34,61 +34,53 @@ export const titledPlayersArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'If you hold a xiangqi or chess title, verify it at [mistboard.com/verify-title](/verify-title). An admin reads every request by hand, and your badge shows next to your name across the site once it clears.',
+      text: 'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).',
     },
     {
       kind: 'paragraph',
-      text: 'Mistboard takes WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, and mention the results behind the claim.',
+      text: 'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.',
     },
   ],
   sections: [
     {
-      heading: 'Why bother',
+      heading: 'What you get',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Xiangqi has no serious English-language home. The Chinese platforms are large and good and I am not competing with them. What does not exist anywhere is a place where a xiangqi master can reach people who do not read Chinese, and where a chess player curious about xiangqi can find something better than a Wikipedia article.',
+          text: '**The badge.** Gold, beside your name, everywhere you appear: games, profile, ladders, forum, studies. Every player who sees you play sees the title first.',
         },
         {
           kind: 'paragraph',
-          text: 'That is the gap, and titled players are the part I cannot build myself.',
+          text: '**Your own coaching page.** Publish at [/coach](/coach) with your headline, languages, rate, and contact details. Students reach you directly and pay you directly. Mistboard takes nothing: no commission, no processing fees, no cut of your lesson.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**The front page.** Write an annotated study and it can lead the homepage under your name. Your analysis is what players come here to read, and there is no queue in front of you.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**The video library.** If you make xiangqi videos, [/videos](/videos) will carry them and send viewers your way.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**A place in the streamer directory.** Stream here and get listed.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.',
         },
       ],
     },
     {
-      heading: 'What a verified title gets you',
+      heading: 'Why Mistboard',
       blocks: [
         {
           kind: 'paragraph',
-          text: '**The badge.** Shown everywhere your name appears: games, profile, ladders, forum, studies.',
+          text: 'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.',
         },
         {
           kind: 'paragraph',
-          text: '**A coach listing.** Publish a profile at [/coach](/coach) with a headline, languages, your rate, and how students should reach you. No commission and no payment processing. Students reach you directly.',
-        },
-        {
-          kind: 'paragraph',
-          text: '**An annotated study.** Write one and I can feature it on the homepage under your name.',
-        },
-        {
-          kind: 'paragraph',
-          text: '**The video library.** If you make xiangqi videos, [/videos](/videos) will carry them.',
-        },
-        {
-          kind: 'paragraph',
-          text: '**A streamer listing.** If you stream, you get a place in the directory.',
-        },
-        {
-          kind: 'paragraph',
-          text: '**A byline.** Send me something longer and I will edit and publish it under your name.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'The study is the one I would push hardest. A master’s annotations are worth more to a learner here than anything I can write.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'You would be early, nothing here is behind a paywall, and I answer my own email.',
+          text: 'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.',
         },
         {
           kind: 'cta',
