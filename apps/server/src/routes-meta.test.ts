@@ -131,9 +131,9 @@ test('live-stats dedupes anonymous connections by per-room client id', async () 
 });
 
 test('live-stats counts EvE games in the playing tally alongside PvP/PvE', async () => {
-  // "games in play" is a raw activity count, so engine-vs-engine games count as
-  // live games too. A spectator watching the EvE game is a real human and counts
-  // as online.
+  // "games in play" is an activity count, not a "humans playing now" count, so
+  // engine-vs-engine games count as live games too. A spectator watching the EvE
+  // game is a real human and counts as online.
   const rooms = new Map<string, Room>([
     ['pvp', room('playing', [client('a', 'u1'), client('b', 'u2')], 'pvp')],
     ['pve', room('playing', [client('c', 'u3')], 'pve')],
@@ -142,6 +142,55 @@ test('live-stats counts EvE games in the playing tally alongside PvP/PvE', async
   const stats = await liveStats(rooms);
   assert.equal(stats.playing, 3); // pvp + pve + eve
   assert.equal(stats.online, 4); // every connected human, spectator included
+});
+
+// A room whose status is 'playing' is not automatically a game in play: it
+// stays 'playing' while paused and while abandoned, and the reapers cannot claim
+// every abandoned room (variant-tenant/reaper-coverage.test.ts). Counting raw
+// status put dead rooms on the landing page — prod served "7 games in play"
+// against 0 players online and nothing featurable on TV. The count now shares
+// the deploy gate's classifier, so all three surfaces agree.
+function agedRoom(
+  lastEventAgoMs: number,
+  options: { paused?: boolean; daysPerMove?: number } = {},
+): Room {
+  return {
+    clients: new Set<Client>(),
+    mode: 'pvp',
+    events: [{ at: Date.now() - lastEventAgoMs }],
+    projection: {
+      paused: options.paused ?? false,
+      state: { status: { type: 'playing' } },
+      timeControl: options.daysPerMove ? { daysPerMove: options.daysPerMove } : null,
+    },
+  } as unknown as Room;
+}
+
+test('live-stats excludes abandoned rooms that no reaper has claimed', async () => {
+  const stats = await liveStats(
+    new Map<string, Room>([
+      ['fresh', agedRoom(5_000)],
+      ['abandoned', agedRoom(60 * 60_000)],
+    ]),
+  );
+  assert.equal(stats.playing, 1);
+});
+
+test('live-stats excludes paused rooms, which keep status playing', async () => {
+  const stats = await liveStats(
+    new Map<string, Room>([['paused', agedRoom(5_000, { paused: true })]]),
+  );
+  assert.equal(stats.playing, 0);
+});
+
+test('live-stats counts a quiet correspondence game, which is genuinely in play', async () => {
+  // The freshness rule must not reach days-per-move rooms: going hours without
+  // an event is how correspondence is played, and filtering on it would
+  // undercount every correspondence game on the site.
+  const stats = await liveStats(
+    new Map<string, Room>([['corr', agedRoom(6 * 60 * 60_000, { daysPerMove: 3 })]]),
+  );
+  assert.equal(stats.playing, 1);
 });
 
 test('live-stats keeps signed-in and anonymous id spaces separate', async () => {

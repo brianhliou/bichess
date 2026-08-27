@@ -69,6 +69,26 @@ export function censusDeployGate(
   return census;
 }
 
+/**
+ * Whether a room is a game genuinely in play right now.
+ *
+ * This is the deploy gate's own classification, re-exported as a predicate so
+ * that "is this game real" has ONE definition. It previously had three, and
+ * they disagreed: the drain gate used this classifier, Mistboard TV used its
+ * own freshness window, and the homepage count (live-room-stats.ts) filtered on
+ * `status === 'playing'` alone — so the landing page advertised abandoned tabs
+ * and paused rooms as live games while TV, reading the same rooms, showed
+ * nothing. Anything reporting a count of live games belongs here.
+ *
+ * `correspondence` counts: a days-per-move game with nobody connected and no
+ * event for hours is genuinely in play, and excluding it on freshness would
+ * undercount every correspondence game on the site.
+ */
+export function isGameInPlay(room: DeployGateRoom, nowMs: number = Date.now()): boolean {
+  const reason = deployGateReasonFor(room, nowMs);
+  return reason === 'gating' || reason === 'correspondence';
+}
+
 export function mergeDeployGateCensus(
   first: DeployGateCensus,
   second: DeployGateCensus,

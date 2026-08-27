@@ -16,7 +16,7 @@
  */
 
 import { clockPolicyKindFor, DAY_MS } from '@mistboard/game';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS } from '../lifecycle-windows.js';
+import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
 import { expireTenantClock, tenantClockRemainingMs } from './runtime.js';
 import type {
@@ -140,8 +140,15 @@ export function tenantAbortPhaseFor<
 ): TenantAbortPhase<C> | null {
   const { status, moveNumber, lastMove } = room.projection.state;
   if (status.type !== 'playing' || moveNumber >= 2) return null;
+  // An unfilled seat used to return null here, which left the room claimed by
+  // NOTHING: the pregame window never opened (nobody owes a move), the forfeit
+  // window needs moveNumber >= 2, and the durable guest-prestart sweep skips
+  // any room carrying a `clock-started` event — which a timed tenant room emits
+  // at CREATION (runtime.ts), unlike the legacy stack where it means "both
+  // seats filled". So an abandoned invite link sat in `playing` forever. It now
+  // gets its own, longer window; see reaper-coverage.test.ts.
   for (const color of tenant.colors) {
-    if (!room.projection.seats[color]) return null;
+    if (!room.projection.seats[color]) return 'unjoined';
   }
   return lastMove === undefined ? `${tenant.colors[0]}-1` : `${tenant.colors[1]}-1`;
 }
@@ -165,10 +172,15 @@ export function tenantDurableDeadlineFor<
   if (room.projection.state.status.type !== 'playing') return null;
   const allowanceMs = (room.projection.timeControl?.daysPerMove ?? 0) * DAY_MS;
   const phase = tenantAbortPhaseFor(tenant, room);
-  if (phase !== null) {
+  // 'unjoined' carries no seat that owes a move, so there is no durable
+  // deadline to enforce and nobody to award. Falling through would pick a seat
+  // arbitrarily and anchor at 0, flagging an unfilled correspondence room
+  // immediately for the wrong player.
+  if (phase !== null && phase !== 'unjoined') {
     const seat = phase === `${tenant.colors[0]}-1` ? tenant.colors[0] : tenant.colors[1];
     return { seat, dueAt: tenantAbortAnchorAt(tenant, room, phase) + allowanceMs };
   }
+  if (phase === 'unjoined') return null;
   const clock = room.projection.clock;
   if (!clock || clock.activeColor === null || clock.runningSince === null) return null;
   return {
@@ -277,6 +289,19 @@ export function tenantForfeitingSeat<
   return null;
 }
 
+// Is anyone actually sitting in this room right now (spectators and displaced
+// sockets excluded)? Used to tell "waiting for an opponent" apart from
+// "abandoned", which look identical in the projection alone.
+function someSeatConnected<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(tenant: TenantLifecycleTenant<C>, room: TenantLifecycleRoom<C, M, State, Spec>): boolean {
+  const connected = tenantConnectedSeats(tenant, room.clients);
+  return tenant.colors.some((color) => connected[color]);
+}
+
 export function tenantConnectedSeats<C extends string>(
   tenant: { colors: readonly [C, C] },
   clients: Iterable<TenantLifecycleClient<C>>,
@@ -309,7 +334,25 @@ function scheduleTenantAbortTimeout<
     room.abortPhase = null;
     return;
   }
+  if (phase === 'unjoined' && someSeatConnected(tenant, room)) {
+    // Somebody is sitting in this room with the page open, waiting for an
+    // opponent. That is not an abandoned room and must never be aborted under
+    // them, however long they wait — the bug being fixed is the room nobody is
+    // in. This is re-derived on every connect, disconnect, and event, so the
+    // window arms the moment the last person actually leaves.
+    room.abortDeadline = null;
+    room.abortPhase = null;
+    return;
+  }
   if (clockPolicyKindFor(room.projection.timeControl) === 'days-per-move') {
+    if (phase === 'unjoined') {
+      // Correspondence rooms waiting for an opponent are left alone: an open
+      // correspondence challenge legitimately sits unfilled for days, and it is
+      // already reclaimed on its own TTL by deleteExpiredCorrespondenceSeeks.
+      room.abortDeadline = null;
+      room.abortPhase = null;
+      return;
+    }
     // Correspondence: the first-move window is the per-move allowance,
     // anchored to the event log (not "now") so hydration after a restart
     // never extends it. No in-memory timer — the deadline sweeper enforces.
@@ -322,7 +365,10 @@ function scheduleTenantAbortTimeout<
   const now = ctx.now?.() ?? Date.now();
   if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
-    room.abortDeadline = now + ABORT_WINDOW_MS;
+    // The phase is part of the guard above, so a seat filling flips
+    // 'unjoined' -> '<first>-1' and recomputes the deadline down to the short
+    // pregame window instead of leaving the long join window running.
+    room.abortDeadline = now + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
   }
   const delay = Math.max(0, room.abortDeadline - now);
   room.abortTimer = setTimeout(() => {

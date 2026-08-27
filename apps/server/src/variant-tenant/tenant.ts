@@ -168,7 +168,10 @@ export type TenantRematchState<C extends string> = {
 };
 
 // Pregame abort phases: waiting on the first mover's move, then the second's.
-export type TenantAbortPhase<C extends string> = `${C}-1`;
+// `${C}-1` = the named seat owes their first move. 'unjoined' = the room is
+// still missing a seat-holder, so nobody owes a move yet and the pregame
+// window has not started; it carries its own, longer deadline.
+export type TenantAbortPhase<C extends string> = `${C}-1` | 'unjoined';
 
 export type TenantRuntimeRoom<
   Kind extends string,
