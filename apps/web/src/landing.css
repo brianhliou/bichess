@@ -106,6 +106,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--home-puzzle-caption-gap, 2px);
+  /* The widget is exactly as wide as its board and centres in the column, the
+     same way the viewer above it sizes to its board and centres. Stacked, the
+     column is much wider than either board: the viewer centred while the puzzle
+     hugged the left, so the two boards sat ~48px apart, and the captions (which
+     span the widget) right-aligned to the COLUMN edge, ~95px past the board they
+     label. Capping the widget at the board width fixes both at once. */
+  width: min(100%, 534px);
+  margin-inline: auto;
   color: var(--site-muted);
   text-decoration: none;
 }
@@ -121,11 +129,13 @@
 }
 
 .home-puzzle-box {
-  /* Stacked bands: full rail width, capped to match the stacked viewer board.
+  /* Fills the widget, which carries the width cap. Square by default: the mini
+     and drop-mini boards are square, and drop mini needs the extra width for its
+     reserve column. A board with a different shape declares it below, so the
+     painted board reaches the box edges instead of letterboxing inside it.
      In the desktop band (min-width 1241px) the grid-line-sharing block below
-     overrides this with the shared feed-row square, so the box is flush with
-     the center feed top and bottom by construction (issue #120). */
-  width: min(100%, 534px);
+     overrides the height with the shared feed-row figure (issue #120). */
+  width: 100%;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: stretch;
@@ -148,6 +158,15 @@
      container just needs to clip anything riding to the edge. */
   border-radius: var(--board-corner-radius);
   overflow: hidden;
+}
+
+/* Standard xiangqi is portrait (552:612), so a square box letterboxed it: the
+   tan stopped ~26px short of each side and the board no longer lined up with the
+   viewer's. It has no reserve column, so the box can just take the board's own
+   shape. Matched only by the intersection-layout board — mini and drop mini
+   render `.mini-xq-board` and keep the square box above. */
+.home-puzzle-box:has(.xq-live-svg--intersection) {
+  aspect-ratio: 552 / 612;
 }
 
 /* The square-grid Xiangqi SVG is taller than the classic board because its river
@@ -2098,7 +2117,10 @@
      variable, so all three band-2 boxes align top AND bottom — the alignment is
      of the whole widget now, caption to caption, not of the bare board. */
   .landing-demo {
-    --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 540);
+    /* 612/552 is the intersection board's own ratio. This read 612/540 (the
+       square-grid layout's width) and so ran ~8px tall, letterboxing the board
+       inside its own box. */
+    --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
     --landing-lower-widget-height: calc(
       var(--landing-puzzle-board-height) +
       (var(--home-puzzle-caption-line) + var(--home-puzzle-caption-gap)) *
