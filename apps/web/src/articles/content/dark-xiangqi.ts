@@ -19,6 +19,9 @@ export const darkXiangqiArticle: Article = {
     boardFamily: 'xiangqi',
     kind: 'rules',
     title: 'Fog Xiangqi Rules',
+    // Same fix fog-chess already got: we brand it "Fog", the world searches
+    // "fog of war". The summary carries the phrase; the title did not.
+    seoTitle: 'Fog of War Xiangqi Rules',
     summary:
       'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
     showSummaryOnPage: false,
