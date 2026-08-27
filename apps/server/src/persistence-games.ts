@@ -880,6 +880,108 @@ export async function getGameSummary(roomId: string): Promise<RecentEveGameRecor
   return record ?? null;
 }
 
+// ── Head-to-head (crosstable) ────────────────────────────────────────────────
+// The record of two subjects against each other in one variant, read straight
+// off game_participants: one self-join, either seat order. "Public" here is the
+// profile game list's rule (persistence-profiles.ts profileVisibilityClause):
+// the game AND both seats are non-private, so a seat someone chose to hide never
+// contributes to a record shown on a page it does not name. Subjects match on
+// (subject_type, subject_id) exactly; an engine id that embeds its version only
+// matches that version, a version-less one ('misty-banqi') matches every build.
+
+export type HeadToHeadSubject = {
+  subjectType: GameParticipantSubjectType;
+  subjectId: string;
+};
+
+export type HeadToHeadGameRow = {
+  roomId: string;
+  variant: string;
+  result: GameResult;
+  endedAt: Date;
+  // Subject a's persisted seat colour in that game ('red' for the xiangqi
+  // family; see crosstable.ts for the seat mapping).
+  aColor: GameParticipantColor;
+};
+
+export type HeadToHeadTally = {
+  aColor: GameParticipantColor;
+  result: GameResult;
+  count: number;
+};
+
+// Bound params: $1 variant, $2/$3 subject a, $4/$5 subject b.
+const HEAD_TO_HEAD_FROM_SQL = `FROM games
+     JOIN game_participants a
+       ON a.game_id = games.room_id
+      AND a.subject_type = $2
+      AND a.subject_id = $3
+     JOIN game_participants b
+       ON b.game_id = games.room_id
+      AND b.subject_type = $4
+      AND b.subject_id = $5
+      AND b.color <> a.color
+     WHERE games.variant = $1
+       AND games.status = 'completed'
+       AND games.visibility <> 'private'
+       AND a.visibility <> 'private'
+       AND b.visibility <> 'private'`;
+
+function headToHeadParams(a: HeadToHeadSubject, b: HeadToHeadSubject, variant: string): unknown[] {
+  return [variant, a.subjectType, a.subjectId, b.subjectType, b.subjectId];
+}
+
+// Newest first, capped. Rows carry a's colour so the caller can express each
+// result from a's side.
+export async function queryHeadToHeadGames(
+  a: HeadToHeadSubject,
+  b: HeadToHeadSubject,
+  variant: string,
+  limit: number,
+): Promise<HeadToHeadGameRow[]> {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const { rows } = await getPool().query<{
+    room_id: string;
+    variant: string;
+    result: GameResult;
+    ended_at: Date;
+    a_color: GameParticipantColor;
+  }>(
+    `SELECT games.room_id, games.variant, games.result, games.ended_at, a.color AS a_color
+     ${HEAD_TO_HEAD_FROM_SQL}
+     ORDER BY games.ended_at DESC, games.room_id DESC
+     LIMIT $6`,
+    [...headToHeadParams(a, b, variant), boundedLimit],
+  );
+  return rows.map((row) => ({
+    roomId: row.room_id,
+    variant: row.variant,
+    result: row.result,
+    endedAt: row.ended_at,
+    aColor: row.a_color,
+  }));
+}
+
+// The whole record (not just the listed page), grouped by (a's colour, result)
+// so the seat-relative outcome mapping stays in one place (crosstable.ts).
+export async function tallyHeadToHeadGames(
+  a: HeadToHeadSubject,
+  b: HeadToHeadSubject,
+  variant: string,
+): Promise<HeadToHeadTally[]> {
+  const { rows } = await getPool().query<{
+    a_color: GameParticipantColor;
+    result: GameResult;
+    count: number;
+  }>(
+    `SELECT a.color AS a_color, games.result, count(*)::int AS count
+     ${HEAD_TO_HEAD_FROM_SQL}
+     GROUP BY a.color, games.result`,
+    headToHeadParams(a, b, variant),
+  );
+  return rows.map((row) => ({ aColor: row.a_color, result: row.result, count: row.count }));
+}
+
 // A saved game never grants access. Non-private completed games are saveable by
 // any signed-in account; private games are saveable only by an account recorded
 // as a participant. Keeping this predicate beside every favorite query prevents

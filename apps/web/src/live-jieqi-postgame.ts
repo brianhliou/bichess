@@ -14,6 +14,7 @@ import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { installJieqiBoardStyles } from './live-jieqi-render.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -202,7 +203,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the
     // public fen (it edits what is visible).

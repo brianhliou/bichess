@@ -5,6 +5,7 @@ import './game-route.css';
 // Reuse the shared dxq-postgame scaffold (.dxq-postgame__*) the other fog
 // variants ride; the board renderer + its fog theme live in our own files.
 import './dark-xiangqi-postgame.css';
+import { crosstableConfig } from './review/crosstable.js';
 import { mountDarkChessReview } from './review/dark-chess-review.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -126,7 +127,7 @@ export function mountDarkChessPostgame(
     moveTimes: moveTimesFromEvents(events, moveEvents),
     players: reviewPlayers(game),
     result: { score: resultScore(game.result), label: status },
-    showCrosstable: true,
+    ...crosstableConfig(game.roomId, game.players),
     // Draft960 is absent from the export table (its PGN needs [SetUp]/[FEN]), so
     // the row is omitted there rather than offering a broken file.
     ...gameExportShareExtra(game.variant, game.roomId),

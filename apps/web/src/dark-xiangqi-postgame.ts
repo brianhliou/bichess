@@ -12,6 +12,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { mountDarkXiangqiReview } from './review/dark-xiangqi-review.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -164,7 +165,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('dark-xiangqi', standardXiangqiFen(truth)),
     boardEditorHref: (truth) => editorHref('dark-xiangqi', standardXiangqiFen(truth)),

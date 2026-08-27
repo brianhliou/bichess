@@ -14,6 +14,7 @@ import './landing.css';
 import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleEnabled } from './feature-flags.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -165,7 +166,7 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('jungle', jungleStateToEngineFen(truth)),
     boardEditorHref: (truth) => editorHref('jungle', jungleStateToEngineFen(truth)),

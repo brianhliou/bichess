@@ -34,6 +34,9 @@ export type UnderboardOptions = {
   seatColors?: ReviewSeatColors;
   /** Present = show the Crosstable tab; the names label its stub. */
   players?: { red?: string; black?: string };
+  /** Lazy Crosstable body: called once, the first time the tab is shown; its
+   *  result replaces the loading placeholder. Absent = the tab keeps a stub. */
+  crosstable?: { load(): Promise<HTMLElement> };
   /** Live-FEN share input, refreshed by the caller on every navigation. Absent
    *  when the variant has no engine FEN (the fog reviews), so the row is
    *  omitted rather than shown empty. */
@@ -80,7 +83,7 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
     tabDefs.push({
       id: 'crosstable',
       label: t('underboard.crosstable'),
-      body: crosstableBody(opts.players),
+      body: crosstableBody(opts.players, Boolean(opts.crosstable)),
     });
   }
   tabDefs.push({
@@ -97,7 +100,13 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   bodies.className = 'review-underboard-bodies';
 
   const buttons = new Map<string, HTMLButtonElement>();
+  let crosstableLoaded = false;
   const show = (id: string): void => {
+    if (id === 'crosstable' && opts.crosstable && !crosstableLoaded) {
+      crosstableLoaded = true;
+      const body = tabDefs.find((def) => def.id === 'crosstable')?.body;
+      void opts.crosstable.load().then((el) => body?.replaceChildren(el));
+    }
     for (const def of tabDefs) {
       const active = def.id === id;
       def.body.hidden = !active;
@@ -145,10 +154,15 @@ function moveTimesBody(times: number[], seatColors?: ReviewSeatColors): HTMLElem
   return body;
 }
 
-function crosstableBody(players: { red?: string; black?: string }): HTMLElement {
+function crosstableBody(players: { red?: string; black?: string }, lazy: boolean): HTMLElement {
   const body = document.createElement('div');
   const note = document.createElement('p');
   note.className = 'review-underboard-empty';
+  if (lazy) {
+    note.textContent = t('underboard.crosstableLoading');
+    body.append(note);
+    return body;
+  }
   const names = players.red && players.black ? `${players.red} vs ${players.black}` : '';
   note.textContent = names
     ? `Head-to-head record for ${names} is coming soon.`

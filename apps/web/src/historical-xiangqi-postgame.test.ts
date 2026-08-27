@@ -63,7 +63,9 @@ describe('historical xiangqi review page', () => {
     expect(root.textContent).toContain('Game info');
     expect(root.textContent).toContain('Wuyang Cup');
     expect(root.textContent).toContain('Guangzhou');
-    expect(root.textContent).toContain('Crosstable');
+    // Archive seats are imported names with no identity, so there is no head-to-head
+    // record to show: the Crosstable tab is deliberately absent here.
+    expect(root.textContent).not.toContain('Crosstable');
     // The raw acquisition move-encoding ("wxf") is internal jargon, not surfaced.
     expect(root.textContent).not.toContain('wxf');
   });
