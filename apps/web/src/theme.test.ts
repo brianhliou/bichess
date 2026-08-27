@@ -16,8 +16,9 @@ import {
 // The chess board and piece pickers are GONE (board 2026-07-31, pieces
 // 2026-07-26): each family ships one, and the wood board carries the
 // accessibility floor itself rather than deferring to a High contrast tile. Fog
-// keeps its options. These lock that shape so tiles cannot drift back in without
-// a deliberate edit, and so any stored preference resolves to a shipping value.
+// still HAS options but no longer offers them (hidden 2026-08-27). These lock
+// that shape so tiles cannot drift back in without a deliberate edit, and so any
+// stored preference resolves to a shipping value.
 describe('appearance option floor', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', {
@@ -112,6 +113,18 @@ describe('site appearance preference', () => {
 
     expect(document.documentElement.dataset.siteTheme).toBe('system');
     expect(document.documentElement.dataset.effectiveTheme).toBe('dark');
+  });
+
+  // The fog picker is hidden, so a choice made while it was visible must not keep
+  // shading one player's boards differently from everyone else's. Storage is left
+  // alone on purpose: this asserts the value is IGNORED, not deleted.
+  it('ignores a stored fog style while the picker is hidden', () => {
+    window.localStorage.setItem('mistboard.fogTheme', 'invisible');
+
+    initializeThemeSettings();
+
+    expect(document.documentElement.dataset.fogTheme).toBe('solid');
+    expect(window.localStorage.getItem('mistboard.fogTheme')).toBe('invisible');
   });
 
   it('exposes the stored xiangqi layout to shared CSS sizing', () => {
@@ -251,7 +264,10 @@ describe('appearance family gating', () => {
     expect(document.querySelector('[data-board-family-select]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="board"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="piece"]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="fog"]')).not.toBeNull();
+    // Fog is hidden for now too, so the panel is xiangqi-only below the shared
+    // Sound/Appearance rows.
+    expect(document.querySelector('[data-theme-tile="fog"]')).toBeNull();
+    expect(document.querySelector('[data-appearance-target="fog"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();

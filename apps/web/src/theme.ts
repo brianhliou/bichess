@@ -99,8 +99,11 @@ export const siteThemeOptions: Array<{ id: SiteTheme; label: string }> = [
 export const boardThemes: Array<{ id: BoardTheme; label: string }> = [
   { id: 'standard', label: 'Wood' },
 ];
-// Fog shading affects readability, so it keeps a control — but six variations of
-// it is a bet-era leftover from when fog was the product.
+// Fog shading affects readability, so it kept a control longer than the board and
+// piece pickers did. HIDDEN FOR NOW (2026-08-27): the row is out of the settings
+// panel (theme-settings-panel.ts) and everyone plays on the first entry. Nothing
+// is erased, so putting the row back also brings back whatever each player had
+// picked. The list stays because the stored-preference normalizer targets it.
 export const fogThemes: Array<{ id: FogTheme; label: string }> = [
   { id: 'solid', label: 'Solid' },
   { id: 'veil', label: 'Veil' },
@@ -154,7 +157,9 @@ function loadThemeSettingsPanel(): Promise<ThemeSettingsPanelModule> {
 export function initializeThemeSettings(): void {
   applySiteTheme(readStoredSiteTheme());
   applyBoardTheme(readStoredTheme());
-  applyFogTheme(readStoredFogTheme());
+  // Pinned to the default while the fog picker is hidden: a stored choice is
+  // ignored, not read, so the whole site renders one shading style.
+  applyFogTheme(defaultFogTheme);
   applyPieceSet(readStoredPieceSet());
   applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
   applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
@@ -170,7 +175,7 @@ export function initializeThemeSettings(): void {
 }
 
 // Set by the active route so the settings panel shows the right board/piece
-// pickers (chess vs xiangqi). The fog picker is shared across both families.
+// pickers (chess vs xiangqi).
 export function setBoardFamily(family: BoardFamily): void {
   document.documentElement.dataset.boardFamily = family;
   syncBoardFamilyControls();

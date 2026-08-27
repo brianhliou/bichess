@@ -27,15 +27,12 @@ import { readStoredSoundSet, SOUND_SETS, type SoundSetId } from './sound-sets.js
 import {
   type AppearanceMenuOptions,
   type BoardFamily,
-  fogThemes,
   formatVolume,
   readEffectiveSoundVolume,
-  readStoredFogTheme,
   readStoredSiteTheme,
   readStoredSoundMuted,
   readXiangqiBoardChoice,
   type SiteTheme,
-  setFogThemePreference,
   setShogiBoardThemePreference,
   setShogiPieceSetPreference,
   setSiteThemePreference,
@@ -119,9 +116,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   };
 
   // Row order mirrors the lichess dasher (Language, Sound, Appearance, Board,
-  // Piece set); Fog is our one addition and sits last. The per-game Board/Piece
-  // pickers carry the Game family selector inside their own sub-panel, so the
-  // root stays a narrow list of rows.
+  // Piece set). The per-game Board/Piece pickers carry the Game family selector
+  // inside their own sub-panel, so the root stays a narrow list of rows.
   if (options.includeLanguage) {
     addCategory('language', t('nav.language', {}, locale), [
       createLanguageField(locale, options.onLocaleSelect),
@@ -209,20 +205,10 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
     addCategory('notation', t('prefs.notation', {}, locale), [createXiangqiNotationList()]);
   }
 
-  // Fog is our one row beyond the lichess set; keep it last so the shared five
-  // stay in lichess order above it.
-  addCategory('fog', t('prefs.fog', {}, locale), [
-    createTileField(
-      'fog',
-      t('prefs.fog', {}, locale),
-      t('prefs.fogShadingStyle', {}, locale),
-      fogThemes,
-      readStoredFogTheme(),
-      setFogThemePreference,
-      undefined,
-      false,
-    ),
-  ]);
+  // Fog was our one row beyond the lichess set and sat last. HIDDEN FOR NOW
+  // (2026-08-27): everyone gets the first shading style, pinned in theme.ts. The
+  // options, the CSS per skin and the stored values all survive, so restoring
+  // this row is the whole revert.
 
   menu.append(root, ...submenus);
 
