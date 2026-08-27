@@ -240,6 +240,9 @@ export type {
   GameRecord,
   GameResult,
   GameSummary,
+  HeadToHeadGameRow,
+  HeadToHeadSubject,
+  HeadToHeadTally,
   ProfileGameRecord,
   RecentEveGameRecord,
   WatchSealedGameOptions,
@@ -261,8 +264,10 @@ export {
   listShowcaseGames,
   listWatchUnlockedGames,
   queryGames,
+  queryHeadToHeadGames,
   recordGameEnd,
   setGameFavorite,
+  tallyHeadToHeadGames,
 } from './persistence-games.js';
 export type {
   AggregatableXiangqiGame,

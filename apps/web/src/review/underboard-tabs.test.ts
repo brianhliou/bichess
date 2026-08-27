@@ -58,3 +58,37 @@ describe('underboard Share & export without an engine FEN', () => {
     expect(labels).toEqual(['Share', 'Moves']);
   });
 });
+
+describe('underboard Crosstable tab', () => {
+  it('loads the head-to-head body once, on the first open', async () => {
+    let loads = 0;
+    const loaded = document.createElement('div');
+    loaded.className = 'loaded-record';
+    const panel = underboardPanel(document.createElement('div'), {
+      hasAnalysis: true,
+      players: { red: 'a', black: 'b' },
+      crosstable: {
+        load: async () => {
+          loads += 1;
+          return loaded;
+        },
+      },
+      shareMovesInput: document.createElement('textarea'),
+      gameUrl: 'https://mistboard.com/game/r1',
+    });
+    const button = [...panel.querySelectorAll<HTMLButtonElement>('.review-underboard-tab')].find(
+      (b) => b.textContent === 'Crosstable',
+    );
+    expect(button).toBeDefined();
+    expect(loads).toBe(0);
+    expect(panel.textContent).toContain('Loading the head-to-head record');
+    button?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(loads).toBe(1);
+    expect(panel.querySelector('.loaded-record')).not.toBeNull();
+    button?.click();
+    await Promise.resolve();
+    expect(loads).toBe(1);
+  });
+});

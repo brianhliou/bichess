@@ -7,6 +7,7 @@ import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { installJieqiBoardStyles } from './live-jieqi-render.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -194,7 +195,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('jieqi', postgame.game.roomId),
     // Server-side PikaJieQi whole-game analysis, DB-cached: an already-analysed game loads
     // straight from cache on open (a GET that never computes). Requesting a fresh compute is

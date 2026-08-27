@@ -1134,3 +1134,90 @@
   border-radius: 6px 6px 0 0;
   box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.16);
 }
+
+/* Crosstable (lichess head-to-head): a surface box with one row per player. Game
+   columns pack against the names from the left, each holding that player's point
+   (1 / 0 / ½); the game being reviewed is a solid accent block across both rows;
+   the totals sit at the right, green for the leader and red for the trailer.
+   Newest games are nearest the names; the scroller opens at that end (the
+   rtl/ltr pair) when the record overflows. */
+.review-crosstable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-crosstable__scroller {
+  overflow-x: auto;
+  direction: rtl;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-surface);
+}
+.review-crosstable__table {
+  direction: ltr;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.review-crosstable__fill {
+  width: 100%;
+  padding: 0;
+}
+.review-crosstable__cell {
+  padding: 0;
+  text-align: center;
+}
+.review-crosstable__cell a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  color: var(--site-text);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.review-crosstable__cell--loss a {
+  color: var(--site-muted);
+}
+.review-crosstable__cell a:hover {
+  background: color-mix(in srgb, var(--site-text) 8%, transparent);
+}
+.review-crosstable__cell--current a,
+.review-crosstable__cell--current a:hover {
+  background: var(--site-accent, #2f7d5b);
+  color: #fff;
+}
+.review-crosstable__name {
+  max-width: 220px;
+  padding: 0 14px 0 16px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.review-crosstable__score {
+  padding: 0 14px 0 8px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.review-crosstable__score--lead {
+  color: #4f9d4f;
+}
+.review-crosstable__score--trail {
+  color: #c0563f;
+}
+.review-crosstable__note {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12px;
+}
+@media (pointer: coarse) {
+  .review-crosstable__cell a {
+    min-width: 42px;
+    height: 42px;
+  }
+}

@@ -11,6 +11,7 @@ import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { fortressXiangqiEnabled } from './feature-flags.js';
 import { installFortressXiangqiBoardStyles } from './fortress-xiangqi-render.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { mountFortressXiangqiReview } from './review/fortress-xiangqi-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
@@ -175,7 +176,7 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('fortress-xiangqi', postgame.game.roomId),
     // Server whole-game FSF analysis, DB-cached: an already-analysed game loads from
     // cache on open (a GET that never computes). Requesting a fresh compute is

@@ -12,6 +12,7 @@ import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { jungleFlipResultLabel, jungleFlipSeatInk } from './jungle-flip-result-label.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
@@ -191,7 +192,7 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     seatColors,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('jungle-flip', postgame.game.roomId),
     // Server-side MistyJungleFlip whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh

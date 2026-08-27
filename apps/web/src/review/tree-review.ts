@@ -345,8 +345,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Visual ink bound to the first/second analysis seats. Flip variants set this
    *  after the opening reveal; analysis ownership remains keyed by seat. */
   seatColors?: ReviewSeatColors;
-  /** Show the "Crosstable" underboard tab (a head-to-head record — a stub for now). */
+  /** Show the "Crosstable" underboard tab. */
   showCrosstable?: boolean;
+  /** Lazy head-to-head body for the Crosstable tab (review/crosstable.ts). */
+  crosstable?: { load(): Promise<HTMLElement> };
   /** Prebuilt provenance panel (source / event / date / flags …). When present, a
    *  "Game info" underboard tab renders it. The historical-library caller supplies
    *  it; played/analysis surfaces leave it undefined. */
@@ -439,7 +441,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const notifyChange = (): void => config.onChange?.();
 
   let currentPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
-  let flipped = config.initialFlipped === true;
+  // `?flip=1` opens the review from the second seat's side: the crosstable links
+  // a row's games that way, so a click reads as "this game from their side".
+  // An explicit initialFlipped (the study's chapter orientation) still wins.
+  let flipped = config.initialFlipped ?? flippedFromUrl();
 
   const currentNode = (): Node => tree.nodeAt(currentPath) ?? tree.root;
   const orientation = (): Color => presentation.perspective(flipped);
@@ -1013,6 +1018,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     moveTimes: config.moveTimes,
     seatColors: config.seatColors,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
+    ...(config.crosstable ? { crosstable: config.crosstable } : {}),
     // No engine = no FEN for this variant (the fog reviews): drop the row.
     ...(presentation.engine ? { shareFenInput } : {}),
     shareMovesInput,
@@ -1055,7 +1061,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     boardMaxPx: presentation.boardMaxPx,
     underboard: composeUnderboard(
       commentPanelEl,
-      config.analysis || config.provenance || config.showCrosstable || config.aboutTab
+      // A played game always has Share & export (and usually Move times), so the
+      // panel shows for those too; the analysis board keeps its own gate.
+      config.analysis ||
+        config.provenance ||
+        config.showCrosstable ||
+        config.aboutTab ||
+        config.moveTimes ||
+        config.shareExtra
         ? underboardEl
         : undefined,
       importPanel?.el,
@@ -1642,6 +1655,11 @@ function resolveBoardAspect(aspect: number | (() => number)): number {
 
 /** Stack the under-board pieces (comment panel, tools panel, FEN/import block)
  *  into one region; pass through a single element alone; undefined when none. */
+function flippedFromUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('flip') === '1';
+}
+
 function composeUnderboard(...parts: Array<HTMLElement | undefined>): HTMLElement | undefined {
   const present = parts.filter((el): el is HTMLElement => !!el);
   if (present.length === 0) return undefined;

@@ -396,6 +396,13 @@ export const EN_REVIEW = {
   'underboard.crosstable': 'Crosstable',
   'underboard.shareExport': 'Share & export',
   'underboard.download': 'Download',
+  'underboard.crosstableLoading': 'Loading the head-to-head record',
+  'underboard.crosstableUnavailable': 'No head-to-head record is available for this game.',
+  'underboard.crosstableGuest':
+    'Head-to-head records are kept for signed-in players and engines. Guest seats have no record.',
+  'underboard.crosstablePrivate': 'One of these seats is private, so there is no public record.',
+  'underboard.crosstableFirstGame': 'First game between {a} and {b}.',
+  'underboard.crosstableShowingLast': 'Showing the last {shown} of {total} games.',
   'annotate.comment': 'Comment',
   'annotate.glyphs': 'Glyphs',
   'annotate.lesson': 'Lesson',

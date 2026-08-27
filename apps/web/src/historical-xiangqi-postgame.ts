@@ -123,7 +123,6 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
       score: game.result === '1/2-1/2' ? '½-½' : game.result,
       label: resultStatus(game),
     },
-    showCrosstable: true,
     // Share & export: the archive PGN, only where the source is cleared for
     // republication (the server gates the endpoint the same way).
     ...(game.pgnExport ? { shareExtra: [downloadRow([historicalPgnLink(game.id)])] } : {}),

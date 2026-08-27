@@ -15,6 +15,7 @@ import {
 } from './review/banqi-decisions.js';
 import { mountBanqiReview } from './review/banqi-review.js';
 import { recoverBanqiDeal } from './review/banqi-tree-adapter.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
@@ -192,7 +193,7 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
     seatColors,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('banqi', postgame.game.roomId),
     // Server-side MistyBanqi whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh

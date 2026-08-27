@@ -6,6 +6,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { mountDarkXiangqiReview } from './review/dark-xiangqi-review.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -158,7 +159,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('dark-xiangqi', postgame.game.roomId),
     // No client/server whole-game analysis for fog yet (the fog engine is a
     // separate worker piece); the review is the interactive triptych + tree.

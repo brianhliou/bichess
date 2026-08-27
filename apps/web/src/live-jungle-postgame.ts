@@ -12,6 +12,7 @@ import './landing.css';
 import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleEnabled } from './feature-flags.js';
+import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import {
@@ -163,7 +164,7 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     players: playerNames,
-    showCrosstable: true,
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     ...gameExportShareExtra('jungle', postgame.game.roomId),
     // Server-side MistyJungle whole-game analysis, DB-cached: an already-analysed
     // game loads straight from cache on open (a GET that never computes). Requesting

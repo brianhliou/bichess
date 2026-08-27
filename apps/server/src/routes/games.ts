@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Color, GameEvent, GameExportFormat, TimeClass } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import { buildCrosstable, CROSSTABLE_GAME_LIMIT, resolveCrosstablePair } from './../crosstable.js';
 import {
   decisionLogAvailable,
   devArtifactPayloads,
@@ -437,6 +438,41 @@ export async function tryHandle(
       'content-disposition': `inline; filename="mistboard-${roomId}.${resolved.format}"`,
     });
     response.end(resolved.body);
+    return true;
+  }
+
+  // Head-to-head record of this room's two seats in this variant (the review
+  // page's crosstable). Persisted games only: the record is a game_participants
+  // self-join, so there is nothing to answer from the in-memory rooms.
+  const crosstableMatch = pathname.match(/^\/api\/games\/([^/]+)\/crosstable$/);
+  if (crosstableMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const roomId = decodeURIComponent(crosstableMatch[1]!);
+    const game = await persistence.getGameSummary(roomId);
+    if (!game) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const resolution = resolveCrosstablePair({
+      roomId,
+      variant: game.variant,
+      participants: game.participants ?? [],
+    });
+    if (!resolution.ok) {
+      writeJson(response, 200, { available: false, reason: resolution.reason });
+      return true;
+    }
+    const { a, b } = resolution.pair;
+    const [games, tallies] = await Promise.all([
+      persistence.queryHeadToHeadGames(a, b, game.variant, CROSSTABLE_GAME_LIMIT),
+      persistence.tallyHeadToHeadGames(a, b, game.variant),
+    ]);
+    writeJson(
+      response,
+      200,
+      buildCrosstable({ variant: game.variant, players: resolution.players, games, tallies }),
+    );
     return true;
   }
 
