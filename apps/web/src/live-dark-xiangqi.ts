@@ -27,6 +27,21 @@ import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
 import { tokenPieceSize } from './board-metrics.js';
+import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+  xiangqiDisplayFile,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+} from './xiangqi-board-surface.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import {
   maybePlayDarkXiangqiSnapshotSound,
@@ -89,6 +104,29 @@ const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
   'aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;"';
 const FOG_OVERLAP = 0.5;
+
+// Fog xiangqi draws the standard 9x10 board, so it takes the shared surface and
+// the shared point transform rather than keeping a fourth copy. Two consequences
+// beyond the appearance preferences finally reaching this board: flipping now
+// ROTATES 180 rather than mirroring the rank only (this file carried the same
+// defect standard xiangqi did), and 'Square grid' works here as well.
+const FOG_GEO: XiangqiBoardGeometry = {
+  fileCount: FILE_COUNT,
+  rankCount: RANK_COUNT,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: Math.round(CELL / 5),
+};
+const FOG_SURFACE: XiangqiSurfaceConfig = {
+  geo: FOG_GEO,
+  palaces: [
+    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
+    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
+  ],
+  riverAfterRank: 5,
+  riverLabel: '楚 河   漢 界',
+};
+let activeLayout: XiangqiBoardLayout = 'intersection';
 
 // ── Dark-Xiangqi-owned interaction/render state ──────────────────────────────
 
@@ -302,6 +340,8 @@ function boardSvg(
     draggingFrom?: XiangqiSquare | null;
     arrows?: readonly DarkXiangqiBoardArrow[];
     markers?: readonly DarkXiangqiBoardMarker[];
+    /** Override the stored board-layout preference (tests, previews). */
+    layout?: XiangqiBoardLayout;
   },
 ): string {
   const sel = options.selectedSquare !== undefined ? options.selectedSquare : selectedSquare;
@@ -314,13 +354,16 @@ function boardSvg(
   // view's perspective (red vs black) is unique per fogged board.
   const maskId = `xq-live-fog-${view.id.replace(/[^a-zA-Z0-9_-]/g, '')}-${view.perspective}`;
   const fog = options.showFog === false ? '' : fogLayer(view, perspective, maskId);
+  const layout = options.layout ?? readStoredXiangqiBoardLayout();
+  activeLayout = layout;
+  const vb = xiangqiBoardViewBox(layout, FOG_GEO);
   return `
-    <svg class="xq-live-svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
-      <g class="xq-live-palace-bands">${palaceBands(perspective)}</g>
-      <g class="xq-live-grid">${gridLayer()}</g>
-      <g class="xq-live-palace">${palaceLayer(perspective)}</g>
-      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${riverLayer(perspective)}</g>
+    <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg">
+      <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(FOG_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(FOG_SURFACE, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(FOG_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(FOG_SURFACE, perspective, layout)}</g>
       <g class="xq-live-fog">${fog}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective)}</g>
       <g class="xq-live-selection">${selectionLayer(sel, perspective)}</g>
@@ -333,78 +376,20 @@ function boardSvg(
   `;
 }
 
-function gridLayer(): string {
-  const parts: string[] = [];
-  const left = MARGIN;
-  const right = MARGIN + (FILE_COUNT - 1) * CELL;
-  const top = MARGIN;
-  const bottom = MARGIN + (RANK_COUNT - 1) * CELL;
-  for (let rank = 0; rank < RANK_COUNT; rank++) {
-    const y = MARGIN + rank * CELL;
-    parts.push(`<line class="xq-live-line" x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`);
-  }
-  for (let file = 0; file < FILE_COUNT; file++) {
-    const x = MARGIN + file * CELL;
-    if (file === 0 || file === FILE_COUNT - 1) {
-      parts.push(`<line class="xq-live-line" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"/>`);
-    } else {
-      parts.push(`<line class="xq-live-line" x1="${x}" y1="${top}" x2="${x}" y2="${RIVER_TOP}"/>`);
-      parts.push(
-        `<line class="xq-live-line" x1="${x}" y1="${RIVER_BOTTOM}" x2="${x}" y2="${bottom}"/>`,
-      );
-    }
-  }
-  return parts.join('');
-}
-
-function palaceBands(perspective: XiangqiColor): string {
-  return [palaceBand(3, 1, 5, 3, perspective), palaceBand(3, 8, 5, 10, perspective)].join('');
-}
-
-function palaceBand(
-  fileMin: number,
-  rankMin: number,
-  fileMax: number,
-  rankMax: number,
-  perspective: XiangqiColor,
-): string {
-  const a = intersection(fileMin, rankMin, perspective);
-  const b = intersection(fileMax, rankMax, perspective);
-  return `<rect class="xq-live-palace-band" x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}"/>`;
-}
-
-function palaceLayer(perspective: XiangqiColor): string {
-  const parts: string[] = [];
-  for (const palace of [
-    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
-    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
-  ]) {
-    const a = intersection(palace.fileMin, palace.rankMax, perspective);
-    const b = intersection(palace.fileMax, palace.rankMin, perspective);
-    const c = intersection(palace.fileMax, palace.rankMax, perspective);
-    const d = intersection(palace.fileMin, palace.rankMin, perspective);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`);
-  }
-  return parts.join('');
-}
-
-function riverLayer(perspective: XiangqiColor): string {
-  const y = (RIVER_TOP + RIVER_BOTTOM) / 2;
-  void perspective;
-  return `
-    <text class="xq-live-river-label" x="${MARGIN + 4 * CELL}" y="${y + 1}">楚 河   漢 界</text>
-  `;
-}
-
 function fogLayer(view: DarkXiangqiWireView, perspective: XiangqiColor, maskId: string): string {
   const cutouts = view.visibleSquares
     .map((square) => {
       const coord = coordOf(square);
       const center = intersection(coord.file, coord.rank, perspective);
       const displayRank = displayRankFor(coord.rank, perspective);
-      const x0 = coord.file === 0 ? 0 : center.x - CELL / 2 - FOG_OVERLAP;
-      const x1 = coord.file === FILE_COUNT - 1 ? WIDTH : center.x + CELL / 2 + FOG_OVERLAP;
+      // Edge cutouts bleed to the board edge so no fog hairline survives between
+      // a visible outer square and the frame. The test must therefore be on the
+      // DISPLAY column, not the logical file: black sees the board rotated, so
+      // file a sits on the right. (The y axis already used displayRank; x did
+      // not, which was invisible only while flipping mirrored the rank alone.)
+      const displayFile = xiangqiDisplayFile(coord.file, perspective, FILE_COUNT);
+      const x0 = displayFile === 0 ? 0 : center.x - CELL / 2 - FOG_OVERLAP;
+      const x1 = displayFile === FILE_COUNT - 1 ? WIDTH : center.x + CELL / 2 + FOG_OVERLAP;
       const y0 = displayRank === 0 ? 0 : center.y - CELL / 2 - FOG_OVERLAP;
       const y1 = displayRank === RANK_COUNT - 1 ? HEIGHT : center.y + CELL / 2 + FOG_OVERLAP;
       return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="black"/>`;
@@ -724,11 +709,9 @@ function intersection(
   file: number,
   rank: number,
   perspective: XiangqiColor,
+  layout: XiangqiBoardLayout = activeLayout,
 ): { x: number; y: number } {
-  return {
-    x: MARGIN + file * CELL,
-    y: MARGIN + displayRankFor(rank, perspective) * CELL,
-  };
+  return xiangqiBoardPoint(file, rank, perspective, layout, FOG_GEO);
 }
 
 function displayRankFor(rank: number, perspective: XiangqiColor): number {
