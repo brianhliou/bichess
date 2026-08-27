@@ -131,7 +131,7 @@ export const EN_COMMUNITY = {
   'title.wcm': 'Woman Candidate Master',
   'verifyTitle.heading': 'Title verification',
   'verifyTitle.intro':
-    'Hold a xiangqi title? Verify it to show a title badge next to your name on your profile and games.',
+    'Hold a xiangqi or chess title? Verify it to show a title badge next to your name on your profile and games.',
   'verifyTitle.signInTitle': 'Sign in to verify your title',
   'verifyTitle.signInBody':
     'Title verification needs an account. Sign in, then come back to this page.',
@@ -139,7 +139,7 @@ export const EN_COMMUNITY = {
   'verifyTitle.titleChoose': 'Choose a title',
   'verifyTitle.evidenceLabel': 'Evidence',
   'verifyTitle.evidenceHelp':
-    'Link your federation profile (WXF, CXA, or a national xiangqi federation), include your real name, and mention the rating or results that support the claim. An admin reviews every request by hand.',
+    'Link your federation profile (WXF, CXA, FIDE, or a national federation), include your real name, and mention the rating or results that support the claim. An admin reviews every request by hand.',
   'verifyTitle.evidencePlaceholder': 'Federation profile link, real name, rating or results…',
   'verifyTitle.submit': 'Submit for review',
   'verifyTitle.submitting': 'Submitting…',
@@ -162,7 +162,7 @@ export const EN_COMMUNITY = {
   'verifyTitle.coachCta': 'Create your coach profile',
   'coach.heading': 'Coaches',
   'coach.intro':
-    'Find a coach to study with. Every coach listed here holds a verified xiangqi title.',
+    'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
   'coach.verifyToCoach': 'Are you a titled player? Verify your title to coach',
   'coach.becomeCoach': 'Become a coach',
   'coach.editYourProfile': 'Edit your coach profile',
@@ -183,7 +183,7 @@ export const EN_COMMUNITY = {
   'coach.signInBody': 'A coach profile needs an account. Sign in, then come back to this page.',
   'coach.untitledTitle': 'Coaching is for verified titled players',
   'coach.untitledBody':
-    'The coach directory lists verified titled players only. Verify your xiangqi title first, then come back to create your coach profile.',
+    'The coach directory lists verified titled players only. Verify your xiangqi or chess title first, then come back to create your coach profile.',
   'coach.untitledCta': 'Verify your title',
   'coach.headlineLabel': 'Headline',
   'coach.headlinePlaceholder': 'e.g. XIM teaching English-language xiangqi for club players',

@@ -37,18 +37,11 @@ export function isPlayerTitle(value: unknown): value is PlayerTitle {
   return typeof value === 'string' && (PLAYER_TITLES as readonly string[]).includes(value);
 }
 
-// Titles a player can currently REQUEST at /verify-title. Scoped to xiangqi for
-// now: chess titles stay in PLAYER_TITLES (so any already-granted chess badge
-// still renders) but cannot be requested yet. Re-enabling chess requests is a
-// one-line change here. Mirror of REQUESTABLE_PLAYER_TITLES in
+// Titles a player can currently REQUEST at /verify-title. Both families are
+// open: xiangqi titles verify against WXF/CXA records, chess titles against a
+// FIDE ID. Mirror of REQUESTABLE_PLAYER_TITLES in
 // apps/server/src/persistence-titles.ts.
-export const REQUESTABLE_PLAYER_TITLES: readonly PlayerTitle[] = [
-  'xgm',
-  'xim',
-  'xnm',
-  'xwgm',
-  'xwim',
-];
+export const REQUESTABLE_PLAYER_TITLES: readonly PlayerTitle[] = PLAYER_TITLES;
 
 const TITLE_NAME_KEYS: Record<PlayerTitle, I18nKey> = {
   xgm: 'title.xgm',

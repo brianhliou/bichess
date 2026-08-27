@@ -154,7 +154,7 @@ export const ZH_HANT_COMMUNITY = {
   'verifyTitle.errRequestPending': '你已有一份申請正在等待審核。',
   'verifyTitle.coachCta': '建立你的教練主頁',
   'coach.heading': '教練',
-  'coach.intro': '找一位教練學棋。這裡的每位教練都持有經認證的象棋頭銜。',
+  'coach.intro': '找一位教練學棋。這裡的每位教練都持有經認證的象棋或國際象棋頭銜。',
   'coach.verifyToCoach': '你是持有頭銜的棋手嗎？認證頭銜即可開課',
   'coach.becomeCoach': '成為教練',
   'coach.editYourProfile': '編輯教練主頁',
@@ -175,7 +175,7 @@ export const ZH_HANT_COMMUNITY = {
   'coach.signInBody': '建立教練主頁需要帳號。登入後再回到本頁。',
   'coach.untitledTitle': '教練目錄面向認證頭銜棋手',
   'coach.untitledBody':
-    '教練目錄只收錄持有認證頭銜的棋手。請先認證你的象棋頭銜，再回來建立教練主頁。',
+    '教練目錄只收錄持有認證頭銜的棋手。請先認證你的象棋或國際象棋頭銜，再回來建立教練主頁。',
   'coach.untitledCta': '認證頭銜',
   'coach.headlineLabel': '標題',
   'coach.headlinePlaceholder': '例如：象棋國際大師，用英語教授俱樂部棋手',

@@ -64,7 +64,7 @@ export async function submitTitleVerificationForApi(
   now: Date = new Date(),
 ): Promise<ApiResult> {
   const title = body.title;
-  // Scoped to xiangqi titles for now; chess-title requests reject fail-closed.
+  // The vocabulary is closed: anything outside it rejects fail-closed.
   if (!isRequestableTitle(title)) return { status: 400, payload: { error: 'invalid_title' } };
   const evidence = typeof body.evidence === 'string' ? body.evidence.trim() : '';
   if (evidence.length === 0) return { status: 400, payload: { error: 'evidence_required' } };

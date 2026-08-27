@@ -6,7 +6,7 @@
 // sign-in prompt. One pending request at a time; rejection allows resubmit.
 
 import './verify-title.css';
-import { t } from './i18n/catalog.js';
+import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
   isPlayerTitle,
@@ -20,6 +20,14 @@ import { buildStaticPageLayout } from './static-page-shell.js';
 
 // Mirrors TITLE_EVIDENCE_MAX in apps/server/src/routes/titles.ts.
 const EVIDENCE_MAX = 4000;
+
+// The two title families, in the order the vocabulary declares them. A title
+// missing from REQUESTABLE_PLAYER_TITLES is skipped, and an empty group is not
+// rendered, so re-narrowing the requestable list needs no change here.
+const TITLE_GROUPS: readonly { labelKey: I18nKey; titles: readonly PlayerTitle[] }[] = [
+  { labelKey: 'setup.xiangqi', titles: ['xgm', 'xim', 'xnm', 'xwgm', 'xwim'] },
+  { labelKey: 'setup.chess', titles: ['gm', 'im', 'fm', 'cm', 'wgm', 'wim', 'wfm', 'wcm'] },
+];
 
 type MyRequestPayload = {
   title: PlayerTitle | null;
@@ -169,11 +177,19 @@ function buildForm(
   placeholder.value = '';
   placeholder.textContent = t('verifyTitle.titleChoose', {}, locale);
   select.append(placeholder);
-  for (const title of REQUESTABLE_PLAYER_TITLES) {
-    const option = document.createElement('option');
-    option.value = title;
-    option.textContent = titleLabel(title, locale);
-    select.append(option);
+  // Grouped by family so a bare GM never reads as a xiangqi title. Xiangqi
+  // leads; the group labels reuse the existing setup.* variant names.
+  for (const group of TITLE_GROUPS) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = t(group.labelKey, {}, locale);
+    for (const title of group.titles) {
+      if (!REQUESTABLE_PLAYER_TITLES.includes(title)) continue;
+      const option = document.createElement('option');
+      option.value = title;
+      option.textContent = titleLabel(title, locale);
+      optgroup.append(option);
+    }
+    if (optgroup.childElementCount > 0) select.append(optgroup);
   }
   titleField.append(titleLabelText, select);
 

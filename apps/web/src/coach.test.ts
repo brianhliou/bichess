@@ -175,6 +175,50 @@ describe('coach detail page', () => {
     expect(backLink).toBeDefined();
   });
 
+  it('autolinks a booking URL in contact and leaves the rest as text', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/coaches/xim-coach')
+          return jsonResponse({
+            coach: {
+              ...detailCoach,
+              contact: 'Email coach@example.com or book at https://cal.com/xim-coach.',
+            },
+          });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const root = mountRoot();
+    await mountCoach(root, 'xim-coach');
+
+    const link = root.querySelector<HTMLAnchorElement>('.coach-detail-contact-link');
+    expect(link?.getAttribute('href')).toBe('https://cal.com/xim-coach');
+    // The trailing period is prose, not part of the URL.
+    expect(link?.textContent).toBe('https://cal.com/xim-coach');
+    expect(link?.rel).toBe('nofollow noopener noreferrer');
+    expect(root.textContent).toContain('Email coach@example.com or book at');
+    expect(root.textContent).toContain('https://cal.com/xim-coach.');
+  });
+
+  it('never builds an href from a non-http scheme', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/coaches/xim-coach')
+          return jsonResponse({
+            coach: { ...detailCoach, contact: 'javascript:alert(1) data:text/html,x' },
+          });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const root = mountRoot();
+    await mountCoach(root, 'xim-coach');
+
+    expect(root.querySelector('.coach-detail-contact-link')).toBeNull();
+    expect(root.textContent).toContain('javascript:alert(1) data:text/html,x');
+  });
+
   it('renders the not-found notice for a 404', async () => {
     vi.stubGlobal(
       'fetch',

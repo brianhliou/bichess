@@ -136,6 +136,10 @@
   overflow-wrap: anywhere;
 }
 
+.coach-detail-contact-link {
+  color: var(--site-accent);
+}
+
 .coach-detail-links {
   display: flex;
   gap: 12px;

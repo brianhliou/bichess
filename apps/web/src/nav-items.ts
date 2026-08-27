@@ -86,7 +86,9 @@ export function watchNavItems(): NavItem[] {
     // it holds: other people's finished games, from broadcasts, from the
     // archive, and from play here. It was reachable only by URL until now.
     { label: 'Games', labelKey: 'nav.games', href: '/games' },
-    { label: 'Streamers', labelKey: 'nav.streamers', href: '/streamer' },
+    // No Streamers entry: /streamer is a shell with no backend, so linking it
+    // from the nav sends visitors to a permanently empty page. The route and its
+    // strings stay; restore this line when there is a streamer directory to show.
     { label: 'Video library', labelKey: 'nav.videoLibrary', href: '/videos' },
   ];
 }

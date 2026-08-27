@@ -154,7 +154,7 @@ export const ZH_HANS_COMMUNITY = {
   'verifyTitle.errRequestPending': '你已有一份申请正在等待审核。',
   'verifyTitle.coachCta': '创建你的教练主页',
   'coach.heading': '教练',
-  'coach.intro': '找一位教练学棋。这里的每位教练都持有经认证的象棋头衔。',
+  'coach.intro': '找一位教练学棋。这里的每位教练都持有经认证的象棋或国际象棋头衔。',
   'coach.verifyToCoach': '你是持有头衔的棋手吗？认证头衔即可开课',
   'coach.becomeCoach': '成为教练',
   'coach.editYourProfile': '编辑教练主页',
@@ -175,7 +175,7 @@ export const ZH_HANS_COMMUNITY = {
   'coach.signInBody': '创建教练主页需要账号。登录后再回到本页。',
   'coach.untitledTitle': '教练目录面向认证头衔棋手',
   'coach.untitledBody':
-    '教练目录只收录持有认证头衔的棋手。请先认证你的象棋头衔，再回来创建教练主页。',
+    '教练目录只收录持有认证头衔的棋手。请先认证你的象棋或国际象棋头衔，再回来创建教练主页。',
   'coach.untitledCta': '认证头衔',
   'coach.headlineLabel': '标题',
   'coach.headlinePlaceholder': '例如：象棋国际大师，用英语教授俱乐部棋手',

@@ -224,7 +224,7 @@ async function renderDetail(shell: HTMLElement, handle: string, locale: Locale):
   facts.className = 'coach-detail-facts';
   appendFact(facts, t('coach.languagesLabel', {}, locale), coach.languages);
   appendFact(facts, t('coach.rateLabel', {}, locale), coach.rate);
-  appendFact(facts, t('coach.contactLabel', {}, locale), coach.contact);
+  appendFact(facts, t('coach.contactLabel', {}, locale), coach.contact, true);
   if (facts.childElementCount > 0) shell.append(facts);
 
   const links = document.createElement('p');
@@ -237,13 +237,40 @@ async function renderDetail(shell: HTMLElement, handle: string, locale: Locale):
   shell.append(links);
 }
 
-function appendFact(facts: HTMLElement, label: string, value: string): void {
+function appendFact(facts: HTMLElement, label: string, value: string, linkify = false): void {
   if (value.trim().length === 0) return;
   const term = document.createElement('dt');
   term.textContent = label;
   const definition = document.createElement('dd');
-  definition.textContent = value;
+  if (linkify) appendLinkified(definition, value);
+  else definition.textContent = value;
   facts.append(term, definition);
+}
+
+// Coach contact is free text a coach types: an email, a Discord handle, or a
+// scheduling link. A pasted booking URL used to render as dead text, which made
+// the one field a coach needs to be reachable through unusable. Autolink http(s)
+// runs only: every other character still goes through textContent, and the
+// scheme allowlist keeps javascript:/data: out of an href.
+const URL_RUN = /https?:\/\/[^\s<>"']+/g;
+
+function appendLinkified(target: HTMLElement, value: string): void {
+  let cursor = 0;
+  for (const match of value.matchAll(URL_RUN)) {
+    const start = match.index ?? 0;
+    if (start > cursor) target.append(value.slice(cursor, start));
+    // Trailing sentence punctuation is far more likely prose than part of the URL.
+    const raw = match[0].replace(/[.,;:!?)\]}]+$/, '');
+    const anchor = document.createElement('a');
+    anchor.className = 'coach-detail-contact-link';
+    anchor.href = raw;
+    anchor.textContent = raw;
+    anchor.rel = 'nofollow noopener noreferrer';
+    anchor.target = '_blank';
+    target.append(anchor);
+    cursor = start + raw.length;
+  }
+  if (cursor < value.length) target.append(value.slice(cursor));
 }
 
 function buildBackLink(locale: Locale): HTMLElement {

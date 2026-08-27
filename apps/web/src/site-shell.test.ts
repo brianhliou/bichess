@@ -98,7 +98,7 @@ describe('site shell nav', () => {
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Broadcasts', 'Games', 'Streamers', 'Video library']);
+    ).toEqual(['Mistboard TV', 'Broadcasts', 'Games', 'Video library']);
 
     // Tools dropdown surfaces the analysis board.
     const toolsMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(

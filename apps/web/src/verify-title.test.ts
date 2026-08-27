@@ -31,15 +31,21 @@ describe('verify-title page', () => {
 
     const select = root.querySelector<HTMLSelectElement>('select[name="title"]');
     expect(select).not.toBeNull();
-    // Placeholder + the requestable (xiangqi-only, for now) vocabulary, nothing else.
+    // Placeholder + the full requestable vocabulary, nothing else.
     expect(select?.options.length).toBe(REQUESTABLE_PLAYER_TITLES.length + 1);
     expect([...(select?.options ?? [])].map((o) => o.value)).toEqual([
       '',
       ...REQUESTABLE_PLAYER_TITLES,
     ]);
     expect(select?.textContent).toContain('XGM (Xiangqi Grandmaster)');
-    // Chess titles are not offered while requests are scoped to xiangqi.
-    expect([...(select?.options ?? [])].map((o) => o.value)).not.toContain('gm');
+    // Both families are offered: xiangqi leads, chess follows.
+    expect(select?.textContent).toContain('GM (Grandmaster)');
+    expect([...(select?.options ?? [])].map((o) => o.value)).toContain('gm');
+
+    // Families are separated so a bare GM never reads as a xiangqi title.
+    const groups = [...root.querySelectorAll('select[name="title"] optgroup')];
+    expect(groups.map((g) => g.getAttribute('label'))).toEqual(['Xiangqi', 'Chess']);
+    expect(groups.map((g) => g.childElementCount)).toEqual([5, 8]);
 
     expect(root.querySelector('textarea[name="evidence"]')).not.toBeNull();
     expect(root.querySelector('.verify-title-help')?.textContent).toContain('federation profile');

@@ -88,11 +88,24 @@ test('submit creates a pending request', async () => {
   assert.equal(request.status, 'pending');
 });
 
-test('submit rejects unknown and non-requestable titles fail-closed', async () => {
+test('submit accepts a chess title alongside the xiangqi ones', async () => {
+  const { deps } = makeFake();
+  const result = await submitTitleVerificationForApi(
+    untitled,
+    { title: 'gm', evidence: 'FIDE ID 1503014, real name Magnus Carlsen' },
+    deps,
+  );
+  assert.equal(result.status, 200);
+  const request = result.payload.request as Record<string, unknown>;
+  assert.equal(request.title, 'gm');
+  assert.equal(request.status, 'pending');
+});
+
+test('submit rejects unknown titles fail-closed', async () => {
   const { deps, requests } = makeFake();
-  // 'gm'/'wcm' are valid PlayerTitles but chess titles are not requestable while
-  // the pipeline is scoped to xiangqi, so they reject like unknown values.
-  for (const bad of ['XGM', 'ngm', 'grandmaster', 'gm', 'wcm', 42, null, undefined]) {
+  // Case, near-misses and non-strings all reject: the vocabulary is closed even
+  // though every title inside it is now requestable.
+  for (const bad of ['XGM', 'ngm', 'grandmaster', 'nm', 'wnm', 42, null, undefined]) {
     const result = await submitTitleVerificationForApi(
       untitled,
       { title: bad, evidence: 'evidence' },
