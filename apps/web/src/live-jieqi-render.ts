@@ -6,6 +6,20 @@ import {
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+} from './xiangqi-board-surface.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -35,6 +49,32 @@ const RANKS = 10;
 const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
+
+// Jieqi is xiangqi's board at a larger scale, so it takes the shared surface
+// rather than keeping its own copy of the grid and palace drawing. That is what
+// lets the board appearance preferences (Traditional / Square grid) reach it at
+// all: 'Square grid' is a different way of drawing the board, not a flag.
+const JIEQI_GEO: XiangqiBoardGeometry = {
+  fileCount: FILES,
+  rankCount: RANKS,
+  cell: CELL,
+  margin: MARGIN,
+  riverGap: Math.round(CELL / 5),
+};
+const JIEQI_SURFACE: XiangqiSurfaceConfig = {
+  geo: JIEQI_GEO,
+  palaces: [
+    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
+    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
+  ],
+  // The river breaks the interior files. Jieqi carries no 楚河漢界 caption, so
+  // no riverLabel: the gap alone is the cue, as it was before this shared.
+  riverAfterRank: 5,
+};
+// The layout for the CURRENT render. The exported marker/arrow helpers take a
+// perspective but no layout (they are called for whatever board is on screen),
+// so the renderer records it here rather than re-reading localStorage per point.
+let activeLayout: XiangqiBoardLayout = 'intersection';
 // Shared board rounding (board-metrics), so this board's corner matches every
 // other board's at the same rendered width.
 const BOARD_CORNER_RX = boardCornerRadius(WIDTH);
@@ -51,6 +91,8 @@ export type JieqiBoardRenderOptions = {
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
   draggingFrom?: JieqiSquare | null;
+  /** Override the stored board-layout preference (tests, previews). */
+  layout?: XiangqiBoardLayout;
 };
 
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
@@ -81,9 +123,9 @@ function intersection(
   file: number,
   rank: number,
   perspective: JieqiColor,
+  layout: XiangqiBoardLayout = activeLayout,
 ): { x: number; y: number } {
-  const displayFile = perspective === 'red' ? file : FILES - 1 - file;
-  return { x: MARGIN + displayFile * CELL, y: MARGIN + displayRankFor(rank, perspective) * CELL };
+  return xiangqiBoardPoint(file, rank, perspective, layout, JIEQI_GEO);
 }
 
 export function renderJieqiBoardSvg(
@@ -93,10 +135,34 @@ export function renderJieqiBoardSvg(
 ): string {
   const pieceSet = options.pieceSet ?? readStoredXiangqiPieceSet();
   const legalMoves = options.legalMoves ?? [];
+  const layout = options.layout ?? readStoredXiangqiBoardLayout();
+  activeLayout = layout;
+  const vb = xiangqiBoardViewBox(layout, JIEQI_GEO);
+  // The square grid paints its own cells, so the board-coloured backdrop only
+  // applies to the intersection layout; on 'cell' it would tint the river gap.
+  const backdrop =
+    layout === 'cell'
+      ? ''
+      : `<rect class="jieqi-board-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}" rx="${BOARD_CORNER_RX}"/>`;
+  // Emitted only when they draw something. The intersection layout has neither a
+  // river tint nor palace bands (the gap and the diagonals are its cues), and an
+  // empty <g> would still put its class in the markup, which reads as a tint
+  // that is not there.
+  const riverInner = xiangqiSurfaceRiver(JIEQI_SURFACE, perspective, layout);
+  const river = riverInner
+    ? `<g class="jieqi-river xq-live-river" aria-hidden="true" pointer-events="none">${riverInner}</g>`
+    : '';
+  const bandsInner =
+    layout === 'cell' ? xiangqiSurfacePalaceBands(JIEQI_SURFACE, perspective, layout) : '';
+  const palaceBands = bandsInner
+    ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
+    : '';
   return `
-    <svg class="jieqi-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
-      <rect class="jieqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${BOARD_CORNER_RX}"/>
-      <g class="jieqi-grid">${gridLines()}${palaceCrosses(perspective)}</g>
+    <svg class="jieqi-board jieqi-board--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
+      ${backdrop}
+      ${river}
+      ${palaceBands}
+      <g class="jieqi-grid">${xiangqiSurfaceGrid(JIEQI_SURFACE, layout)}${xiangqiSurfacePalace(JIEQI_SURFACE, perspective, layout)}</g>
       ${lastMoveMarkers(view, perspective)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
@@ -173,45 +239,6 @@ export function jieqiPieceGhostSvg(
         size: PIECE_SIZE,
       });
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
-}
-
-function gridLines(): string {
-  const parts: string[] = [];
-  for (let r = 0; r < RANKS; r += 1) {
-    const y = MARGIN + r * CELL;
-    parts.push(`<line x1="${MARGIN}" y1="${y}" x2="${MARGIN + (FILES - 1) * CELL}" y2="${y}"/>`);
-  }
-  for (let f = 0; f < FILES; f += 1) {
-    const x = MARGIN + f * CELL;
-    if (f === 0 || f === FILES - 1) {
-      // Edge files run the full height across the river.
-      parts.push(`<line x1="${x}" y1="${MARGIN}" x2="${x}" y2="${MARGIN + (RANKS - 1) * CELL}"/>`);
-    } else {
-      // Interior files stop at the river banks (the xiangqi river gap).
-      parts.push(`<line x1="${x}" y1="${MARGIN}" x2="${x}" y2="${RIVER_TOP}"/>`);
-      parts.push(
-        `<line x1="${x}" y1="${RIVER_BOTTOM}" x2="${x}" y2="${MARGIN + (RANKS - 1) * CELL}"/>`,
-      );
-    }
-  }
-  return parts.join('');
-}
-
-function palaceCrosses(perspective: JieqiColor): string {
-  const parts: string[] = [];
-  // Palace files d..f (3..5); red ranks 1..3, black ranks 8..10.
-  for (const palace of [
-    { lo: 1, hi: 3 },
-    { lo: 8, hi: 10 },
-  ]) {
-    const a = intersection(3, palace.hi, perspective);
-    const b = intersection(5, palace.lo, perspective);
-    const c = intersection(5, palace.hi, perspective);
-    const d = intersection(3, palace.lo, perspective);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`);
-  }
-  return parts.join('');
 }
 
 // Each piece is wrapped in a positioned slot keyed by its square, so the glide

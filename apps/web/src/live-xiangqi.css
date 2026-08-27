@@ -18,6 +18,12 @@
   --uni-board-aspect: calc(660 / 732);
 }
 
+/* Square grid spans full cells plus the river gap, so it is a different
+   rectangle from the intersection layout (9*72 wide, 10*72 + 14 tall). */
+:root[data-xiangqi-board-layout="cell"] .live-route--jieqi {
+  --uni-board-aspect: calc(648 / 734);
+}
+
 .live-route--jieqi .board-status {
   width: 100%;
 }
