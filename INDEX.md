@@ -1031,3 +1031,8 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 |------|------|
 | `apps/web/src/grid-board-overlays.ts` | _needs a one-line description_ |
 | `apps/web/src/variant-tenant/board-annotations.ts` | _needs a one-line description_ |
+| `apps/server/src/historical-xiangqi-digest.ts` | Content identity for archive game rows: the hash `content_sha256` uses, keyed on date+result+moves so a re-anonymized re-import dedupes. |
+| `apps/server/src/rehash-historical-xiangqi.ts` | One-off repair: recompute `content_sha256` for a source and drop the duplicates that surface. Dry-run by default. |
+| `apps/web/src/review/xiangqi-game-source.ts` | Resolve a Mistboard game link (played / archive / broadcast) into moves a study chapter can hold. |
+| `apps/web/src/review/xiangqi-pgn-chapter.ts` | Translate between a parsed PGN game and a study chapter tree, both directions, plus whole-study PGN export. |
+| `apps/web/src/study-chapter-dialog.ts` | The New Chapter dialog: name, an Empty/Position/Game/PGN source tab strip, and the create or import each one runs. |

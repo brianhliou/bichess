@@ -10,6 +10,35 @@ const RESULTS = new Set<persistence.HistoricalXiangqiResult>(['1-0', '0-1', '1/2
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const RESERVED_SOURCES = new Set(['mistboard', 'broadcast']);
 
+// `tags` is the source's own row, stored verbatim so an import stays lossless and
+// re-derivable. Serving it verbatim is a different decision, and the wrong one:
+// ElephantChess rows carry `redPlayerId`/`blackPlayerId` (pseudonymous keys that
+// are stable within a dump, so publishing them hands out a join key linking one
+// player's games) plus `sourceFile`, their internal CSV name. None of that is
+// ours to publish and none of it is read by anything.
+//
+// Allowlist, not denylist: a new source's tags arrive unreviewed, so the default
+// has to be "not served". These seven are exactly what the archive page renders
+// (see historicalProvenance in historical-xiangqi-postgame.ts). The stored row is
+// untouched — this redacts the response, not the import.
+const PUBLIC_TAG_KEYS = [
+  'timeControl',
+  'timeControlCategory',
+  'ratingMode',
+  'redEloBefore',
+  'redEloAfter',
+  'blackEloBefore',
+  'blackEloAfter',
+] as const;
+
+export function publicTags(tags: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of PUBLIC_TAG_KEYS) {
+    if (tags[key] !== undefined && tags[key] !== null) out[key] = tags[key];
+  }
+  return out;
+}
+
 type UnifiedXiangqiSearchItem = {
   id: string;
   kind: 'mistboard' | 'historical' | 'broadcast';
@@ -60,7 +89,7 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { game });
+    writeJson(response, 200, { game: { ...game, tags: publicTags(game.tags) } });
     return true;
   }
 
