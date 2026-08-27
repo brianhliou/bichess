@@ -43,7 +43,11 @@ a.site-box-top:focus-visible .site-box-more {
 }
 
 /* Row helpers: widgets opt in by using .site-box-row children. Zebra carries
-   the rhythm, no per-row borders (same rule as the leaderboard/watch queue). */
+   the rhythm, no per-row borders (same rule as the leaderboard/watch queue).
+   Widgets that change the layout (grid columns, align-items, padding) must do
+   it with a two-class selector (.site-box-row.my-row): this file is shared, so
+   Vite may emit it in a later CSS chunk than the widget's own stylesheet, and a
+   same-specificity override then loses on source order. */
 .site-box-row {
   display: flex;
   align-items: baseline;
