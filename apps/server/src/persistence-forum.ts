@@ -1,5 +1,6 @@
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import { ensureForumTopicWatch, isWatchingForumTopic } from './persistence-forum-watches.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
 export type ForumTopicWritePolicy = 'account' | 'admin';
@@ -75,6 +76,9 @@ export type ForumPost = {
 
 export type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
+  // The signed-in reader's own watch state (123); null for anonymous reads,
+  // which keep the pre-123 shape.
+  viewer: { watching: boolean } | null;
 };
 
 export type ForumPostSearchPage = {
@@ -446,7 +450,7 @@ export async function getForumPostLocation(
 
 export async function getForumTopic(
   id: string,
-  options: { postLimit?: number; postOffset?: number } = {},
+  options: { postLimit?: number; postOffset?: number; viewerAccountId?: string | null } = {},
 ): Promise<ForumTopicDetail | null> {
   const { rows } = await getPool().query<ForumTopicRow>(
     `${FORUM_TOPIC_SELECT}
@@ -455,8 +459,13 @@ export async function getForumTopic(
   );
   const topic = rows[0] ? topicFromRow(rows[0]) : null;
   if (!topic) return null;
-  const posts = await listForumPosts(id, { limit: options.postLimit, offset: options.postOffset });
-  return { ...topic, posts };
+  const [posts, watching] = await Promise.all([
+    listForumPosts(id, { limit: options.postLimit, offset: options.postOffset }),
+    options.viewerAccountId
+      ? isWatchingForumTopic(options.viewerAccountId, id)
+      : Promise.resolve(null),
+  ]);
+  return { ...topic, posts, viewer: watching === null ? null : { watching } };
 }
 
 export async function createForumTopic(input: {
@@ -500,6 +509,12 @@ export async function createForumTopic(input: {
        VALUES ($1, $2, $3, $4, $5, $5)`,
       [input.postId, input.id, input.authorAccountId, input.bodyText, input.now],
     );
+    // Starting a thread watches it (123): replies land in the author's bell.
+    await ensureForumTopicWatch(client, {
+      accountId: input.authorAccountId,
+      topicId: input.id,
+      now: input.now,
+    });
     return { ok: true };
   });
   if (!result.ok) return result;
@@ -552,6 +567,13 @@ export async function addForumPost(input: {
        WHERE id = $1`,
       [input.topicId, input.now],
     );
+    // Replying watches the thread (123), and counts as having read it up to
+    // this moment. Overrides a prior unwatch on purpose: replying is opting in.
+    await ensureForumTopicWatch(client, {
+      accountId: input.authorAccountId,
+      topicId: input.topicId,
+      now: input.now,
+    });
     const post = postFromRow(rows[0]!);
     return { ok: true, post };
   });

@@ -75,6 +75,8 @@ type ForumPost = {
 
 type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
+  // The signed-in reader's own watch state; null (or absent) when anonymous.
+  viewer?: { watching: boolean } | null;
 };
 
 type ForumPostSearchResult = {
@@ -328,6 +330,8 @@ export async function mountForumTopic(root: HTMLElement, topicId: string): Promi
   else panel.append(user ? replyForm(topic, user) : signInBox(t('forum.signInToReply')));
 
   shell.append(panel);
+  // Read receipt for the bell: the watcher has now seen this page of replies.
+  if (user && topic.viewer?.watching) markTopicSeen(topic.id);
 }
 
 export async function mountForumPostRedirect(root: HTMLElement, postId: string): Promise<void> {
@@ -676,6 +680,7 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
     forumBackLink(categoryHref(topic.category), `Back to ${topic.category.name}`),
     heading,
   );
+  if (user) titleRow.append(topicWatchButton(topic));
   if (canReportForumContent(topic.author, user)) titleRow.append(topicReportButton(topic));
   const meta = document.createElement('p');
   meta.className = 'forum-sub';
@@ -1075,6 +1080,37 @@ function topicInlinePageLinks(topic: ForumTopicSummary): HTMLElement | null {
 
 function replyCount(topic: ForumTopicSummary): number {
   return Math.max(0, topic.postCount - 1);
+}
+
+// Watch toggle: replies in a watched topic land in the nav bell. aria-pressed
+// carries the state so the label stays a plain verb; the title says what
+// watching does, since the bell is its only visible effect.
+function topicWatchButton(topic: ForumTopicDetail): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'forum-topic-watch';
+  let watching = topic.viewer?.watching === true;
+  const render = () => {
+    button.textContent = watching ? t('forum.watching') : t('forum.watch');
+    button.title = watching ? t('forum.watchingHint') : t('forum.watchHint');
+    button.setAttribute('aria-pressed', watching ? 'true' : 'false');
+  };
+  render();
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    void submitTopicWatch(topic.id, !watching)
+      .then((next) => {
+        watching = next;
+        render();
+      })
+      .catch((err) => {
+        window.alert(err instanceof Error ? err.message : t('forum.watchCouldNotChange'));
+      })
+      .finally(() => {
+        button.disabled = false;
+      });
+  });
+  return button;
 }
 
 function topicReportButton(topic: ForumTopicDetail): HTMLButtonElement {
@@ -2218,6 +2254,25 @@ function errorMessageForReportStatus(status: number): string {
   if (status === 409) return t('forum.errAlreadyReported');
   if (status >= 500) return t('forum.errUnavailable');
   return t('forum.reportCouldNotBeSent');
+}
+
+async function submitTopicWatch(topicId: string, watching: boolean): Promise<boolean> {
+  const resp = await fetch(`/api/forum/topics/${encodeURIComponent(topicId)}/watch`, {
+    method: watching ? 'PUT' : 'DELETE',
+    headers: { accept: 'application/json' },
+  });
+  if (!resp.ok) throw new Error(errorMessageForStatus(resp.status));
+  const data = (await resp.json()) as { watching: boolean };
+  return data.watching === true;
+}
+
+// Fire-and-forget: the server no-ops for non-watchers, and a lost call only
+// means the badge clears one visit later.
+function markTopicSeen(topicId: string): void {
+  void fetch(`/api/forum/topics/${encodeURIComponent(topicId)}/seen`, {
+    method: 'POST',
+    headers: { accept: 'application/json' },
+  }).catch(() => null);
 }
 
 async function submitTopicReport(topicId: string, reason: string): Promise<void> {

@@ -4,7 +4,8 @@
 // since I last looked?" Two shapes appear:
 //   - watermarked feeds (new followers, forum replies) are append-only, so the
 //     count is rows-after-users.<kind>_seen_at and "reading" them is a single
-//     timestamp write.
+//     timestamp write. Forum replies add a second, per-topic watermark on the
+//     watch row (123) so reading one thread clears just that thread.
 //   - live-state counts (unread DMs, your-move games, incoming challenges) have
 //     no watermark: the thing itself is either still pending or it is not, so a
 //     watermark would let a badge lie about work that is still outstanding.
@@ -43,23 +44,86 @@ export async function countNewFollowers(userId: string): Promise<number> {
   return Number(rows[0]?.count ?? 0);
 }
 
-// Replies by other people on topics this user started, since they last looked.
-// Hidden posts and hidden topics are excluded so a moderated reply does not
-// leave a badge the user can never clear by reading.
-export async function countForumReplies(userId: string): Promise<number> {
-  const { rows } = await getPool().query<{ count: string }>(
-    `SELECT count(*)::text AS count
-     FROM forum_posts p
-     JOIN forum_topics t ON t.id = p.topic_id
-     JOIN users u ON u.id = $1
-     WHERE t.author_account_id = $1
-       AND p.author_account_id IS DISTINCT FROM $1
-       AND p.hidden_at IS NULL
-       AND t.hidden_at IS NULL
-       AND p.created_at > u.forum_replies_seen_at`,
-    [userId],
+export type ForumWatchNotification = {
+  topicId: string;
+  slug: string;
+  title: string;
+  unread: number;
+  // The oldest unread reply: the bell row deep-links to it through the post
+  // redirect route, so one click lands where the reader left off.
+  firstUnreadPostId: string;
+};
+
+export type UnreadWatchedForumTopics = {
+  // Topics with at least one unread reply. The badge counts THESE, not
+  // replies: one busy thread is a 1, not a 40.
+  total: number;
+  // The most recently active of them, capped by the caller.
+  topics: ForumWatchNotification[];
+};
+
+// Unread activity older than this drops off the bell by itself. The watch row
+// stays; a thread the user walked away from simply stops asking for them.
+export const FORUM_UNREAD_WINDOW_DAYS = 30;
+
+// Replies by other people in the topics this user watches (123), grouped per
+// topic. A reply is unread when it postdates BOTH the bell watermark (opening
+// the panel) and the topic's own seen_at (visiting the thread). Left out so
+// the badge never points at something the user cannot see or does not want:
+// hidden posts and topics, their own posts, replies from accounts they block,
+// and anything older than the window.
+export async function unreadWatchedForumTopics(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<UnreadWatchedForumTopics> {
+  const limit = Math.max(1, Math.min(20, Math.floor(options.limit ?? 5)));
+  const { rows } = await getPool().query<{
+    topic_id: string;
+    slug: string;
+    title: string;
+    unread: number;
+    first_unread_post_id: string;
+    total: number;
+  }>(
+    `WITH unread AS (
+       SELECT t.id AS topic_id, t.slug, t.title, t.last_post_at,
+              count(*)::int AS unread,
+              (array_agg(p.id ORDER BY p.created_at ASC, p.id ASC))[1] AS first_unread_post_id
+       FROM forum_topic_watches w
+       JOIN users u ON u.id = w.account_id
+       JOIN forum_topics t ON t.id = w.topic_id AND t.hidden_at IS NULL
+       JOIN forum_posts p ON p.topic_id = t.id
+         AND p.hidden_at IS NULL
+         AND p.author_account_id IS DISTINCT FROM w.account_id
+         AND p.created_at > GREATEST(u.forum_replies_seen_at, w.seen_at)
+         AND p.created_at > now() - make_interval(days => $2::int)
+         AND NOT EXISTS (
+           SELECT 1
+           FROM user_relations b
+           WHERE b.actor_id = w.account_id
+             AND b.target_id = p.author_account_id
+             AND b.relation = 'block'
+         )
+       WHERE w.account_id = $1
+       GROUP BY t.id, t.slug, t.title, t.last_post_at
+     )
+     SELECT topic_id, slug, title, unread, first_unread_post_id,
+            (count(*) OVER ())::int AS total
+     FROM unread
+     ORDER BY last_post_at DESC, topic_id ASC
+     LIMIT $3::int`,
+    [userId, FORUM_UNREAD_WINDOW_DAYS, limit],
   );
-  return Number(rows[0]?.count ?? 0);
+  return {
+    total: rows[0]?.total ?? 0,
+    topics: rows.map((row) => ({
+      topicId: row.topic_id,
+      slug: row.slug,
+      title: row.title,
+      unread: row.unread,
+      firstUnreadPostId: row.first_unread_post_id,
+    })),
+  };
 }
 
 // Directed correspondence challenges still awaiting this user's answer. Live

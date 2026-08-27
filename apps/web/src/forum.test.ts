@@ -522,6 +522,64 @@ describe('forum pages', () => {
     expect(select?.value).toBe('feedback');
   });
 
+  it('lets a signed-in reader watch and unwatch a topic', async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url === '/api/forum/topics/topic_strategy/watch') {
+        return json({ watching: init?.method === 'PUT' });
+      }
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({ topic: { ...topic, posts: [], viewer: { watching: false } } });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    const button = root.querySelector<HTMLButtonElement>('button.forum-topic-watch');
+    expect(button?.textContent).toBe('Watch');
+    expect(button?.getAttribute('aria-pressed')).toBe('false');
+    // Not watching, so this visit sends no read receipt.
+    expect(calls.some((call) => call.endsWith('/seen'))).toBe(false);
+
+    button?.click();
+    await vi.waitFor(() => expect(button?.textContent).toBe('Watching'));
+    expect(button?.getAttribute('aria-pressed')).toBe('true');
+    expect(calls).toContain('PUT /api/forum/topics/topic_strategy/watch');
+
+    button?.click();
+    await vi.waitFor(() => expect(button?.textContent).toBe('Watch'));
+    expect(calls).toContain('DELETE /api/forum/topics/topic_strategy/watch');
+  });
+
+  it('sends a read receipt when a watcher opens the topic', async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url === '/api/forum/topics/topic_strategy/seen') return json({ ok: true });
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({ topic: { ...topic, posts: [], viewer: { watching: true } } });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    expect(root.querySelector('button.forum-topic-watch')?.textContent).toBe('Watching');
+    expect(calls).toContain('POST /api/forum/topics/topic_strategy/seen');
+  });
+
   it('renders topic moderation controls for admins', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);

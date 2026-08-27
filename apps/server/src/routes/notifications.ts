@@ -20,9 +20,27 @@ export type NotificationCounts = {
   inboxUnread: number;
   correspondenceYourMove: number;
   newFollowers: number;
-  forumReplies: number;
+  // Watched forum topics with unread replies (123). Topics, not replies, so
+  // one busy thread cannot swamp the badge.
+  forumTopics: number;
   incomingChallenges: number;
 };
+
+export type ForumWatchNotificationJson = {
+  topicId: string;
+  slug: string;
+  title: string;
+  unread: number;
+  firstUnreadPostId: string;
+};
+
+// The bell payload: every count, plus the per-topic rows behind forumTopics
+// (capped, most recently active first) so the panel can deep-link each one.
+export type NotificationsPayload = NotificationCounts & {
+  forumWatched: ForumWatchNotificationJson[];
+};
+
+const FORUM_BELL_ROWS = 5;
 
 async function countOrZero(work: Promise<number>): Promise<number> {
   try {
@@ -47,7 +65,7 @@ export async function tryHandle(
       return true;
     }
 
-    const [inboxUnread, correspondenceYourMove, newFollowers, forumReplies, incomingChallenges] =
+    const [inboxUnread, correspondenceYourMove, newFollowers, forumWatched, incomingChallenges] =
       await Promise.all([
         countOrZero(persistence.countUnreadDmThreads(user.id)),
         countOrZero(
@@ -56,18 +74,21 @@ export async function tryHandle(
             .then((games) => games.reduce((count, game) => count + (game.isYourMove ? 1 : 0), 0)),
         ),
         countOrZero(persistence.countNewFollowers(user.id)),
-        countOrZero(persistence.countForumReplies(user.id)),
+        persistence
+          .unreadWatchedForumTopics(user.id, { limit: FORUM_BELL_ROWS })
+          .catch((): persistence.UnreadWatchedForumTopics => ({ total: 0, topics: [] })),
         countOrZero(persistence.countIncomingChallenges(user.id)),
       ]);
 
-    const counts: NotificationCounts = {
+    const payload: NotificationsPayload = {
       inboxUnread,
       correspondenceYourMove,
       newFollowers,
-      forumReplies,
+      forumTopics: forumWatched.total,
       incomingChallenges,
+      forumWatched: forumWatched.topics,
     };
-    writeJson(response, 200, counts);
+    writeJson(response, 200, payload);
     return true;
   }
 
