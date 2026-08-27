@@ -9,6 +9,8 @@
 // The two callers differ only in ingress + metadata. The board is INTERACTIVE
 // (play a move → it branches the tree, promote/delete variations).
 
+import { LIVE_BOARD_GEO } from '../xiangqi-board.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import {
   fsfUciToXiangqiSquares,
   type StandardXiangqiPlayerView,
@@ -73,7 +75,7 @@ const xiangqiPresentation: TreePresentation<
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Xiangqi board',
-  boardAspect: () => (readStoredXiangqiBoardLayout() === 'cell' ? 540 / 612 : 552 / 612),
+  boardAspect: () => xiangqiBoardAspect(LIVE_BOARD_GEO),
   boardCols: 9,
   // The xiangqi board renders pieces as inline SVG, so a piece-set change needs a
   // re-render (the chess board picks up its set via CSS and does not).

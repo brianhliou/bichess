@@ -10,6 +10,10 @@
 // marker remains a separate slice. Drop reserves and the drop gesture are both
 // absent here by choice; drops still replay in the mainline.
 
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { FXQ_GEO } from '../fortress-xiangqi-render.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import {
   type FortressXiangqiColor,
   type FortressXiangqiGameState,
@@ -90,7 +94,13 @@ const fortressPresentation: TreePresentation<
   boardHostClassName: 'fortress-xiangqi-postgame-board fortress-xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Fortress Xiangqi board',
-  boardAspect: 516 / 588,
+  boardAspect: () => xiangqiBoardAspect(FXQ_GEO),
+  // Both events matter now that coordinates are drawn ON the board: a notation
+  // change relabels them, and toggling them changes the board's geometry. Before
+  // that, this surface needed neither -- its pieces pick up their set via CSS --
+  // which is why /analysis/{variant} ignored every appearance change until 2026-08-27.
+  appearanceEvent: xiangqiAppearanceChangedEvent,
+  labelsEvent: xiangqiNotationChangedEvent,
   boardCols: 7,
   perspective: (flipped) => (flipped ? 'black' : 'red'),
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),

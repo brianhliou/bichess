@@ -114,7 +114,7 @@ const FOG_OVERLAP = 0.5;
 // beyond the appearance preferences finally reaching this board: flipping now
 // ROTATES 180 rather than mirroring the rank only (this file carried the same
 // defect standard xiangqi did), and 'Square grid' works here as well.
-const FOG_GEO: XiangqiBoardGeometry = {
+export const FOG_GEO: XiangqiBoardGeometry = {
   fileCount: FILE_COUNT,
   rankCount: RANK_COUNT,
   cell: CELL,

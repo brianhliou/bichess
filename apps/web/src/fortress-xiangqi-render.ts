@@ -79,7 +79,7 @@ type Palace = { fileLo: number; fileHi: number; rankLo: number; rankHi: number }
 // Its river is a TINTED BAND rather than a caption and its palace bands carry
 // their own class, so those stay local for the intersection layout; the square
 // grid uses the shared ones, which is where the tinted cells are the cue.
-const FXQ_GEO: XiangqiBoardGeometry = {
+export const FXQ_GEO: XiangqiBoardGeometry = {
   fileCount: FILES,
   rankCount: RANKS,
   cell: CELL,

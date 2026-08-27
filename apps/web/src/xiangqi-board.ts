@@ -61,7 +61,7 @@ const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const CELL_RIVER_GAP = 12;
 // The live board's config for the shared geometry core; the article diagrams use
 // their own (smaller) config against the same transform.
-const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
+export const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
   fileCount: FILE_COUNT,
   rankCount: RANK_COUNT,
   cell: CELL,

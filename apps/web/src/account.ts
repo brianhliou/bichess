@@ -26,6 +26,7 @@ import {
   writeDisplayPreference,
 } from './display-preferences.js';
 import { buildFlairIcon, FLAIR_KEYS, flairLabel } from './flair.js';
+import { setBoardCoordinatesPreference } from './theme.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
@@ -964,6 +965,14 @@ function buildBooleanDisplayPreference(
   input.name = id;
   input.checked = value;
   input.addEventListener('change', () => {
+    // Board coordinates change the board's geometry, so they go through the
+    // theme setter: it persists, stamps the root attribute CSS reads for the
+    // matching aspect ratio, and fires the event boards re-render on. Writing
+    // the preference alone would leave every mounted board stale until reload.
+    if (id === 'boardCoordinates') {
+      setBoardCoordinatesPreference(input.checked);
+      return;
+    }
     writeDisplayPreference(id, input.checked as DisplayPreferenceValue<typeof id>);
   });
 

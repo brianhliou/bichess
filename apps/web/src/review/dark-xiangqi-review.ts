@@ -9,9 +9,12 @@
 // replay all work. In analysis the game is fully revealed, so the tree replays and
 // branches on the TRUE move history like an open variant.
 
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import type { XiangqiColor, XiangqiGameState, XiangqiMove } from '@mistboard/game';
 import { createDarkXiangqiInteractiveBoard } from '../dark-xiangqi-tree-board.js';
-import type { DarkXiangqiWireView } from '../live-dark-xiangqi.js';
+import { FOG_GEO, type DarkXiangqiWireView } from '../live-dark-xiangqi.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { darkXiangqiTreeAdapter } from './dark-xiangqi-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
 import {
@@ -43,7 +46,13 @@ const darkXiangqiPresentation: TreePresentation<
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Fog Xiangqi board',
-  boardAspect: 552 / 612,
+  boardAspect: () => xiangqiBoardAspect(FOG_GEO),
+  // Both events matter now that coordinates are drawn ON the board: a notation
+  // change relabels them, and toggling them changes the board's geometry. Before
+  // that, this surface needed neither -- its pieces pick up their set via CSS --
+  // which is why /analysis/{variant} ignored every appearance change until 2026-08-27.
+  appearanceEvent: xiangqiAppearanceChangedEvent,
+  labelsEvent: xiangqiNotationChangedEvent,
   boardCols: 9,
   perspective: (flipped) => (flipped ? 'black' : 'red'),
   // Review plays BOTH sides on the truth board: the interactive seat is the side

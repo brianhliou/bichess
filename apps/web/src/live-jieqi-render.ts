@@ -58,7 +58,7 @@ const HIT_HALF = 31;
 // rather than keeping its own copy of the grid and palace drawing. That is what
 // lets the board appearance preferences (Traditional / Square grid) reach it at
 // all: 'Square grid' is a different way of drawing the board, not a flag.
-const JIEQI_GEO: XiangqiBoardGeometry = {
+export const JIEQI_GEO: XiangqiBoardGeometry = {
   fileCount: FILES,
   rankCount: RANKS,
   cell: CELL,

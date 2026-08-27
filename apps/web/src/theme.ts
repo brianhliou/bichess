@@ -1,7 +1,7 @@
 import './theme.css';
 import type { GameFamilyId } from '@mistboard/game';
 import type { ConnectionStatus } from './connection-status.js';
-import { readDisplayPreferences } from './display-preferences.js';
+import { readDisplayPreferences, writeDisplayPreference } from './display-preferences.js';
 import type { Locale } from './i18n/locale.js';
 import {
   readStoredShogiBoardTheme,
@@ -301,9 +301,23 @@ export function setShogiPieceSetPreference(pieceSet: ShogiPieceSet): void {
 export function setXiangqiNotationPreference(value: XiangqiNotationPreference): void {
   writeStoredXiangqiNotation(value);
   syncThemeControls();
-  // Display-only preference: review surfaces relabel their move trees on this
-  // event; no board appearance is involved.
+  // Review surfaces relabel their move trees on this event.
   window.dispatchEvent(new Event(xiangqiNotationChangedEvent));
+  // The notation ALSO draws on the board now: coordinate labels follow it, and
+  // the four styles do not agree on what a file is called or whether ranks are
+  // named at all. It stopped being display-only the day coordinates shipped, so
+  // the boards have to re-render too.
+  dispatchXiangqiAppearanceChanged();
+}
+
+/** Turning board coordinates on or off changes the board's geometry, not just
+ *  its paint: the label gutter is reserved only while they are shown. Boards
+ *  re-render on the appearance event, and the root attribute is what CSS reads
+ *  to pick the matching aspect ratio. */
+export function setBoardCoordinatesPreference(on: boolean): void {
+  writeDisplayPreference('boardCoordinates', on);
+  applyBoardCoordinates(on);
+  dispatchXiangqiAppearanceChanged();
 }
 
 export function setSoundVolumePreference(volume: number): void {
