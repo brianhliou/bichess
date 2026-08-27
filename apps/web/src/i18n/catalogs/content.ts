@@ -256,7 +256,7 @@ export const EN_CONTENT = {
     'No. Engines only receive the information allowed by the game they are playing. In hidden-information games, that means the same redacted view a human player receives; the true board stays server-side for adjudication.',
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
-    'No. Live games are not spectatable, so no one can feed a player the full board mid-game. Once a game finishes, anyone can replay it from either side or with the full board revealed.',
+    'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
     'Rated play is account-backed human-vs-human play in supported ladder variants. During beta, ladders may be provisional while ratings calibrate. Engine games and casual games do not count.',
