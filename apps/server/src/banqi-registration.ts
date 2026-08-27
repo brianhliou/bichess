@@ -8,6 +8,7 @@
 import type { RoomTimeControl } from '@mistboard/game';
 import type { BanqiCreatorPreference, BanqiRuntimeRoom } from './banqi-runtime.js';
 import { banqiTenant } from './banqi-tenant.js';
+import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleBanqiCreate, requestsBanqi } from './routes/banqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
@@ -104,6 +105,13 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // JSON only. Results are recorded by SEAT; the ink the first seat bound on its
+  // opening flip rides along so a consumer can tell which pieces the winner played.
+  export: tenantExportBinding(banqiTenant, {
+    gameRouteBase: '/banqi/game',
+    uci: flipOrBoardMoveUci,
+    firstMoverInk: (state) => state.firstColor,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

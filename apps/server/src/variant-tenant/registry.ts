@@ -103,10 +103,58 @@ export type VariantTenantWatchChannel = {
   default?: boolean;
 };
 
+// One exported ply of a FINISHED tenant game, already type-erased: the mover
+// is the tenant's color word, the move is a coordinate string in the encoding
+// documented in game-export-tenant.ts, and `san` is null unless the tenant has
+// a real human notation for the move (xiangqi WXF).
+export type TenantExportPly = {
+  ply: number;
+  mover: string;
+  uci: string;
+  san: string | null;
+  // Remaining clock per color after the move, when the event carried a clock.
+  clockMsAfter: Readonly<Record<string, number>> | null;
+};
+
+export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
+
+export type TenantExportGame = {
+  // Move order: [first mover, second mover], the tenant's own color words.
+  colors: readonly [string, string];
+  plies: readonly TenantExportPly[];
+  // Flip variants only (banqi, jungle-flip): the ink the first-mover seat bound
+  // on its opening flip. The result is recorded by seat, so a consumer needs
+  // this to know which pieces the winner actually played.
+  firstMoverInk?: string | null;
+  // Present only for tenants with an honest movetext notation. Receives the
+  // full tag block the neutral builder assembled (Event, Site, Date, Round, the
+  // two color-named player tags, Result, Variant, ...) and the result token;
+  // returns the complete PGN text.
+  writePgn?: (tags: Readonly<Record<string, string>>, result: TenantExportPgnResult) => string;
+};
+
+// Export capability for `GET /api/games/:roomId/export.{pgn,json}`. Bound by
+// the registration because only the tenant can validate its event log, replay
+// it, and read its moves; the route and the builders never learn a variant's
+// Color/Move. `finishedGame` returns null unless the log is this tenant's AND
+// the replay ends 'finished' (the same rule the postgame routes apply), which
+// is what keeps an in-progress fog game's moves off the wire. Absent = the
+// tenant exports nothing; the route answers 501 (fail-closed, and
+// packages/game export-formats.ts must agree, see game-export-tenant.test.ts).
+export type VariantTenantExport = {
+  // Review URL base for this tenant's finished games, e.g. '/xiangqi/game'
+  // (mirrors gameRouteBase in apps/web's variant-tenant registry).
+  gameRouteBase: string;
+  finishedGame(events: readonly unknown[], roomId: string): TenantExportGame | null;
+};
+
 export type VariantTenantRegistration = {
   kind: string;
   gameSpecId: string;
   roomIdPrefix: string;
+  // PGN/JSON export of finished games, or null/absent when the tenant exports
+  // nothing (see VariantTenantExport).
+  export?: VariantTenantExport | null;
   // Mistboard TV channel for this tenant, or null/absent when it has no watch
   // surface. Derived into WatchChannel by watch-channels.ts.
   watch?: VariantTenantWatchChannel | null;

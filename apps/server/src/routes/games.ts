@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { Color, GameEvent, TimeClass } from '@mistboard/game';
+import type { Color, GameEvent, GameExportFormat, TimeClass } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import {
   decisionLogAvailable,
@@ -8,7 +8,7 @@ import {
 } from './../dev-decision-log-artifacts.js';
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
-import { buildGamePgn, buildGamePublicationJson } from './../game-export.js';
+import { resolveGameExport } from './../game-export-tenant.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
@@ -420,36 +420,23 @@ export async function tryHandle(
   if (exportMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
     const roomId = decodeURIComponent(exportMatch[1]!);
-    const format = exportMatch[2]!;
-    const summary = await gameSummaryForApi(ctx, roomId);
-    const events = await gameEventsForApi(ctx, roomId);
-    const replayResponse = eventReplayResponse(events);
-    if (replayResponse.status !== 200 || !summary || !events) {
-      writeJson(response, replayResponse.status, replayResponse.body);
+    const format = exportMatch[2] as GameExportFormat;
+    // Chess-family logs take the legacy builders; every variant tenant resolves
+    // through its registry export binding (see game-export-tenant.ts).
+    const [summary, events] = await Promise.all([
+      gameSummaryForApi(ctx, roomId),
+      gameEventsForApi(ctx, roomId),
+    ]);
+    const resolved = resolveGameExport({ roomId, format, summary, events });
+    if (resolved.status !== 200) {
+      writeJson(response, resolved.status, resolved.body);
       return true;
     }
-    if (summary.variant === 'draft960') {
-      writeJson(response, 501, {
-        error: 'export_not_supported_for_variant',
-        variant: summary.variant,
-      });
-      return true;
-    }
-    if (format === 'pgn') {
-      const pgn = buildGamePgn(summary, events);
-      response.writeHead(200, {
-        'content-type': 'application/x-chess-pgn; charset=utf-8',
-        'content-disposition': `inline; filename="mistboard-${roomId}.pgn"`,
-      });
-      response.end(pgn);
-      return true;
-    }
-    const payload = buildGamePublicationJson(summary, events);
     response.writeHead(200, {
-      'content-type': 'application/json; charset=utf-8',
-      'content-disposition': `inline; filename="mistboard-${roomId}.json"`,
+      'content-type': resolved.contentType,
+      'content-disposition': `inline; filename="mistboard-${roomId}.${resolved.format}"`,
     });
-    response.end(JSON.stringify(payload));
+    response.end(resolved.body);
     return true;
   }
 

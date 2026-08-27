@@ -395,6 +395,7 @@ export const EN_REVIEW = {
   'underboard.moveTimes': 'Move times',
   'underboard.crosstable': 'Crosstable',
   'underboard.shareExport': 'Share & export',
+  'underboard.download': 'Download',
   'annotate.comment': 'Comment',
   'annotate.glyphs': 'Glyphs',
   'annotate.lesson': 'Lesson',

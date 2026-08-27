@@ -13,6 +13,7 @@ Edit task → find file → open only that file.
 |------|------|
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
 | `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, shogi, jungle, military-chess, ...), board geometries, movement/objective rules, and the open / dark / hidden-identity visibility axis that fail-closed variant dispatch keys on |
+| `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
 | `engine-protocol.ts` | Public redacted engine request/response contract shared by server and external/first-party engines |
 | `bughouse-engine-protocol.ts` | Draft Chess Bughouse partner-bot request/response contract, validators, seat/team mappings, clocks, legal actions, reserve needs, and cross-seat signaling rules |
 | `bughouse-engine-protocol.fixtures.ts` | JSON-stable partner-bot protocol fixtures for engine-side contract tests and Mistboard/server validation |
@@ -250,7 +251,11 @@ Edit task → find file → open only that file.
 | `import-corpus.ts` | CLI: import FoW game corpus |
 | `worker.ts` | Background worker entry point for async engine game execution |
 | `feedback-notify.ts` | Email notification on feedback submission |
-| `game-export.ts` | PGN/JSON export for `/api/games/:id/export.*` (Phase D, 2026-05-22) |
+| `game-export.ts` | Chess-family PGN/JSON publication builders for `/api/games/:id/export.*` (Phase D, 2026-05-22); shared header/result/termination helpers moved to `game-export-shared.ts` |
+| `game-export-shared.ts` | Constants + helpers every export builder shares: schema/license/site, `timeControlFromSummary`, `pgnResult`/`normalizeJsonResult` (know red-wins), `pgnStandardTermination`, PGN header escaping, content types |
+| `game-export-tenant.ts` | Variant-tenant export: `tenantExportBinding(tenant, opts)` (event-log validation + finished replay, coordinate `uci` with `@sq` flips and `P@sq` drops), color-neutral JSON publication, PGN via a tenant writer, and `resolveGameExport`, the whole `export.{pgn,json}` decision (chess path vs registry `export` binding; 501 for unlisted formats/variants, 403 for unfinished logs) |
+| `xiangqi-game-export.ts` | Xiangqi export notation: ICCS `uci`, WXF `san` only when the whole line replays under standard rules (fog-only moves fall back to ICCS), `xiangqiPgnWriter` over `writeXiangqiPgn` |
+| `historical-xiangqi-export.ts` | Archive-game PGN for `/api/historical-xiangqi/games/:id/export.pgn`: source-attributed tags, no Mistboard license claim; the route serves it only for `licenseStatus === 'cleared'` sources |
 | `og-image.ts` | OG image rendering (default + per-game + per-article + per-study/chapter). The study card draws the chapter's own hand-set `rootFen` (a composition IS its diagram), falls back to the standard start only when no rootFen is present, and refuses non-public studies so a card never publishes a private position. |
 | `obs.ts` | Structured-JSON logging helpers |
 | `room-lifecycle-audit.ts` | Lifecycle audit/event helpers |
@@ -845,7 +850,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `review/move-glyph.ts` | `moveGlyphTone`: one tone mapping for a move-annotation glyph ('??'/'?'/'?!' plus user NAGs), shared by the move list and the board badge so the two surfaces cannot disagree about a move |
 | `review/study-export.ts` | `createStudyFromTree`/`studyExportMessage`: POST the current analysis tree to /api/studies as a private study; returns a typed result (401 reads as unauthenticated) and deliberately does NOT navigate, so the caller owns that |
 | `review/opening-explorer.ts` | Opening-explorer underboard panel: takes kernel state (so key and notation come from one source), caches by position, renders move share bars; malformed payloads read as unavailable |
-| `review/underboard-tabs.ts` | `underboardPanel`: lichess analyse underboard tab strip (Computer analysis / Move times / Crosstable / Share and export) over a shared body; variant-neutral, caller supplies the analysis body, tabs with no data omitted |
+| `review/underboard-tabs.ts` | `underboardPanel`: lichess analyse underboard tab strip (Computer analysis / Move times / Crosstable / Share and export) over a shared body; variant-neutral, caller supplies the analysis body, tabs with no data omitted; `downloadRow` builds the Share & export Download row (one `<a download>` per format) that postgames pass through `shareExtra` |
+| `review/game-export-links.ts` | `gameExportShareExtra(variant, roomId)`: the `shareExtra` Download row for a finished game, one link per format in `GAME_EXPORT_FORMATS` (nothing when the variant exports none) |
 | `review/advantage-chart.ts` | `createAdvantageChart`: win%-per-ply curve over a red/black split field for the review underboard slot, click-to-jump-ply with a current-ply cursor; uses mate-aware win% instead of raw cp so mates do not spike the axis |
 | `review/analysis-summary.ts` | `createAnalysisSummary`: per-player accuracy block (inaccuracies/mistakes/blunders/ACPL/accuracy) for the review analysisSummary slot; `hideAcpl` for chance/hidden-info variants (jieqi), seat-colored ink, anonymous games labelled Red/Black |
 | `review/annotations-editor.ts` | `createAnnotationEditor`: study glyph (NAG) picker, comment box, and clear-shapes button for the current tree node; owns no tree state, xiangqi-review wires the callbacks to `tree.annotateAt` and reloads via setAnnotations on navigation |

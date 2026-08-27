@@ -6,6 +6,7 @@
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
+import { tenantExportBinding } from './game-export-tenant.js';
 import type { JieqiCreatorPreference, JieqiRuntimeRoom } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import * as persistence from './persistence.js';
@@ -29,6 +30,7 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { xiangqiExportUci } from './xiangqi-game-export.js';
 
 export const jieqiRooms = new Map<string, JieqiLiveRoom>();
 
@@ -104,6 +106,12 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
+  // JSON only: hidden identities reveal as pieces move, so no notation names a
+  // jieqi move honestly. Moves are ICCS coordinates on the shared 9x10 board.
+  export: tenantExportBinding(jieqiTenant, {
+    gameRouteBase: '/jieqi/game',
+    uci: xiangqiExportUci,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });
