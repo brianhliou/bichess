@@ -417,10 +417,23 @@ async function waitForGithubCi({ headRevision }) {
       console.log(`hosted CI passed: ${run.url ?? run.databaseId ?? headRevision}`);
       return;
     } else {
+      // A run's top-level conclusion is not a verdict on its tests: cancelled or
+      // skipped housekeeping jobs poison the badge to `cancelled`/`failure` while
+      // every real job passed. That has stopped a release whose CI was green, so
+      // the badge is treated as a prompt to look rather than as an answer.
+      const verdict = jobVerdict(run);
+      if (verdict.blocking.length === 0 && verdict.succeeded > 0) {
+        console.log(
+          `hosted CI conclusion is ${run.conclusion ?? 'unknown'}, but no job failed: ` +
+            `${verdict.succeeded} passed, forgiving [${verdict.forgiven.join(', ')}]`,
+        );
+        console.log(`hosted CI passed: ${run.url ?? run.databaseId ?? headRevision}`);
+        return;
+      }
       throw new Error(
-        `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}: ${
-          run.url ?? run.databaseId ?? headRevision
-        }`,
+        `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}` +
+          (verdict.blocking.length > 0 ? `; failing jobs: ${verdict.blocking.join(', ')}` : '') +
+          `: ${run.url ?? run.databaseId ?? headRevision}`,
       );
     }
 
@@ -433,6 +446,43 @@ async function waitForGithubCi({ headRevision }) {
       run ? `${run.status}/${run.conclusion ?? 'none'} ${run.url ?? ''}` : 'not found'
     }`,
   );
+}
+
+// Split a run's jobs into ones that genuinely failed and ones that merely did
+// not succeed. Only `failure` and `timed_out` block a release; `cancelled` and
+// `skipped` are forgiven and named in the log so nothing is quietly waved past.
+//
+// The limitation worth knowing: a run a human cancelled mid-flight also reports
+// its unfinished test jobs as `cancelled`, so this would forgive it. The printed
+// job list is what keeps that visible to whoever is running the release.
+function jobVerdict(run) {
+  const runId = run.databaseId;
+  if (!runId) return { blocking: [], forgiven: [], succeeded: 0 };
+  let jobs;
+  try {
+    const output = runCapture(
+      'gh run view',
+      ['gh', 'run', 'view', String(runId), '--json', 'jobs'],
+      { quiet: true },
+    );
+    jobs = JSON.parse(output).jobs;
+    if (!Array.isArray(jobs)) throw new Error('not an array');
+  } catch (error) {
+    // Fall back to trusting the badge: a lookup failure must not turn a red run
+    // green. Zero `succeeded` fails the guard above, so the release still stops.
+    console.log(`warn: could not read job conclusions (${error.message})`);
+    return { blocking: [], forgiven: [], succeeded: 0 };
+  }
+  const blocking = [];
+  const forgiven = [];
+  let succeeded = 0;
+  for (const job of jobs) {
+    if (job.conclusion === 'success') succeeded += 1;
+    else if (job.conclusion === 'failure' || job.conclusion === 'timed_out')
+      blocking.push(job.name);
+    else forgiven.push(`${job.name}:${job.conclusion ?? 'none'}`);
+  }
+  return { blocking, forgiven, succeeded };
 }
 
 function listGithubRuns(headRevision) {
