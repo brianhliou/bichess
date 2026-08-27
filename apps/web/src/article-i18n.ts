@@ -31,6 +31,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted, not native-reviewed (2026-08-27). Opted in anyway because
+  // most titled xiangqi players read Chinese, so English-only was the wrong
+  // default for THIS page specifically. Re-review when a reader is available.
+  'titled-players',
   'riverbank-cannon',
   'skill-vs-luck',
   'fog-chess',
@@ -75,6 +79,41 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // -- Titled players (recruitment page) --
+  // MACHINE-DRAFTED 2026-08-27, NOT NATIVE-REVIEWED. Brian cannot validate zh
+  // (see memory user_not_fluent_chinese) and no reviewer was available, so this
+  // shipped on a best-effort basis. Terminology is matched to the site's own
+  // catalog (题目 / 论坛 / 排行榜 / 视频库 / 主播 / 教练 / 研习) rather than
+  // invented. Re-review when a native reader is available.
+  'Bring your title to Mistboard': '把你的头衔带到 Mistboard',
+  // Drives the localized <title>; not covered by the prose test, so it is easy to miss.
+  'For titled xiangqi and chess players': '致象棋与国际象棋的头衔棋手',
+  'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
+    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟。',
+  'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
+    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟：请前往 [mistboard.com/verify-title](/verify-title)。',
+  'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
+    'Mistboard 接受世界象棋联合会（WXF）与中国象棋协会（CXA）的头衔（XGM、XIM、XNM、XWGM、XWIM），以及国际棋联（FIDE）的头衔（GM、IM、FM、CM、WGM、WIM、WFM、WCM）。请附上你的协会个人页面链接、写明真实姓名，并说明支持该头衔的成绩，每份申请都由管理员亲自审核。',
+  'What you get': '你能获得什么',
+  '**The badge.** Gold, beside your name, everywhere you appear: games, profile, ladders, forum, studies. Every player who sees you play sees the title first.':
+    '**头衔徽章。** 金色，就在你的名字旁边，出现在你所到之处：对局、资料页、排行榜、论坛、研习。每一个看你下棋的人，都会先看到你的头衔。',
+  '**Your own coaching page.** Publish at [/coach](/coach) with your headline, languages, rate, and contact details. Students reach you directly and pay you directly. Mistboard takes nothing: no commission, no processing fees, no cut of your lesson.':
+    '**属于你的教练主页。** 在 [/coach](/coach) 发布你的简介、授课语言、收费与联系方式。学员直接联系你，也直接付款给你。Mistboard 分文不取：没有佣金，没有手续费，不从你的课时费里抽走一分钱。',
+  '**The front page.** Write an annotated study and it can lead the homepage under your name. Your analysis is what players come here to read, and there is no queue in front of you.':
+    '**首页版位。** 写一份讲解研习，它就有机会以你的名义登上首页。棋手来这里就是为了读你的分析，而且你前面没有人排队。',
+  '**The video library.** If you make xiangqi videos, [/videos](/videos) will carry them and send viewers your way.':
+    '**视频库。** 如果你制作象棋视频，[/videos](/videos) 会收录它们，并把观众带向你。',
+  '**A place in the streamer directory.** Stream here and get listed.':
+    '**主播目录中的一席。** 在这里直播，就会被收录。',
+  '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
+    '**署名文章。** 写一篇长一点的稿子寄来，我们会编辑后以你的名义发表，并在名字旁标上你的头衔。',
+  'Why Mistboard': '为什么选择 Mistboard',
+  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
+    'Mistboard 是用英语下象棋的地方。免费、开源，没有广告，没有付费墙，也没有会员等级。每一副棋盘、每一道题目、每一节课，对每一个来到这里的人都开放。',
+  'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
+    '这批棋迷从来没有一个像样的英语大本营，也从来没有头衔棋手可以请教。你会是最早的一批，而这个网站从一开始就是为了把你的名字摆到他们面前，而不是埋起来。',
+  'Verify your title': '认证你的头衔',
+  'Ask me something first': '有问题先问我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡垒象棋规则',
   'Shigenobu Kusumoto, working in Osaka, invented [Mini Xiangqi](/rules/mini-xiangqi) in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
@@ -1160,6 +1199,38 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // -- Titled players (recruitment page) --
+  // MACHINE-DRAFTED 2026-08-27, NOT NATIVE-REVIEWED. See the Simplified block.
+  // Taiwan lexical forks applied, not a glyph conversion: 影片庫 not 视频库,
+  // 直播主 not 主播, 連結 not 链接, 聯絡 not 联系.
+  'Bring your title to Mistboard': '把你的頭銜帶到 Mistboard',
+  'For titled xiangqi and chess players': '致象棋與國際象棋的頭銜棋手',
+  'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
+    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘。',
+  'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
+    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘：請前往 [mistboard.com/verify-title](/verify-title)。',
+  'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
+    'Mistboard 接受世界象棋聯合會（WXF）與中國象棋協會（CXA）的頭銜（XGM、XIM、XNM、XWGM、XWIM），以及國際棋聯（FIDE）的頭銜（GM、IM、FM、CM、WGM、WIM、WFM、WCM）。請附上你的協會個人頁面連結、寫明真實姓名，並說明支持該頭銜的成績，每份申請都由管理員親自審核。',
+  'What you get': '你能獲得什麼',
+  '**The badge.** Gold, beside your name, everywhere you appear: games, profile, ladders, forum, studies. Every player who sees you play sees the title first.':
+    '**頭銜徽章。** 金色，就在你的名字旁邊，出現在你所到之處：對局、資料頁、排行榜、論壇、研習。每一個看你下棋的人，都會先看到你的頭銜。',
+  '**Your own coaching page.** Publish at [/coach](/coach) with your headline, languages, rate, and contact details. Students reach you directly and pay you directly. Mistboard takes nothing: no commission, no processing fees, no cut of your lesson.':
+    '**屬於你的教練主頁。** 在 [/coach](/coach) 發布你的簡介、授課語言、收費與聯絡方式。學員直接聯絡你，也直接付款給你。Mistboard 分文不取：沒有佣金，沒有手續費，不從你的課時費裡抽走一分錢。',
+  '**The front page.** Write an annotated study and it can lead the homepage under your name. Your analysis is what players come here to read, and there is no queue in front of you.':
+    '**首頁版位。** 寫一份講解研習，它就有機會以你的名義登上首頁。棋手來這裡就是為了讀你的分析，而且你前面沒有人排隊。',
+  '**The video library.** If you make xiangqi videos, [/videos](/videos) will carry them and send viewers your way.':
+    '**影片庫。** 如果你製作象棋影片，[/videos](/videos) 會收錄它們，並把觀眾帶向你。',
+  '**A place in the streamer directory.** Stream here and get listed.':
+    '**直播主目錄中的一席。** 在這裡直播，就會被收錄。',
+  '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
+    '**署名文章。** 寫一篇長一點的稿子寄來，我們會編輯後以你的名義發表，並在名字旁標上你的頭銜。',
+  'Why Mistboard': '為什麼選擇 Mistboard',
+  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
+    'Mistboard 是用英語下象棋的地方。免費、開源，沒有廣告，沒有付費牆，也沒有會員等級。每一副棋盤、每一道題目、每一節課，對每一個來到這裡的人都開放。',
+  'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
+    '這批棋迷從來沒有一個像樣的英語大本營，也從來沒有頭銜棋手可以請教。你會是最早的一批，而這個網站從一開始就是為了把你的名字擺到他們面前，而不是埋起來。',
+  'Verify your title': '認證你的頭銜',
+  'Ask me something first': '有問題先問我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡壘象棋規則',
   'Shigenobu Kusumoto, working in Osaka, invented [Mini Xiangqi](/rules/mini-xiangqi) in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
