@@ -119,7 +119,15 @@ function renderPage(shell: HTMLElement, payload: MyRequestPayload, locale: Local
   const intro = document.createElement('p');
   intro.className = 'verify-title-intro';
   intro.textContent = t('verifyTitle.intro', {}, locale);
-  shell.append(intro, buildForm(shell, payload, locale, request?.status === 'rejected'));
+  // The form answers "how"; this answers "why". Someone who lands here unsure
+  // whether verifying is worth it has nowhere else to read the case for it.
+  const pitch = document.createElement('p');
+  pitch.className = 'verify-title-pitch';
+  const pitchLink = document.createElement('a');
+  pitchLink.href = '/blog/titled-players';
+  pitchLink.textContent = t('verifyTitle.whatYouGet', {}, locale);
+  pitch.append(pitchLink);
+  shell.append(intro, pitch, buildForm(shell, payload, locale, request?.status === 'rejected'));
 }
 
 function buildStatusCard(

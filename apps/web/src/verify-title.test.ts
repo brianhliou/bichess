@@ -49,6 +49,11 @@ describe('verify-title page', () => {
 
     expect(root.querySelector('textarea[name="evidence"]')).not.toBeNull();
     expect(root.querySelector('.verify-title-help')?.textContent).toContain('federation profile');
+
+    // The form answers "how"; the pitch link answers "why".
+    const pitch = root.querySelector<HTMLAnchorElement>('.verify-title-pitch a');
+    expect(pitch?.getAttribute('href')).toBe('/blog/titled-players');
+    expect(pitch?.textContent).toBe('What titled players get on Mistboard');
   });
 
   it('submits a request and flips to the pending status view', async () => {

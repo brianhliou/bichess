@@ -153,6 +153,7 @@ export const ZH_HANT_COMMUNITY = {
   'verifyTitle.errAlreadyTitled': '你已持有該頭銜。',
   'verifyTitle.errRequestPending': '你已有一份申請正在等待審核。',
   'verifyTitle.coachCta': '建立你的教練主頁',
+  'verifyTitle.whatYouGet': '持有頭銜的棋手能在 Mistboard 獲得什麼',
   'coach.heading': '教練',
   'coach.intro': '找一位教練學棋。這裡的每位教練都持有經認證的象棋或國際象棋頭銜。',
   'coach.verifyToCoach': '你是持有頭銜的棋手嗎？認證頭銜即可開課',
