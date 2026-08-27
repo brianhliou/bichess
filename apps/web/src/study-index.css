@@ -343,6 +343,15 @@ a.study-index__rail-tab.is-active:hover {
   justify-content: space-between;
   gap: 1rem;
 }
+/* One row, one button height. Left to their own padding, cancel came out 31px
+   next to a 38px primary, which reads as bad spacing before anyone notices the
+   heights. Sized to the primary, the tallest of the set. */
+.study-create-dialog__actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.375rem;
+}
 
 .study-create-dialog__cancel {
   padding: 0.4rem 0.4rem;
@@ -404,4 +413,139 @@ a.study-index__rail-tab.is-active:hover {
 }
 .study-create-dialog__error:empty {
   display: none;
+}
+
+/* New-chapter dialog: name, source tabs, then the source's own controls.
+   Structure follows lichess's chapterNewForm; the colours are our tokens. */
+
+.study-chapter-dialog {
+  transition: width 0.15s ease;
+}
+/* Separate the commit row from the form body, the way lichess's .form-actions
+   does. Scoped to this dialog so the settings dialog's own footer is untouched. */
+.study-chapter-dialog .study-create-dialog__actions {
+  margin-top: 0.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+.study-chapter-dialog--wide {
+  width: min(44rem, calc(100vw - 2rem));
+}
+
+.study-chapter-dialog__tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  margin: -0.2rem 0 0.2rem;
+  border-bottom: 1px solid var(--site-border-soft);
+  user-select: none;
+}
+
+.study-chapter-dialog__tab {
+  flex: 1 1 auto;
+  min-width: 5rem;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--site-muted);
+  background: none;
+  border: none;
+  /* The active marker sits ON the strip's own border, so the tab and the rule
+     share one line instead of stacking two. */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.study-chapter-dialog__tab:hover {
+  color: var(--site-text);
+  border-bottom-color: var(--site-border);
+}
+.study-chapter-dialog__tab.is-active {
+  color: var(--site-link);
+  border-bottom-color: var(--site-link);
+}
+.study-chapter-dialog__tab:focus-visible {
+  outline: 2px solid var(--site-link);
+  outline-offset: -2px;
+}
+
+.study-chapter-dialog__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.study-chapter-dialog__panel[hidden] {
+  display: none;
+}
+
+.study-chapter-dialog__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+.study-chapter-dialog__hint[hidden] {
+  display: none;
+}
+
+.study-chapter-dialog__pgn {
+  width: 100%;
+  resize: vertical;
+  /* PGN is column-sensitive to read; a proportional face makes a pasted game
+     look wrong even when it parsed fine. */
+  font-family: var(--site-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+/* The real file input is browser chrome and looks it, so it is hidden behind a
+   label styled as one of our own buttons. Kept in the layout (not
+   display:none) so it stays focusable from the keyboard. */
+.study-chapter-dialog__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.study-chapter-dialog__file {
+  align-self: flex-start;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--site-text);
+  background: var(--site-panel-strong, var(--site-panel));
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  cursor: pointer;
+}
+.study-chapter-dialog__file:hover {
+  border-color: var(--site-link);
+  color: var(--site-link);
+}
+.study-chapter-dialog__file-input:focus-visible + .study-chapter-dialog__file,
+.study-chapter-dialog__file:focus-visible {
+  outline: 2px solid var(--site-link);
+  outline-offset: 2px;
+}
+
+.study-chapter-dialog--drop .study-chapter-dialog__pgn {
+  border-color: var(--site-link);
+  box-shadow: 0 0 0 3px var(--site-focus);
+}
+
+/* Share & export: the PGN row carries a note between label and button, where
+   the other rows carry a read-only field. */
+.review-share__note {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--site-muted);
 }

@@ -210,15 +210,25 @@ const CODECS: XiangqiNotationCodec[] = [
   coordinate0Codec,
 ];
 
+export interface XiangqiImportOptions {
+  /** Replay from here instead of the standard opening. Set by the PGN reader
+   *  when a [FEN] tag names a custom start, which is how classical endgame
+   *  compositions are recorded. */
+  initialState?: XiangqiGameState;
+}
+
 /** Parse a pasted game in any supported notation into canonical moves. Returns
  *  the detected format, or an error when nothing replays legally. */
-export function importXiangqiGame(input: string): XiangqiImportResult {
+export function importXiangqiGame(
+  input: string,
+  options: XiangqiImportOptions = {},
+): XiangqiImportResult {
   const trimmed = input.trim();
   if (!trimmed) return { moves: [], format: null, error: 'Enter a game to import.' };
   let firstError: string | undefined;
   for (const codec of CODECS) {
     if (!codec.detect(trimmed)) continue;
-    const attempt = replayWithCodec(codec, trimmed);
+    const attempt = replayWithCodec(codec, trimmed, options.initialState);
     if (attempt.moves.length > 0 && !attempt.error) {
       return { moves: attempt.moves, format: codec.format };
     }
@@ -232,10 +242,11 @@ export function importXiangqiGame(input: string): XiangqiImportResult {
 function replayWithCodec(
   codec: XiangqiNotationCodec,
   input: string,
+  initialState?: XiangqiGameState,
 ): { moves: XiangqiMove[]; error?: string } {
   const tokens = codec.tokenize(input);
   if (tokens.length === 0) return { moves: [], error: 'No moves found.' };
-  let state = createInitialXiangqiState('import');
+  let state = initialState ?? createInitialXiangqiState('import');
   const moves: XiangqiMove[] = [];
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]!;
@@ -247,4 +258,29 @@ function replayWithCodec(
     moves.push(move);
   }
   return { moves };
+}
+
+// --- per-format resolution (for callers that already know the notation) ------
+// The PGN reader sniffs the format once from the mainline, then walks a move
+// TREE: a variation's tokens must resolve against the position at their branch
+// point, not against the mainline. That needs one token decoded at a time in a
+// known format, which the sniffer above never has to expose.
+
+const CODECS_BY_FORMAT: ReadonlyMap<XiangqiMoveFormat, XiangqiNotationCodec> = new Map(
+  CODECS.map((codec) => [codec.format, codec]),
+);
+
+/** Decode a single token in a known notation against a known position. Returns
+ *  null when the token is unreadable OR resolves to an illegal move, so callers
+ *  get one rejection path rather than two. */
+export function resolveXiangqiMoveInFormat(
+  token: string,
+  state: XiangqiGameState,
+  format: XiangqiMoveFormat,
+): XiangqiMove | null {
+  const codec = CODECS_BY_FORMAT.get(format);
+  if (!codec || state.status.type !== 'playing') return null;
+  const move = codec.resolveMove(token, state);
+  if (!move || !isStandardXiangqiLegalMove(state, move)) return null;
+  return move;
 }

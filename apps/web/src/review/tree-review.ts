@@ -350,6 +350,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  surface uses it for the study's own description + favorite + errata, so those
    *  live under the board instead of crowding the left rail. */
   aboutTab?: { label: string; body: HTMLElement };
+  /** Extra rows for the Share & export tab. The study surface puts its PGN
+   *  download here, with the other ways of getting the content out. */
+  shareExtra?: HTMLElement[];
   /** Opening-explorer panel for surfaces with a game corpus behind them. Kept
    *  fully opaque here (an element plus a per-node setter) so this controller
    *  stays variant-neutral: the caller owns the variant types and the lookup. */
@@ -973,6 +976,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     shareFenInput,
     shareMovesInput,
     gameUrl: typeof window !== 'undefined' ? window.location.href : '',
+    shareExtra: config.shareExtra,
   });
 
   // The tree truncates an illegal seed to the legal prefix; surface a notice.

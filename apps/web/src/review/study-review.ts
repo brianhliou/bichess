@@ -26,7 +26,8 @@ export type StudyReviewConfig = Omit<
   TreeReviewConfig<never>,
   // `explorer` is variant-typed (its handlers carry the concrete Move/Arrow); a
   // never/unknown-typed one from this generic-erased config would not assign to
-  // a concrete variant's mount. Studies never use it, so drop it here.
+  // a concrete variant's mount. Dropped here because the variant branch builds
+  // its own (xiangqi studies DO get the explorer, just not via this config).
   'moves' | 'root' | 'analysis' | 'decisions' | 'explorer'
 > & {
   /** SerializedTree.rootFen — the chapter's hand-set start, if it has one. */
@@ -50,10 +51,12 @@ export async function mountStudyReview(
       const parsed = rootFen ? parseStandardXiangqiFen(rootFen) : null;
       return mountXiangqiReview(root, {
         ...base,
-        // No opening explorer here: the study board's underboard would otherwise
-        // appear on a surface that deliberately has none, changing a layout that
-        // was specced without it. Worth revisiting as its own decision.
-        openingExplorer: false,
+        // The opening explorer IS on here (default). It was off until 2026-08-26
+        // to leave the hand-specced study layout untouched; the call was made
+        // when a study author reported the site had no game database, while the
+        // 10k-game explorer sat one flag away from their board. The panel is
+        // lazy and closed until opened, so the layout only changes for a reader
+        // who asks for it.
         root: parsed?.ok
           ? { truth: parsed.state, fen: standardXiangqiFen(parsed.state) }
           : undefined,

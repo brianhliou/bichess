@@ -39,6 +39,10 @@ export type UnderboardOptions = {
   /** Live move-export textarea, refreshed by the caller on every navigation. */
   shareMovesInput: HTMLTextAreaElement;
   gameUrl: string;
+  /** Extra rows for the Share & export tab, appended after FEN/Share/Moves. The
+   *  study surface uses this for its PGN download, which belongs with the other
+   *  ways of getting the content out and is NOT owner-gated. */
+  shareExtra?: HTMLElement[];
   /** Fired with the newly shown tab id, including the initial one. Lets a tab
    *  body defer work until it is actually on screen — the explorer only queries
    *  its corpus while visible, instead of on every navigation for every reader
@@ -80,7 +84,7 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   tabDefs.push({
     id: 'share',
     label: t('underboard.shareExport'),
-    body: shareExportBody(opts.shareFenInput, opts.shareMovesInput, opts.gameUrl),
+    body: shareExportBody(opts.shareFenInput, opts.shareMovesInput, opts.gameUrl, opts.shareExtra),
   });
 
   const panel = document.createElement('section');
@@ -155,6 +159,7 @@ function shareExportBody(
   fenInput: HTMLInputElement,
   movesInput: HTMLTextAreaElement,
   gameUrl: string,
+  extra?: readonly HTMLElement[],
 ): HTMLElement {
   const body = document.createElement('div');
   const grid = document.createElement('div');
@@ -174,6 +179,7 @@ function shareExportBody(
   movesInput.readOnly = true;
   movesInput.rows = 2;
   grid.append(shareRow('Moves', movesInput));
+  if (extra) grid.append(...extra);
 
   body.append(grid);
   return body;

@@ -22,6 +22,7 @@ import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
 import { mountXiangqiGamebook } from './review/xiangqi-gamebook.js';
+import { downloadStudyPgn } from './review/xiangqi-pgn-chapter.js';
 import { buildNav } from './site-shell.js';
 import {
   createStudyAutosave,
@@ -36,6 +37,7 @@ import {
   studyVariantSupportsComposition,
   studyVariantSupportsGamebook,
 } from './study-catalog.js';
+import { openChapterDialog } from './study-chapter-dialog.js';
 import {
   buildStudyRail,
   type ChapterControlModel,
@@ -261,9 +263,52 @@ function renderStudy(
   };
 
   const addChapter = (): void =>
-    openAddChapterDialog(`Chapter ${chapters.length + 1}`, studyVariant(), (name, rootFen) =>
-      createChapter(name, rootFen),
-    );
+    openChapterDialog({
+      defaultName: `Chapter ${chapters.length + 1}`,
+      composable: studyVariantSupportsComposition(studyVariant()),
+      // PGN is standard-xiangqi only for now: the reader, the notation codecs,
+      // and the tree translation are all xiangqi. Other variants get the dialog
+      // without the tab rather than a tab that cannot work.
+      importable: studyVariant() === 'xiangqi',
+      normalizeFen: (raw) => normalizeStartFen(studyVariant(), raw),
+      createChapter: (name, rootFen, root) => createChapter(name, rootFen, root),
+    });
+
+  const pgnExportable = (): boolean => studyVariant() === 'xiangqi';
+
+  const pgnExportRow = (): HTMLElement => {
+    const row = document.createElement('div');
+    row.className = 'review-share__row';
+    const label = document.createElement('span');
+    label.className = 'review-share__label';
+    label.textContent = 'PGN';
+    const note = document.createElement('span');
+    note.className = 'review-share__note';
+    note.textContent = chapters.length > 1 ? `All ${chapters.length} chapters` : 'This study';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'review-share__copy';
+    button.textContent = 'Download';
+    button.addEventListener('click', () => {
+      // Export the SAVED trees: an unflushed edit would leave the file a move
+      // behind what the author can see on the board.
+      void flushActive().then((flushed) => {
+        if (!flushed) {
+          button.textContent = t('study.resolveFirst');
+          setTimeout(() => (button.textContent = 'Download'), 2000);
+          return;
+        }
+        downloadStudyPgn(
+          study.name,
+          chapters.map((chapter) => ({ name: chapter.name, root: chapter.root })),
+        );
+        button.textContent = 'Downloaded';
+        setTimeout(() => (button.textContent = 'Download'), 1200);
+      });
+    });
+    row.append(label, note, button);
+    return row;
+  };
 
   const removeChapter = async (id: string): Promise<string | null> => {
     if (!(await flushActive())) return t('study.resolveFirst');
@@ -584,6 +629,10 @@ function renderStudy(
       boardAriaLabel: `${studyVariantLabel(variant)} board`,
       actions: rail(status),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
+      // PGN download sits with FEN/Share/Moves rather than in the owner-only
+      // settings menu: a study whose work cannot leave it is a trap, so every
+      // viewer gets it.
+      ...(pgnExportable() ? { shareExtra: [pgnExportRow()] } : {}),
       details: buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
@@ -844,123 +893,6 @@ function notice(text: string): HTMLElement {
   shell.append(heading);
   return shell;
 }
-
-// Add-chapter dialog: name + optional hand-set start position (a composition /
-// endgame chapter). Mirrors the create-study dialog on /study (same classes,
-// study-index.css). No variant picker: the study's variant is fixed at create
-// time. The FEN field only shows for variants that can parse one back
-// (studyVariantSupportsComposition) — offering the box where the FEN would be
-// silently dropped is worse than not offering it.
-function openAddChapterDialog(
-  defaultName: string,
-  studyVariant: StudyVariantId,
-  onCreate: (name: string, rootFen?: string) => Promise<string | null>,
-): void {
-  document.querySelector<HTMLDialogElement>('dialog[data-add-chapter]')?.remove();
-
-  const dialog = document.createElement('dialog');
-  dialog.dataset.addChapter = '';
-  dialog.className = 'study-create-dialog';
-
-  const heading = document.createElement('h2');
-  heading.className = 'study-create-dialog__title';
-  heading.textContent = t('study.newChapter');
-
-  const form = document.createElement('form');
-  form.className = 'study-create-dialog__form';
-
-  const nameField = document.createElement('label');
-  nameField.className = 'study-create-dialog__field';
-  const nameLabel = document.createElement('span');
-  nameLabel.className = 'study-create-dialog__label';
-  nameLabel.textContent = t('study.fieldName');
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.className = 'study-create-dialog__control';
-  nameInput.maxLength = 80;
-  nameInput.value = defaultName;
-  nameInput.setAttribute('aria-label', t('study.chapterNameAria'));
-  nameField.append(nameLabel, nameInput);
-
-  const fenField = document.createElement('label');
-  fenField.className = 'study-create-dialog__field';
-  const fenLabel = document.createElement('span');
-  fenLabel.className = 'study-create-dialog__label';
-  fenLabel.textContent = t('study.fieldStartFen');
-  const fenInput = document.createElement('input');
-  fenInput.type = 'text';
-  fenInput.className = 'study-create-dialog__control';
-  fenInput.placeholder = t('study.startFenPlaceholder');
-  fenInput.setAttribute('aria-label', t('study.startFenAria'));
-  fenField.append(fenLabel, fenInput);
-  const fenError = document.createElement('p');
-  fenError.className = 'study-create-dialog__error';
-
-  const actions = document.createElement('div');
-  actions.className = 'study-create-dialog__actions';
-  const cancel = document.createElement('button');
-  cancel.type = 'button';
-  cancel.className = 'study-create-dialog__cancel';
-  cancel.textContent = t('study.cancel');
-  cancel.addEventListener('click', () => dialog.close('cancel'));
-  const start = document.createElement('button');
-  start.type = 'submit';
-  start.className = 'study-create-dialog__start';
-  start.textContent = t('study.add');
-  actions.append(cancel, start);
-
-  // The chapter inherits the study's variant, so the only variant-dependent part
-  // left here is whether a start FEN can be parsed back.
-  const composable = studyVariantSupportsComposition(studyVariant);
-  fenField.hidden = !composable;
-
-  form.append(nameField, fenField, fenError, actions);
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    fenError.textContent = '';
-    let rootFen: string | undefined;
-    const fenRaw = composable ? fenInput.value.trim() : '';
-    if (fenRaw) {
-      // Store the CANONICAL spelling, not what was pasted: the board replays the
-      // stored string, so one position must have exactly one stored form.
-      const parsed = normalizeStartFen(studyVariant, fenRaw);
-      if (!parsed.ok) {
-        fenError.textContent = parsed.error;
-        return;
-      }
-      rootFen = parsed.fen;
-    }
-    start.disabled = true;
-    start.textContent = 'Adding…';
-    void onCreate(nameInput.value.trim(), rootFen)
-      .then((error) => {
-        if (!error) {
-          dialog.close('create');
-          return;
-        }
-        fenError.textContent = error;
-        start.disabled = false;
-        start.textContent = t('study.add');
-      })
-      .catch(() => {
-        fenError.textContent = 'The request failed. Check your connection and try again.';
-        start.disabled = false;
-        start.textContent = t('study.add');
-      });
-  });
-
-  dialog.append(heading, form);
-  dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) dialog.close('cancel');
-  });
-  dialog.addEventListener('close', () => dialog.remove());
-
-  document.body.append(dialog);
-  dialog.showModal();
-  nameInput.focus();
-  nameInput.select();
-}
-
 function renderError(root: HTMLElement, status: number): void {
   const shell = document.createElement('main');
   shell.className = 'dxq-postgame__error';

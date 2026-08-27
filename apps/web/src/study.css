@@ -504,7 +504,11 @@
 .study-settings__form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
+  /* Matches .study-create-dialog__form. Without it the settings dialogs render
+     their fields and footer flush against the dialog border, which is what the
+     create dialog's own padding was quietly providing. */
+  padding: 1.2rem;
 }
 .study-settings__description {
   min-height: 7rem;
@@ -536,7 +540,30 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding-top: 0.25rem;
+  margin-top: 0.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* Two buttons, so they sit together at the end rather than being sprung apart
+   by the shared space-between rule. */
+.study-settings__footer .study-create-dialog__actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Same height rule as .study-create-dialog__actions, extended to the settings
+   dialogs' own destructive and utility rows so every button in these dialogs
+   lines up whichever group it sits in. */
+.study-settings__footer button,
+.study-settings__danger button,
+.study-chapter-dialog__destructive button,
+.study-chapter-dialog__utilities button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.375rem;
 }
 .study-settings__danger,
 .study-chapter-dialog__destructive,
@@ -552,15 +579,19 @@
 .study-settings__delete,
 .study-settings__danger-action,
 .study-settings__secondary {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--site-border-soft);
+  padding: 0.45rem 0.7rem;
+  /* Transparent rather than absent, so hover and the armed state can fill the
+     border in without the button changing size. */
+  border: 1px solid transparent;
   border-radius: var(--site-radius-sm, 6px);
   background: transparent;
   color: var(--site-text);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
+/* Destructive actions sit BELOW cancel in emphasis, not above it: a bordered
+   red box next to a filled primary reads as a second call to action. */
 .study-settings__delete,
 .study-settings__danger-action {
   color: #b4473d;
@@ -576,10 +607,15 @@
   background: color-mix(in srgb, var(--site-accent) 8%, transparent);
 }
 .study-settings__feedback {
-  min-height: 1.2em;
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
   color: var(--site-muted);
+}
+/* Collapse when silent. Reserving a line left a dead band above the footer that
+   read as a spacing mistake; the same rule already governs the create dialog. */
+.study-settings__feedback:empty {
+  display: none;
 }
 .study-settings__feedback[data-state="error"] {
   color: #b91c1c;

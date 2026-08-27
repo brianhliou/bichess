@@ -120,8 +120,8 @@ export function mountXiangqiReview(
   // Standard-xiangqi review surfaces get the opening explorer by default: the
   // corpus is keyed by position, so it is as useful on a played game as on the
   // analysis board. Default-on rather than opt-in so a NEW surface inherits it
-  // instead of quietly missing it. Set `openingExplorer: false` to decline (the
-  // study board does, to leave its hand-specced layout alone). The panel is
+  // instead of quietly missing it. Set `openingExplorer: false` to decline; no
+  // surface does today (the study board did until 2026-08-26). The panel is
   // closed until the reader opens it from the book tool, so this costs nothing
   // on a surface where nobody looks.
   const explorer =
