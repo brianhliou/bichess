@@ -6,8 +6,20 @@ import {
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  readStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -22,17 +34,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
-import { readDisplayPreferences } from './display-preferences.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import {
-  GLYPH_OFFSET_RATIO,
-  GLYPH_RADIUS_RATIO,
-  type SvgBoardMarkerStyle,
-  svgBoardCircleMarker,
-  svgBoardGlyphMarker,
-} from './svg-board-marker.js';
-import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the 9x10 jieqi board. Pieces sit on intersections
@@ -50,8 +52,6 @@ const RING_LAST = PIECE_SIZE / 2 + 4;
 const RING_CAPTURE = PIECE_SIZE / 2 + 1;
 const FILES = 9;
 const RANKS = 10;
-const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
-const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
 
 // Jieqi is xiangqi's board at a larger scale, so it takes the shared surface
@@ -85,10 +85,10 @@ const JIEQI_SURFACE: XiangqiSurfaceConfig = {
 let activeLayout: XiangqiBoardLayout = 'intersection';
 // Shared board rounding (board-metrics), so this board's corner matches every
 // other board's at the same rendered width.
-const BOARD_CORNER_RX = boardCornerRadius(WIDTH);
+// Sized from the BOARD's own width, not the viewBox: the coordinate gutter is
+// outside the board and must not change how its corners round.
+const BOARD_CORNER_RX = boardCornerRadius(MARGIN * 2 + (FILES - 1) * CELL);
 // The river sits between ranks 5 and 6 (display rows 4 and 5 from the top).
-const RIVER_TOP = MARGIN + 4 * CELL;
-const RIVER_BOTTOM = MARGIN + 5 * CELL;
 
 export type JieqiBoardRenderOptions = {
   arrows?: readonly JieqiBoardArrow[];
@@ -121,10 +121,6 @@ function jieqiCoordOf(square: JieqiSquare): { file: number; rank: number } {
 
 function jieqiSquareOf(file: number, rank: number): JieqiSquare {
   return `${String.fromCharCode(97 + file)}${rank}` as JieqiSquare;
-}
-
-function displayRankFor(rank: number, perspective: JieqiColor): number {
-  return perspective === 'red' ? RANKS - rank : rank - 1;
 }
 
 function intersection(

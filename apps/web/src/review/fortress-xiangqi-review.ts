@@ -10,10 +10,6 @@
 // marker remains a separate slice. Drop reserves and the drop gesture are both
 // absent here by choice; drops still replay in the mainline.
 
-import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
-import { xiangqiAppearanceChangedEvent } from '../theme.js';
-import { FXQ_GEO } from '../fortress-xiangqi-render.js';
-import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import {
   type FortressXiangqiColor,
   type FortressXiangqiGameState,
@@ -28,8 +24,12 @@ import {
   animateFortressXiangqiBoardMove,
   type FortressXiangqiBoardArrow,
   type FortressXiangqiBoardMarker,
+  FXQ_GEO,
 } from '../fortress-xiangqi-render.js';
 import { fortressXiangqiMoveLabel } from '../fortress-xiangqi-view.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import {
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,

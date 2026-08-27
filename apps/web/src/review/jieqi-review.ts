@@ -4,10 +4,6 @@
 // adapter is DEAL-BOUND (a factory over the reconstructed deal), so the
 // presentation is built per-game rather than held as a module constant.
 
-import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
-import { xiangqiAppearanceChangedEvent } from '../theme.js';
-import { JIEQI_GEO } from '../live-jieqi-render.js';
-import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import {
   type JieqiColor,
   type JieqiDeal,
@@ -19,6 +15,10 @@ import {
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
+import { JIEQI_GEO } from '../live-jieqi-render.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import {
   bestMoveArrowWithParser,
   engineArrowsFromLinesWithParser,

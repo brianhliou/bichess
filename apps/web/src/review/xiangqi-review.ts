@@ -9,8 +9,6 @@
 // The two callers differ only in ingress + metadata. The board is INTERACTIVE
 // (play a move → it branches the tree, promote/delete variations).
 
-import { LIVE_BOARD_GEO } from '../xiangqi-board.js';
-import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import {
   fsfUciToXiangqiSquares,
   type StandardXiangqiPlayerView,
@@ -20,13 +18,15 @@ import {
   type XiangqiMove,
   type XiangqiSquare,
 } from '@mistboard/game';
-import { readStoredXiangqiBoardLayout, xiangqiAppearanceChangedEvent } from '../theme.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import {
   animateXiangqiBoardMove,
   createXiangqiInteractiveBoard,
+  LIVE_BOARD_GEO,
   type XiangqiBoardArrow,
   type XiangqiBoardMarker,
 } from '../xiangqi-board.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';

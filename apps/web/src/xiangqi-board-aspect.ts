@@ -17,9 +17,7 @@ import { type XiangqiBoardGeometry, xiangqiBoardViewBox } from './xiangqi-board-
  *  when labels are off, matching what the renderer does. */
 export function xiangqiBoardAspect(geo: XiangqiBoardGeometry): number {
   const layout = readStoredXiangqiBoardLayout();
-  const withCoords = readDisplayPreferences().boardCoordinates
-    ? geo
-    : { ...geo, coordGutter: 0 };
+  const withCoords = readDisplayPreferences().boardCoordinates ? geo : { ...geo, coordGutter: 0 };
   const vb = xiangqiBoardViewBox(layout, withCoords);
   return vb.width / vb.height;
 }

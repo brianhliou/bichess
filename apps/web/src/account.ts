@@ -26,11 +26,11 @@ import {
   writeDisplayPreference,
 } from './display-preferences.js';
 import { buildFlairIcon, FLAIR_KEYS, flairLabel } from './flair.js';
-import { setBoardCoordinatesPreference } from './theme.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
+import { setBoardCoordinatesPreference } from './theme.js';
 
 type AccountSettingsSection =
   | 'profile'

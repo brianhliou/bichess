@@ -9,12 +9,12 @@
 // replay all work. In analysis the game is fully revealed, so the tree replays and
 // branches on the TRUE move history like an open variant.
 
-import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
-import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import type { XiangqiColor, XiangqiGameState, XiangqiMove } from '@mistboard/game';
 import { createDarkXiangqiInteractiveBoard } from '../dark-xiangqi-tree-board.js';
-import { FOG_GEO, type DarkXiangqiWireView } from '../live-dark-xiangqi.js';
+import { type DarkXiangqiWireView, FOG_GEO } from '../live-dark-xiangqi.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { darkXiangqiTreeAdapter } from './dark-xiangqi-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
 import {

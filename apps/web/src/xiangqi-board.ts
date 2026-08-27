@@ -22,6 +22,7 @@ import type {
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
@@ -43,7 +44,6 @@ import {
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
-import { readDisplayPreferences } from './display-preferences.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -54,10 +54,6 @@ const FILE_COUNT = 9;
 const RANK_COUNT = 10;
 const CELL = 60;
 const MARGIN = 36;
-const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
-const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
-const RIVER_TOP = MARGIN + 4 * CELL;
-const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const CELL_RIVER_GAP = 12;
 // The live board's config for the shared geometry core; the article diagrams use
 // their own (smaller) config against the same transform.

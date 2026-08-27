@@ -13,8 +13,20 @@ import {
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  readStoredXiangqiPieceSet,
+} from './xiangqi-appearance-storage.js';
 import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
@@ -29,17 +41,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
-import { readDisplayPreferences } from './display-preferences.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
-import {
-  GLYPH_OFFSET_RATIO,
-  GLYPH_RADIUS_RATIO,
-  type SvgBoardMarkerStyle,
-  svgBoardCircleMarker,
-  svgBoardGlyphMarker,
-} from './svg-board-marker.js';
-import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   animalTreasureMarks,
   cjkGlyphMark,
@@ -65,8 +67,6 @@ const RING_LAST = PIECE_SIZE / 2 + 4;
 const RING_CAPTURE = PIECE_SIZE / 2 + 1;
 const FILES = 7;
 const RANKS = 8;
-const WIDTH = MARGIN * 2 + (FILES - 1) * CELL;
-const HEIGHT = MARGIN * 2 + (RANKS - 1) * CELL;
 const HIT_HALF = 31;
 // This board deliberately does NOT round its own background: perimeter clipping
 // is the host's job here (see the render test), and the host clips at the shared
@@ -514,13 +514,6 @@ function intersection(
 // Black views the board rotated 180 degrees (BOTH axes flipped), so each side's
 // own palace stays bottom-left on its own screen. Flipping only the rank (a
 // vertical mirror) puts the palaces on the wrong diagonal.
-function displayFileFor(file: number, perspective: FortressXiangqiColor): number {
-  return perspective === 'red' ? file : FILES - 1 - file;
-}
-
-function displayRankFor(rank: number, perspective: FortressXiangqiColor): number {
-  return perspective === 'red' ? RANKS - rank : rank - 1;
-}
 
 let stylesInstalled = false;
 

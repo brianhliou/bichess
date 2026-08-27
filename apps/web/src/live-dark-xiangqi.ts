@@ -27,25 +27,7 @@ import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
 import { tokenPieceSize } from './board-metrics.js';
-import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
-import {
-  type XiangqiBoardGeometry,
-  xiangqiBoardPoint,
-  xiangqiBoardViewBox,
-  xiangqiDisplayFile,
-} from './xiangqi-board-geometry.js';
-import {
-  type XiangqiSurfaceConfig,
-  xiangqiSurfaceCoords,
-  xiangqiSurfaceGrid,
-  xiangqiSurfacePalace,
-  xiangqiSurfacePalaceBands,
-  xiangqiSurfaceRiver,
-} from './xiangqi-board-surface.js';
-import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { readDisplayPreferences } from './display-preferences.js';
-import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import {
   maybePlayDarkXiangqiSnapshotSound,
@@ -71,7 +53,25 @@ import {
 } from './variant-tenant/live-client.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
+import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  type XiangqiBoardGeometry,
+  xiangqiBoardPoint,
+  xiangqiBoardViewBox,
+  xiangqiDisplayFile,
+} from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+} from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type DarkXiangqiWireBoardEntry =
@@ -101,8 +101,6 @@ const CELL = 60;
 const MARGIN = 36;
 const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
 const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
-const RIVER_TOP = MARGIN + 4 * CELL;
-const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
