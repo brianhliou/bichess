@@ -23,6 +23,12 @@
 // does not follow this one.)
 
 import { banqiStateToDealtFen, parseBanqiFen } from './banqi-fen.js';
+import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
+import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
+import {
+  createInitialJungleFlipState,
+  createJungleFlipDeal,
+} from './variants-jungle-flip.js';
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
@@ -55,6 +61,40 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
 
 export function hasStartFen(spec: string): boolean {
   return (START_FEN_SPEC_IDS as readonly string[]).includes(spec);
+}
+
+
+/** The start position a NEW document of this variant should open at, as a
+ *  canonical FEN.
+ *
+ *  For the deterministic variants this is just their standard opening, and a
+ *  caller could equally have stored nothing. For the dealt three it is a FRESH
+ *  DEAL, and storing it is the whole point: a banqi, jieqi or flip jungle
+ *  document that records only moves replays into a different game every time it
+ *  is opened, because there is no standard start to replay from.
+ *
+ *  `rng` is injected so a caller can seed it; tests pass a fixed generator. */
+export function initialStartFen(spec: string, rng: () => number = Math.random): string | null {
+  switch (spec) {
+    case BANQI_SPEC_ID:
+      return banqiStateToDealtFen(createInitialBanqiState('start', createBanqiDeal(rng)));
+    case JIEQI_SPEC_ID:
+      return jieqiStateToDealtFen(createInitialJieqiState('start', createJieqiDeal(rng)));
+    case JUNGLE_FLIP_SPEC_ID:
+      return jungleFlipStateToDealtFen(
+        createInitialJungleFlipState('start', createJungleFlipDeal(rng)),
+      );
+    // Deterministic variants need no stored root: replaying from their standard
+    // opening reproduces the document exactly.
+    default:
+      return null;
+  }
+}
+
+/** Whether a variant's start is a random deal, so a document of it is only
+ *  reconstructable from a stored root FEN. */
+export function startIsDealt(spec: string): boolean {
+  return spec === BANQI_SPEC_ID || spec === JIEQI_SPEC_ID || spec === JUNGLE_FLIP_SPEC_ID;
 }
 
 export type NormalizeStartFenResult = { ok: true; fen: string } | { ok: false; error: string };
