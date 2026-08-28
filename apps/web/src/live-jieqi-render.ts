@@ -91,6 +91,11 @@ const BOARD_CORNER_RX = boardCornerRadius(MARGIN * 2 + (FILES - 1) * CELL);
 // The river sits between ranks 5 and 6 (display rows 4 and 5 from the top).
 
 export type JieqiBoardRenderOptions = {
+  /** false = draw no coordinates AND reserve no space for them, whatever the
+   *  reader's preference says. For surfaces whose framing is authored rather
+   *  than played on: article diagrams, the homepage puzzle thumbnail. Boards
+   *  you actually play on leave this alone and follow the preference. */
+  coordinates?: boolean;
   arrows?: readonly JieqiBoardArrow[];
   markers?: readonly JieqiBoardMarker[];
   interactive?: boolean;
@@ -141,7 +146,7 @@ export function renderJieqiBoardSvg(
   const legalMoves = options.legalMoves ?? [];
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
-  const showCoords = readDisplayPreferences().boardCoordinates;
+  const showCoords = options.coordinates !== false && readDisplayPreferences().boardCoordinates;
   const surface = showCoords ? JIEQI_SURFACE : { ...JIEQI_SURFACE, geo: JIEQI_GEO_NO_COORDS };
   const vb = xiangqiBoardViewBox(layout, surface.geo);
   const coords = showCoords
