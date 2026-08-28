@@ -357,6 +357,15 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
    *  the side's displayed ink is used. */
   players?: { red?: string; black?: string };
+  /**
+   * Draw the names as strips above and below the board. OPT-IN, and separate
+   * from `players` on purpose: every game-review surface already passes
+   * `players` for the accuracy summary and crosstable, and already shows the
+   * pairing in its own meta card, so keying the strips off `players` rendered
+   * them twice on every game page. Only a surface with no other place to name
+   * the seats -- a study chapter -- asks for these.
+   */
+  seatLabels?: boolean;
   /** Visual ink bound to the first/second analysis seats. Flip variants set this
    *  after the opening reveal; analysis ownership remains keyed by seat. */
   seatColors?: ReviewSeatColors;
@@ -595,7 +604,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   //
   // The strips are laid out by ORIENTATION, so flipping the board moves the
   // names with it: the side at the bottom is always the one facing the reader.
-  const seatNames = config.players;
+  const seatNames = config.seatLabels ? config.players : undefined;
   const topSeat = seatNames ? document.createElement('div') : null;
   const bottomSeat = seatNames ? document.createElement('div') : null;
   function paintSeats(): void {

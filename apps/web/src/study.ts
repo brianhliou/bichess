@@ -668,6 +668,7 @@ function renderStudy(
       // follow a board flip and reads as a spoiler.
       ...(chapter.tags?.red || chapter.tags?.black
         ? {
+            seatLabels: true,
             players: {
               ...(chapter.tags.red ? { red: chapter.tags.red } : {}),
               ...(chapter.tags.black ? { black: chapter.tags.black } : {}),
