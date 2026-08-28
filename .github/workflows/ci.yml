@@ -96,8 +96,31 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-  unit:
-    name: Unit tests
+  # `npm run test:unit` ran every workspace in series in one job: 176s, of
+  # which web was 82s, server 52s, and game 28s. Nothing about them is ordered,
+  # so they are three jobs. Keep the root script as the one-command local
+  # entry point; this split exists for wall clock on hosted runners only.
+  unit-web:
+    name: Unit tests (web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # No server build: nothing under apps/web imports @mistboard/server. The
+      # old combined job needed it for the server's own unit tests.
+      - name: Build workspace dependencies
+        run: |
+          npm run build --workspace @mistboard/game
+          npm run build --workspace @mistboard/board-render
+      - name: Unit tests (web)
+        run: npm run test:unit --workspace @mistboard/web
+
+  unit-server:
+    name: Unit tests (server)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -110,9 +133,31 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
-          npm run build --workspace @mistboard/server
-      - name: Unit tests
-        run: npm run test:unit
+      - name: Unit tests (server)
+        run: npm run test:unit --workspace @mistboard/server
+
+  # The two pure packages plus the repo's own tooling tests. Small enough to
+  # share a runner; splitting further would cost more in setup than it saves.
+  unit-shared:
+    name: Unit tests (packages, tooling)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build workspace dependencies
+        run: |
+          npm run build --workspace @mistboard/game
+          npm run build --workspace @mistboard/board-render
+      - name: Tooling tests
+        run: npm run test:tooling
+      - name: Unit tests (game)
+        run: npm run test:unit --workspace @mistboard/game
+      - name: Unit tests (board-render)
+        run: npm run test:unit --workspace @mistboard/board-render
 
   puzzle-corpus:
     name: Puzzle corpus verification
@@ -161,9 +206,54 @@ jobs:
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
       - name: Server integration
+        run: MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --workspace @mistboard/server
+
+  # The Postgres-backed suite was 146s of a 180s step and the longest job in
+  # CI. It cannot go parallel inside one database (at --test-concurrency=4 the
+  # wall clock does not move and 157 tests fail), so each shard is a job with
+  # its own Postgres. See scripts/persistent-shard.mjs for the file split and
+  # for the measurements behind it.
+  persistent:
+    name: Persistent tests (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bichess
+          POSTGRES_PASSWORD: bichess
+          POSTGRES_DB: bichess
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://bichess:bichess@localhost:5432/bichess
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build workspace dependencies
         run: |
-          npm run test:persistent --workspace @mistboard/server
-          MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true TEST_DATABASE_URL=$TEST_DATABASE_URL npm run test:integration --workspace @mistboard/server
+          npm run build --workspace @mistboard/game
+          npm run build --workspace @mistboard/board-render
+      - name: Compile server
+        run: npx tsc -p apps/server/tsconfig.json
+      - name: Persistent tests (shard ${{ matrix.shard }} of 3)
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_TOTAL: 3
+        run: node scripts/persistent-shard.mjs
 
   browser-smoke:
     name: Browser smoke
@@ -224,9 +314,12 @@ jobs:
       - lint
       - build
       - typecheck
-      - unit
+      - unit-web
+      - unit-server
+      - unit-shared
       - puzzle-corpus
       - integration
+      - persistent
       - browser-smoke
       - audit
     # NOT always(): a concurrency-cancelled run must conclude as cancelled, not
