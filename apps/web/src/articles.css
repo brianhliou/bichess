@@ -1733,6 +1733,14 @@
   margin-inline: auto;
 }
 
+/* The jieqi platform page opens on the replay, so it is a lead-in rather than the
+   subject: at the shared 480px it dominates the fold and pushes the copy under it.
+   Scoped by slug so the rules article's replay, where the board IS the subject,
+   keeps its size. */
+[data-article-slug="jieqi-platform"] .raw-svg-stepper-frame.raw-svg-stepper-frame-jieqi > svg {
+  width: min(360px, 100%);
+}
+
 /* Banqi sample-game board: rendered with the diagram primitives (xq-diagram-bg,
    50px cells) so it matches the other banqi figures. Fills the article column,
    like the static banqi board diagrams above it. */

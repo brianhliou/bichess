@@ -170,12 +170,17 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on a branch built for jieqi. Classical search with a hand-written evaluation and no neural network, which is why it is beatable in a way a top xiangqi engine is not. It is listed as Pikafish in the lobby.',
+            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical search with a hand-written evaluation and no neural network. It is listed as Pikafish in the lobby.',
         },
         {
           kind: 'paragraph',
           text:
-            'The build is pinned to one upstream commit rather than tracking a branch, so the engine behind your analysis does not quietly change under you between one game and the next.',
+            'Our [fork and the WebAssembly build](https://github.com/brianhliou/pikafish-jieqi-wasm) are public. The same source produces both the engine that plays you on the server and the one that analyses in your browser tab, so the two never disagree about the rules.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The server build is pinned to one upstream commit rather than tracking a branch, so the engine behind your analysis does not quietly change under you between one game and the next.',
         },
         { kind: 'sub-heading', text: 'What it is allowed to see' },
         {
@@ -183,17 +188,33 @@ export const jieqiPlatformArticle: Article = {
           text:
             'It receives the redacted board only, with every face-down piece written as a faceless x. It does not know the deal. That boundary is the whole reason the engine can be trusted to play and to analyse the same game, so it is enforced by a test that fails the build if the wire format ever leaks a true identity.',
         },
-        { kind: 'sub-heading', text: 'What it is bad at' },
+        { kind: 'sub-heading', text: 'What it is bad at, and why' },
         {
           kind: 'paragraph',
           text:
-            'It values its own hidden pieces optimistically, so it over-commits them. That bias sits in the evaluation rather than the search depth, which means more thinking time does not remove it. The game at the top of this page is one it lost that way.',
+            'It values its own face-down pieces optimistically, so it over-commits them. We measured that bias holding steady from depth 8 all the way to depth 48, which places it in the evaluation rather than the search. More thinking time cannot remove it. The game at the top of this page is one the engine lost that way.',
         },
-        { kind: 'sub-heading', text: 'All of it is open source' },
+        { kind: 'sub-heading', text: 'The missing piece is a net' },
+        {
+          kind: 'paragraph',
+          text:
+            'Almost all of modern Pikafish\'s strength lives in its NNUE, a small neural network that does the evaluating. There is no trained jieqi net. The branch we ship predates it and evaluates by hand, which is why a careful human can beat it and why the bias above survives any depth we throw at the position.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The hook is already in place: point the engine at a net file and it will load one. Producing that net is the part we have not solved. It needs jieqi training data at a scale we do not have and a build of the newer branch, and it is the single change that would most improve both the bot and the analysis on this page.',
+        },
+        { kind: 'sub-heading', text: 'Open source, and help wanted' },
         {
           kind: 'paragraph',
           text:
             'Mistboard is [open source](https://github.com/brianhliou/mistboard): the jieqi rules engine, the redaction boundary, the decision-versus-luck maths described above, and the tests that hold them in place. If you think a number on this page is wrong, the code that produced it is readable.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'If you train nets, or you know jieqi well enough to say where the evaluation goes wrong, that is the contribution we would most like to have. The engine work is in the [fork](https://github.com/brianhliou/pikafish-jieqi-wasm) and the platform work is in the [main repo](https://github.com/brianhliou/mistboard).',
         },
       ],
     },
