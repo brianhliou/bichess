@@ -616,6 +616,28 @@
   min-height: var(--capture-piece-size, 26px);
 }
 
+/* Drop-variant reserve rows (fortress on review / analysis / study). Same rule
+   the live room's rail already uses (live-review.css): where drops are a real
+   mechanic the pocket is POSITION, not a capture ledger, so its row is reserved
+   space that holds its band while empty. The generic :empty collapse above would
+   otherwise undo the band defined in drop-mini-xiangqi.css — and that reflow is
+   exactly what got the material rows pulled from this surface (#166). Plain
+   captured-material strips still collapse when empty.
+
+   The piece size is pinned rather than inherited: drop-mini-xiangqi.css sizes
+   tiles from 100cqw against a .drop-mini-reserve-container ancestor, and the
+   rail has none, so cqw would fall back to the viewport and size the pocket off
+   the window width instead of the rail. */
+.review-material-row.drop-mini-reserve-strip,
+.review-material-row.drop-mini-reserve-strip:empty {
+  --drop-mini-hand-piece-size: 28px;
+
+  display: block;
+  height: var(--drop-mini-hand-band-height);
+  min-height: var(--drop-mini-hand-band-height);
+  padding-block: 4px;
+}
+
 .review-material-row .review-material-points {
   align-self: center;
   padding-left: 4px;
@@ -888,6 +910,24 @@
     .review-spectator-chat:not(.review-spectator-chat--manual-height) {
     flex: 0 0 auto;
     height: 340px;
+  }
+
+  /* A study opts out for the opposite reason to banqi: its rail carries a
+     chapter list AND a chat, and its board can be TALL (fortress is 7x8), so the
+     board-bottom lock leaves the chat squeezed under the chapter card and then
+     clipped by the rail's overflow:hidden, with no way to scroll to it. A study
+     column is also taller than its board — the underboard carries the chapter
+     body — so ending the rail at the board line strands the remaining height.
+
+     This fixes the chat's DRAG CEILING as much as the clipping. chat-resize
+     derives the ceiling from the panel's parent minus its siblings, so while the
+     rail was board-locked the ceiling was whatever the chapter card left over
+     (~320px) and the handle could never grow past it. Stretching the rail gives
+     the last group a rail-driven height, so the ceiling is stable and large
+     rather than tracking the panel — which is the ratchet the note above warns
+     about. Only the LAST group grows, so the chapter card keeps its own size. */
+  .study-review .review-shell__left {
+    height: auto;
   }
 }
 

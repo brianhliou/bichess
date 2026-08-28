@@ -184,4 +184,18 @@
   .live-route--banqi .live-review__cluster .review-shell__center {
     align-items: center;
   }
+
+  /* Fortress centers for the same reason banqi does, arrived at from the
+     opposite direction: banqi's board is too SHORT for the row, fortress's 7x8
+     board is tall but still shorter than the full-height room rails, so
+     top-pinning strands ~130px of dead space under the board and leaves the
+     board and the game console reading as two surfaces at different heights.
+
+     The reserve bands are already pinned to a fixed height whether or not a
+     pocket holds anything (.rail-material.drop-mini-reserve-strip above), so
+     they ride the centered column without shifting as pieces flow in and out of
+     hand — the board does not move when the first capture lands. */
+  .live-route--fortress-xiangqi .live-review__cluster .review-shell__center {
+    align-items: center;
+  }
 }
