@@ -7,6 +7,16 @@ import type {
   XiangqiGameStatus,
   XiangqiMove,
 } from '@mistboard/game';
+
+// Ingesting a RECORD of a game is not the same as adjudicating live play. Our
+// kernel auto-draws on repetition and on the progress clock; a real tournament
+// game runs past both because an arbiter applies the perpetual-check/chase
+// rules instead. Without this, our own auto-draw made every later move read as
+// illegal and the board was skipped as `illegal_move` -- silently losing real
+// games. Live play is unaffected; this option exists only on replay-to-validate
+// paths. See docs-private/broadcast-october-2026-plan.md.
+const INGEST_REPLAY_OPTIONS = { continuePastAdjudicatedDraw: true } as const;
+
 import {
   replayXiangqiBroadcastBoard,
   validateXiangqiBroadcastBoard,
@@ -534,7 +544,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
       );
     }
 
-    const replay = replayXiangqiBroadcastBoard(board);
+    const replay = replayXiangqiBroadcastBoard(board, INGEST_REPLAY_OPTIONS);
     if (!replay.ok) {
       return rejectedBoardUpdate(
         await skipBoard(client, board, 'illegal_move', replay.reason, {
@@ -674,7 +684,7 @@ export async function importXiangqiBroadcastPackOn(
         continue;
       }
 
-      const replay = replayXiangqiBroadcastBoard(board);
+      const replay = replayXiangqiBroadcastBoard(board, INGEST_REPLAY_OPTIONS);
       if (!replay.ok) {
         boardsSkipped += 1;
         errors.push(
