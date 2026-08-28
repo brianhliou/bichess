@@ -9,7 +9,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { clockPolicyKindFor } from '@mistboard/game';
-import type { UserAccount } from '../persistence.js';
+import { isPlayDisabled, type UserAccount } from '../persistence.js';
 import { hashSeatToken } from '../server-seat-session.js';
 import type { TenantSeat, TenantSeatTokenState } from './tenant.js';
 
@@ -51,7 +51,11 @@ export type TenantSeatAssignment<C extends string> =
     }
   | {
       ok: false;
-      reason: 'private room' | 'rated requires account' | 'correspondence requires account';
+      reason:
+        | 'private room'
+        | 'rated requires account'
+        | 'correspondence requires account'
+        | 'play disabled';
     };
 
 export function assignTenantSeat<
@@ -110,6 +114,10 @@ export function assignTenantSeat<
   }
   const seat = nextAvailableTenantSeat(tenant, room.projection.creatorPreference, occupiedSeats);
   if (!seat) return { ok: false, reason: 'private room' };
+  // Per-account play lock (126). Only the new-seat path: both reclaim branches
+  // above have already returned, so locking an account never strands it in a
+  // game it is already sitting in.
+  if (isPlayDisabled(accountUser)) return { ok: false, reason: 'play disabled' };
   if (room.rated && !accountUser) return { ok: false, reason: 'rated requires account' };
   // Correspondence (days-per-move) seats are account-required on BOTH sides:
   // notifications, deadline rows, and cross-device reseat all key off the seat's

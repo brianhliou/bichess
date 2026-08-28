@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Color } from '@mistboard/game';
-import type { UserAccount } from './persistence.js';
+import { isPlayDisabled, type UserAccount } from './persistence.js';
 import {
   appendEvent,
   persistSeatToken,
@@ -49,6 +49,14 @@ export async function assignSeat(
   // turns this denial into a clear close so the client can prompt sign-in.
   if (room.rated && !accountUser && !isServerEngineClient(clientId)) {
     return { seat: 'spectator', deniedReason: 'rated-requires-account' };
+  }
+  // Per-account play lock (126). Placed on the fallthrough path on purpose: the
+  // grant/reclaim branches above have already returned, so locking an account
+  // stops it taking a NEW seat without stranding a game it is already sitting
+  // in. Every tenant and the legacy stack reach a seat through this function,
+  // so this one check is the whole games-side enforcement.
+  if (isPlayDisabled(accountUser)) {
+    return { seat: 'spectator', deniedReason: 'play-disabled' };
   }
   if (room.projection.seats.white === clientId) {
     await startLiveClockIfReady(ctx, room);

@@ -114,6 +114,11 @@ export type UserAccount = {
   accountPreferences: AccountPreferences;
   profileVisibility: ProfileVisibility;
   accountRole: AccountRole;
+  // Play lock (126). Non-null = this account cannot take a game seat, post or
+  // accept a correspondence challenge, or book a puzzle attempt. It is for
+  // accounts that are identities rather than players (the official @mistboard
+  // account), and is orthogonal to accountRole: admins play.
+  playDisabledAt: Date | null;
   // Verified player title (088), granted only through the title-verification
   // pipeline (routes/titles.ts). NULL = untitled. Closed vocabulary; see
   // persistence-titles.ts.
@@ -137,6 +142,13 @@ export type UserAccount = {
   closedAt: Date | null;
 };
 
+// The play lock as a predicate. One import for every enforcement point (seat
+// assignment, correspondence seeks, puzzle attempts) so the rule cannot drift
+// between them, and null-tolerant so a signed-out caller is simply not locked.
+export function isPlayDisabled(user: Pick<UserAccount, 'playDisabledAt'> | null): boolean {
+  return user?.playDisabledAt != null;
+}
+
 // Canonical users-table column list for reads. Keep in lockstep with UserRow
 // and userFromRow below: every SELECT/RETURNING of a full user row derives from
 // this, so a column can't be silently dropped from one query (which once
@@ -156,6 +168,7 @@ export const USER_COLUMNS = [
   'account_preferences',
   'profile_visibility',
   'account_role',
+  'play_disabled_at',
   'title',
   'flair',
   'locale',
@@ -260,6 +273,7 @@ export type UserRow = {
   account_preferences: unknown;
   profile_visibility: UserAccount['profileVisibility'];
   account_role: AccountRole;
+  play_disabled_at: Date | null;
   title: PlayerTitle | null;
   flair: FlairKey | null;
   locale: AccountLocale | null;
@@ -288,6 +302,7 @@ export function userFromRow(row: UserRow): UserAccount {
     accountPreferences: accountPreferencesFromJson(row.account_preferences),
     profileVisibility: row.profile_visibility,
     accountRole: row.account_role,
+    playDisabledAt: row.play_disabled_at,
     title: row.title,
     flair: row.flair,
     locale: row.locale,

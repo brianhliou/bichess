@@ -95,6 +95,10 @@ export type TenantChromeContext<C extends string> = {
   view(): TenantWebView<C> | null;
   seat(): unknown;
   connectionState(): string;
+  // Raw WebSocket close reason behind a 'rejected' state, or '' when the socket
+  // never closed. The chrome distinguishes only the reasons that need their own
+  // sentence; everything else falls back to the tenant's rejectedBody line.
+  closeReason(): string;
   clock(): TenantWebClock<C> | null | undefined;
   timeControl(): { initialMs: number; incrementMs: number } | null | undefined;
   connectedSeats(): Partial<Record<C, boolean>>;
@@ -564,7 +568,9 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   function actionTitle(view: TenantWebView<C> | null): string {
-    if (ctx.connectionState() === 'rejected') return 'Room unavailable';
+    if (ctx.connectionState() === 'rejected') {
+      return ctx.closeReason() === 'play disabled' ? 'Playing is off' : 'Room unavailable';
+    }
     if (ctx.connectionState() === 'displaced') return 'Session moved';
     if (!view) return 'Connecting';
     if (!ctx.isReplayLive()) return 'Viewing replay';
@@ -577,7 +583,14 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   function actionBody(view: TenantWebView<C> | null): string {
-    if (ctx.connectionState() === 'rejected') return tenant.rejectedBody;
+    if (ctx.connectionState() === 'rejected') {
+      // The per-account play lock is not a property of the room, so the tenant's
+      // "this room is not active" line would send the player off to create
+      // another invite that will be refused the same way.
+      return ctx.closeReason() === 'play disabled'
+        ? 'This account cannot play games. Sign in with your playing account.'
+        : tenant.rejectedBody;
+    }
     if (ctx.connectionState() === 'displaced') return 'Another tab reclaimed this seat.';
     if (!view) return 'Opening the room socket.';
     if (!ctx.isReplayLive()) return 'Return to latest before making a move.';

@@ -20,6 +20,7 @@ export {
   isClockTenthsPreference,
   isDmPolicy,
   isPieceAnimationPreference,
+  isPlayDisabled,
   isProfileVisibility,
   userExists,
   userIdForHandle,
