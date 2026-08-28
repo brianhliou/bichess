@@ -26,7 +26,11 @@ import { withXiangqiAnalysisSession, type XiangqiPositionEval } from './xiangqi-
 // truncated pv, evals were off by up to 163cp, and a real blunder was graded an
 // inaccuracy. Fixed in uci-engine-harness (prefer the last COMPLETE iteration);
 // this bump orphans the corrupted rows so they recompute on demand.
-export const XIANGQI_ANALYSIS_ENGINE_VERSION = 3;
+// @4 (2026-08-27, same day): the stored PV cap went 16 -> 32 plies. Bumping
+// again is nearly free because @3 shipped hours earlier and almost nothing has
+// recomputed yet, and it keeps every cached row on one PV depth rather than
+// mixing 16-ply and 32-ply lines depending on when they were computed.
+export const XIANGQI_ANALYSIS_ENGINE_VERSION = 4;
 
 // Cache engine id, version-suffixed so an engine/config change invalidates stored
 // evals (the sibling pattern: JIEQI/BANQI/JUNGLE_ANALYSIS_ENGINE_ID). Xiangqi
