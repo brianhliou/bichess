@@ -55,6 +55,13 @@ export function fillFortressXiangqiReserve(
     interactive?: boolean;
     selectedRole?: FortressXiangqiDropRole | null;
     onSelect?(role: FortressXiangqiDropRole): void;
+    /** Render a slot for EVERY droppable role, ghosting the ones held zero
+     *  times, the way lichess draws a crazyhouse pocket. An empty pocket then
+     *  reads as a fixed set of waiting slots instead of blank space, and the
+     *  row never changes width as pieces come and go — the slot a piece will
+     *  appear in is already on screen. Used by the review rail; the live room
+     *  keeps the compact held-only strip beside the board. */
+    allRoles?: boolean;
   } = {},
 ): void {
   // Reuse the shared drop-mini reserve styling for a consistent pocket look.
@@ -63,11 +70,16 @@ export function fillFortressXiangqiReserve(
     .closest<HTMLElement>('.board-shell, .replay-pane')
     ?.classList.add('drop-mini-reserve-container');
   host.replaceChildren();
-  const entries = FORTRESS_DROP_ROLES.map((role) => ({
+  const held = FORTRESS_DROP_ROLES.map((role) => ({
     role,
     count: view.hands[owner][role] ?? 0,
-  })).filter((entry) => entry.count > 0);
-  host.classList.toggle('has-captures', entries.length > 0);
+  }));
+  const entries = options.allRoles ? held : held.filter((entry) => entry.count > 0);
+  host.classList.toggle(
+    'has-captures',
+    held.some((entry) => entry.count > 0),
+  );
+  host.classList.toggle('drop-mini-reserve-strip--all-roles', options.allRoles === true);
   if (entries.length === 0) return;
 
   const pieceSet = readStoredXiangqiPieceSet();
@@ -80,12 +92,16 @@ export function fillFortressXiangqiReserve(
     tile.className = [
       'drop-mini-reserve-piece',
       entry.count > 1 ? 'has-count' : '',
+      entry.count === 0 ? 'is-empty' : '',
       options.selectedRole === entry.role ? 'selected' : '',
     ]
       .filter(Boolean)
       .join(' ');
     if (tile instanceof HTMLButtonElement) {
       tile.type = 'button';
+      // A ghosted slot holds space for a piece you do not have; it is not a
+      // control, so it stays out of the tab order and ignores clicks.
+      tile.disabled = entry.count === 0;
       tile.dataset.drop = entry.role;
       tile.setAttribute('aria-grabbed', options.selectedRole === entry.role ? 'true' : 'false');
       tile.addEventListener('click', () => options.onSelect?.(entry.role));
