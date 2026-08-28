@@ -236,6 +236,22 @@
   border-radius: 10px;
 }
 
+/* These cards render with coordinates suppressed whatever the reader's
+   preference says, so they must not inherit .xiangqi-live-board's
+   coordinates-on ratio: the host clips, and a ratio wider than the board
+   letterboxes it inside a card whose whole job is a consistent silhouette.
+   Both selectors out-specify the live-board rules rather than relying on
+   source order, because these two stylesheets land in different built
+   chunks and the order between them is Vite's to choose. */
+:root[data-board-coordinates="on"] .xqb-card-board.xiangqi-live-board {
+  aspect-ratio: 552 / 612;
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+  .xqb-card-board.xiangqi-live-board {
+  aspect-ratio: 540 / 612;
+}
+
 .xqb-card-players {
   display: flex;
   flex-direction: column;
