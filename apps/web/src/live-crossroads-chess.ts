@@ -131,6 +131,11 @@ function createCrossroadsChessLiveClient(
   >({
     tenant: crossroadsChessWebTenant,
     gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+    // This module kept its own lifecycle tracker through the migration to the
+    // shared client (see trackCrossroadsChessLifecycle below), and its version
+    // knows the game is casual where the shared one can only report null. Opt
+    // out so the pair does not emit game_started twice.
+    emitsOwnLifecycleAnalytics: true,
     defaultRoomId: 'dchess_dev',
     boardClass: 'crossroads-live-board',
     chrome: {
