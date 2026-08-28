@@ -12,6 +12,7 @@ import { listXiangqiBroadcastRounds } from './persistence-xiangqi-broadcasts.js'
 import {
   buildDiscoveryManifestSources,
   isXiangqiBroadcastDiscoveryUrl,
+  NO_ACTIVE_ROUND_MESSAGE,
   parseXiangqiBroadcastDiscoverySource,
   resolveScheduledRound,
 } from './xiangqi-broadcast-discovery.js';
@@ -528,7 +529,7 @@ async function discoverManifest(
   sourceUrl: string,
 ): Promise<
   | { ok: true; manifest: XiangqiBroadcastSourceManifest }
-  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string }
+  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
 > {
   const parsed = parseXiangqiBroadcastDiscoverySource(
     sourceUrl,
@@ -546,7 +547,19 @@ async function discoverManifest(
   // Between sessions there is no active round, and importing nothing is the
   // correct outcome: guessing the most recent round would file the next
   // round's games under the previous one.
-  if (!round.ok) return { ok: false, kind: 'source_malformed', message: round.message };
+  //
+  // That state holds for most of a multi-day event, so it is marked quiet. A
+  // sync log per tick would be tens of thousands of rows across an eleven-day
+  // tournament and would leave the ops console's source health red exactly
+  // when it most needs to mean something.
+  if (!round.ok) {
+    return {
+      ok: false,
+      kind: 'source_malformed',
+      message: round.message,
+      ...(round.message === NO_ACTIVE_ROUND_MESSAGE ? { quiet: true as const } : {}),
+    };
+  }
 
   const discovered = await parsed.source.provider.discover({
     config: parsed.source.config,
@@ -580,12 +593,14 @@ async function resolveSourceBody(context: PollContext, sourceUrl: string): Promi
   if (isXiangqiBroadcastDiscoveryUrl(sourceUrl)) {
     const discovered = await discoverManifest(context, sourceUrl);
     if (!discovered.ok) {
-      await recordSourceError(context, {
-        sourceUrl,
-        kind: discovered.kind,
-        message: discovered.message,
-        payload: { discovery: true },
-      });
+      if (!discovered.quiet) {
+        await recordSourceError(context, {
+          sourceUrl,
+          kind: discovered.kind,
+          message: discovered.message,
+          payload: { discovery: true },
+        });
+      }
       return { ok: false, kind: discovered.kind, message: discovered.message };
     }
     return { ok: true, body: { kind: 'manifest', manifest: discovered.manifest } };

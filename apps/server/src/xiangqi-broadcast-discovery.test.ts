@@ -207,3 +207,15 @@ test('boards past the cap are dropped and counted, not silently truncated', () =
   assert.equal(built.sources.length, 3);
   assert.equal(built.droppedForCap, 2);
 });
+
+import { NO_ACTIVE_ROUND_MESSAGE } from './xiangqi-broadcast-discovery.js';
+
+// The poller keys its quiet path off this exact message, so a reworded string
+// would silently restore a sync log per tick: tens of thousands of rows across
+// an eleven-day event, and a permanently red source-health indicator.
+test('the between-rounds message is the one the poller stays quiet on', () => {
+  const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-09T12:00:00+08:00'), 60_000);
+  assert.equal(resolved.ok, false);
+  if (resolved.ok) return;
+  assert.equal(resolved.message, NO_ACTIVE_ROUND_MESSAGE);
+});

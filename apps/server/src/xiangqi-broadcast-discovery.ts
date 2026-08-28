@@ -154,6 +154,13 @@ export type RoundResolution =
   | { ok: true; roundId: string; roundName?: string }
   | { ok: false; message: string };
 
+/**
+ * Between rounds there is simply nothing to import, which is the normal state
+ * for most of a multi-day event. Callers use this to stay quiet rather than
+ * recording a fault on every tick.
+ */
+export const NO_ACTIVE_ROUND_MESSAGE = 'no scheduled round is active';
+
 /** Default span after a round's start during which its boards are still live. */
 export const XIANGQI_BROADCAST_ROUND_WINDOW_MS = 12 * 60 * 60 * 1000;
 
@@ -183,7 +190,7 @@ export function resolveScheduledRound(
     if (!best || startedAt > best.startsAt.getTime()) best = round;
   }
   if (!best) {
-    return { ok: false, message: 'no scheduled round is active' };
+    return { ok: false, message: NO_ACTIVE_ROUND_MESSAGE };
   }
   return { ok: true, roundId: best.id, ...(best.name ? { roundName: best.name } : {}) };
 }
