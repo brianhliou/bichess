@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildHomeFooter, buildNav } from './site-shell.js';
+import { buildHomeFooter, buildNav, navTabletMediaQuery, placeNavAccount } from './site-shell.js';
 
 describe('site shell nav', () => {
   afterEach(() => {
@@ -176,5 +176,47 @@ describe('site shell nav', () => {
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
+  });
+});
+
+describe('site shell nav account placement', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    document.body.innerHTML = '';
+    window.matchMedia = originalMatchMedia;
+  });
+
+  function stubViewport(tablet: boolean): void {
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: query === navTabletMediaQuery && tablet,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }) as unknown as MediaQueryList) as typeof window.matchMedia;
+  }
+
+  it('keeps the account slot inside the utilities on desktop and phones', () => {
+    stubViewport(false);
+    const nav = buildNav();
+    const account = nav.querySelector<HTMLElement>('.site-nav-account');
+    expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
+    expect(account?.querySelector('[data-account-slot]')).not.toBeNull();
+  });
+
+  it('moves the account slot onto the bar beside the hamburger on tablets, and back', () => {
+    stubViewport(true);
+    const nav = buildNav();
+    const account = nav.querySelector<HTMLElement>('.site-nav-account');
+    expect(account?.parentElement).toBe(nav);
+    expect(account?.nextElementSibling?.classList.contains('site-nav-toggle')).toBe(true);
+    // The drawer no longer holds it, so the sign-in link is reachable without
+    // opening the menu.
+    expect(nav.querySelector('.site-nav-collapse .site-nav-auth')).toBeNull();
+
+    stubViewport(false);
+    placeNavAccount(nav);
+    expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
+    expect(nav.querySelector('.site-nav-utilities')?.firstElementChild).toBe(account);
   });
 });

@@ -161,6 +161,8 @@ export const EN_PLAY = {
   'live.spectatorOpenReview': 'Open Review game to see the full board.',
   'live.spectatorWaitingSeats': 'Waiting for both player seats to be filled.',
   'live.spectatorFogView': 'Spectators receive a public Fog view while the game is live.',
+  'live.rejectedPlayDisabled':
+    'This account cannot play games. It is set up as an identity, not a player. Sign in with your playing account to take a seat.',
   'live.rejectedPrivateRoom':
     'This game is in progress. Mistboard never shares live game state with anyone but the seated players. The full replay will be here once the game finishes.',
   'live.rejectedRatedAccount':
@@ -310,6 +312,7 @@ export const EN_PLAY = {
   'puzzle.solved': 'Solved.',
   'puzzle.correct': 'Correct.',
   'puzzle.tryAnotherMove': 'Try another move.',
+  'puzzle.playDisabled': 'This account cannot solve puzzles. Sign in with your playing account.',
   'puzzle.fetchingHint': 'Fetching a hint.',
   'puzzle.noHint': 'No hint available.',
   'puzzle.hintMoveHighlighted': 'Hint: move the highlighted piece.',

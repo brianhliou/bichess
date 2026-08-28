@@ -15,7 +15,7 @@ import {
   normalizeAccountPreferences,
   replaceAccountPreferences,
 } from './account-preferences.js';
-import { identify, resetIdentity, track } from './analytics.js';
+import { identify, resetIdentity } from './analytics.js';
 import { requestedAuthReferrer } from './auth-redirect.js';
 import {
   DISPLAY_PREFERENCE_DEFINITIONS,
@@ -2045,7 +2045,9 @@ function buildLoginForm(
         account_role: data.user.accountRole,
         email_verified: data.user.emailVerified,
       });
-      if (data.isNewUser) track('signup_completed');
+      // signup_completed is fired by the server on account creation (it
+      // reaches PostHog even when the browser blocks analytics); firing it
+      // here too would double-count the unblocked signups.
       setAccountNavUser(data.user);
       if (options.redirectOnSuccess) {
         window.location.href = requestedAuthReferrer() ?? localizedHref('/', locale);

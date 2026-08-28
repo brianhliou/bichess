@@ -129,6 +129,7 @@ const chrome = createTenantRoomChrome(darkMiniXiangqiWebTenant, {
   view: currentMiniView,
   seat: () => liveState.seat,
   connectionState: () => liveState.connectionState,
+  closeReason: () => liveState.closeReason,
   clock: () => liveState.clock,
   timeControl: () => liveState.timeControl,
   connectedSeats: () => liveState.connectedSeats,

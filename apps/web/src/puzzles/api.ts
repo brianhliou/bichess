@@ -92,6 +92,21 @@ export async function fetchPuzzleDetail(id: string): Promise<PuzzleDetail | null
   return body.puzzle ?? null;
 }
 
+// The per-account play lock: an account set up as an identity rather than a
+// player is refused by every route that would book a puzzle attempt. Its own
+// error type so the three solving actions share one message instead of each
+// inventing a failure mode for a 403.
+export class PuzzlePlayDisabledError extends Error {}
+
+async function throwIfPlayDisabled(response: Response): Promise<void> {
+  if (response.status !== 403) return;
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => ({}))) as { error?: string };
+  if (body.error === 'play_disabled') throw new PuzzlePlayDisabledError('play disabled');
+}
+
 export async function submitPuzzleAttempt(
   id: string,
   moves: readonly PuzzleMove[],
@@ -102,6 +117,7 @@ export async function submitPuzzleAttempt(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ moves, rated: puzzleRatedPref, qualitySessionId }),
   });
+  await throwIfPlayDisabled(response);
   if (!response.ok) throw new Error(`Puzzle attempt failed: ${response.status}`);
   const body = (await response.json()) as {
     attempt?: PuzzleAttempt;
@@ -122,6 +138,7 @@ export async function fetchPuzzleSolution(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ mode: 'solution', rated: puzzleRatedPref, qualitySessionId }),
   });
+  await throwIfPlayDisabled(response);
   if (!response.ok) throw new Error(`Puzzle reveal failed: ${response.status}`);
   const body = (await response.json()) as {
     solution?: PuzzleMove[];
@@ -148,6 +165,7 @@ export async function fetchPuzzleHint(
       qualitySessionId,
     }),
   });
+  await throwIfPlayDisabled(response);
   if (!response.ok) throw new Error(`Puzzle hint failed: ${response.status}`);
   const body = (await response.json()) as {
     move?: PuzzleMove | null;

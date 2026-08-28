@@ -795,7 +795,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // The best line's value is the eval BEFORE the played move (that eval IS what
   // best play reaches), so the whole line resolves to one verdict at its end.
   const compAssessmentByKey = new Map<string, string>();
-  const MAX_INJECTED_PV_PLIES = 10;
+  // Raised 10 -> 24 on 2026-08-27. The server stores 32; grafting only 10 meant
+  // the best-play branch ended five moves a side in, which reads as a shallow
+  // engine rather than a display cap.
+  const MAX_INJECTED_PV_PLIES = 24;
 
   function injectBestLines(analysis: GameAnalysis): void {
     // Which parser turns an analysis PV token into a move. A variant whose

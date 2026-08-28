@@ -245,6 +245,14 @@ async function createSeek(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<boolean> {
+  // Per-account play lock (126). Correspondence never reaches seat assignment
+  // through a socket the way a live room does, so posting a seek and accepting
+  // one are their own enforcement points. Declining and cancelling stay open: a
+  // locked account must still be able to clear challenges aimed at it.
+  if (persistence.isPlayDisabled(user)) {
+    writeJson(response, 403, { error: 'play_disabled' });
+    return true;
+  }
   const body = await readJsonBody(request);
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
   // Fork-6 fail-closed allowlist — the same set the create route enforces.
@@ -345,6 +353,10 @@ async function acceptSeek(
   seekId: string,
   response: ServerResponse,
 ): Promise<boolean> {
+  if (persistence.isPlayDisabled(user)) {
+    writeJson(response, 403, { error: 'play_disabled' });
+    return true;
+  }
   if (ctx.isDraining()) {
     writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
     return true;

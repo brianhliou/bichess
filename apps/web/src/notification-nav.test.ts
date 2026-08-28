@@ -55,6 +55,23 @@ describe('notification nav', () => {
     document.body.replaceChildren();
   });
 
+  // Regression: the account slot sits inside site-shell's .site-nav-account
+  // container, so the bell must insert as the slot's sibling, not as a child
+  // of the utilities (that insertBefore threw and the signed-in menu never
+  // mounted; the study-creator browser smoke caught it on 2026-08-27).
+  it('mounts beside the real nav account slot without assuming its parent', async () => {
+    const { buildNav } = await import('./site-shell.js');
+    registerNotificationSource({ read: () => ({ count: 0, entries: [] }) });
+    const nav = buildNav();
+    document.body.append(nav);
+
+    expect(() => mountNotificationBell(nav)).not.toThrow();
+
+    const bell = nav.querySelector('[data-notification-nav]');
+    expect(bell?.nextElementSibling?.hasAttribute('data-account-slot')).toBe(true);
+    expect(bell?.parentElement?.classList.contains('site-nav-account')).toBe(true);
+  });
+
   it('uses the standard SVG bell instead of the dobutsu notification art', () => {
     registerNotificationSource({ read: () => ({ count: 0, entries: [] }) });
     const nav = document.createElement('nav');

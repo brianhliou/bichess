@@ -338,9 +338,12 @@ export type XiangqiPositionEval = {
   depth: number;
 };
 
-/** Stored/served PV length cap: enough for a readable refutation line without
- *  bloating cached analysis rows (the client injects at most 10 plies). */
-const ANALYSIS_PV_MAX_PLIES = 16;
+/** Stored/served PV length cap. Raised 16 -> 32 on 2026-08-27: at the analysis
+ *  budget Pikafish routinely reports 20-24 plies and reaches seldepth in the
+ *  thirties, so 16 was cutting real line, and the review page then cut it again
+ *  to 10. A refutation that stops eight moves in reads as the engine having
+ *  nothing more to say. Cost is ~5 bytes/ply on the pv field only. */
+const ANALYSIS_PV_MAX_PLIES = 32;
 
 // Normalize a side-to-move UCI eval to RED's POV. Red moves first, so Black is
 // to move after an odd number of plies; flip the sign then. `mate 0` = the side

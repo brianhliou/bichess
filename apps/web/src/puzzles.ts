@@ -32,6 +32,7 @@ import {
   fetchPuzzleListWithAttempts,
   fetchPuzzleSolution,
   fetchUserPuzzleRating,
+  PuzzlePlayDisabledError,
   reportAttemptRating,
   sendPuzzleQualityEvent,
   setOnAttemptRating,
@@ -578,6 +579,23 @@ function actionButton(
   return button;
 }
 
+// The three solving actions (submit, hint, reveal) all call a route that books
+// a puzzle attempt, so all three can be refused by the per-account play lock.
+// One shared landing so the board says why instead of sitting on its pending
+// message; any other failure still propagates.
+const PLAY_LOCKED = Symbol('play-locked');
+
+function playLockRefusal(error: unknown): typeof PLAY_LOCKED {
+  if (error instanceof PuzzlePlayDisabledError) return PLAY_LOCKED;
+  throw error;
+}
+
+function showPlayLocked(session: PuzzleSession, renderSession: () => void): void {
+  session.submitting = false;
+  session.feedback = { kind: 'bad', text: t('puzzle.playDisabled') };
+  renderSession();
+}
+
 async function submitMove(
   session: PuzzleSession,
   move: PuzzleMove,
@@ -593,11 +611,13 @@ async function submitMove(
   const beforeCount = puzzlePieceCount(session.state);
   const playedCountBefore = session.playedMoves.length;
   const nextSolverMoves = [...session.solverMoves, move];
-  const { attempt, rating } = await submitPuzzleAttempt(
+  const submitted = await submitPuzzleAttempt(
     session.puzzle.id,
     nextSolverMoves,
     session.qualitySessionId,
-  );
+  ).catch(playLockRefusal);
+  if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
+  const { attempt, rating } = submitted;
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
@@ -659,11 +679,13 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.fetchingHint') };
   renderSession();
-  const { move, rating } = await fetchPuzzleHint(
+  const hinted = await fetchPuzzleHint(
     session.puzzle.id,
     session.playedMoves.length,
     session.qualitySessionId,
-  );
+  ).catch(playLockRefusal);
+  if (hinted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
+  const { move, rating } = hinted;
   session.submitting = false;
   if (!move) {
     session.feedback = { kind: 'neutral', text: t('puzzle.noHint') };
@@ -693,10 +715,11 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.loadingSolution') };
   renderSession();
-  const { solution, rating } = await fetchPuzzleSolution(
-    session.puzzle.id,
-    session.qualitySessionId,
+  const revealed = await fetchPuzzleSolution(session.puzzle.id, session.qualitySessionId).catch(
+    playLockRefusal,
   );
+  if (revealed === PLAY_LOCKED) return showPlayLocked(session, renderSession);
+  const { solution, rating } = revealed;
   session.submitting = false;
   if (!solution || solution.length === 0) {
     session.feedback = { kind: 'neutral', text: t('puzzle.noSolution') };
