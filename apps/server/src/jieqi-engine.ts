@@ -35,7 +35,14 @@ export const JIEQI_ENGINE_VERSION = '0.2.0';
 // analysis search config (fixed depth 12, single thread, default hash) are untouched, so
 // cached sweeps stay valid and must not be invalidated. Bump this one only when the binary
 // or the analysis search config itself changes.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.1.0';
+// 0.2.0 (2026-08-27): jieqi analysis runs `go depth N movetime T` and halts on
+// whichever binds first. When movetime wins, the final iteration is aborted and
+// the last `info` line is a bound with a one-move pv — which the UCI reader used
+// to take as the evaluation (see uci-engine-harness). Fixed there; this bump
+// orphans sweeps whose movetime bound, since their evals and pvs are wrong.
+// Fortress is NOT bumped: it runs a pure `go depth N`, which always completes
+// its final iteration. The Misty-backed variants never touch this parser.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.2.0';
 
 export type JieqiEngineTier = {
   id: string;
