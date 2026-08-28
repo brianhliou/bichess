@@ -114,7 +114,14 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   const utilities = document.createElement('div');
   utilities.className = 'site-nav-utilities';
 
-  utilities.append(buildSignedOutAccountLinks(locale));
+  // The account slot (signed-out links, or the account menu once account-nav
+  // mounts) sits in a container that placeNavAccount() can move: inside the
+  // utilities on desktop and phones, up on the bar beside the hamburger on
+  // tablets, so signing in never needs the drawer opened first.
+  const account = document.createElement('div');
+  account.className = 'site-nav-account';
+  account.append(buildSignedOutAccountLinks(locale));
+  utilities.append(account);
 
   // Mobile menu toggle. On desktop `.site-nav-collapse` is `display: contents`,
   // so links + utilities lay out exactly as before; on mobile the toggle reveals
@@ -138,7 +145,44 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   ensureNavDismiss();
   ensureNavAutoHide();
   nav.append(brand, toggle, collapse);
+  placeNavAccount(nav);
+  ensureNavAccountPlacement();
   return nav;
+}
+
+// Tablets (601 to 1100px) get the phone bar (hamburger, drawer) but have room
+// for the account slot beside the toggle; phones do not, and desktop shows the
+// utilities inline anyway. CSS cannot reparent, so the slot's container moves
+// on the media query. account-nav.ts finds the slot through the nav, not the
+// utilities, so it mounts wherever the container currently sits.
+export const navTabletMediaQuery = '(min-width: 601px) and (max-width: 1100px)';
+
+function isTabletNav(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(navTabletMediaQuery).matches;
+}
+
+export function placeNavAccount(nav: HTMLElement): void {
+  const account = nav.querySelector<HTMLElement>('.site-nav-account');
+  const toggle = nav.querySelector<HTMLElement>(':scope > .site-nav-toggle');
+  const utilities = nav.querySelector<HTMLElement>('.site-nav-utilities');
+  if (!account || !toggle || !utilities) return;
+  if (isTabletNav()) {
+    if (account.nextElementSibling !== toggle) toggle.before(account);
+  } else if (account.parentElement !== utilities) {
+    utilities.prepend(account);
+  }
+}
+
+// Bound once for the document (route swaps rebuild the nav); the handler
+// re-finds the current bar, like the auto-hide listener above.
+let navAccountPlacementBound = false;
+function ensureNavAccountPlacement(): void {
+  if (navAccountPlacementBound || typeof window.matchMedia !== 'function') return;
+  navAccountPlacementBound = true;
+  window.matchMedia(navTabletMediaQuery).addEventListener('change', () => {
+    const nav = document.querySelector<HTMLElement>('.site-nav');
+    if (nav) placeNavAccount(nav);
+  });
 }
 
 // Lichess-style sticky-nav auto-hide: hide the bar when scrolling down, reveal
