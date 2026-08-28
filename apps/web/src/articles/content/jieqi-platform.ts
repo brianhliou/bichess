@@ -20,7 +20,7 @@ export const jieqiPlatformArticle: Article = {
   summary:
     'A modern jieqi platform: play the engine or a friend, free and without an account, with engine analysis that handles reveals correctly.',
   showSummaryOnPage: false,
-  status: 'published',
+  status: 'draft',
   publishedAt: '2026-08-28',
   audience:
     'Jieqi players looking for a place to play and review their games, and anyone curious how a game with random reveals gets analysed honestly.',

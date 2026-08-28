@@ -79,13 +79,10 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Vietnamese landing page, newest. It sits in this English index because
-      // the index lists every published article; the page itself declares
-      // lang="vi" and is aimed at readers who arrive by search, not by
-      // browsing here.
+      // Both drafts. This assertion runs with DEV stubbed true, where the index
+      // lists drafts so an author can preview them; in a production build they
+      // are absent from here and their routes 404 client-side.
       '/blog/co-up',
-      // Same publish date as the Vietnamese landing page; ties break
-      // alphabetically by title and 'Chơi' sorts before 'Jieqi'.
       '/blog/jieqi-platform',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically

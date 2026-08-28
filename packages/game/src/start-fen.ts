@@ -23,12 +23,6 @@
 // does not follow this one.)
 
 import { banqiStateToDealtFen, parseBanqiFen } from './banqi-fen.js';
-import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
-import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
-import {
-  createInitialJungleFlipState,
-  createJungleFlipDeal,
-} from './variants-jungle-flip.js';
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
@@ -44,7 +38,10 @@ import { jieqiStateToDealtFen, parseJieqiFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen, parseJungleFlipFen } from './jungle-flip-fen.js';
 import { darkChessFen, parseDarkChessFen } from './variants.js';
+import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
+import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
+import { createInitialJungleFlipState, createJungleFlipDeal } from './variants-jungle-flip.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
 /** Specs whose start position can be given as a FEN. */
@@ -62,7 +59,6 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
 export function hasStartFen(spec: string): boolean {
   return (START_FEN_SPEC_IDS as readonly string[]).includes(spec);
 }
-
 
 /** The start position a NEW document of this variant should open at, as a
  *  canonical FEN.

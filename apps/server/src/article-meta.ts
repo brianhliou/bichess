@@ -41,6 +41,11 @@ const RETIRED_RULES_SLUGS = new Set([
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
+  // Written and reviewable at /blog/<slug> in dev, deliberately not published:
+  // the jieqi page wants Brian's read at full length, and the Vietnamese one
+  // wants a native reader before it reaches the audience it is written for.
+  'jieqi-platform',
+  'co-up',
   'fog-openings',
   'fog-chess-concepts',
   'shogi',

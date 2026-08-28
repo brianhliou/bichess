@@ -24,7 +24,7 @@ export const coUpArticle: Article = {
   summary:
     'Cờ úp trên Mistboard: chơi với engine hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích của engine.',
   showSummaryOnPage: false,
-  status: 'published',
+  status: 'draft',
   publishedAt: '2026-08-28',
   audience:
     'Người chơi cờ úp muốn một nơi hiện đại để chơi và để xem lại ván đấu của mình.',
