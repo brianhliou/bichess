@@ -35,6 +35,11 @@ export type XiangqiGameAnalysisResponse = {
   chancePlies?: number[];
 };
 
+/** Positive glyph: `!!` (a sound piece sacrifice) or `!` (the only good move). Computed by the
+ *  variant's own rules from the eval series plus the board (see praiseMove on the engine
+ *  presentation); absent for variants without such rules, and never on a judged move. */
+export type MovePraise = 'brilliant' | 'great';
+
 export type MoveAnalysis = {
   /** Ply this move lands on (1..N). */
   ply: number;
@@ -42,6 +47,7 @@ export type MoveAnalysis = {
   judgment: MoveJudgment;
   /** This move's accuracy in [0, 100]. */
   accuracy: number;
+  praise?: MovePraise;
 };
 
 export type PlayerAnalysis = {
@@ -85,6 +91,38 @@ export function judgmentGlyph(
     default:
       return null;
   }
+}
+
+/** Move glyph for a positive verdict: !! brilliant, ! great. `suffixClass` matches the
+ *  .review-move--<class> colour hooks in move-list.css. */
+export function praiseGlyph(
+  praise: MovePraise | undefined,
+): { suffix: string; suffixClass: string } | null {
+  switch (praise) {
+    case 'brilliant':
+      return { suffix: '!!', suffixClass: 'brilliant' };
+    case 'great':
+      return { suffix: '!', suffixClass: 'great' };
+    default:
+      return null;
+  }
+}
+
+/** Attach positive verdicts to an analysis. A judged move (an error by the engine's own
+ *  reckoning) is never praised, whatever the map says. Returns the same object when the map is
+ *  empty. */
+export function withPraise(
+  analysis: GameAnalysis,
+  praiseByPly: ReadonlyMap<number, MovePraise>,
+): GameAnalysis {
+  if (praiseByPly.size === 0) return analysis;
+  return {
+    ...analysis,
+    moves: analysis.moves.map((move) => {
+      const praise = move.judgment === null ? praiseByPly.get(move.ply) : undefined;
+      return praise ? { ...move, praise } : move;
+    }),
+  };
 }
 
 const ACPL_CAP = 1000;

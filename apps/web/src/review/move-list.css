@@ -146,3 +146,12 @@
 .review-move--inaccuracy {
   color: #b7950b;
 }
+/* Positive verdicts (game-analysis.praiseGlyph): brilliant teal, great green. */
+.review-move--brilliant {
+  color: #0f8b8d;
+  font-weight: 700;
+}
+.review-move--great {
+  color: #2e7d32;
+  font-weight: 700;
+}

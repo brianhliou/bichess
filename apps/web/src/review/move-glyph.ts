@@ -12,21 +12,36 @@
 // deliberately clears it so an authored '?' is not styled as an engine verdict in
 // the list). The symbol fallback below is what lets the badge still colour those.
 
-/** Badge colour families. The first three mirror MoveJudgment; 'good' and
- *  'speculative' exist only for user-authored NAGs, and are deliberately NOT
- *  judgment colours so an authored '!' never reads as an engine verdict. */
-export type MoveGlyphTone = 'blunder' | 'mistake' | 'inaccuracy' | 'good' | 'speculative';
+/** Badge colour families. The first three mirror MoveJudgment. 'brilliant' (`!!`)
+ *  and 'good' (`!`) are shared by the engine's positive verdicts
+ *  (game-analysis.praiseGlyph, whose class for `!` is 'great') and by
+ *  user-authored NAGs; 'speculative' (`!?`) is authored only. */
+export type MoveGlyphTone =
+  | 'blunder'
+  | 'mistake'
+  | 'inaccuracy'
+  | 'brilliant'
+  | 'good'
+  | 'speculative';
 
 const TONE_BY_SYMBOL: Record<string, MoveGlyphTone> = {
   '??': 'blunder',
   '?': 'mistake',
   '?!': 'inaccuracy',
   '!': 'good',
-  '!!': 'good',
+  '!!': 'brilliant',
   '!?': 'speculative',
 };
 
-const TONES = new Set<string>(['blunder', 'mistake', 'inaccuracy', 'good', 'speculative']);
+const TONES = new Set<string>([
+  'blunder',
+  'mistake',
+  'inaccuracy',
+  'brilliant',
+  'good',
+  'speculative',
+]);
+const TONE_BY_CLASS: Record<string, MoveGlyphTone> = { great: 'good' };
 
 /**
  * Tone for a move-list glyph. `suffixClass` (the engine judgment) wins when it is
@@ -40,6 +55,7 @@ export function moveGlyphTone(
   suffixClass: string | undefined,
 ): MoveGlyphTone | null {
   if (suffixClass && TONES.has(suffixClass)) return suffixClass as MoveGlyphTone;
+  if (suffixClass && TONE_BY_CLASS[suffixClass]) return TONE_BY_CLASS[suffixClass]!;
   if (!suffix) return null;
   return TONE_BY_SYMBOL[suffix] ?? null;
 }

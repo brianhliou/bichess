@@ -12,6 +12,8 @@ import { banqiArticle } from './articles/content/banqi.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { chessArticle } from './articles/content/chess.js';
+import { coUpArticle } from './articles/content/co-up.js';
+import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { crossroadsChessArticle } from './articles/content/crossroads-chess.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
@@ -42,6 +44,8 @@ import { xiangqiArticle } from './articles/content/xiangqi.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  jieqiPlatformArticle,
+  coUpArticle,
   mistyArticle,
   chessArticle,
   darkChessArticle,

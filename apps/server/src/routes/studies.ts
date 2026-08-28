@@ -16,7 +16,7 @@
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { isStudyEligibleSpecId } from '@mistboard/game';
+import { initialStartFen, isStudyEligibleSpecId, startIsDealt } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import {
@@ -97,6 +97,25 @@ function publicStudyView(study: persistence.PublicStudySummary) {
 function parseLimit(params: URLSearchParams, fallback: number): number {
   const value = Number(params.get('limit'));
   return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+// Banqi, jieqi and flip jungle have no standard opening: a chapter that stores
+// only moves replays into a different deal every time it is opened, so it does
+// not open at all. Every chapter of those variants therefore needs a root, and
+// this is the one place that guarantees it rather than trusting each client
+// path to remember. The create-study flow already mints one; the add-chapter
+// flow did not, which shipped a study whose second chapter would not load.
+export function ensureDealtRoot(variant: string, root: unknown): unknown {
+  if (!startIsDealt(variant)) return root;
+  if (
+    root &&
+    typeof root === 'object' &&
+    typeof (root as { rootFen?: unknown }).rootFen === 'string'
+  ) {
+    return root;
+  }
+  const rootFen = initialStartFen(variant);
+  return rootFen ? { ...(root as object), rootFen } : root;
 }
 
 function chapterView(chapter: persistence.StudyChapterRecord) {
@@ -374,7 +393,7 @@ async function createStudy(
       i18n: parseI18nField(chapter.i18n),
       variant,
       orientation,
-      root: chapter.root,
+      root: ensureDealtRoot(variant, chapter.root),
       denorm: chapter.denorm ?? {},
       tags: parseChapterTags(chapter.tags),
     },
@@ -454,7 +473,7 @@ async function addChapter(
     i18n: parseI18nField(body.i18n),
     variant,
     orientation,
-    root: body.root,
+    root: ensureDealtRoot(variant, body.root),
     denorm: body.denorm ?? {},
     tags: parseChapterTags(body.tags),
   });

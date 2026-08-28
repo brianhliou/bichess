@@ -15,12 +15,14 @@ describe('moveGlyphTone', () => {
     expect(moveGlyphTone('?', undefined)).toBe('mistake');
     expect(moveGlyphTone('?!', undefined)).toBe('inaccuracy');
     expect(moveGlyphTone('!', undefined)).toBe('good');
-    expect(moveGlyphTone('!!', undefined)).toBe('good');
+    expect(moveGlyphTone('!!', undefined)).toBe('brilliant');
+    expect(moveGlyphTone('!!', 'brilliant')).toBe('brilliant');
+    expect(moveGlyphTone('!', 'great')).toBe('good');
     expect(moveGlyphTone('!?', undefined)).toBe('speculative');
   });
 
   it('does not trust an unrecognised class', () => {
-    expect(moveGlyphTone('??', 'brilliant')).toBe('blunder');
+    expect(moveGlyphTone('??', 'bogus')).toBe('blunder');
   });
 
   it('returns null for an absent or unknown glyph rather than a default colour', () => {

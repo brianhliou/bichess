@@ -147,3 +147,29 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 });
+
+// A variant's play deep link must be gated on its OWN feature flag. Two were
+// not: fog xiangqi's `acceptsDeepLink` pointed at darkMiniXiangqiEnabled and
+// jieqi's at dropMiniXiangqiEnabled, both flags for unrelated mini-xiangqi
+// variants that are off in production. Neither variant's own flag was even
+// imported here, so the entries fell back to whatever was already in scope and
+// typechecked cleanly. The effect was invisible: /?play=computer&gameSpecId=…
+// silently dropped the visitor on the homepage, so every shared play link for
+// two live variants went nowhere and nothing failed.
+describe('play deep links are gated on their own variant', () => {
+  it('enables a deep link exactly when the variant itself is enabled', () => {
+    const mismatched: string[] = [];
+    for (const tenant of webVariantTenants()) {
+      const landing = tenant.landing;
+      if (!landing) continue;
+      const deepLink = landing.acceptsDeepLink();
+      const offered = landing.offerInMenu();
+      // A variant offered in the play menu must also accept its deep link:
+      // the menu and the link are the same affordance reached two ways.
+      if (offered && !deepLink) {
+        mismatched.push(`${tenant.gameSpecId}: offered in menu but refuses deep links`);
+      }
+    }
+    expect(mismatched, mismatched.join('\n')).toEqual([]);
+  });
+});

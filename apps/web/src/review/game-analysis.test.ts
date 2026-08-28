@@ -4,7 +4,9 @@ import {
   judgmentGlyph,
   mergeDecisionAnalysis,
   type PlyDecision,
+  praiseGlyph,
   regradeBestPlayed,
+  withPraise,
 } from './game-analysis.js';
 
 const evals = (cps: (number | null)[]) => ({
@@ -134,5 +136,26 @@ describe('judgmentGlyph', () => {
 
   it('returns null for a fine move (no glyph)', () => {
     expect(judgmentGlyph(null)).toBeNull();
+  });
+});
+
+describe('withPraise', () => {
+  it('attaches a positive verdict only to unjudged moves, and no-ops on an empty map', () => {
+    const base = computeGameAnalysis(evals([0, 20, 600]));
+    expect(withPraise(base, new Map())).toBe(base);
+    const praised = withPraise(
+      base,
+      new Map([
+        [1, 'brilliant' as const],
+        [2, 'great' as const],
+      ]),
+    );
+    expect(praised.moves[0]?.praise).toBe('brilliant');
+    // Ply 2 is a blunder for its mover; an error is never praised.
+    expect(praised.moves[1]?.judgment).toBe('blunder');
+    expect(praised.moves[1]?.praise).toBeUndefined();
+    expect(praiseGlyph('brilliant')).toEqual({ suffix: '!!', suffixClass: 'brilliant' });
+    expect(praiseGlyph('great')).toEqual({ suffix: '!', suffixClass: 'great' });
+    expect(praiseGlyph(undefined)).toBeNull();
   });
 });

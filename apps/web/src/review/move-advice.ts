@@ -4,12 +4,18 @@
 // move (evals[ply-1].best), already in our own square notation from the server.
 import './move-advice.css';
 import { fsfUciToXiangqiSquares, type MoveJudgment } from '@mistboard/game';
-import type { GameAnalysis } from './game-analysis.js';
+import type { GameAnalysis, MovePraise } from './game-analysis.js';
 
 export const ADVICE_LABEL: Record<Exclude<MoveJudgment, null>, string> = {
   inaccuracy: 'Inaccuracy',
   mistake: 'Mistake',
   blunder: 'Blunder',
+};
+
+/** Inline note under a praised move (the positive counterpart of ADVICE_LABEL). */
+export const PRAISE_COMMENT: Record<MovePraise, string> = {
+  brilliant: 'Brilliant. A piece given up, and the engine agrees it does not come back.',
+  great: 'Great move. The only good move in the position.',
 };
 
 export interface MoveAdvice {

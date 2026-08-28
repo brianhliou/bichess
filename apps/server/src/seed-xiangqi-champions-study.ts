@@ -90,18 +90,18 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
       'Guangdong answers. Five years after the handover the old champion is still beating the new one, and Hu will not have the country to himself for another decade. 183 plies, and the longest game of the pair.',
   },
   {
-    key: 'm_17496',
-    name: '1980 · The summer the run ended',
+    key: 'm_44977',
+    name: '1980 · Liu Dahua opens the summer',
     orientation: 'black',
     blurb:
-      'The summer Hu Ronghua’s run finally ended. Seventy plies, the shortest game in the study, and Liu takes Yang apart in it.',
+      'The championship that ended Hu Ronghua’s run, and Liu Dahua’s first scalp in it: Li Laiqun, who would take the title off him two years later.',
   },
   {
-    key: 'm_44977',
-    name: '1980 · Eight days earlier',
+    key: 'm_17496',
+    name: '1980 · And then Yang Guanlin',
     orientation: 'black',
     blurb:
-      'Eight days earlier in the same championship, against the man who would take the title off him two years later.',
+      'Five days later in the same championship, Liu Dahua takes apart the man who won the very first one. Seventy plies, the shortest game in the study.',
   },
   {
     key: 'm_23400',
@@ -118,13 +118,6 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
       'Guangdong\u2019s third great player, in the year he won his first national title, against Yu Youhua, who would win one himself. Lü Qin went on to five national titles and five world titles, more of the latter than anyone before or since. Our engine grades him at 95.7 here.',
   },
   {
-    key: 'm_2071',
-    name: '1990 · Xu Yinchuan, also aged fifteen',
-    orientation: 'red',
-    blurb:
-      'The defending national champion against a fifteen-year-old Xu Yinchuan. It is 1960 in reverse: the same age, the same stage, the opposite result. Xu Yinchuan won his own first title three years later.',
-  },
-  {
     key: 'm_18360',
     name: '1989 · Zhao Guorong before the titles',
     orientation: 'red',
@@ -132,11 +125,11 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
       'Heilongjiang against Shanghai: Zhao Guorong beats Hu Ronghua the year before the first of his four national titles. Zhao grades 97.7 across 73 plies, one of the cleanest games here and among the shortest.',
   },
   {
-    key: 'm_19406',
-    name: '1996 · Tao Hanming over Liu Dahua',
+    key: 'm_2071',
+    name: '1990 · Xu Yinchuan, also aged fifteen',
     orientation: 'red',
     blurb:
-      'Tao Hanming won a single national title, in 1994, in an era owned by four or five other men. Two years later he takes down Liu Dahua, a two-time champion, which is the better evidence of what he could do.',
+      'The defending national champion against a fifteen-year-old Xu Yinchuan. It is 1960 in reverse: the same age, the same stage, the opposite result. Xu Yinchuan won his own first title three years later.',
   },
   {
     key: 'm_137202',
@@ -153,11 +146,39 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
       'The third of Guangdong’s champions, against the man who ended Hu’s run. Xu Yinchuan grades 97.7 here with no blunder and no mistake, and won six national titles between 1993 and 2009.',
   },
   {
+    key: 'm_19406',
+    name: '1996 · Tao Hanming over Liu Dahua',
+    orientation: 'red',
+    blurb:
+      'Tao Hanming won a single national title, in 1994, in an era owned by four or five other men. Two years later he takes down Liu Dahua, a two-time champion, which is the better evidence of what he could do.',
+  },
+  {
+    key: 'm_8975',
+    name: '2002 · Yu Youhua, once',
+    orientation: 'black',
+    blurb:
+      'Yu Youhua won the national championship in 2002 and never again, in the middle of an era owned by Hu Ronghua, Lü Qin and Xu Yinchuan. This is from the championship he won, against Xu Tianhong.',
+  },
+  {
+    key: 'm_37503',
+    name: '2010 · Sun Yongzheng, the year before',
+    orientation: 'black',
+    blurb:
+      'Sun Yongzheng took the title in 2011. A year earlier he beats Xu Tianhong in sixty plies and grades 97.1 doing it, one of the cleanest games here.',
+  },
+  {
     key: 'm_135530',
     name: '2025 · Shanghai, and the title leaves China',
     orientation: 'red',
     blurb:
       'From the championship in Shanghai that Lại Lý Huynh won, the first man from outside China to take the standard world title in the thirty-five years the event has existed.',
+  },
+  {
+    key: 'm_138948',
+    name: '2025 · Wang Yubo, and an empty top',
+    orientation: 'red',
+    blurb:
+      'The most recent national champion, from the championship he won. He faces nobody else in this study, and that is the point rather than an omission: the generation that would have been across the board from him is serving competition bans.',
   },
 ];
 
@@ -204,6 +225,10 @@ const PLAYER_NAMES: Record<string, string> = {
   陶汉明: 'Tao Hanming',
   许银川: 'Xu Yinchuan',
   李雪松: 'Li Xuesong',
+  于幼华: 'Yu Youhua',
+  孙勇征: 'Sun Yongzheng',
+  王禹博: 'Wang Yubo',
+  苏奕霖: 'Su Yilin',
   刘伯良: 'Liu Boliang',
   吴贵临: 'Wu Guilin',
   冯家俊: 'Fung Ka-chun',

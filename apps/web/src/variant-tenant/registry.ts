@@ -43,8 +43,10 @@ import {
   darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkShogiEnabled,
+  darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
   fortressXiangqiEnabled,
+  jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
   kriegspielEnabled,
@@ -337,7 +339,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       defaultEngineId: 'python-fdx-v1.1',
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: darkMiniXiangqiEnabled,
+      acceptsDeepLink: darkXiangqiEnabled,
     },
   },
   {
@@ -379,7 +381,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5'],
       offerInMenu: alwaysEnabled,
-      acceptsDeepLink: dropMiniXiangqiEnabled,
+      acceptsDeepLink: jieqiEnabled,
       // One public identity (bot-consolidation 2026-07-21): Pikafish fronts the
       // depth-10 jieqi profile. The amateur/strongest engine ids stay
       // server-resolvable for history and EvE; no ladder until the jieqi engine

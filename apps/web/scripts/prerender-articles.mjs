@@ -210,6 +210,70 @@ async function writeRoutePreloadManifest(manifest, shellHtml) {
 // prod HTML (leaking hidden variants and flashing panels that hydration then
 // removes).
 process.env.NODE_ENV = 'production';
+// --- RSS 2.0 for the announcement archive -----------------------------------
+// Hand-rolled rather than a dependency: the document is a dozen lines and the
+// only hard parts are escaping and the RFC-822 date.
+const xmlEscape = (value) =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+// Announcements carry a date with no time. Noon UTC keeps every reader's local
+// date equal to the authored one.
+const rssDate = (iso) => {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12)).toUTCString();
+};
+
+const absoluteHref = (href) => {
+  if (!href) return `${host}/feed`;
+  return /^https?:/.test(href) ? href : `${host}${href}`;
+};
+
+function renderNewsRss(entries) {
+  const items = entries
+    .map((entry) => {
+      // Stable id that does not change when an entry's link does, so a reader
+      // that has seen an item never sees it twice.
+      const slug = entry.headline
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      // The authored CTA ("Open the editor") is a UI label, not prose. In a
+      // reader, and in a tweet built from this document, the link is the call
+      // to action, so the label would only read as a dangling imperative.
+      const description = entry.body ?? '';
+      return [
+        '    <item>',
+        `      <title>${xmlEscape(entry.headline)}</title>`,
+        `      <link>${xmlEscape(absoluteHref(entry.href))}</link>`,
+        `      <guid isPermaLink="false">mistboard:${entry.date}:${slug}</guid>`,
+        `      <pubDate>${rssDate(entry.date)}</pubDate>`,
+        `      <category>${xmlEscape(entry.kind)}</category>`,
+        description ? `      <description>${xmlEscape(description)}</description>` : null,
+        '    </item>',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mistboard updates</title>
+    <link>${host}/feed</link>
+    <atom:link href="${host}/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Releases, articles, and status updates from Mistboard.</description>
+    <language>en</language>
+${items}
+  </channel>
+</rss>
+`;
+}
+
 const server = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
@@ -229,11 +293,18 @@ try {
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
   // sets <html lang> and JSON-LD inLanguage; langDir is the output-path segment.
   // The base segment (articles vs rules) is chosen per-article from its kind.
-  const variants = [
+  const baseVariants = [
     { lang: null, urlPrefix: '', htmlLang: 'en', langDir: null },
     { lang: 'zh-Hans', urlPrefix: '/zh-hans', htmlLang: 'zh-Hans', langDir: 'zh-hans' },
     { lang: 'zh-Hant', urlPrefix: '/zh-hant', htmlLang: 'zh-Hant', langDir: 'zh-hant' },
   ];
+
+  // An article written in a language the interface does not speak keeps the
+  // same output path and canonical, and only changes what it DECLARES itself
+  // to be. Without this a Vietnamese page ships as <html lang="en"> with
+  // hreflang="en", which is the site telling Google the page is English.
+  const variantsFor = (article) =>
+    article.sourceLang ? [{ ...baseVariants[0], htmlLang: article.sourceLang }] : baseVariants;
 
   const shell = await fs.readFile(resolve(distDir, 'index.html'), 'utf-8');
   if (!shell.includes('<div id="app"></div>')) {
@@ -280,8 +351,9 @@ try {
     // translation publication boundary.
     const imageUrl = `${host}/og/article/${slug}.png`;
     const translationPublished = isArticleTranslationPublished(article.slug);
+    const selfHreflang = article.sourceLang ?? 'en';
     const hreflang = [
-      `<link rel="alternate" hreflang="en" href="${host}/${base}/${slug}" />`,
+      `<link rel="alternate" hreflang="${selfHreflang}" href="${host}/${base}/${slug}" />`,
       ...(translationPublished
         ? [
             `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
@@ -291,7 +363,8 @@ try {
       `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
     ].join('');
 
-    const articleVariants = translationPublished ? variants : variants.slice(0, 1);
+    const localeVariants = variantsFor(article);
+    const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
       const main = buildArticlePage(article.slug, v.lang ?? undefined);
@@ -388,6 +461,45 @@ try {
   await fs.writeFile(resolve(distDir, 'player.html'), leaderboardHtml, 'utf-8');
   await fs.writeFile(resolve(distDir, 'leaderboard.html'), leaderboardHtml, 'utf-8');
   console.log('prerendered /player (player.html)');
+
+  // /feed: the announcement archive. Static authored copy with no live or
+  // per-account data, so the baked DOM is exactly what a reader sees. It was
+  // serving a bare shell while carrying a noindex; both were fixed 2026-08-27,
+  // and a sitemap entry for a bare shell is worse than no entry at all.
+  const { renderNewsShellForPrerender } = await server.ssrLoadModule('/src/news-page.ts');
+  const newsAssetLinks = routeAssetLinks(manifest, 'src/news-page.ts', shell);
+  const newsInner = renderNewsShellForPrerender();
+  let newsHtml = shell.replace(
+    '<div id="app"></div>',
+    `<div id="app" class="landing-page news-route">${newsInner}</div>`,
+  );
+  // Same copy as the server's SPA_ROUTE_META['/feed'], which covers the fallback
+  // path when this file is missing.
+  newsHtml = injectPageMeta(newsHtml, {
+    title: 'Updates and Announcements | Mistboard',
+    description:
+      'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
+    url: `${host}/feed`,
+  });
+  newsHtml = newsHtml.replace(
+    '</head>',
+    `<link rel="canonical" href="${host}/feed" />${newsAssetLinks}</head>`,
+  );
+  await fs.writeFile(resolve(distDir, 'feed.html'), newsHtml, 'utf-8');
+  console.log('prerendered /feed (feed.html)');
+
+  // feed.xml: the same archive as RSS 2.0, so the announcements are followable
+  // without opening the site. Gated by the same public-surface filter as the
+  // page, or the feed would announce variants the site hides.
+  const { announcements } = await server.ssrLoadModule('/src/announcements.ts');
+  const { rulesHrefPublicSurfaceEnabled } = await server.ssrLoadModule(
+    '/src/variant-public-surfaces.ts',
+  );
+  const feedEntries = announcements()
+    .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  await fs.writeFile(resolve(distDir, 'feed.xml'), renderNewsRss(feedEntries), 'utf-8');
+  console.log(`wrote /feed.xml (${feedEntries.length} entries)`);
 
   // Learn: bake the stage map (sidebar + all 20 stage tiles + "what next") with
   // its route CSS. /learn/xiangqi previously served the bare shell, so a crawler

@@ -1,9 +1,10 @@
 import './forum.css';
 import { t } from './i18n/catalog.js';
-import { DISCORD_INVITE_URL } from './nav-items.js';
+import { DISCORD_BLOCKED_IN, DISCORD_INVITE_URL } from './nav-items.js';
 import { prependTitleBadge } from './player-titles.js';
 import { type AuthUser, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
+import { isBlockedForViewer } from './viewer-geo.js';
 
 type ForumCategory = {
   id: string;
@@ -537,14 +538,17 @@ function forumHomeActions(searchQuery: string | null, user: AuthUser | null): HT
   actions.className = 'forum-panel-actions';
   actions.append(forumSearchForm(searchQuery, { compact: true }));
   // Live chat lives off-site; the forum home is where people looking for the
-  // community land, so the invite sits beside the search.
-  const discord = document.createElement('a');
-  discord.className = 'forum-panel-action forum-discord-link';
-  discord.href = DISCORD_INVITE_URL;
-  discord.target = '_blank';
-  discord.rel = 'noreferrer noopener';
-  discord.textContent = t('forum.discord');
-  actions.append(discord);
+  // community land, so the invite sits beside the search. Not for viewers in
+  // countries where Discord is blocked: for them the forum is the community.
+  if (!isBlockedForViewer(DISCORD_BLOCKED_IN)) {
+    const discord = document.createElement('a');
+    discord.className = 'forum-panel-action forum-discord-link';
+    discord.href = DISCORD_INVITE_URL;
+    discord.target = '_blank';
+    discord.rel = 'noreferrer noopener';
+    discord.textContent = t('forum.discord');
+    actions.append(discord);
+  }
   if (user?.accountRole === 'admin') {
     const reports = document.createElement('a');
     reports.className = 'forum-panel-action forum-report-admin-link';

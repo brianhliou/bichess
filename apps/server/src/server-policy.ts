@@ -179,6 +179,10 @@ export function legacyPageRedirect(pathname: string): string | null {
   if (normalized === '/historical-xiangqi' || normalized === '/historical-xiangqi/games') {
     return '/games';
   }
+  // The announcement archive answers on two paths. /feed is canonical (every
+  // internal link points there); /news served the identical page, so the pair
+  // read as duplicates to a crawler. One permanent hop, no canonical tag.
+  if (normalized === '/news') return '/feed';
   return null;
 }
 
@@ -306,13 +310,18 @@ export function isClientRoute(pathname: string): boolean {
 }
 
 // Client routes that must never appear in a search index: the signed-in surface
-// (auth, settings, inbox) and the personalised feeds, whose content is either
+// (auth, settings, inbox) and the per-account feeds, whose content is either
 // per-account or empty to a crawler.
+//
+// /feed is NOT one of them and was removed 2026-08-27. Its name put it in this
+// list on 2026-08-14, but it is the public announcement archive (the same class
+// of page as /blog), not a personalised timeline, and it had been carrying a
+// noindex while every internal link on the site pointed at it.
 //
 // These are already absent from the sitemap, which is not sufficient — a
 // sitemap invites crawling, it does not forbid it, and Search Console showed
-// /account?tab=login, /feed and /following all picking up impressions on brand
-// queries in the 90 days to 2026-08-14. A login page as a search result is the
+// /account?tab=login and /following picking up impressions on brand queries in
+// the 90 days to 2026-08-14. A login page as a search result is the
 // visible symptom; the quieter cost is that a dozen thin account pages compete
 // with the real pages for the same query.
 //
@@ -332,7 +341,6 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized.startsWith('/account/settings/') ||
     normalized === '/inbox' ||
     normalized.startsWith('/inbox/') ||
-    normalized === '/feed' ||
     normalized === '/following' ||
     normalized === '/correspondence' ||
     normalized.startsWith('/challenge/')

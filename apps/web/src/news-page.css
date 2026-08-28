@@ -69,3 +69,15 @@
     gap: 2px;
   }
 }
+
+.news-page-subscribe {
+  color: var(--site-link);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.news-page-subscribe:hover,
+.news-page-subscribe:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}

@@ -37,6 +37,11 @@ export type DrainControllerOptions = {
 type DrainState = {
   phase: DrainPhase | null;
   restartAt: number | null;
+  // Who asked for this drain. Set from the activating request so a cancel from
+  // a DIFFERENT automated release cannot take it away: two sessions releasing
+  // at once, where the first fails before pushing and runs its cleanup, used to
+  // cancel the second session's drain and let it deploy into live games.
+  owner: string | null;
 };
 
 export type DrainPhase = 'pending' | 'restarting';
@@ -45,7 +50,7 @@ const drainRateLimit = 10;
 const drainRateWindowMs = 60_000;
 
 export function createDrainController(options: DrainControllerOptions): DrainController {
-  const drainState: DrainState = { phase: null, restartAt: null };
+  const drainState: DrainState = { phase: null, restartAt: null, owner: null };
   const drainRateBuckets = new Map<string, number[]>();
 
   function isDraining(): boolean {
@@ -121,6 +126,18 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
     }
 
     if (pathname === '/admin/drain/cancel') {
+      const cancelBody = await readJsonBody(request);
+      const claimant = typeof cancelBody.owner === 'string' ? cancelBody.owner : null;
+      // A caller that names an owner is an automated release cleaning up after
+      // itself, and it may only cancel its own drain. A caller that names none
+      // is a human at a terminal (the documented `/admin/drain/cancel` escape
+      // hatch), who is allowed to cancel anything: the point of an escape hatch
+      // is that it opens when the automation is what went wrong.
+      const owner = drainState.owner;
+      if (claimant !== null && owner !== null && claimant !== owner) {
+        writeJson(response, 409, { error: 'drain_owned_by_another', owner });
+        return;
+      }
       const wasActive = isDraining();
       const hadDrain = drainState.phase !== null;
       const cancelledAt = Date.now();
@@ -128,6 +145,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
       const phase = drainState.phase;
       drainState.phase = null;
       drainState.restartAt = null;
+      drainState.owner = null;
       if (hadDrain) broadcastDrainCancel(options.rooms);
       await recordRoomLifecycleAuditSafe({
         kind: 'drain_cancelled',
@@ -137,11 +155,22 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
           hadDrain,
           phase,
           restartAt,
+          owner,
+          claimant,
           rooms: options.rooms.size,
           activeGames: activeGameCount(),
         },
       });
-      console.log(JSON.stringify({ level: 'info', kind: 'drain_cancelled', at: cancelledAt }));
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          kind: 'drain_cancelled',
+          owner,
+          claimant,
+          override: claimant === null && owner !== null,
+          at: cancelledAt,
+        }),
+      );
       writeJson(response, 200, { ok: true, draining: false });
       return;
     }
@@ -198,6 +227,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
         draining: true,
         phase: drainState.phase,
         restartAt: drainState.restartAt,
+        owner: drainState.owner,
         idempotent: true,
       });
       return;
@@ -217,6 +247,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
     const activatedAt = Date.now();
     drainState.phase = 'pending';
     drainState.restartAt = activatedAt + windowMs;
+    drainState.owner = typeof body.owner === 'string' ? body.owner : null;
     broadcastDrainSchedule(options.rooms, drainState.restartAt);
     await recordRoomLifecycleAuditSafe({
       kind: 'drain_activated',
@@ -225,6 +256,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
         windowMs,
         restartAt: drainState.restartAt,
         requestedWindowMs,
+        owner: drainState.owner,
         rooms: options.rooms.size,
         activeGames: activeGameCount(),
       },
@@ -243,6 +275,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
       draining: true,
       phase: drainState.phase,
       restartAt: drainState.restartAt,
+      owner: drainState.owner,
       idempotent: false,
     });
   }

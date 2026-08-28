@@ -20,10 +20,13 @@ import { type GameSpecId, gameSpecForId, hasStartFen, XIANGQI_SPEC_ID } from '@m
 // shared list fails the test until it also gets a board.
 const STUDY_VARIANT_IDS = [
   'xiangqi',
+  'banqi',
+  'jieqi',
   'fortress-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
+  'jungle-flip',
 ] as const satisfies readonly GameSpecId[];
 
 export type StudyVariantId = (typeof STUDY_VARIANT_IDS)[number];
@@ -78,10 +81,11 @@ export function selectedStudyVariant(select: HTMLSelectElement): StudyVariantId 
 
 /** Whether a chapter of this variant can be rooted at a hand-set position. Reads
  *  the same list normalizeStartFen dispatches on, so the box is offered exactly
- *  where a pasted FEN can actually be parsed back and replayed. Every current
- *  study variant qualifies; the check stays as the seam for the variants Tier 2
- *  adds (banqi, jieqi, jungle-flip), whose start is a DEALT fen (dealt-fen.ts)
- *  that a chapter would have to persist with its deal pinned. */
+ *  where a pasted FEN can actually be parsed back and replayed.
+ *
+ *  Every study variant now qualifies, including the dealt three: their canonical
+ *  FEN is the six-field DEALT form (dealt-fen.ts) whose last field pins the deal,
+ *  and a chapter already persists a hand-set start as SerializedTree.rootFen. */
 export function studyVariantSupportsComposition(id: StudyVariantId): boolean {
   return hasStartFen(id);
 }

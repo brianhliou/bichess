@@ -212,10 +212,13 @@ export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
 // against a freshly minted deal would truncate the line to its legal prefix.
 export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
+  BANQI_SPEC_ID,
+  JIEQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
+  JUNGLE_FLIP_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an

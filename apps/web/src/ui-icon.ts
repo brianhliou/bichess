@@ -11,10 +11,12 @@ import {
   createElement,
   Heart,
   type IconNode,
+  Info,
   Megaphone,
   MessagesSquare,
   Newspaper,
   RadioTower,
+  Sparkles,
   SquarePen,
   Store,
   Swords,
@@ -28,6 +30,8 @@ import type { AnnouncementKind } from './announcements.js';
 export type UiIconName =
   | 'announcement-release'
   | 'announcement-article'
+  | 'announcement-status'
+  | 'announcement-update'
   | 'challenge-friend'
   | 'create-topic'
   | 'event-broadcast'
@@ -47,6 +51,8 @@ export type UiIconName =
 const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'announcement-release': Megaphone,
   'announcement-article': Newspaper,
+  'announcement-status': Info,
+  'announcement-update': Sparkles,
   'challenge-friend': Swords,
   'create-topic': SquarePen,
   'event-broadcast': RadioTower,
@@ -74,12 +80,16 @@ export function buildUiIcon(name: UiIconName, className = ''): SVGElement {
 }
 
 export function uiIconForAnnouncementKind(kind: AnnouncementKind): UiIconName {
+  // One glyph per kind: four kinds sharing two glyphs made a release and an
+  // update indistinguishable in the feed's marker column.
   switch (kind) {
     case 'release':
-    case 'update':
       return 'announcement-release';
+    case 'update':
+      return 'announcement-update';
     case 'article':
-    case 'status':
       return 'announcement-article';
+    case 'status':
+      return 'announcement-status';
   }
 }

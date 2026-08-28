@@ -53,6 +53,9 @@ export async function mountStudyReview(
 ): Promise<TreeReviewHandle> {
   const { rootFen, ...rest } = config;
   const base = { ...rest, moves: [], analysis: null };
+  // Stand-in game id for the dealt adapters, which key their deal recovery on
+  // one. A study chapter has no game behind it: the deal comes from rootFen.
+  const STUDY_GAME_ID = 'study';
   // `fen` is what the engine and the share surfaces read back, so it is always
   // the CANONICAL spelling the parser produced, never the raw stored string.
 
@@ -131,6 +134,59 @@ export async function mountStudyReview(
       return mountDarkChessReview(root, {
         ...base,
         root: parsed?.ok ? { truth: parsed.state, fen: darkChessFen(parsed.state) } : undefined,
+      });
+    }
+    // The dealt three. A chapter of these variants is only reconstructable from
+    // its stored SerializedTree.rootFen: `deal` is null because there is no game
+    // behind a study, so the six-field FEN's last field IS the deal. A chapter
+    // with no rootFen would mount a fresh random deal and replay the author's
+    // moves into a different game, so the mount is refused instead.
+    case 'banqi': {
+      const [
+        { mountBanqiReview },
+        { installBanqiBoardStyles },
+        { parseBanqiFen, banqiStateToDealtFen },
+      ] = await Promise.all([
+        import('./banqi-review.js'),
+        import('./../live-banqi-render.js'),
+        import('@mistboard/game'),
+      ]);
+      // Same trap as fortress above: the board SVG's fills live in a page-level
+      // installed <style>, so without this the board paints solid black.
+      installBanqiBoardStyles();
+      const parsed = rootFen ? parseBanqiFen(rootFen) : null;
+      if (!parsed?.ok) throw new Error('banqi study chapter needs a dealt root position');
+      return mountBanqiReview(root, STUDY_GAME_ID, null, {
+        ...base,
+        root: { truth: parsed.state, fen: banqiStateToDealtFen(parsed.state) },
+      });
+    }
+    case 'jieqi': {
+      const [
+        { mountJieqiReview },
+        { installJieqiBoardStyles },
+        { parseJieqiFen, jieqiStateToDealtFen },
+      ] = await Promise.all([
+        import('./jieqi-review.js'),
+        import('./../live-jieqi-render.js'),
+        import('@mistboard/game'),
+      ]);
+      installJieqiBoardStyles();
+      const parsed = rootFen ? parseJieqiFen(rootFen) : null;
+      if (!parsed?.ok) throw new Error('jieqi study chapter needs a dealt root position');
+      return mountJieqiReview(root, STUDY_GAME_ID, null, {
+        ...base,
+        root: { truth: parsed.state, fen: jieqiStateToDealtFen(parsed.state) },
+      });
+    }
+    case 'jungle-flip': {
+      const [{ mountJungleFlipReview }, { parseJungleFlipFen, jungleFlipStateToDealtFen }] =
+        await Promise.all([import('./jungle-flip-review.js'), import('@mistboard/game')]);
+      const parsed = rootFen ? parseJungleFlipFen(rootFen) : null;
+      if (!parsed?.ok) throw new Error('flip jungle study chapter needs a dealt root position');
+      return mountJungleFlipReview(root, STUDY_GAME_ID, null, {
+        ...base,
+        root: { truth: parsed.state, fen: jungleFlipStateToDealtFen(parsed.state) },
       });
     }
     default: {

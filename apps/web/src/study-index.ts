@@ -10,7 +10,7 @@ import './game-shell.css';
 import { localizedStudyName } from './study-i18n.js';
 import './study.css';
 import './study-index.css';
-import { normalizeStartFen } from '@mistboard/game';
+import { initialStartFen, normalizeStartFen } from '@mistboard/game';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
@@ -411,7 +411,13 @@ async function createStudy(
 ): Promise<void> {
   // rootFen rides inside the serialized tree blob (SerializedTree.rootFen), so a
   // composition chapter needs no dedicated column or route change.
-  const root = rootFen ? { ...EMPTY_TREE, rootFen } : EMPTY_TREE;
+  //
+  // A dealt variant (banqi, jieqi, flip jungle) has no standard start, so an
+  // author who leaves the position box empty still needs a deal: without one the
+  // chapter would have nothing to replay from and would not open at all. Mint a
+  // fresh one, exactly as visiting /analysis/<variant> with no fen does.
+  const effectiveRootFen = rootFen || initialStartFen(variant) || undefined;
+  const root = effectiveRootFen ? { ...EMPTY_TREE, rootFen: effectiveRootFen } : EMPTY_TREE;
   const response = await fetch('/api/studies', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

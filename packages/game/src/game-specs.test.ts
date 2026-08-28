@@ -35,6 +35,7 @@ import {
   STUDY_ELIGIBLE_SPEC_IDS,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
+import { hasStartFen } from './start-fen.js';
 
 test('canonical display order contains exactly the current public variant shelf', () => {
   assert.deepEqual(CANONICAL_VARIANT_ORDER, [
@@ -401,15 +402,21 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(isRatedPoolBase('not-a-pool'), false);
 });
 
-test('study-eligible specs are real specs, fail closed, and exclude hidden-deal variants', () => {
+test('every study-eligible spec is a real spec that can be rooted at a position', () => {
   for (const id of STUDY_ELIGIBLE_SPEC_IDS) {
     assert.ok(maybeGameSpecForId(id), `${id} is not a real game spec`);
     assert.equal(isStudyEligibleSpecId(id), true);
+    // The invariant that replaced the old hidden-deal exclusion. A chapter
+    // stores moves and is replayed from its root, so a variant whose position
+    // cannot be spelled as a FEN has nothing to replay from. That is what makes
+    // the dealt three safe to include: their canonical FEN pins the deal, and a
+    // chapter persists it as SerializedTree.rootFen.
+    assert.equal(hasStartFen(id), true, `${id} is study-eligible but has no start FEN`);
   }
-  // Hidden-deal variants stay out until a chapter can persist its deal: replaying
-  // a saved tree against a freshly minted deal would truncate the line.
+  // The hidden-deal variants are IN now, and they are the reason the assertion
+  // above exists rather than a hardcoded list.
   for (const id of [BANQI_SPEC_ID, JIEQI_SPEC_ID, JUNGLE_FLIP_SPEC_ID]) {
-    assert.equal(isStudyEligibleSpecId(id), false, `${id} needs deal persistence first`);
+    assert.equal(isStudyEligibleSpecId(id), true, `${id} should be study-eligible`);
   }
   assert.equal(isStudyEligibleSpecId('chess'), false);
   assert.equal(isStudyEligibleSpecId('not-a-variant'), false);

@@ -454,7 +454,6 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/account/settings/profile',
   '/inbox',
   '/inbox/abc123',
-  '/feed',
   '/following',
   '/correspondence',
   '/challenge/abc123',
@@ -492,6 +491,18 @@ test('public pages are never noindexed', () => {
   for (const route of ['/', '/about', '/player', '/source', '/leaderboard', '/privacy', '/terms']) {
     assert.equal(isNoindexRoute(route), false, `${route} is a public page and must stay indexable`);
   }
+});
+
+// /feed spent 2026-08-14 to 2026-08-27 noindexed because its name reads like a
+// personalised timeline. It is the public announcement archive, it is in the
+// sitemap, and the homepage News box and the site footer both link to it.
+test('the announcement archive is indexable and answers on one URL', () => {
+  assert.equal(isNoindexRoute('/feed'), false);
+  assert.equal(isNoindexRoute('/feed/'), false);
+  assert.ok(SITEMAP_STATIC_ROUTES.includes('/feed'));
+  assert.equal(legacyPageRedirect('/news'), '/feed');
+  assert.equal(legacyPageRedirect('/news/'), '/feed');
+  assert.equal(legacyPageRedirect('/feed'), null);
 });
 
 test('isNoindexRoute ignores a trailing slash', () => {

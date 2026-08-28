@@ -17,7 +17,7 @@
 // tree, engine, and analysis machinery is identical. The board is INTERACTIVE
 // (play a move → it branches the tree, promote/delete variations).
 
-import type { MoveJudgment } from '@mistboard/game';
+import { type MoveJudgment, winPercent } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
@@ -36,8 +36,11 @@ import {
   type GameAnalysis,
   type GamePhases,
   judgmentGlyph,
+  type MovePraise,
   mergeDecisionAnalysis,
+  praiseGlyph,
   regradeBestPlayed,
+  withPraise,
 } from './game-analysis.js';
 import {
   createGameTree,
@@ -48,7 +51,7 @@ import {
   type TreePath,
   type VariantTreeAdapter,
 } from './game-tree.js';
-import { ADVICE_LABEL, defaultFormatBestMove } from './move-advice.js';
+import { ADVICE_LABEL, defaultFormatBestMove, PRAISE_COMMENT } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
 import { createReviewControls, REVIEW_MENU_ICONS, type ReviewMenuItem } from './review-controls.js';
@@ -117,6 +120,18 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
    *  the tree adapter's fromUci already consumes the same coordinates. Hidden
    *  variants use this for their 0-indexed engine ranks. */
   moveFromEngineUci?(uci: string, truth: Truth): Move | null;
+  /** Positive glyph (`!!` / `!`) for a mainline move the whole-game analysis left unjudged,
+   *  by the variant's own rules (xiangqi: @mistboard/game xiangqi-move-classification).
+   *  `pv` is the engine's line from the position AFTER the move, in the engine's UCI dialect,
+   *  for the variant to decode. Omit for no positive glyphs. */
+  praiseMove?(input: {
+    before: Truth;
+    move: Move;
+    winBefore: number;
+    winAfter: number;
+    playedBest: boolean;
+    pv: readonly string[];
+  }): MovePraise | null;
   /** On-board arrows for live MultiPV lines. Omit while a board renderer has no
    *  overlay capability; the engine panel then hides its arrow setting. */
   engineArrowsFromLines?(lines: CevalLine[]): Arrow[];
@@ -1412,8 +1427,46 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return plies;
   }
 
+  /** Positive verdicts for the unjudged mainline plies, from the variant's praiseMove rule.
+   *  Runs after the best-played regrade so a praised move is never also an error. */
+  function praiseByPly(analysis: GameAnalysis): Map<number, MovePraise> {
+    const praise = presentation.engine?.praiseMove;
+    const out = new Map<number, MovePraise>();
+    if (!praise) return out;
+    const nodes = mainlineNodes();
+    const evalByPly = new Map(analysis.evals.map((entry) => [entry.ply, entry]));
+    const bestPlayed = new Set(analysis.bestPlayedPlies);
+    const chance = new Set(analysis.chancePlies);
+    for (const move of analysis.moves) {
+      if (move.judgment !== null || chance.has(move.ply)) continue;
+      const parent = nodes[move.ply - 1];
+      const played = nodes[move.ply];
+      const before = evalByPly.get(move.ply - 1);
+      const after = evalByPly.get(move.ply);
+      if (!parent || !played?.move || !before || !after) continue;
+      const redBefore = winPercent(before.cp, before.mate);
+      const redAfter = winPercent(after.cp, after.mate);
+      let verdict: MovePraise | null = null;
+      try {
+        verdict = praise({
+          before: parent.truth,
+          move: played.move,
+          winBefore: move.mover === 'red' ? redBefore : 100 - redBefore,
+          winAfter: move.mover === 'red' ? redAfter : 100 - redAfter,
+          playedBest: bestPlayed.has(move.ply),
+          pv: after.pv ?? [],
+        });
+      } catch {
+        verdict = null; // a rule that cannot read the position praises nothing
+      }
+      if (verdict) out.set(move.ply, verdict);
+    }
+    return out;
+  }
+
   function applyAnalysis(raw: GameAnalysis): void {
-    const analysis = regradeBestPlayed(raw, bestPlayedPlies(raw));
+    const regraded = regradeBestPlayed(raw, bestPlayedPlies(raw));
+    const analysis = withPraise(regraded, praiseByPly(regraded));
     gameAnalysis = analysis;
     // Graft the best-play refutation lines into the tree BEFORE the annotation
     // rebuild so comments and variations land in one pass.
@@ -1515,7 +1568,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       for (const move of gameAnalysis.moves) {
         const node = nodes[move.ply];
         if (!node) continue;
-        const glyph = judgmentGlyph(move.judgment);
+        const glyph = judgmentGlyph(move.judgment) ?? praiseGlyph(move.praise);
         const entry = evalByPly.get(move.ply);
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
@@ -1527,8 +1580,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
           comment: move.judgment
             ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestForAdvice(best)} was best.` : ''}`
-            : undefined,
-          commentClass: move.judgment ?? undefined,
+            : move.praise
+              ? PRAISE_COMMENT[move.praise]
+              : undefined,
+          commentClass: move.judgment ?? move.praise ?? undefined,
         });
       }
       // Decision overlay (jieqi): a reveal ply carries no eval-swing judgment (it is a chance

@@ -79,6 +79,11 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Both drafts. This assertion runs with DEV stubbed true, where the index
+      // lists drafts so an author can preview them; in a production build they
+      // are absent from here and their routes 404 client-side.
+      '/blog/co-up',
+      '/blog/jieqi-platform',
       '/blog/titled-players',
       // Same date as titled-players; ties break alphabetically by title and
       // 'Titled...' sorts before 'Who Is...'. Draft, so dev-only.

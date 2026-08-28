@@ -5,6 +5,7 @@ import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './
 import {
   adminNavItems,
   communityNavItems,
+  DISCORD_BLOCKED_IN,
   DISCORD_INVITE_URL,
   donateNavItem,
   learnNavItems,
@@ -14,6 +15,7 @@ import {
   watchNavItems,
 } from './nav-items.js';
 import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
+import { isBlockedForViewer } from './viewer-geo.js';
 
 export const GITHUB_URL = 'https://github.com/brianhliou/mistboard';
 
@@ -326,6 +328,8 @@ function navMenu(
   locale: Locale,
   titleHref?: string,
 ): HTMLElement {
+  // Off-site items unreachable from the viewer's country are not rendered.
+  const visibleItems = items.filter((item) => !isBlockedForViewer(item.blockedIn));
   const menu = document.createElement('div');
   menu.className = 'site-nav-menu';
 
@@ -371,7 +375,7 @@ function navMenu(
 
   const panel = document.createElement('div');
   panel.className = 'site-nav-menu-panel';
-  for (const item of items) {
+  for (const item of visibleItems) {
     const link = navLink(item, locale);
     panel.append(link);
   }
@@ -445,12 +449,19 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   href: string;
   labelKey: I18nKey;
   external?: boolean;
+  blockedIn?: readonly string[];
 }> = [
   { href: '/about', labelKey: 'footer.about' },
+  { href: '/feed', labelKey: 'footer.news' },
   { href: '/faq', labelKey: 'footer.faq' },
   { href: '/patron', labelKey: 'footer.patron' },
   { href: '/contact', labelKey: 'footer.contact' },
-  { href: DISCORD_INVITE_URL, labelKey: 'footer.discord', external: true },
+  {
+    href: DISCORD_INVITE_URL,
+    labelKey: 'footer.discord',
+    external: true,
+    blockedIn: DISCORD_BLOCKED_IN,
+  },
   { href: '/source', labelKey: 'footer.source' },
   { href: '/terms', labelKey: 'footer.terms' },
   { href: '/privacy', labelKey: 'footer.privacy' },
@@ -463,6 +474,7 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   const links = document.createElement('div');
   links.className = 'landing-footer-links';
   for (const link of HOME_FOOTER_LINKS) {
+    if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);
     anchor.textContent = t(link.labelKey, {}, locale);

@@ -38,10 +38,11 @@ describe('study catalog', () => {
   it('narrows variants fail-closed', () => {
     expect(isStudyVariantId('xiangqi')).toBe(true);
     expect(isStudyVariantId('dark-chess')).toBe(true);
-    // Hidden-deal variants have a board but no way to persist their deal yet.
-    expect(isStudyVariantId('banqi')).toBe(false);
-    expect(isStudyVariantId('jieqi')).toBe(false);
-    expect(isStudyVariantId('jungle-flip')).toBe(false);
+    // The hidden-deal variants are in: their canonical FEN pins the deal, and a
+    // chapter already persists a hand-set start inside SerializedTree.rootFen.
+    expect(isStudyVariantId('banqi')).toBe(true);
+    expect(isStudyVariantId('jieqi')).toBe(true);
+    expect(isStudyVariantId('jungle-flip')).toBe(true);
     expect(isStudyVariantId('chess')).toBe(false);
     expect(isStudyVariantId('')).toBe(false);
   });
@@ -103,6 +104,9 @@ describe('study board dispatch', () => {
       'fortress-xiangqi': './fortress-xiangqi-review.js',
       'dark-xiangqi': './dark-xiangqi-review.js',
       'dark-chess': './dark-chess-review.js',
+      banqi: './banqi-review.js',
+      jieqi: './jieqi-review.js',
+      'jungle-flip': './jungle-flip-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
       const module = expected[variant.id];
