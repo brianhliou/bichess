@@ -1,8 +1,27 @@
 // Postgame analysis math (P3): centipawn eval -> win probability -> per-move
-// judgment + accuracy. Formulas ported from lichess/lila. They are tuned for
-// chess-engine centipawns; Pikafish's xiangqi eval scale is similar but not
-// identical, so the win% logistic constant and the judgment thresholds are a
-// starting point that likely wants recalibration on real xiangqi games.
+// judgment + accuracy. Formulas ported from lichess/lila.
+//
+// CALIBRATED AND LEFT ALONE, 2026-08-27. The note here used to say the chess
+// constants "likely want recalibration on real xiangqi games". That was tested
+// against 70 national-championship games (856 sampled positions, every 6th ply
+// past move 10, paired with the actual game result). Do not re-litigate it
+// without a bigger corpus; `scripts/calibrate-win-curve.mjs` reproduces it.
+//
+//   - Near equality, where essentially every judgment happens, the chess curve
+//     is right: the -75..+75cp band (558 samples) scored 0.500 observed against
+//     0.511 predicted.
+//   - Best fit is K = 0.00623, 1.69x steeper than chess, because real games
+//     convert a 200-400cp edge (0.909) harder than the chess curve expects
+//     (0.739). But bootstrapping BY GAME -- the right unit, since positions
+//     inside one game share its result -- gives a 95% CI of 0.0033-0.0114, which
+//     contains the chess constant. Mean log-loss 0.6219 -> 0.6124. Refitting on
+//     70 games would be fitting noise.
+//   - The corpus is master play (49% draws, Red scores 0.571). A curve for
+//     amateur games could differ; that is the sample that would settle it.
+//
+// So the residual error is confined to already-decided positions, where a drop
+// from +300 to +150 is graded slightly gentler than xiangqi practice justifies.
+// That is the least consequential region there is.
 
 export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 
