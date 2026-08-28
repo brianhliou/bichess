@@ -21,6 +21,7 @@ import {
   type XiangqiGameState,
   type XiangqiMove,
 } from '@mistboard/game';
+import { resolveExistingStudy } from './seed-study-idempotency.js';
 
 type SerializedNode = {
   uci?: string;
@@ -252,6 +253,18 @@ async function main(): Promise<void> {
     if (!confirm.ok) throw new Error(`auth confirm failed: ${confirm.status}`);
     console.log(`signed in as ${email} at ${base}`);
   }
+
+  const get = async (path: string): Promise<Response> =>
+    fetch(`${base}${path}`, { headers: { ...(cookie ? { cookie } : {}) } });
+  const del = async (path: string): Promise<Response> =>
+    fetch(`${base}${path}`, { method: 'DELETE', headers: { ...(cookie ? { cookie } : {}) } });
+
+  // Do not create a second copy on a re-run (see seed-study-idempotency.ts).
+  // This seeder is how the QA database ended up with two of these.
+  const decision = await resolveExistingStudy({ get, del }, 'The Riverbank Cannon', {
+    replace: args.replace === true,
+  });
+  if (decision.action === 'skip') return;
 
   const [first, ...rest] = chapters;
   const createResponse = await post('/api/studies', {

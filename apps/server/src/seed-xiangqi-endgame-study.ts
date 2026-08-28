@@ -40,6 +40,7 @@ import {
   type XiangqiGameState,
   type XiangqiMove,
 } from '@mistboard/game';
+import { resolveExistingStudy } from './seed-study-idempotency.js';
 import {
   ENDGAME_STUDY_I18N,
   ENDGAME_STUDY_LANGS,
@@ -190,9 +191,11 @@ function chapterPayload(entry: EndgameEntry, row: VerifyRow | undefined) {
 }
 
 /** The create-study body, shared by the poster and by --emit. */
+const STUDY_NAME = 'Xiangqi basic endgames: what wins and what draws';
+
 function studyCreateBody(visibility: string, chapter: unknown): Record<string, unknown> {
   return {
-    name: 'Xiangqi basic endgames: what wins and what draws',
+    name: STUDY_NAME,
     description:
       'The book verdicts of the basic endgames, each rooted at a representative position with Pikafish’s line as the mainline. Play them out against the engine rather than taking the verdict on trust. Where the verdicts come from, how they were checked, and the two the engine refused to confirm until a tablebase settled them: https://brianhliou.com/posts/xiangqi-basic-endgames/',
     i18n: ENDGAME_STUDY_I18N,
@@ -209,6 +212,19 @@ class Session {
   /** Adopt a session established elsewhere (a real browser login). */
   useCookie(cookie: string): void {
     this.cookie = cookie;
+  }
+
+  async get(path: string): Promise<Response> {
+    return fetch(`${this.base}${path}`, {
+      headers: { ...(this.cookie ? { cookie: this.cookie } : {}) },
+    });
+  }
+
+  async del(path: string): Promise<Response> {
+    return fetch(`${this.base}${path}`, {
+      method: 'DELETE',
+      headers: { ...(this.cookie ? { cookie: this.cookie } : {}) },
+    });
   }
 
   async post(path: string, body: unknown): Promise<Response> {
@@ -311,6 +327,14 @@ async function main(): Promise<void> {
     await session.signIn(email as string);
     console.log(`signed in as ${email} at ${base}`);
   }
+
+  // Do not create a second copy on a re-run (see seed-study-idempotency.ts).
+  const decision = await resolveExistingStudy(
+    { get: (path) => session.get(path), del: (path) => session.del(path) },
+    STUDY_NAME,
+    { replace: args.replace === true },
+  );
+  if (decision.action === 'skip') return;
 
   const [first, ...rest] = chapters;
   if (!first) return;

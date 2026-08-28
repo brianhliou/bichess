@@ -32,6 +32,7 @@ import {
   fortressXiangqiMoveToFsfUci,
   isFortressXiangqiLegalMove,
 } from '@mistboard/game';
+import { resolveExistingStudy } from './seed-study-idempotency.js';
 
 const STUDY_NAME = 'Fortress Xiangqi: twenty engine games';
 const STUDY_DESCRIPTION =
@@ -422,6 +423,17 @@ async function main(): Promise<void> {
     if (!confirm.ok) throw new Error(`auth confirm failed: ${confirm.status}`);
     console.log(`signed in as ${email} at ${base}`);
   }
+
+  const get = async (path: string): Promise<Response> =>
+    fetch(`${base}${path}`, { headers: { ...(cookie ? { cookie } : {}) } });
+  const del = async (path: string): Promise<Response> =>
+    fetch(`${base}${path}`, { method: 'DELETE', headers: { ...(cookie ? { cookie } : {}) } });
+
+  // Do not create a second copy on a re-run (see seed-study-idempotency.ts).
+  const decision = await resolveExistingStudy({ get, del }, STUDY_NAME, {
+    replace: args.replace === true,
+  });
+  if (decision.action === 'skip') return;
 
   const [first, ...rest] = chapters;
   const createResponse = await post('/api/studies', {
