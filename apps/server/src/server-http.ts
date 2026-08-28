@@ -26,6 +26,7 @@ import {
   serveStudyPage,
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
+import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
 
 export type PersistenceHealthEntry = {
   at: number;
@@ -107,6 +108,16 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (isIsolatedEngineAssetPath(pathname)) {
       response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
       response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    }
+
+    // Page navigations carry the viewer's country (Cloudflare's CF-IPCountry)
+    // to the client as a readable cookie, so the nav can skip links that are
+    // dead ends there (Discord in mainland China). setHeader survives the
+    // later writeHead merges, like the headers above; nothing else sets a
+    // cookie on a page navigation.
+    if (isPageNavigationRequest(request, pathname)) {
+      const country = viewerCountryFromRequest(request);
+      if (country) response.setHeader('set-cookie', viewerCountryCookie(country));
     }
 
     if (url === '/health') {

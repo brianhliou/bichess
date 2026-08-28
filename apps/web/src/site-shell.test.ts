@@ -190,6 +190,26 @@ describe('site shell nav', () => {
   });
 });
 
+describe('site shell geo-blocked links', () => {
+  afterEach(() => {
+    document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+    document.body.innerHTML = '';
+  });
+
+  it('hides the Discord invite for viewers in mainland China, keeps it elsewhere', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const cnNav = buildNav();
+    expect(cnNav.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+    // The rest of the Community menu is untouched.
+    expect(cnNav.querySelector('a[href="/forum"]')).not.toBeNull();
+    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+
+    document.cookie = 'mb_cc=US; Path=/';
+    expect(buildNav().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
+    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
+  });
+});
+
 describe('site shell nav account placement', () => {
   const originalMatchMedia = window.matchMedia;
   afterEach(() => {

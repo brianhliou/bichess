@@ -185,6 +185,7 @@ Edit task → find file → open only that file.
 | `server-config.ts` | Runtime config parsing and room-region normalization |
 | `server-types.ts` | Shared server types: `Client`, `Room`, `SeatTokenState`, `SeatAssignment`, `LobbyTicket` |
 | `server-policy.ts` | Access control: `canObserveLiveRoom`, `liveObservePolicy`/`canServeLiveBoard` (visibility-keyed live-TV gate, fail-closed on fog), `eventReplayResponse`, `visibleEventsForLiveSnapshot`, `modeForProjection`, `isAdminDebugToken`, `isAllowedWebSocketOrigin`, `isClientRoute`, `PARKED_CLIENT_ROUTES` |
+| `viewer-country.ts` | Viewer country from Cloudflare's `CF-IPCountry` to the browser: `viewerCountryFromRequest` (two-letter code; XX/T1/absent are unknown) and the readable day-long `mb_cc` cookie that `server-http.ts` sets on page navigations so the client can skip links blocked where the viewer is |
 | `server-ws-messages.ts` | Client WebSocket message parser and known-message allowlist used by `server-ws-connection.ts` dispatch |
 | `server-seat-session.ts` | Seat assignment/session helpers: seat-token hashing and verification, account/token credential gate, new/existing seat assignment, and duplicate seat displacement. |
 | `server-live-engine-reservations.ts` | Live engine reservation helpers: PvE engine-seat detection, legacy engine ID normalization, engine-worker reservation create/release, and reservation logging. |
@@ -672,6 +673,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `web-utils.ts` | `escapeHtml`, `isColor`, `formatClock`, `oppositeColor`, file/rank helpers |
 | `captures.ts` | Captured-piece list derivation |
 | `nav-items.ts` | Nav item definitions (shared between top-nav and footer) |
+| `viewer-geo.ts` | Client side of the viewer country: `viewerCountry()` reads the `mb_cc` cookie synchronously, `isBlockedForViewer(blockedIn)` gates `NavItem.blockedIn` items (Discord in mainland China) in the nav, footer, and forum; no cookie means show everything |
 | `announcements.ts` | Card list for /announcements + landing widget |
 | `variant-public-surfaces.ts` | Single public-surface switchboard per `GameSpecId`: controls variant discoverability in rules rails/tiles, homepage article cards, homepage News, and `/news` without per-content visibility flags |
 | `annotations.ts` | Annotation read/write for the research feedback workflow |
