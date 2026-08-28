@@ -53,14 +53,18 @@ import type { UciMultiPvLine } from './uci-engine-harness.js';
 
 // Search budget. A fixed DEPTH is CPU-independent in RESULT (the eval at a given depth is the
 // same tree on any box), so the cached analysis stays stable; the movetime cap only bounds
-// per-ply latency on a slow box. Depth 12 is a touch deeper than the "strong" PvE tier (10),
-// which is appropriate for a one-shot review pass.
-const JIEQI_ANALYSIS_DEPTH_SEARCH = 12;
-const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 4_000;
+// per-ply latency on a slow box. Depth 20 rather than the old 12: measured single-threaded with
+// the analysis Hash, a midgame ply costs 10ms at depth 12 and ~300ms at depth 20, against a
+// 4000ms cap that was therefore never within an order of magnitude of binding. The eval is also
+// still moving over that range (a sampled midgame: 1023 cp at depth 12, 1024 at 20, 1050 at 24),
+// so depth 12 was not a converged number, it was an unspent budget.
+const JIEQI_ANALYSIS_DEPTH_SEARCH = 20;
+const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 6_000;
 
 // Nominal cache dimension: `depth` only has to be STABLE for the (room, engine, depth) cache
-// key. Kept at the family default (banqi/jungle use 12 too).
-export const JIEQI_ANALYSIS_DEPTH = 12;
+// key. Tracks JIEQI_ANALYSIS_DEPTH_SEARCH so a depth change self-invalidates the cache; it no
+// longer matches the banqi/jungle family default of 12, which is fine (the key is per-variant).
+export const JIEQI_ANALYSIS_DEPTH = 20;
 
 // Red-SEAT-POV cp for a decisive finished position (no engine query is made there).
 const TERMINAL_CP = 30_000;
@@ -317,8 +321,8 @@ export async function resolveJieqiAnalysis(
 // hidden role), all at this depth so realized and the mean share one search. MultiPV only picks
 // the candidate ceiling moves; its clamped scores never reach the output. ~ a few evals per
 // reveal → a couple of minutes for a whole game, one-time and cached.
-const JIEQI_DECISION_DEPTH = 10;
-const JIEQI_DECISION_MOVETIME_CAP_MS = 4_000;
+const JIEQI_DECISION_DEPTH = 16;
+const JIEQI_DECISION_MOVETIME_CAP_MS = 6_000;
 // Matches the pikajieqi-analysis engine pool's slot count: with launch
 // concurrency == pool slots, no fan-out eval ever waits in the pool queue.
 const JIEQI_DECISION_EVAL_CONCURRENCY = 2;
