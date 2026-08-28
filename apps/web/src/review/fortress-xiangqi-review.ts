@@ -7,8 +7,9 @@
 // fortress-xiangqi.ini). The eval gauge + engine panel + Share FEN are live; the
 // engine reads the tree's FSF move list (startpos + moves), so no server round-trip.
 // Board-move PV arrows are live. A drop has no origin square, so its destination
-// marker remains a separate slice. Drop reserves and the drop gesture are both
-// absent here by choice; drops still replay in the mainline.
+// marker remains a separate slice. Drop reserves are DISPLAYED (see `material`
+// below — the pocket is position, not decoration); the drop GESTURE is still
+// absent, so drops replay in the mainline but cannot be played from the rail.
 
 import {
   type FortressXiangqiColor,
@@ -17,8 +18,13 @@ import {
   type FortressXiangqiPlayerView,
   fortressXiangqiEngineFen,
   fsfUciToFortressXiangqiMove,
+  getFortressXiangqiPlayerView,
   isFortressXiangqiDropMove,
 } from '@mistboard/game';
+// The reserve rows below reuse the shared drop pocket styling; the review family
+// does not otherwise pull it in, so the study path rendered zero-height rows
+// until this import existed.
+import '../drop-mini-xiangqi.css';
 import { createFortressXiangqiInteractiveBoard } from '../fortress-xiangqi-board.js';
 import {
   animateFortressXiangqiBoardMove,
@@ -26,7 +32,7 @@ import {
   type FortressXiangqiBoardMarker,
   FXQ_GEO,
 } from '../fortress-xiangqi-render.js';
-import { fortressXiangqiMoveLabel } from '../fortress-xiangqi-view.js';
+import { fillFortressXiangqiReserve, fortressXiangqiMoveLabel } from '../fortress-xiangqi-view.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
@@ -130,12 +136,30 @@ const fortressPresentation: TreePresentation<
     text: glyph.text,
     className: `xq-marker--${glyph.tone}`,
   }),
-  // Drop reserves are deliberately NOT rendered here (product call): drops
-  // replay in the mainline instead. To turn them back on, supply the controller's
-  // `material` hook — it hands you the mat-top / mat-bot rows and a per-ply
-  // updater, and fortress is perfect-information so ONE projection
-  // (getFortressXiangqiPlayerView) carries both seats' pockets for
-  // fillFortressXiangqiReserve. The live room keeps showing them either way.
+  // Drop reserves ARE rendered on review / analysis / study, unlike the captured
+  // material rows the rest of the review family suppresses (#166). The distinction
+  // is not taste: in a drop variant the reserve is part of the POSITION, not a
+  // record of what has been taken. You cannot read a fortress position without
+  // knowing what is droppable, so an absent reserve hides board state the same way
+  // a missing rank would. It is also why this renders the pocket itself rather
+  // than #166's material DIFF — an imbalance number cannot say what you hold.
+  //
+  // The reflow that got the material rows removed is handled in CSS, not here:
+  // .drop-mini-reserve-strip pins its band height for :empty too, so an empty
+  // pocket keeps its footprint and the first capture does not shove the rail.
+  //
+  // Fortress is perfect information, so ONE projection carries both seats'
+  // pockets and the rows never depend on whose turn it is. rootTruth is unused
+  // for the same reason: a pocket is absolute, not a diff against the root.
+  material: (hosts) => (truth, _rootTruth, flipped) => {
+    // The board puts perspective(flipped) at the bottom; reserves follow it, so
+    // this matches the live room (bottom = your pocket, top = the opponent's).
+    const bottom: FortressXiangqiColor = flipped ? 'black' : 'red';
+    const top: FortressXiangqiColor = bottom === 'red' ? 'black' : 'red';
+    const view = getFortressXiangqiPlayerView(truth, bottom);
+    fillFortressXiangqiReserve(hosts.top, view, top);
+    fillFortressXiangqiReserve(hosts.bottom, view, bottom);
+  },
 };
 
 export function mountFortressXiangqiReview(
