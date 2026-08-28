@@ -124,3 +124,86 @@ test('a poll long after the last round resolves to no round', () => {
   const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-20T14:30:00+08:00'));
   assert.equal(resolved.ok, false);
 });
+
+import {
+  buildDiscoveryManifestSources,
+  type DiscoveredBoard,
+} from './xiangqi-broadcast-discovery.js';
+
+function parsed(url: string) {
+  withFakeProvider();
+  const result = parseXiangqiBroadcastDiscoverySource(url, MAX_BOARDS);
+  assert.equal(result.ok, true);
+  if (!result.ok) throw new Error('unreachable');
+  return result.source;
+}
+
+const ROUND = { roundId: 'r07', roundName: 'Round 7' };
+
+function board(id: string, event: string, plies = 10): DiscoveredBoard {
+  return { url: `http://www.dpxq.com/x?id=${id}`, event, plies, red: 'R', black: 'B' };
+}
+
+test('the event filter keeps only boards whose event tag matches', () => {
+  const built = buildDiscoveryManifestSources({
+    source: parsed(
+      'mistboard-discover://fake-live?tourSlug=t&event=%E7%94%B2%E7%BA%A7%E8%81%94%E8%B5%9B',
+    ),
+    boards: [
+      board('1', '2026年全国象棋男子甲级联赛'),
+      board('2', '适情雅趣'),
+      board('3', '2026年甲级联赛第二阶段'),
+    ],
+    round: ROUND,
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => s.url),
+    ['http://www.dpxq.com/x?id=1', 'http://www.dpxq.com/x?id=3'],
+  );
+});
+
+// Board numbers come from the ranking, because dpxq serves one game per page
+// and the converter's positional fallback would number every board 1.
+test('entries pin tour, round and an incrementing board number', () => {
+  const built = buildDiscoveryManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=2026-league&tourName=League'),
+    boards: [board('1', 'e'), board('2', 'e'), board('3', 'e')],
+    round: ROUND,
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => [s.tourSlug, s.tourName, s.roundId, s.roundName, s.boardNumber]),
+    [
+      ['2026-league', 'League', 'r07', 'Round 7', 1],
+      ['2026-league', 'League', 'r07', 'Round 7', 2],
+      ['2026-league', 'League', 'r07', 'Round 7', 3],
+    ],
+  );
+});
+
+test('no matching board yields a failure, never an empty manifest', () => {
+  const built = buildDiscoveryManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=t&event=nothing-matches'),
+    boards: [board('1', '适情雅趣')],
+    round: ROUND,
+  });
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.match(built.message, /no live boards matched event/);
+});
+
+test('boards past the cap are dropped and counted, not silently truncated', () => {
+  const boards = Array.from({ length: 5 }, (_, index) => board(String(index), 'e'));
+  const built = buildDiscoveryManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=t&maxBoards=3'),
+    boards,
+    round: ROUND,
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.equal(built.sources.length, 3);
+  assert.equal(built.droppedForCap, 2);
+});

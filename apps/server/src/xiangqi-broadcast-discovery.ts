@@ -187,3 +187,61 @@ export function resolveScheduledRound(
   }
   return { ok: true, roundId: best.id, ...(best.name ? { roundName: best.name } : {}) };
 }
+
+export type DiscoveryManifestSource = {
+  url: string;
+  tourSlug: string;
+  tourName?: string;
+  roundId: string;
+  roundName?: string;
+  boardNumber: number;
+};
+
+export type DiscoveryManifestBuild =
+  | { ok: true; sources: DiscoveryManifestSource[]; droppedForCap: number }
+  | { ok: false; message: string };
+
+/**
+ * Turn discovered boards into manifest entries.
+ *
+ * Every entry pins the tour, the round and the board number rather than letting
+ * the converter derive them. dpxq's tag hygiene varies by whoever created the
+ * record (sampled boards carried event="2020", round="2020-10" and an empty
+ * table), and it serves one game per page, so a derived round would collapse a
+ * whole league onto one round and a derived board number would make every board
+ * "Board 1".
+ */
+export function buildDiscoveryManifestSources(input: {
+  source: DiscoverySource;
+  boards: readonly DiscoveredBoard[];
+  round: { roundId: string; roundName?: string };
+}): DiscoveryManifestBuild {
+  const matching = input.source.event
+    ? input.boards.filter((board) => (board.event ?? '').includes(input.source.event as string))
+    : [...input.boards];
+
+  if (matching.length === 0) {
+    return {
+      ok: false,
+      message: input.source.event
+        ? `no live boards matched event "${input.source.event}"`
+        : 'no live boards discovered',
+    };
+  }
+
+  const kept = matching.slice(0, input.source.maxBoards);
+  return {
+    ok: true,
+    // A silent cap reads as full coverage, so the count travels with the result
+    // and the caller logs it.
+    droppedForCap: matching.length - kept.length,
+    sources: kept.map((board, index) => ({
+      url: board.url,
+      tourSlug: input.source.tourSlug,
+      roundId: input.round.roundId,
+      boardNumber: index + 1,
+      ...(input.source.tourName ? { tourName: input.source.tourName } : {}),
+      ...(input.round.roundName ? { roundName: input.round.roundName } : {}),
+    })),
+  };
+}
