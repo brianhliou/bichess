@@ -38,8 +38,12 @@ const ARROW_END_INSET = 10;
  * hand-writes a judgment or a line.
  */
 export type XiangqiReplayAnnotation = {
-  /** Judgment glyph. Only the negative classes exist today (see analysis.ts). */
-  glyph?: '??' | '?' | '?!';
+  /**
+   * Judgment glyph. The negative classes come from analysis.ts; `!` and `!!`
+   * come from the positive classifier (xiangqi-move-classification.ts) and only
+   * appear on games run through it.
+   */
+  glyph?: '??' | '?' | '?!' | '!' | '!!';
   /** Eval AFTER the played move, Red POV, centipawns. */
   cp?: number | null;
   /** Mate distance after the played move, Red POV. */

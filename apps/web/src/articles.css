@@ -1293,6 +1293,18 @@
   color: #8a6d1f;
 }
 
+/* Positive marks, from the classifier rather than the judgment path. Coloured
+   away from the fault glyphs so a reader can tell praise from blame at a glance
+   without reading the symbol. */
+.xq-replay-annotated .xq-replay-glyph-brilliant {
+  color: #1a7f64;
+}
+
+.xq-replay-annotated .xq-replay-glyph-great {
+  color: #1a7f64;
+  opacity: 0.75;
+}
+
 /* Narrow: the move tree drops under the board instead of beside it. */
 @media (max-width: 720px) {
   .xq-replay-annotated .xq-replay-grid {
