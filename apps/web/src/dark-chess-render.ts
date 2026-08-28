@@ -24,6 +24,7 @@ import {
 } from '@mistboard/board-render';
 import type { Color, Move, PieceRole, PlayerView, Square } from '@mistboard/game';
 import './dark-chess-render.css';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 
 const FILES = 8;
 const RANKS = 8;
@@ -81,6 +82,9 @@ export function renderDarkChessBoardSvg(
 
   return renderGridBoardSvg(DARK_CHESS_DESCRIPTOR, {
     id,
+    // Omitting this drew the labels unconditionally: grid-board treats only an
+    // explicit false as off, so the site-wide setting never reached this board.
+    coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
       [pieceLayer(view, geom, null), showFog ? fogLayer(visible, geom) : ''].join(''),
@@ -121,6 +125,9 @@ export function renderDarkChessInteractiveBoardSvg(
 
   return renderGridBoardSvg(DARK_CHESS_DESCRIPTOR, {
     id,
+    // Omitting this drew the labels unconditionally: grid-board treats only an
+    // explicit false as off, so the site-wide setting never reached this board.
+    coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
       [pieceLayer(view, geom, draggingFrom), showFog ? fogLayer(visible, geom) : ''].join(''),

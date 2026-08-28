@@ -150,7 +150,9 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
   if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) {
     const view = getFortressXiangqiPlayerView(puzzle.initial as FortressXiangqiGameState, turn);
     box.append(
-      homePuzzleBoardSurface(renderFortressXiangqiBoardSvg(view, turn, { interactive: false })),
+      homePuzzleBoardSurface(
+        renderFortressXiangqiBoardSvg(view, turn, { interactive: false, coordinates: false }),
+      ),
       fortressReserveColumn(view, turn),
     );
     return box;
@@ -177,6 +179,11 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
       homePuzzleBoardSurface(
         renderXiangqiBoardSvg(
           getStandardXiangqiPlayerView(puzzle.initial as XiangqiGameState, turn),
+          turn,
+          // A thumbnail that links to the puzzle, not a board anyone plays on.
+          // Suppressing the labels also keeps the box's authored aspect ratio
+          // right: the host clips, and the gutter is a different rectangle.
+          { coordinates: false },
         ),
       ),
     );

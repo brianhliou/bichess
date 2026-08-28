@@ -14,6 +14,7 @@ import {
   readCrossroadsChessAppearance,
   renderCrossroadsChessBoardSvg,
 } from './crossroads-chess-render.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { darkCrossroadsChessEnabled } from './feature-flags.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { mountReviewLayout } from './review/review-layout.js';
@@ -171,7 +172,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkCrossroadsChessPostgame
         board.innerHTML = renderCrossroadsChessBoardSvg(view, {
           perspective: orientation,
           showFog: entry.key !== 'truth',
-          coords: false,
+          coords: boardCoordinatesEnabled(),
           ...appearance,
         });
       }

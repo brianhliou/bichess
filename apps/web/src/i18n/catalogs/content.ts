@@ -258,6 +258,11 @@ export const EN_CONTENT = {
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
     'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
+  'faq.libraryQuestion': 'Where do the games in the library come from?',
+  'faq.libraryAnswer':
+    "Three places: public-domain classical manuals we re-encode ourselves, tournaments we broadcast with the organizer's agreement, and games played here. We do not republish another site's archive. Large xiangqi databases exist elsewhere, and copying one would be easy. They belong to the operators who built them, so we ask first. That keeps the library smaller than it could be, and keeps every game in it accounted for.",
+  'faq.libraryExplorer':
+    'The opening explorer also draws on a licensed dataset of anonymous online games, which is why its numbers cover more games than the library lists.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
     'Rated play is account-backed human-vs-human play in supported ladder variants. During beta, ladders may be provisional while ratings calibrate. Engine games and casual games do not count.',
@@ -448,6 +453,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'faq.enginesAnswer',
   'faq.liveWatchQuestion',
   'faq.liveWatchAnswer',
+  'faq.libraryQuestion',
+  'faq.libraryAnswer',
+  'faq.libraryExplorer',
   'faq.ratedQuestion',
   'faq.ratedAnswer',
   'terms.heading',

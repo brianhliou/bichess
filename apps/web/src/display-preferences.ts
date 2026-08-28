@@ -118,3 +118,12 @@ export function isBooleanDisplayPreference(
 ): definition is BooleanPreferenceDefinition {
   return definition.kind === 'boolean';
 }
+
+// Grid boards (chess, jungle, shogi, crossroads geometry) draw their labels
+// INSIDE the edge squares, so unlike the xiangqi family they reserve no gutter
+// and nothing resizes when the preference flips. They all read it through here
+// so the site-wide toggle cannot silently miss a board again: it reached four
+// xiangqi-shaped boards and no others until 2026-08-27 (#308).
+export function boardCoordinatesEnabled(): boolean {
+  return readDisplayPreferences().boardCoordinates;
+}

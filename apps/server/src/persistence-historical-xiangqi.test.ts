@@ -243,13 +243,17 @@ definePersistenceTests('historical xiangqi', () => {
       license: 'GPL-3.0',
       licenseStatus: 'cleared',
     });
-    const moves: XiangqiMove[] = [{ from: 'h3', to: 'e3' }];
+    // Two DIFFERENT games. Row identity is the content digest (date, result,
+    // moves) and deliberately not the source's own labels, so a pair that shared
+    // its moves and differed only in sourceGameId would be one row: the second
+    // insert would upsert onto the first and flip its visibility, and this test
+    // would be asserting against a single game wearing both hats.
     const unlisted = await insertHistoricalXiangqiGame({
       sourceId: source.id,
       sourceGameId: 'gate-unlisted',
       result: '1-0',
       moveFormat: 'coordinate',
-      moves,
+      moves: [{ from: 'h3', to: 'e3' }] as XiangqiMove[],
       visibility: 'unlisted',
     });
     const priv = await insertHistoricalXiangqiGame({
@@ -257,7 +261,7 @@ definePersistenceTests('historical xiangqi', () => {
       sourceGameId: 'gate-private',
       result: '1-0',
       moveFormat: 'coordinate',
-      moves,
+      moves: [{ from: 'b3', to: 'e3' }] as XiangqiMove[],
       visibility: 'private',
     });
 

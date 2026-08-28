@@ -32,6 +32,7 @@ import type {
   RevealChessPlayerView,
   RevealChessSquare,
 } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 
 const FILES = 8;
@@ -89,6 +90,9 @@ export function renderRevealChessBoardSvg(
 
   return renderGridBoardSvg(REVEAL_CHESS_DESCRIPTOR, {
     id,
+    // Omitting this drew the labels unconditionally: grid-board treats only an
+    // explicit false as off, so the site-wide setting never reached this board.
+    coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
       pieceLayer(view, geom, options.draggingFrom ?? null) +

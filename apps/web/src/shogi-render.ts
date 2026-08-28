@@ -36,6 +36,7 @@ import {
   shogiCoordOf,
   shogiSquareOf,
 } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import {
   readStoredShogiBoardTheme,
@@ -188,7 +189,7 @@ export function renderShogiBoardSvg(
     fogHidden: showFog ? hiddenSquares(visible) : null,
     threats: (options.forbidden ?? []).map((sq) => coordOf(sq)),
     interactive: options.interactive ?? false,
-    coords: options.showCoords ?? false,
+    coords: options.showCoords ?? boardCoordinatesEnabled(),
     squareName: (file, rank) => squareAt(file, rank),
   });
 }

@@ -63,9 +63,10 @@ export const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
   cell: CELL,
   margin: MARGIN,
   riverGap: CELL_RIVER_GAP,
-  // Reserved always, so turning coordinates on never resizes the board. A fifth
-  // of a cell puts the label clear of a piece sitting on the outer intersection
-  // (radius 0.45 cells) with room to breathe.
+  // A fifth of a cell puts the label clear of a piece sitting on the outer
+  // intersection (radius 0.45 cells) with room to breathe. Reserved only while
+  // labels are shown and reclaimed when they are off, so a reader who never
+  // turns coordinates on sees the board exactly as it was.
   coordGutter: Math.round(CELL / 5),
 };
 // Same board with NO reserved gutter, for surfaces that are not interactive
@@ -96,7 +97,7 @@ const NON_SELECTABLE_RIVER_ATTRS =
 export function renderXiangqiBoardSvg(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor = view.perspective,
-  options: Pick<XiangqiBoardSvgState, 'layout'> = {},
+  options: Pick<XiangqiBoardSvgState, 'layout' | 'coordinates'> = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
     interactive: false,
@@ -107,10 +108,11 @@ export function renderXiangqiBoardSvg(
 }
 
 export interface XiangqiBoardSvgState {
-  /** false = draw no coordinates AND reserve no space for them. For surfaces
-   *  whose framing is authored rather than played on (video frames). Interactive
-   *  boards leave this alone: they reserve the gutter always, so toggling the
-   *  coordinate preference never resizes the board. */
+  /** false = draw no coordinates AND reserve no space for them, whatever the
+   *  reader's preference says. For surfaces whose framing is authored rather
+   *  than played on: video frames, article diagrams, the homepage puzzle
+   *  thumbnail. Boards you actually play on leave this alone and follow the
+   *  preference, reclaiming the gutter when it is off. */
   coordinates?: boolean;
   interactive: boolean;
   selectedSquare: XiangqiSquare | null;

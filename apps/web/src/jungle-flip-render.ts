@@ -24,6 +24,7 @@ import {
   jungleFlipCoordOf,
 } from '@mistboard/game';
 import { TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
   framedTokenSvg,
@@ -266,7 +267,7 @@ export function renderJungleFlipBoardSvg(
     id: gid,
     flip: false, // the deal has no sides — a fixed orientation is least confusing
     extraDefs: shadow ? defs(gid) : '',
-    coords: false,
+    coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
       terrain(geom, options.lastMove ?? null, boardSkin) +
       pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +

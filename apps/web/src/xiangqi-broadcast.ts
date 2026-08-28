@@ -752,7 +752,10 @@ function tourCard(entry: BroadcastIndexEntry): HTMLElement {
   boardEl.className = 'xqb-card-board xiangqi-live-board';
   boardEl.setAttribute('aria-hidden', 'true');
   const view = entry.featuredBoard?.view ?? buildXiangqiReplayFromMoves([]).views[0]!;
-  boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red');
+  // Card thumbnail, aria-hidden and about a hundred pixels across. Coordinates
+  // are noise at that size, and the card is framed by hand, so the reserved
+  // gutter would change the silhouette every card shares.
+  boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
 
   const copy = document.createElement('div');
   copy.className = 'xqb-tour-card-copy';
@@ -831,7 +834,10 @@ function boardCard(board: BroadcastBoardSummary): HTMLElement {
   boardEl.setAttribute('aria-hidden', 'true');
   const replay = buildXiangqiReplayFromMoves(board.moves ?? []);
   const view = replay.views[replay.maxPly] ?? replay.views[0]!;
-  boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red');
+  // Card thumbnail, aria-hidden and about a hundred pixels across. Coordinates
+  // are noise at that size, and the card is framed by hand, so the reserved
+  // gutter would change the silhouette every card shares.
+  boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
 
   const players = document.createElement('div');
   players.className = 'xqb-card-players';

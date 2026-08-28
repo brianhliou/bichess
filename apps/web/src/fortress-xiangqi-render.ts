@@ -106,6 +106,11 @@ const FXQ_SURFACE: XiangqiSurfaceConfig = {
 };
 
 export type FortressXiangqiBoardRenderOptions = {
+  /** false = draw no coordinates AND reserve no space for them, whatever the
+   *  reader's preference says. For surfaces whose framing is authored rather
+   *  than played on: article diagrams, the homepage puzzle thumbnail. Boards
+   *  you actually play on leave this alone and follow the preference. */
+  coordinates?: boolean;
   arrows?: readonly FortressXiangqiBoardArrow[];
   markers?: readonly FortressXiangqiBoardMarker[];
   interactive?: boolean;
@@ -145,7 +150,7 @@ export function renderFortressXiangqiBoardSvg(
   const targets = options.targets ?? [];
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
-  const showCoords = readDisplayPreferences().boardCoordinates;
+  const showCoords = options.coordinates !== false && readDisplayPreferences().boardCoordinates;
   const surface = showCoords ? FXQ_SURFACE : { ...FXQ_SURFACE, geo: FXQ_GEO_NO_COORDS };
   const vb = xiangqiBoardViewBox(layout, surface.geo);
   const coords = showCoords
