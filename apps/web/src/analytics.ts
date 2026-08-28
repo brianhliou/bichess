@@ -3,6 +3,7 @@ import {
   type GameSpecId,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  maybeGameSpecForId,
   timeClassFromTimeControl,
   type VariantId,
 } from '@mistboard/game';
@@ -53,6 +54,19 @@ export function gameSpecAnalyticsProps(input: {
 // game spec (e.g. Dark Mini Xiangqi) so lobby analytics aren't mislabeled chess.
 export function gameSpecAnalyticsPropsForId(gameSpecId: GameSpecId): GameSpecAnalyticsProps {
   return analyticsPropsFromSpec(gameSpecForId(gameSpecId));
+}
+
+// Same thing for callers holding a plain string, which is what the tenant live
+// client gets from its route config. `gameSpecForId` THROWS on an unknown id
+// because variant dispatch is fail-closed, and that is right for dispatch and
+// wrong here: a measurement call must never be able to take down a live room.
+// An unrecognised id yields null, and the caller emits the event without spec
+// identity rather than not emitting it at all.
+export function maybeGameSpecAnalyticsProps(
+  gameSpecId: string | null | undefined,
+): GameSpecAnalyticsProps | null {
+  const spec = maybeGameSpecForId(gameSpecId);
+  return spec ? analyticsPropsFromSpec(spec) : null;
 }
 
 type PostHogLike = {

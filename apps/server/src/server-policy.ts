@@ -238,6 +238,7 @@ export function isClientRoute(pathname: string): boolean {
     // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
     normalized === '/games' ||
     normalized === '/engines' ||
+    normalized === '/accounts' ||
     normalized === '/bots' ||
     normalized === '/mini-xiangqi-spike' ||
     normalized === '/xiangqi-demo' ||

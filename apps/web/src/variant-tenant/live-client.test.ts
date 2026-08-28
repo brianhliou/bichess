@@ -6,7 +6,9 @@
 // replay path. Drives a client through the socketFactory test seam with a
 // minimal two-color test variant; no real WebSocket.
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { BANQI_SPEC_ID } from '@mistboard/game';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from '../analytics.js';
 import type { LiveRefs } from '../live-state.js';
 import {
   createTenantLiveClient,
@@ -654,5 +656,102 @@ describe('replay controller: replaceHistory + jumpToPly', () => {
     controller.jumpToPly(2);
     expect(controller.isLive()).toBe(true);
     expect(controller.currentView('live')).toBe('live');
+  });
+});
+
+// The gap these cover: until 2026-08-28 `game_started` fired only from
+// live-render.ts and Dark Mini Xiangqi, so every tenant variant (banqi, jieqi,
+// xiangqi, fortress, fog xiangqi, jungle) emitted no game events at all. Ninety
+// days of production data was 24 starts, all fog chess, which reads as nobody
+// playing them and meant nobody measuring them. Nothing failed, because nothing
+// asserted it.
+describe('tenant game lifecycle analytics', () => {
+  const capture = vi.fn();
+  const named = (name: string) =>
+    (capture.mock.calls as Array<[string, Record<string, unknown>]>).filter(([n]) => n === name);
+
+  beforeEach(() => {
+    capture.mockReset();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+  });
+
+  it('emits game_started for a tenant variant, sliced by spec and room mode', () => {
+    const h = createHarness({
+      gameSpecId: BANQI_SPEC_ID,
+      chrome: { roomMode: () => 'pve' },
+    });
+    h.feedHello({
+      state: view({ status: { type: 'setup' } }),
+      timeControl: { initialMs: 5 * 60_000, incrementMs: 5_000 },
+    });
+    expect(named('game_started')).toHaveLength(0);
+
+    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_started')[0][1]).toMatchObject({
+      gameId: 'room1',
+      variant: BANQI_SPEC_ID,
+      game_spec: BANQI_SPEC_ID,
+      roomMode: 'pve',
+      initialMs: 5 * 60_000,
+      incrementMs: 5_000,
+      time_class: 'rapid',
+      // Unknown on this stack, never guessed: the legacy stack reports a real
+      // value and a fabricated one here would silently pool with it.
+      rated: null,
+    });
+  });
+
+  it('emits game_finished once, with the winner and reason', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    h.feedHello({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    h.feedSnapshot({
+      state: view({
+        status: { type: 'finished', winner: 'blue', reason: 'no-moves' },
+        moveNumber: 21,
+      }),
+    });
+    h.feedSnapshot({
+      state: view({
+        status: { type: 'finished', winner: 'blue', reason: 'no-moves' },
+        moveNumber: 21,
+      }),
+    });
+    expect(named('game_finished')).toHaveLength(1);
+    expect(named('game_finished')[0][1]).toMatchObject({
+      winner: 'blue',
+      reason: 'no-moves',
+      moveNumber: 21,
+    });
+  });
+
+  it('stays silent for a tenant that emits its own', () => {
+    // Crossroads Chess kept its own tracker through the migration to this
+    // client. Without the opt-out it would report every game twice, and a
+    // doubled variant in a funnel is worse than a missing one: the missing one
+    // is visibly zero.
+    const h = createHarness({
+      gameSpecId: BANQI_SPEC_ID,
+      emitsOwnLifecycleAnalytics: true,
+    });
+    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    h.feedSnapshot({
+      state: view({ status: { type: 'finished', winner: 'red', reason: 'no-moves' } }),
+    });
+    expect(named('game_started')).toHaveLength(0);
+    expect(named('game_finished')).toHaveLength(0);
+  });
+
+  it('survives a gameSpecId the registry does not know', () => {
+    // Variant dispatch is fail-closed and throws on an unknown id. Measurement
+    // must not: an analytics call that can take down a live room is worse than
+    // one that loses a property.
+    const h = createHarness({ gameSpecId: 'not-a-real-spec' });
+    expect(() =>
+      h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) }),
+    ).not.toThrow();
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_started')[0][1]).toMatchObject({ variant: 'not-a-real-spec' });
+    expect(named('game_started')[0][1]).not.toHaveProperty('game_spec');
   });
 });

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   replayXiangqiBroadcastBoard,
   validateXiangqiBroadcastBoard,
   validateXiangqiBroadcastBoards,
@@ -119,4 +120,77 @@ test('xiangqi broadcast tape validation rejects ambiguous and unordered events',
     'tape.events[1].boardId must be a non-empty string',
     'tape.events[1].result must be * until status is complete',
   ]);
+});
+
+// A record of a finished game is not live play. Our kernel auto-draws on
+// repetition and on the progress clock; a real tournament game runs past both
+// because an arbiter applies the perpetual-check/chase rules instead. Before
+// this option existed, our own auto-draw made every later move read as illegal
+// and ingestion DROPPED the board -- 15 of 90 games in a national-championship
+// sample. Both fixtures below are real games from that sample.
+const adjudicatedRoot = new URL(
+  '../fixtures/xiangqi-broadcast/arbiter-adjudicated/',
+  import.meta.url,
+);
+
+test('the adjudicated-draw table is exactly the arbiter-decided reasons', () => {
+  // Asserting the table, not one member of it: checkmate and stalemate must
+  // never become resumable, or the option turns into a rubber stamp.
+  assert.deepEqual([...ARBITER_ADJUDICATED_DRAWS].sort(), ['progress-clock', 'repetition']);
+  for (const terminal of ['checkmate', 'stalemate', 'resignation', 'timeout'] as const) {
+    assert.equal(ARBITER_ADJUDICATED_DRAWS.has(terminal), false, `${terminal} must stay terminal`);
+  }
+});
+
+for (const [file, reason, plies] of [
+  ['repetition.json', 'repetition', 135],
+  ['progress-clock.json', 'progress-clock', 281],
+] as const) {
+  test(`real game continuing past ${reason} replays only with the ingest option`, () => {
+    const parsed = validateXiangqiBroadcastBoard(loadJson(new URL(file, adjudicatedRoot)));
+    assert.equal(parsed.ok, true, parsed.ok ? undefined : parsed.errors.join('\n'));
+    if (!parsed.ok) return;
+    assert.equal(parsed.value.moves.length, plies);
+
+    // Without the option the kernel's own auto-draw rejects a legitimate game.
+    const strict = replayXiangqiBroadcastBoard(parsed.value);
+    assert.equal(strict.ok, false, 'live-play replay should still stop at the auto-draw');
+
+    const ingest = replayXiangqiBroadcastBoard(parsed.value, {
+      continuePastAdjudicatedDraw: true,
+    });
+    assert.equal(ingest.ok, true, ingest.ok ? undefined : ingest.reason);
+    if (!ingest.ok) return;
+    assert.equal(ingest.plies, plies);
+    assert.ok(ingest.adjudications.length > 0, 'should record where the kernel called it over');
+    assert.equal(ingest.adjudications[0]?.reason, reason);
+    assert.ok(
+      (strict.ok ? 0 : strict.ply) <= ingest.adjudications[0]!.ply,
+      'adjudication should be at or before the ply strict replay stopped on',
+    );
+  });
+}
+
+test('the ingest option does not rescue a genuinely illegal move', () => {
+  const parsed = validateXiangqiBroadcastBoard(
+    loadJson(new URL('games/men-r1-b03-invalid.json', fixtureRoot)),
+  );
+  assert.equal(parsed.ok, true, parsed.ok ? undefined : parsed.errors.join('\n'));
+  if (!parsed.ok) return;
+
+  const replay = replayXiangqiBroadcastBoard(parsed.value, { continuePastAdjudicatedDraw: true });
+  assert.equal(replay.ok, false);
+  if (replay.ok) return;
+  assert.equal(replay.ply, 1);
+});
+
+test('a clean game records no adjudications', () => {
+  const parsed = validateXiangqiBroadcastBoard(
+    loadJson(new URL('games/men-r1-b01.json', fixtureRoot)),
+  );
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) return;
+  const replay = replayXiangqiBroadcastBoard(parsed.value, { continuePastAdjudicatedDraw: true });
+  assert.equal(replay.ok, true);
+  assert.deepEqual(replay.ok ? replay.adjudications : null, []);
 });

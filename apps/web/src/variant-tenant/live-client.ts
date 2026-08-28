@@ -19,6 +19,12 @@
  * room-chrome (clocks/status/actions), replay-controller (scrub state).
  */
 
+import {
+  classifyTimeControl,
+  createGameLifecycleTracker,
+  type GameLifecycleStatusType,
+  maybeGameSpecAnalyticsProps,
+} from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
@@ -214,6 +220,14 @@ export type TenantReplayCaptureConfig<C extends string, V> = {
 export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>, M> = {
   tenant: WebVariantTenant<C>;
   gameSpecId: string;
+  /**
+   * Set only by a tenant that emits `game_started`/`game_finished` itself, to
+   * stop this client emitting them a second time. Crossroads Chess is the one
+   * such tenant: it kept its own tracker through the migration to this client,
+   * and its version reports a real `rated: false` where this one can only say
+   * null. Anything else leaves this alone and gets the shared funnel.
+   */
+  emitsOwnLifecycleAnalytics?: boolean;
   /**
    * Layout sizing spec override when a variant reuses another's board layout
    * (Dark Crossroads renders the crossroads-chess 6x8 board). Defaults to
@@ -529,6 +543,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     captureReplayView(view);
     const displayed = replay.currentView(view);
     updateLifecycleEffects(view);
+    trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.
     const pendingAnimation = consumePendingAnimation(lastDisplayedView);
@@ -558,6 +573,59 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         return value;
       });
     }
+  }
+
+  // Start/finish funnel for every tenant variant. Until 2026-08-28 this fired
+  // only from live-render.ts (the legacy chess stack) and Dark Mini Xiangqi, so
+  // banqi, jieqi, xiangqi, fortress, fog xiangqi and jungle emitted no game
+  // events at all. Ninety days of `game_started` was 24 events, every one of
+  // them fog chess, which reads as "nobody plays the tenant variants" and
+  // actually meant "nobody measures them".
+  //
+  // It lives here rather than in each room module for the same reason the board
+  // -coordinates preference got one accessor: N call sites is N chances for the
+  // next variant to be the one that misses.
+  const lifecycleTracker = createGameLifecycleTracker();
+  // Resolved once. The id comes from route config and does not change for the
+  // life of a client.
+  const lifecycleSpecProps = maybeGameSpecAnalyticsProps(config.gameSpecId);
+
+  // 'setup' is this stack's name for what the legacy stack calls 'pregame'.
+  // Mapped rather than passed through so one event schema describes both.
+  function lifecycleStatusType(status: V['status']['type']): GameLifecycleStatusType {
+    return status === 'setup' ? 'pregame' : (status as GameLifecycleStatusType);
+  }
+
+  function trackGameLifecycle(view: V | null): void {
+    if (config.emitsOwnLifecycleAnalytics) return;
+    // Scrubbing a replay is not playing, and re-entering a finished room must
+    // not re-emit its finish.
+    if (!view || !replay.isLive()) return;
+    const timeControl = state.timeControl ?? state.clock;
+    const baseProps = {
+      gameId: view.id,
+      variant: config.gameSpecId,
+      ...(lifecycleSpecProps ?? {}),
+      // The tenant stack carries no per-room rated flag, so this is unknown
+      // here rather than false. Do not substitute a guess: the legacy stack
+      // reports a real value and a fabricated one would silently pool with it.
+      rated: null,
+      roomMode: config.chrome?.roomMode?.() ?? 'pvp',
+      initialMs: timeControl?.initialMs ?? null,
+      incrementMs: timeControl?.incrementMs ?? null,
+      time_class: timeControl
+        ? classifyTimeControl(timeControl.initialMs, timeControl.incrementMs)
+        : null,
+    };
+    const status = view.status;
+    lifecycleTracker.update({
+      statusType: lifecycleStatusType(status.type),
+      baseProps,
+      outcome:
+        status.type === 'finished'
+          ? { winner: status.winner, reason: status.reason, moveNumber: view.moveNumber }
+          : null,
+    });
   }
 
   function updateLifecycleEffects(view: V | null): void {

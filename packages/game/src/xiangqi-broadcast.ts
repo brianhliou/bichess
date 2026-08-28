@@ -1,6 +1,7 @@
 import { XIANGQI_SPEC_ID } from './game-specs.js';
 import {
   createInitialXiangqiState,
+  type XiangqiGameEndReason,
   type XiangqiMove,
   type XiangqiSquare,
 } from './variants-xiangqi.js';
@@ -82,12 +83,19 @@ export type XiangqiBroadcastValidationResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
+/**
+ * Points where our kernel called the game over but the record kept going.
+ * Not errors: see ARBITER_ADJUDICATED_DRAWS.
+ */
+export type XiangqiBroadcastAdjudication = { ply: number; reason: XiangqiGameEndReason };
+
 export type XiangqiBroadcastReplayResult =
   | {
       ok: true;
       boardId: string;
       plies: number;
       finalStatus: ReturnType<typeof createInitialXiangqiState>['status'];
+      adjudications: XiangqiBroadcastAdjudication[];
     }
   | {
       ok: false;
@@ -298,12 +306,44 @@ export function validateXiangqiBroadcastBoards(
   return errors.length ? { ok: false, errors } : { ok: true, value: boards };
 }
 
+/**
+ * End reasons our kernel decides on its own but a human arbiter decides in real
+ * play. Xiangqi's perpetual-check/chase (长打) rules mean a repetition is not
+ * automatically a draw, and a long endgame outlasts the progress clock without
+ * the game being over. Tournament records therefore run straight past both.
+ *
+ * Checkmate and stalemate are NOT in here: no ruleset lets play continue.
+ */
+export const ARBITER_ADJUDICATED_DRAWS: ReadonlySet<XiangqiGameEndReason> =
+  new Set<XiangqiGameEndReason>(['repetition', 'progress-clock']);
+
+export type ReplayXiangqiBroadcastBoardOptions = {
+  /**
+   * Keep replaying when the kernel auto-draws on an arbiter-adjudicated reason.
+   * Broadcast and archive ingestion set this: dropping such a board loses a
+   * real game. Live play must NOT set it — there the auto-draw is the ruling.
+   */
+  continuePastAdjudicatedDraw?: boolean;
+};
+
 export function replayXiangqiBroadcastBoard(
   board: XiangqiBroadcastBoard,
+  options: ReplayXiangqiBroadcastBoardOptions = {},
 ): XiangqiBroadcastReplayResult {
   let state = createInitialXiangqiState(board.id);
+  const adjudications: XiangqiBroadcastAdjudication[] = [];
   for (let i = 0; i < board.moves.length; i += 1) {
     const move = board.moves[i]!;
+    // A finished state generates no legal moves, so an adjudicated draw would
+    // otherwise read as a corrupt record from here to the end of the game.
+    if (
+      options.continuePastAdjudicatedDraw &&
+      state.status.type === 'finished' &&
+      ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)
+    ) {
+      adjudications.push({ ply: i + 1, reason: state.status.reason });
+      state = { ...state, status: { type: 'playing', turn: i % 2 === 0 ? 'red' : 'black' } };
+    }
     const legal = getStandardXiangqiLegalMoves(state).some(
       (candidate) => candidate.from === move.from && candidate.to === move.to,
     );
@@ -323,6 +363,7 @@ export function replayXiangqiBroadcastBoard(
     boardId: board.id,
     plies: board.moves.length,
     finalStatus: state.status,
+    adjudications,
   };
 }
 

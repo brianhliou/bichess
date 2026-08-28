@@ -235,8 +235,15 @@ function movesFromDhtmlMovelist(
   return { ok: true, moves };
 }
 
+// Ingestion replays with continuePastAdjudicatedDraw: a tournament game runs
+// through repetitions and past the progress clock because an arbiter, not an
+// engine, decides those. Without it our own auto-draw made the rest of the game
+// read as illegal and the board was DROPPED from the snapshot entirely -- 15 of
+// 90 national-championship games in a 2026-08-27 sample, i.e. roughly one live
+// board in six would silently never appear. Live play still auto-draws; only
+// this replay-for-validation path relaxes it.
 function issueForReplayFailure(board: XiangqiBroadcastBoard): WxfDhtmlXqIssue | null {
-  const replay = replayXiangqiBroadcastBoard(board);
+  const replay = replayXiangqiBroadcastBoard(board, { continuePastAdjudicatedDraw: true });
   if (replay.ok) return null;
   return {
     kind: 'illegal_movelist',

@@ -10,6 +10,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as accountRoute from './routes/account.js';
+import * as adminAccountsRoute from './routes/admin-accounts.js';
 import * as annotationsRoute from './routes/annotations.js';
 import * as authRoute from './routes/auth.js';
 import * as banqiGamesRoute from './routes/banqi-games.js';
@@ -125,6 +126,7 @@ export const routes: RouteModule[] = [
   gamesRoute,
   relationsRoute,
   titlesRoute,
+  adminAccountsRoute,
   coachesRoute,
   usersRoute,
   leaderboardRoute,

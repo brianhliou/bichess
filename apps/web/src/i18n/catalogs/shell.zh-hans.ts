@@ -32,6 +32,7 @@ export const ZH_HANS_SHELL = {
   'nav.admin': '管理',
   'nav.database': '数据库',
   'nav.engines': '引擎',
+  'nav.accounts': '账户',
   'nav.lab': '实验室',
   'nav.tv': 'Mistboard 电视',
   'nav.analysis': '分析棋盘',
