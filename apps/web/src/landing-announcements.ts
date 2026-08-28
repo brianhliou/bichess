@@ -4,84 +4,66 @@ import { localizeAnnouncement } from './announcement-i18n.js';
 import { type Announcement, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
+import { buildSiteBox } from './site-box.js';
 import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
 import { rulesHrefPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // All announcements render as one dated News feed box (lichess lobby__feed
-// grammar); the full history lives at /feed. Row count is sized to fill
-// --landing-lower-widget-height without forcing a scroll.
-const MAX_FEED_ROWS = 3;
-const ANNOUNCEMENT_KIND_META: Record<
-  Announcement['kind'],
-  { label: string; futureDobutsuSlot: 'announcement-a' | 'announcement-b' | null }
-> = {
-  release: {
-    label: 'Release',
-    futureDobutsuSlot: 'announcement-a',
-  },
-  status: {
-    label: 'Status',
-    futureDobutsuSlot: 'announcement-b',
-  },
-  article: {
-    label: 'Article',
-    futureDobutsuSlot: 'announcement-b',
-  },
-  update: {
-    label: 'Update',
-    futureDobutsuSlot: 'announcement-a',
-  },
-};
+// grammar); the full history lives at /feed.
+//
+// The box is one of the two bands-3/4 side rails, so its height comes from the
+// blog + video rows beside it, not from its row count: render more rows than fit
+// and let the timeline scroll. The old cap of 3 predates the compact row (a
+// clamped body under its own headline line) and left the archive link doing all
+// the work of "there is more here".
+const MAX_FEED_ROWS = 12;
 
 export function buildLandingAnnouncements(locale: Locale = currentLocale()): HTMLElement {
-  const panel = document.createElement('aside');
-  panel.className = 'landing-announcements landing-news-feed';
-  panel.setAttribute('aria-label', t('news.heading', {}, locale));
-
-  const entries = announcements();
-  if (entries.length === 0) return panel;
-
-  // Keep the shared site-box title, but put the archive link at the end of the
-  // timeline itself, matching the Lichess feed's terminal star row.
-  const top = document.createElement('div');
-  top.className = 'site-box-top';
-  const title = document.createElement('h2');
-  title.className = 'site-box-title';
-  title.textContent = t('news.heading', {}, locale);
-  top.append(title);
-
-  const ordered = entries
+  const ordered = announcements()
     .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
     .sort((a, b) => b.date.localeCompare(a.date));
+
+  if (ordered.length === 0) {
+    const empty = document.createElement('aside');
+    empty.className = 'landing-announcements landing-news-feed';
+    empty.setAttribute('aria-label', t('news.heading', {}, locale));
+    return empty;
+  }
+
+  // Same shell as Top studies (the other bands-3/4 rail): a linked header whose
+  // "More »" goes to the archive. It replaced a terminal ☆ row inside the
+  // timeline, which sat below the fold once the box scrolled and so was the one
+  // affordance a reader had to scroll to find.
+  const { box, body } = buildSiteBox({
+    title: t('news.heading', {}, locale),
+    href: localizedHref('/feed', locale),
+    moreLabel: t('site.more', {}, locale),
+    className: 'landing-announcements landing-news-feed',
+  });
+  box.setAttribute('aria-label', t('news.heading', {}, locale));
+  // Two-class selector in the stylesheet: site-box.css is shared and Vite may
+  // emit it in a later chunk than this widget's own sheet.
+  body.classList.add('landing-news-scroll');
+
   const updates = document.createElement('div');
   updates.className = 'landing-news-updates';
   for (const entry of ordered.slice(0, MAX_FEED_ROWS)) {
     updates.append(renderFeedEntry(entry, locale));
   }
-  updates.append(renderAllUpdates(locale));
+  body.append(updates);
 
-  // The timeline scrolls independently below the pinned header.
-  const scroll = document.createElement('div');
-  scroll.className = 'landing-news-scroll';
-  scroll.append(updates);
-
-  panel.append(top, scroll);
-
-  return panel;
+  return box;
 }
 
 function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   const entry = localizeAnnouncement(source, locale);
-  const kindMeta = ANNOUNCEMENT_KIND_META[entry.kind];
   const row = document.createElement('article');
   row.className = `landing-news-update landing-news-update-${entry.kind}`;
   row.dataset.announcementKind = entry.kind;
 
   const marker = document.createElement('span');
-  marker.className = `landing-news-marker landing-news-marker-${entry.kind} landing-news-marker-dobutsu`;
+  marker.className = `landing-news-marker landing-news-marker-${entry.kind}`;
   marker.dataset.announcementKind = entry.kind;
-  marker.dataset.futureDobutsuSlot = kindMeta.futureDobutsuSlot ?? '';
-  marker.title = kindMeta.label;
   marker.setAttribute('aria-hidden', 'true');
   marker.append(buildUiIcon(uiIconForAnnouncementKind(entry.kind), 'landing-news-marker-icon'));
 
@@ -99,44 +81,38 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   date.textContent = formatAnnouncementRelativeDate(entry.date, locale);
   dateLink.append(date);
 
-  const body = document.createElement('p');
-  body.className = 'landing-news-body';
-  body.append(document.createTextNode(entry.headline));
-  if (entry.body) {
-    body.append(document.createTextNode(` ${entry.body}`));
-  }
-  content.append(dateLink, body);
+  // The headline is the row's link. It used to be a run of plain text ahead of
+  // the body in one paragraph, with a trailing "Read more." CTA carrying the
+  // href: nothing in the row read as a headline, and the CTA cost a line per
+  // row. The authored CTA label survives as the link's tooltip, and /feed still
+  // renders it inline.
+  const headline = document.createElement('p');
+  headline.className = 'landing-news-headline';
   if (entry.href) {
-    const cta = document.createElement('a');
-    cta.className = 'landing-news-link';
-    cta.href = /^https?:/.test(entry.href) ? entry.href : localizedHref(entry.href, locale);
-    if (/^https?:/.test(entry.href)) {
-      cta.target = '_blank';
-      cta.rel = 'noopener noreferrer';
+    const link = document.createElement('a');
+    link.className = 'landing-news-link';
+    const external = /^https?:/.test(entry.href);
+    link.href = external ? entry.href : localizedHref(entry.href, locale);
+    if (external) {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
     }
-    cta.textContent = ctaLabel(entry, locale);
-    body.append(document.createTextNode(' '), cta, document.createTextNode('.'));
+    link.title = ctaLabel(entry, locale);
+    link.textContent = entry.headline;
+    headline.append(link);
+  } else {
+    headline.textContent = entry.headline;
+  }
+  content.append(dateLink, headline);
+
+  if (entry.body) {
+    const body = document.createElement('p');
+    body.className = 'landing-news-body';
+    body.textContent = entry.body;
+    content.append(body);
   }
 
   row.append(marker, content);
-  return row;
-}
-
-function renderAllUpdates(locale: Locale): HTMLAnchorElement {
-  const row = document.createElement('a');
-  row.className = 'landing-news-update landing-news-all-updates';
-  row.href = localizedHref('/feed', locale);
-
-  const marker = document.createElement('span');
-  marker.className = 'landing-news-marker landing-news-marker-all';
-  marker.setAttribute('aria-hidden', 'true');
-  marker.textContent = '☆';
-
-  const label = document.createElement('span');
-  label.className = 'landing-news-all-label';
-  label.textContent = t('news.allUpdates', {}, locale);
-
-  row.append(marker, label);
   return row;
 }
 

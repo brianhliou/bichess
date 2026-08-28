@@ -444,6 +444,20 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The announcement archive, prerendered: static authored copy, so the baked
+    // page is what a reader sees. /news redirects here (legacyPageRedirect).
+    if (pathname === '/feed') {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: 'feed.html',
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // Default-locale learn page gets its prerendered stage map; localized
     // paths stay on the client-rendered shell below.
     if (pathname === '/learn/xiangqi') {

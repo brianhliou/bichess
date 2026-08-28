@@ -7,6 +7,8 @@ import { type Announcement, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { formatAnnouncementDate } from './landing-announcements.js';
+import { buildNav } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
 import { rulesHrefPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
@@ -20,7 +22,14 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
 
   const intro = document.createElement('p');
   intro.className = 'news-page-intro';
-  intro.textContent = t('news.intro', {}, locale);
+  intro.append(`${t('news.intro', {}, locale)} `);
+  // The archive is the only page that names the RSS document; the <link
+  // rel="alternate"> in the shell is for readers, not for people.
+  const subscribe = document.createElement('a');
+  subscribe.className = 'news-page-subscribe';
+  subscribe.href = '/feed.xml';
+  subscribe.textContent = t('news.subscribe', {}, locale);
+  intro.append(subscribe);
   section.append(intro);
 
   // Pure reverse-chronological: pinning is a rail concern, not a history one.
@@ -84,4 +93,13 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
 
 function announcementCtaLabel(entry: Announcement, locale: Locale): string {
   return entry.cta ?? t('news.readMore', {}, locale);
+}
+
+/** Build-time shell for /feed (prerender-articles.mjs). The archive is a static
+ *  list of authored copy with no per-account or live data in it, so the baked
+ *  DOM is the same page a reader gets; the SPA still takes over on boot. Without
+ *  this the route served a bare shell, which is not worth the sitemap entry it
+ *  now has. */
+export function renderNewsShellForPrerender(): string {
+  return `${buildNav().outerHTML}${buildStaticPageLayout('news', buildNewsPage()).outerHTML}`;
 }

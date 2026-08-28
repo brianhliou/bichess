@@ -180,8 +180,11 @@ describe('site shell nav', () => {
 
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/rules"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')).toBeNull();
-    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
+    // The announcement archive joined the footer 2026-08-27, when it stopped
+    // being a noindexed dead end. It is not a content path, so it keeps its
+    // bare href under a zh locale.
+    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     const footerDiscord = footer.querySelector<HTMLAnchorElement>('a[href^="https://discord.gg/"]');
     expect(footerDiscord?.textContent).toBe('Discord');
