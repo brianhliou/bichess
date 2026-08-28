@@ -73,9 +73,9 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-reveal-candidates.png',
-          alt: 'A jieqi review move list. Move 13 is a reveal: it carries a dice badge reading minus 10 percent and lists four candidate moves with win percentages, the played move marked third at 15 percent. Move 17 shows the same treatment with candidates at 94, 92, 91 and 88 percent. Ordinary plies between them carry a single evaluation.',
+          alt: 'A jieqi review move list. Move 19 is a reveal carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent, each with its own ranked candidates. The ordinary plies between them carry a single evaluation and no candidates.',
           caption:
-            'Reveal plies get ranked candidates and a luck price. Ordinary plies get a normal evaluation.',
+            'Reveal plies get ranked candidates and a luck price, good or bad. Ordinary plies get a normal evaluation.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -127,7 +127,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-accuracy-summary.png',
-          alt: 'A game summary: the advantage graph across the game, beside accuracy cards reading Guest 97 percent with no inaccuracies, mistakes or blunders, and Pikafish 92 percent with three inaccuracies and one mistake.',
+          alt: 'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 84 percent with eleven inaccuracies, three mistakes and five blunders, and Guest 90 percent with three inaccuracies, no mistakes and two blunders.',
           caption:
             'A recent game the engine lost. Accuracy is luck-stripped, so the gap is play rather than draw.',
         } as ArticleBlock,
