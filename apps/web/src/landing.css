@@ -22,13 +22,17 @@
   /* Desktop side-rail (puzzle / players column) width. Single-sourced here so the
      grid columns and the puzzle board's derived height stay in sync. */
   --landing-rail-width: 340px;
-  /* The daily-puzzle captions ride INSIDE the widget box. Their line box and the
-     gap to the board are single-sourced here because two rules need the number:
-     the captions set their own line-height from it, and the band-2 height adds it
-     twice (once above the board, once below) so the widget still lines up with
-     the forum and chat boxes top AND bottom. */
-  --home-puzzle-caption-line: 16px;
-  --home-puzzle-caption-gap: 2px;
+  /* Board captions: the viewer's seat rows (name / clock) above and below the TV
+     board, and the daily-puzzle title / side-to-play above and below its board.
+     One token set so the two boards carry the same text band: the same line box,
+     the same gap to the board, the same type size. Pinned in px (not a ratio)
+     because two layouts derive from the number: the desktop viewer reserves its
+     out-of-flow seat rows with it, and the band-2 height adds it twice (once
+     above the board, once below) so the puzzle widget still lines up with the
+     forum and chat boxes top AND bottom. */
+  --landing-board-caption-line: 18px;
+  --landing-board-caption-gap: 2px;
+  --landing-board-caption-size: 0.85rem;
 
   display: grid;
   /* lichess-shaped portal in three bands. Band 1 (~the first two-thirds of the
@@ -105,7 +109,7 @@
 .home-puzzle-widget {
   display: flex;
   flex-direction: column;
-  gap: var(--home-puzzle-caption-gap, 2px);
+  gap: var(--landing-board-caption-gap, 2px);
   /* The widget is exactly as wide as its board and centres in the column, the
      same way the viewer above it sizes to its board and centres. Stacked, the
      column is much wider than either board: the viewer centred while the puzzle
@@ -114,13 +118,13 @@
      label. Capping the widget at the board width fixes both at once. */
   width: min(100%, 534px);
   margin-inline: auto;
-  color: var(--site-muted);
+  color: var(--site-text);
   text-decoration: none;
 }
 
 .home-puzzle-widget:hover,
 .home-puzzle-widget:focus-visible {
-  color: var(--site-text);
+  color: var(--site-accent);
 }
 
 .home-puzzle-widget:focus-visible {
@@ -224,30 +228,27 @@
   background: color-mix(in srgb, var(--site-panel) 58%, transparent);
 }
 
-/* Captions inside the box, right-aligned, thin + embossed (nav style), tight.
-   The line box is pinned (not a ratio) because the desktop band-2 height is
-   derived from it: a caption that grew a pixel would push the widget past the
-   forum and chat boxes it lines up with. */
+/* Captions inside the box, dressed as the viewer's seat rows one band up: the
+   same line box, type size and weight as a seat name, left-aligned with the same
+   4px inset, so the two boards read as one column of board + text bands. (They
+   were 13px/400, muted, embossed and right-aligned before, against the viewer's
+   0.85rem/600 dark rows, and the pair read as two unrelated widgets.) The line
+   box is pinned (not a ratio) because the desktop band-2 height is derived from
+   it: a caption that grew a pixel would push the widget past the forum and chat
+   boxes it lines up with. */
 .home-puzzle-widget-title,
 .home-puzzle-widget-turn {
   flex: none;
-  height: var(--home-puzzle-caption-line, 16px);
-  color: var(--site-muted);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: var(--home-puzzle-caption-line, 16px);
-  text-align: right;
-}
-
-.home-puzzle-widget-title {
+  height: var(--landing-board-caption-line, 18px);
+  padding-inline: 4px;
   overflow: hidden;
+  color: inherit;
+  font-size: var(--landing-board-caption-size, 0.85rem);
+  font-weight: 600;
+  line-height: var(--landing-board-caption-line, 18px);
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-:root:not([data-effective-theme="dark"]) .home-puzzle-widget-title,
-:root:not([data-effective-theme="dark"]) .home-puzzle-widget-turn {
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 /* Left column (band 1): event banners (collapse when empty) over the showcase
@@ -1067,13 +1068,23 @@
 }
 
 /* The viewer now lives in a narrow side rail, so keep the seat name + clock
-   compact (the earlier 1.15rem bump was for the full-width center). Set via the
-   seat-font vars (not direct font-size rules) so the chess clock rows and the
-   tenant seats pick it up at the same specificity — direct rules here lose to the
-   chess-unification block and desync the chess vs tenant seat heights. */
+   compact (the earlier 1.15rem bump was for the full-width center), at the shared
+   board-caption size the puzzle captions use. Set via the seat-font vars (not
+   direct font-size rules) so the chess clock rows and the tenant seats pick it up
+   at the same specificity — direct rules here lose to the chess-unification block
+   and desync the chess vs tenant seat heights. */
 .landing-board-column #landing-replay {
-  --showcase-seat-name-size: 0.85rem;
-  --showcase-seat-clock-size: 0.85rem;
+  --showcase-seat-name-size: var(--landing-board-caption-size, 0.85rem);
+  --showcase-seat-clock-size: var(--landing-board-caption-size, 0.85rem);
+}
+
+/* Seat rows share the puzzle captions' line box, on both renderers (the tenant
+   .showcase-seat and the chessground .replay-clock-row). Pinned so the row IS
+   the token rather than the font's `normal` line-height, and the desktop margin
+   that reserves the out-of-flow rows can be derived from the same number. */
+.landing-board-column #landing-replay :is(.showcase-seat, .replay-clock-row) {
+  height: var(--landing-board-caption-line, 18px);
+  line-height: var(--landing-board-caption-line, 18px);
 }
 
 /* Article carousel beneath the hero board (center column) — a single row of
@@ -1689,7 +1700,7 @@
    also matches the solo (it's a .replay-layout), inflating the seat<->board gap on
    the homepage. Override it tight so the name/clock sit right against the board. */
 .landing-page #landing-replay .replay-layout-solo {
-  gap: 2px;
+  gap: var(--landing-board-caption-gap, 2px);
 }
 
 .showcase-widget .replay-layout-solo .replay-pane {
@@ -1925,7 +1936,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--landing-board-caption-gap, 2px);
   width: 100%;
 }
 
@@ -2032,7 +2043,7 @@
   color: var(--site-muted);
   font-size: var(--showcase-seat-clock-size, 0.9rem);
   font-weight: 500;
-  line-height: 1.2;
+  line-height: inherit;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2123,7 +2134,7 @@
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
     --landing-lower-widget-height: calc(
       var(--landing-puzzle-board-height) +
-      (var(--home-puzzle-caption-line) + var(--home-puzzle-caption-gap)) *
+      (var(--landing-board-caption-line) + var(--landing-board-caption-gap)) *
       2
     );
   }
@@ -2178,10 +2189,14 @@
     --showcase-widget-size: 100cqw;
   }
 
-  /* Desktop only: reserve the out-of-flow seat rows (name/clock, ~26px each).
-     The frame itself is dropped at every width by the rule near .showcase-widget. */
+  /* Desktop only: reserve the out-of-flow seat rows: exactly one caption line
+     plus its gap on each side, so the rows sit flush with the viewer's box edges
+     the way the puzzle captions sit flush with theirs (a fixed 28px left ~8px of
+     dead space beyond each row, so the two widgets' text ended at different
+     distances from the band edge). The frame itself is dropped at every width by
+     the rule near .showcase-widget. */
   .landing-page .landing-board-column #landing-replay {
-    margin-block: 28px;
+    margin-block: calc(var(--landing-board-caption-line) + var(--landing-board-caption-gap));
   }
 
   /* Hug the box to the inner (center-facing = right) edge of the left rail, so the
@@ -2225,7 +2240,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(100% + 2px);
+    bottom: calc(100% + var(--landing-board-caption-gap));
   }
 
   .landing-page
@@ -2239,7 +2254,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(100% + 2px);
+    top: calc(100% + var(--landing-board-caption-gap));
   }
 
   /* Tenant (SVG .replay-layout-solo) */
@@ -2269,7 +2284,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(100% + 2px);
+    bottom: calc(100% + var(--landing-board-caption-gap));
   }
 
   .landing-page
@@ -2280,7 +2295,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(100% + 2px);
+    top: calc(100% + var(--landing-board-caption-gap));
   }
 
   /* Fortress reserves stack ABOVE and BELOW the board (the base
