@@ -32,7 +32,7 @@ export type PageMeta = {
 // here, or the sitemap advertises a set of identical shells.
 const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
   '/learn/xiangqi': {
-    title: 'Learn Xiangqi (Chinese Chess) | Mistboard',
+    title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:
       'A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.',
   },

@@ -517,7 +517,7 @@ try {
   let learnHtml = shell.replace('<div id="app"></div>', `<div id="app">${learnInner}</div>`);
   learnHtml = learnHtml.replace(
     /<title>[^<]*<\/title>/,
-    '<title>Learn Xiangqi (Chinese Chess) | Mistboard</title>',
+    '<title>Learn Chinese Chess (Xiangqi) | Mistboard</title>',
   );
   learnHtml = learnHtml.replace(
     '</head>',

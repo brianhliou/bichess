@@ -449,7 +449,7 @@ test('serveSpaShellWithRoutePreloads gives a route with meta its own title and c
   });
 
   assert.equal(served, true);
-  assert.match(response.body, /<title>Learn Xiangqi \(Chinese Chess\) \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>Learn Chinese Chess \(Xiangqi\) \| Mistboard<\/title>/);
   assert.match(
     response.body,
     /<meta property="og:url" content="https:\/\/mistboard\.com\/learn\/xiangqi">/,
@@ -473,7 +473,7 @@ test('serveSpaShellWithRoutePreloads serves route meta even with no preload mani
   });
 
   assert.equal(served, true);
-  assert.match(response.body, /<title>Learn Xiangqi \(Chinese Chess\) \| Mistboard<\/title>/);
+  assert.match(response.body, /<title>Learn Chinese Chess \(Xiangqi\) \| Mistboard<\/title>/);
 });
 
 test('every sitemap SPA route that is not prerendered carries its own title', async () => {
