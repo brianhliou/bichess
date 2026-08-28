@@ -73,7 +73,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-reveal-candidates.png',
-          alt: 'A jieqi review move list. Move 19 is a reveal carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent, each with its own ranked candidates. The ordinary plies between them carry a single evaluation and no candidates.',
+          alt: 'A jieqi review move list. Move 19 is a reveal carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent, each with its own ranked candidates. The ordinary plies between them carry a single evaluation and no candidates, one of them flagged as a blunder with the better move named.',
           caption:
             'Reveal plies get ranked candidates and a luck price, good or bad. Ordinary plies get a normal evaluation.',
         } as ArticleBlock,
@@ -127,7 +127,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-accuracy-summary.png',
-          alt: 'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 84 percent with eleven inaccuracies, three mistakes and five blunders, and Guest 90 percent with three inaccuracies, no mistakes and two blunders.',
+          alt: 'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 86 percent with thirteen inaccuracies, two mistakes and one blunder, and Guest 91 percent with six inaccuracies, two mistakes and one blunder.',
           caption:
             'A recent game the engine lost. Accuracy is luck-stripped, so the gap is play rather than draw.',
         } as ArticleBlock,
