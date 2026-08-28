@@ -17,6 +17,7 @@ import {
   randomEmailLoginCode,
   sendEmailLoginCode,
 } from './../account-session.js';
+import { captureServerEvent } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { authCounters } from './../obs.js';
 import * as persistence from './../persistence.js';
@@ -185,6 +186,17 @@ export async function tryHandle(
       userAgent: sessionUserAgent(request),
     });
     authCounters.recordConfirm('success');
+    // The server owns signup_completed (analytics-server.ts): the browser's
+    // copy missed ad-blocked signups, so the web no longer fires it. Same
+    // distinct id as the browser's identify(), so the person merges.
+    if (isNew) {
+      void captureServerEvent({
+        event: 'signup_completed',
+        distinctId: user.id,
+        properties: { handle: user.handle, method: 'email_code' },
+        ip: clientIp,
+      });
+    }
     writeJson(
       response,
       200,
