@@ -3,9 +3,12 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
-import net from 'node:net';
-
-const DEFAULT_TEST_DATABASE_URL = 'postgres://mistboard:mistboard@localhost:5435/mistboard_test';
+import {
+  DEFAULT_TEST_DATABASE_URL,
+  isDatabaseReachable,
+  needsPersistenceGate,
+  persistenceGateWarning,
+} from './persistence-gate.mjs';
 
 const ZERO_SHA = /^0{40}$/;
 const DIST_DIRS = [
@@ -79,7 +82,7 @@ function changedFiles(localSha, remoteSha) {
 }
 
 function buildPlan(files, options) {
-  const persistenceGate = files.some(isPersistenceWatchedPath);
+  const persistenceGate = needsPersistenceGate(files);
 
   if (files.length === 0) {
     return {
@@ -147,14 +150,6 @@ function buildPlan(files, options) {
     persistenceGate,
     commands: [['npm', 'run', 'check:drift']],
   };
-}
-
-function isPersistenceWatchedPath(file) {
-  return (
-    file.startsWith('apps/server/migrations/') ||
-    file === 'apps/server/src/migrate.ts' ||
-    /^apps\/server\/src\/persistence[^/]*\.ts$/.test(file)
-  );
 }
 
 function isDocsOrMetaOnly(file) {
@@ -232,37 +227,7 @@ async function runPersistenceGate() {
     run(['npm', 'run', 'test:persistent']);
     return;
   }
-  console.warn(`
-pre-push: ==================== WARNING ====================
-pre-push: persistence/migration files changed, but Postgres-backed tests
-pre-push: (test:persistent) only run in hosted CI. A query/migration bug in
-pre-push: this push can land red on main and silently freeze the Railway
-pre-push: auto-deploy. To check locally before pushing:
-pre-push:   npm run db:up && npm run test:persistent
-pre-push: =================================================
-`);
-}
-
-function isDatabaseReachable(databaseUrl) {
-  let host = 'localhost';
-  let port = 5432;
-  try {
-    const parsed = new URL(databaseUrl);
-    host = parsed.hostname || host;
-    port = Number(parsed.port) || port;
-  } catch {
-    return Promise.resolve(false);
-  }
-  return new Promise((resolve) => {
-    const socket = net.connect({ host, port, timeout: 1000 });
-    const done = (result) => {
-      socket.destroy();
-      resolve(result);
-    };
-    socket.once('connect', () => done(true));
-    socket.once('timeout', () => done(false));
-    socket.once('error', () => done(false));
-  });
+  console.warn(persistenceGateWarning('pre-push'));
 }
 
 function cleanDist() {
