@@ -17,6 +17,10 @@ export type SweepPlyEval = {
   best: string | null;
   /** Principal variation (engine UCI), when the evaluator reports one. */
   pv?: string[];
+  /** Runner-up root move from the SAME search, when the evaluator ran MultiPV > 1
+   *  (xiangqi does; the other variants report one line and omit this). Scores are
+   *  in the evaluator's own POV, i.e. the same POV as `cp`/`mate` on this row. */
+  second?: { move: string; cp: number | null; mate: number | null };
 };
 
 /**
@@ -41,7 +45,13 @@ export function isVacuousAnalysis(plies: readonly SweepPlyEval[]): boolean {
 export type PositionEvaluate = (
   moves: string[],
   opts: { depth: number },
-) => Promise<{ cp: number | null; mate: number | null; best: string | null; pv?: string[] }>;
+) => Promise<{
+  cp: number | null;
+  mate: number | null;
+  best: string | null;
+  pv?: string[];
+  second?: { move: string; cp: number | null; mate: number | null };
+}>;
 
 /**
  * Walk the move prefixes and evaluate each. With a `progress` store the sweep
@@ -65,6 +75,7 @@ export async function sweepPlyEvals(
       mate: evaluation.mate,
       best: evaluation.best,
       ...(evaluation.pv?.length ? { pv: evaluation.pv } : {}),
+      ...(evaluation.second ? { second: evaluation.second } : {}),
     });
     if (progress) await progress.save({ nextIndex: ply + 1, items: evals });
   }

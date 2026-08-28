@@ -132,6 +132,16 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
     winAfter: number;
     playedBest: boolean;
     pv: readonly string[];
+    /** Mover-POV win% of the engine's SECOND-best move at this position, from the
+     *  same search as `winBefore`. Null when the sweep stored no runner-up. */
+    secondBestWin: number | null;
+    /** Mover-POV win% two plies back (before the opponent's last move), so a rule
+     *  can ask whether there was anything to punish. Null at the first move. */
+    winTwoPliesAgo: number | null;
+    /** The engine's line after the opponent ACCEPTS a piece this move offered and
+     *  the main line declined, starting after the capture. Empty when the offer
+     *  was taken in the main line, or when no piece was offered. */
+    pvAfterCapture: readonly string[];
   }): MovePraise | null;
   /** On-board arrows for live MultiPV lines. Omit while a board renderer has no
    *  overlay capability; the engine panel then hides its arrow setting. */
@@ -1456,15 +1466,28 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       if (!parent || !played?.move || !before || !after) continue;
       const redBefore = winPercent(before.cp, before.mate);
       const redAfter = winPercent(after.cp, after.mate);
+      // Every win% handed to a rule is the MOVER's, so a rule never has to know
+      // which seat it is looking at.
+      const toMover = (red: number): number => (move.mover === 'red' ? red : 100 - red);
+      // The runner-up lives on the position the move was played FROM, and comes
+      // out of the same search as `winBefore` — that is what makes their gap a
+      // comparison rather than a difference between two searches.
+      const secondBest = before.second;
+      // Two plies back is the position before the OPPONENT's last move, i.e. the
+      // eval this move may be punishing.
+      const twoAgo = evalByPly.get(move.ply - 2);
       let verdict: MovePraise | null = null;
       try {
         verdict = praise({
           before: parent.truth,
           move: played.move,
-          winBefore: move.mover === 'red' ? redBefore : 100 - redBefore,
-          winAfter: move.mover === 'red' ? redAfter : 100 - redAfter,
+          winBefore: toMover(redBefore),
+          winAfter: toMover(redAfter),
           playedBest: bestPlayed.has(move.ply),
           pv: after.pv ?? [],
+          secondBestWin: secondBest ? toMover(winPercent(secondBest.cp, secondBest.mate)) : null,
+          winTwoPliesAgo: twoAgo ? toMover(winPercent(twoAgo.cp, twoAgo.mate)) : null,
+          pvAfterCapture: after.offerLine?.pv ?? [],
         });
       } catch {
         verdict = null; // a rule that cannot read the position praises nothing

@@ -21,6 +21,15 @@ export type PlyEval = {
    *  capped server-side. Feeds the inline refutation lines at judged moves;
    *  absent on rows cached before PV capture (the line degrades to `best`). */
   pv?: string[];
+  /** Runner-up root move at this position (MultiPV rank 2), same POV and dialect
+   *  as `best`, from the SAME search as `cp`/`mate` — so `cp` minus this is a real
+   *  gap, not two searches differing by noise. Absent on rows cached before the
+   *  MultiPV sweep, and at terminal / single-move positions. */
+  second?: { move: string; cp: number | null; mate: number | null };
+  /** For the move that REACHED this position: the engine's line after the opponent
+   *  accepts a piece it offered, when the main line declines it. `pv` starts AFTER
+   *  the capture. Present on the handful of plies that offer a declined piece. */
+  offerLine?: { capture: string; pv: string[] };
 };
 
 export type XiangqiGameAnalysisResponse = {

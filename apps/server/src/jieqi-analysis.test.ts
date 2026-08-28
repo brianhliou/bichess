@@ -226,7 +226,7 @@ function firstRevealMove(deal: JieqiDeal): { move: JieqiMove; uci: string } {
 }
 
 function mpvLine(index: number, move: string, cp: number): UciMultiPvLine {
-  return { index, move, cp, mate: null, depth: 10 };
+  return { index, move, cp, mate: null, depth: 10, pv: [move], bound: null };
 }
 
 // Red's remaining hidden pool (role -> count) at the initial position.

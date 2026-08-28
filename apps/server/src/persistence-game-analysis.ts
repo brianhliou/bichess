@@ -17,6 +17,13 @@ export type StoredPlyEval = {
   /** Principal variation (capped, same dialect as `best`). Absent on rows cached
    *  before PV capture; the client degrades to the single best move. */
   pv?: string[];
+  /** Runner-up root move at this position (MultiPV rank 2, same POV and dialect
+   *  as `best`). Absent on rows cached before analysis @5. */
+  second?: { move: string; cp: number | null; mate: number | null };
+  /** For the move that reached this position: the line after the opponent accepts
+   *  an offered piece the main line declined. Absent on rows cached before @5 and
+   *  on the overwhelming majority of plies. */
+  offerLine?: { capture: string; pv: string[] };
 };
 
 export async function getGameAnalysis(

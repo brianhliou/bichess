@@ -320,6 +320,13 @@ export const XIANGQI_ANALYSIS_DEPTH = 18;
 // CPU-independent, reproducible eval — the lichess/fishnet user-request tier is
 // 1M nodes, which the persistent session makes affordable.
 export const XIANGQI_ANALYSIS_NODES = 1_000_000;
+// MultiPV width for the sweep. 2 is not a strength setting: it is what makes the
+// runner-up move available so the `!` rule can ask "was there another move this
+// good" (#315). Both lines come out of ONE search, so the gap between them is a
+// real comparison; deriving the second line from a separate search would put
+// search noise inside the threshold. Cost is a slightly shallower rank-1 PV at
+// the same node budget.
+export const XIANGQI_ANALYSIS_MULTI_PV = 2;
 // Hard per-position wall-clock guard for a sweep eval. 1M nodes is normally a
 // few seconds; this only fires when the engine wedges (then the session dies
 // and the sweep fails closed rather than hanging the job).
@@ -336,6 +343,15 @@ export type XiangqiPositionEval = {
    *  best-play lines. Absent when the engine emitted none. */
   pv?: string[];
   depth: number;
+  /**
+   * The SECOND-best root move at this position (MultiPV rank 2), Red POV, from
+   * the SAME search as `cp`/`mate` — so the gap between them is a real
+   * comparison rather than two searches differing by noise. Absent when the
+   * search reported one line (terminal or single-legal-move positions), and on
+   * every row cached before MultiPV 2 (analysis engine version <= 4).
+   * Feeds the `!` rule's "was there another move this good" test (#315).
+   */
+  second?: { move: string; cp: number | null; mate: number | null };
 };
 
 /** Stored/served PV length cap. Raised 16 -> 32 on 2026-08-27: at the analysis
@@ -350,15 +366,31 @@ const ANALYSIS_PV_MAX_PLIES = 32;
 // to move is already checkmated (a loss for them): 0 cannot carry the POV sign,
 // so encode it as a decisive cp instead — otherwise the winner's mating move
 // looks like it dropped to a loss.
-function redPovEval(evaluation: UciEval, plyCount: number): XiangqiPositionEval {
-  const sign = plyCount % 2 === 0 ? 1 : -1;
-  const pv = evaluation.pv?.length ? evaluation.pv.slice(0, ANALYSIS_PV_MAX_PLIES) : undefined;
-  if (evaluation.mate === 0) {
-    return { cp: sign * -30000, mate: null, best: evaluation.best, pv, depth: evaluation.depth };
-  }
+function redPovSign(plyCount: number): 1 | -1 {
+  return plyCount % 2 === 0 ? 1 : -1;
+}
+
+/** Flip one side-to-move score pair onto Red's POV. `mate 0` is the side to move
+ *  being already checkmated; 0 cannot carry a sign, so encode it as decisive cp. */
+function redPovScore(
+  cp: number | null,
+  mate: number | null,
+  sign: 1 | -1,
+): { cp: number | null; mate: number | null } {
+  if (mate === 0) return { cp: sign * -30000, mate: null };
   return {
-    cp: evaluation.cp == null ? null : evaluation.cp * sign,
-    mate: evaluation.mate == null ? null : evaluation.mate * sign,
+    cp: cp == null ? null : cp * sign,
+    mate: mate == null ? null : mate * sign,
+  };
+}
+
+function redPovEval(evaluation: UciEval, plyCount: number): XiangqiPositionEval {
+  const sign = redPovSign(plyCount);
+  const pv = evaluation.pv?.length ? evaluation.pv.slice(0, ANALYSIS_PV_MAX_PLIES) : undefined;
+  const score = redPovScore(evaluation.cp, evaluation.mate, sign);
+  return {
+    cp: score.cp,
+    mate: score.mate,
     best: evaluation.best,
     pv,
     depth: evaluation.depth,
@@ -416,27 +448,38 @@ export async function evaluateXiangqiPosition(
  */
 export async function withXiangqiAnalysisSession<T>(
   fn: (evaluate: (moves: string[]) => Promise<XiangqiPositionEval>) => Promise<T>,
-  opts: { nodes?: number } = {},
+  opts: { nodes?: number; multiPv?: number } = {},
 ): Promise<T> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
   const nodes = Math.max(1, Math.floor(opts.nodes ?? XIANGQI_ANALYSIS_NODES));
+  const multiPv = Math.max(1, Math.floor(opts.multiPv ?? XIANGQI_ANALYSIS_MULTI_PV));
   const release = await analysisPool.acquire();
   const session = new UciEngineSession({
     bin,
     name: 'pikafish-xiangqi-analysis',
-    initCommands: ['uci', `setoption name EvalFile value ${net}`, 'ucinewgame', 'isready'],
+    initCommands: [
+      'uci',
+      `setoption name EvalFile value ${net}`,
+      `setoption name MultiPV value ${multiPv}`,
+      'ucinewgame',
+      'isready',
+    ],
   });
   try {
     await session.ready();
     return await fn(async (moves) => {
-      const evaluation = await session.evalPosition({
+      const evaluation = await session.multiPvPosition({
         positionCommand: positionCommand(moves),
         goCommand: `go nodes ${nodes}`,
         timeoutMs: XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS,
         timeoutMessage: 'pikafish-xiangqi analysis eval timed out',
       });
-      return redPovEval(evaluation, moves.length);
+      const base = redPovEval(evaluation, moves.length);
+      const runnerUp = evaluation.lines.find((line) => line.index === 2);
+      if (!runnerUp) return base;
+      const score = redPovScore(runnerUp.cp, runnerUp.mate, redPovSign(moves.length));
+      return { ...base, second: { move: runnerUp.move, cp: score.cp, mate: score.mate } };
     });
   } finally {
     session.close();

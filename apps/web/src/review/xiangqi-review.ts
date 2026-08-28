@@ -75,15 +75,40 @@ const xiangqiPresentation: TreePresentation<
     // `!!` / `!` by the shared xiangqi rules. The server hands the whole-game PV
     // in our own square notation (same dialect as `best`), decoded to the first
     // token the rules engine cannot read.
-    praiseMove: ({ before, move, winBefore, winAfter, playedBest, pv }) => {
+    praiseMove: ({
+      before,
+      move,
+      winBefore,
+      winAfter,
+      playedBest,
+      pv,
+      secondBestWin,
+      winTwoPliesAgo,
+      pvAfterCapture,
+    }) => {
       if (before.status.type !== 'playing') return null;
-      const pvAfter: XiangqiMove[] = [];
-      for (const uci of pv) {
-        const decoded = fsfUciToXiangqiSquares(uci);
-        if (!decoded) break;
-        pvAfter.push(decoded);
-      }
-      return classifyXiangqiMove({ before, move, winBefore, winAfter, playedBest, pvAfter }).glyph;
+      // An unreadable token TRUNCATES a line: every move after it would land on
+      // the wrong position.
+      const decodeLine = (line: readonly string[]): XiangqiMove[] => {
+        const out: XiangqiMove[] = [];
+        for (const uci of line) {
+          const decoded = fsfUciToXiangqiSquares(uci);
+          if (!decoded) break;
+          out.push(decoded);
+        }
+        return out;
+      };
+      return classifyXiangqiMove({
+        before,
+        move,
+        winBefore,
+        winAfter,
+        playedBest,
+        pvAfter: decodeLine(pv),
+        secondBestWin,
+        winTwoPliesAgo,
+        pvAfterCapture: pvAfterCapture.length ? decodeLine(pvAfterCapture) : null,
+      }).glyph;
     },
   },
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
