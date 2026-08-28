@@ -213,7 +213,7 @@
   display: none;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1100px) {
   .theme-control-trigger {
     padding: 6px 0;
   }
