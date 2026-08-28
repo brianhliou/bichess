@@ -25,6 +25,18 @@ export {
   userIdForHandle,
 } from './persistence-accounts.js';
 export type {
+  AdminAccountRow,
+  AdminAccountSort,
+  AdminAccountsPage,
+  AdminAccountsQuery,
+} from './persistence-admin-accounts.js';
+export {
+  ADMIN_ACCOUNT_SORTS,
+  ADMIN_ACCOUNTS_MAX_LIMIT,
+  isAdminAccountSort,
+  listAdminAccounts,
+} from './persistence-admin-accounts.js';
+export type {
   AccountClosureChallenge,
   AuthRateLimitInput,
   AuthRateLimitScope,

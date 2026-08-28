@@ -239,7 +239,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (pathname === '/robots.txt') {
       response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
       response.end(
-        `User-agent: *\nAllow: /\nDisallow: /database\nDisallow: /engines\nSitemap: ${options.publicHost}/sitemap.xml\n`,
+        `User-agent: *\nAllow: /\nDisallow: /database\nDisallow: /engines\nDisallow: /accounts\nSitemap: ${options.publicHost}/sitemap.xml\n`,
       );
       return;
     }

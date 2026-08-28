@@ -1,0 +1,173 @@
+/* Unlisted admin account roster (/accounts). Dense internal tool on the shared
+   site tokens, laid out like /engines with the /database control styling. */
+
+.accounts-admin-shell {
+  max-width: 960px;
+}
+
+.accounts-admin-sub {
+  margin: 0 0 16px;
+  color: var(--site-muted, #8a8f98);
+  font-size: 0.9rem;
+}
+
+.accounts-admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 12px;
+}
+
+.accounts-admin-input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.accounts-admin-select,
+.accounts-admin-input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--site-radius, 6px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font-size: 0.88rem;
+}
+
+.accounts-admin-select:focus,
+.accounts-admin-input:focus {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+.accounts-admin-btn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--site-radius, 6px);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.accounts-admin-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Touch floor for the control row; the select takes an explicit height because
+   WebKit ignores min-height on a native menulist control. */
+@media (pointer: coarse) {
+  .accounts-admin-input,
+  .accounts-admin-btn {
+    min-height: 44px;
+  }
+
+  .accounts-admin-select {
+    height: 44px;
+  }
+}
+
+.accounts-admin-summary {
+  margin: 0 0 12px;
+  color: var(--site-muted, #8a8f98);
+  font-size: 0.88rem;
+}
+
+.accounts-admin-status {
+  color: var(--site-muted, #8a8f98);
+  padding: 16px 0;
+}
+
+.accounts-admin-more {
+  margin-top: 12px;
+}
+
+.accounts-admin-table-scroll {
+  overflow-x: auto;
+}
+
+.accounts-admin-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.accounts-admin-table th,
+.accounts-admin-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
+}
+
+.accounts-admin-table th {
+  font-weight: 600;
+  color: var(--site-muted, #8a8f98);
+  white-space: nowrap;
+}
+
+.accounts-admin-rank {
+  width: 2.5rem;
+  color: var(--site-muted, #8a8f98);
+}
+
+.accounts-admin-games {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-admin-table th:nth-child(5) {
+  text-align: right;
+}
+
+.accounts-admin-empty {
+  color: var(--site-muted, #8a8f98);
+}
+
+.accounts-admin-name {
+  font-weight: 600;
+}
+
+.accounts-admin-name-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.accounts-admin-name-link:hover {
+  text-decoration: underline;
+}
+
+.accounts-admin-handle,
+.accounts-admin-email {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--site-muted, #8a8f98);
+}
+
+.accounts-admin-email {
+  word-break: break-all;
+}
+
+.accounts-admin-notes {
+  white-space: nowrap;
+}
+
+.accounts-admin-badge {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 1px 7px;
+  border: 1px solid var(--site-border, rgba(255, 255, 255, 0.08));
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: var(--site-muted, #8a8f98);
+}
+
+.accounts-admin-badge--warn {
+  color: var(--site-warning, #c8861a);
+  border-color: currentColor;
+}
+
+.accounts-admin-table tr.is-closed td {
+  color: var(--site-muted, #8a8f98);
+}

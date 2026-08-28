@@ -41,7 +41,7 @@ describe('site shell nav', () => {
       [...(adminMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Database', 'Engines']);
+    ).toEqual(['Database', 'Engines', 'Accounts']);
     expect(adminMenu?.hidden).toBe(true);
 
     const puzzleLink = nav.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');

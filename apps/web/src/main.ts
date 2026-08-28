@@ -244,6 +244,10 @@ const wantsTitlesAdmin = path === '/titles';
 // Unlisted admin engine tracker. No nav entry; admin-gated by /api/admin/engines
 // (open in local dev). Direct-URL only.
 const wantsEngines = path === '/engines';
+// Unlisted admin player roster (/accounts): every registered account. Admin-
+// gated by /api/admin/accounts (open in local dev); reached from the account
+// menu's admin group.
+const wantsAccountsAdmin = path === '/accounts';
 // Unlisted admin per-engine profile (/engine/:id). Same admin gate as /engines.
 const engineProfileId = path.startsWith('/engine/')
   ? decodeURIComponent(path.slice('/engine/'.length))
@@ -458,6 +462,11 @@ if (replaySample) {
   setTitle('Title verification');
   void mountOrReport(() =>
     import('./titles-admin.js').then(({ mountTitlesAdmin }) => mountTitlesAdmin(appRoot)),
+  );
+} else if (wantsAccountsAdmin) {
+  setTitle('Accounts');
+  void mountOrReport(() =>
+    import('./accounts-admin.js').then(({ mountAccountsAdmin }) => mountAccountsAdmin(appRoot)),
   );
 } else if (wantsEngines) {
   setTitle('Engines');

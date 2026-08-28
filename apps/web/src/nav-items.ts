@@ -70,6 +70,7 @@ export function adminNavItems(): NavItem[] {
   return [
     { label: 'Database', labelKey: 'nav.database', href: '/database' },
     { label: 'Engines', labelKey: 'nav.engines', href: '/engines' },
+    { label: 'Accounts', labelKey: 'nav.accounts', href: '/accounts' },
   ];
 }
 

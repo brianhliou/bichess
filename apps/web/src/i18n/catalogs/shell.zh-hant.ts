@@ -32,6 +32,7 @@ export const ZH_HANT_SHELL = {
   'nav.admin': '管理',
   'nav.database': '資料庫',
   'nav.engines': '引擎',
+  'nav.accounts': '帳戶',
   'nav.lab': '實驗室',
   'nav.tv': 'Mistboard 電視',
   'nav.analysis': '分析棋盤',

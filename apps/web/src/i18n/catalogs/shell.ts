@@ -26,6 +26,7 @@ export const EN_SHELL = {
   'nav.admin': 'Admin',
   'nav.database': 'Database',
   'nav.engines': 'Engines',
+  'nav.accounts': 'Accounts',
   'nav.lab': 'Lab',
   'nav.tv': 'Mistboard TV',
   'nav.analysis': 'Analysis board',
