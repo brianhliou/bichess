@@ -254,7 +254,12 @@ export function createReviewScaffold(
   // and the board line. There the controls become the box's last strip, and the box
   // bottom lands on the board bottom. Fusing requires no rail panel: the opening
   // explorer overlays railMain and would cover controls fused inside it.
-  const fuseNavigation = config.reviewSurface === 'study' && !config.railPanel;
+  // Material rows change where the controls belong. With a pocket, the box that
+  // tracks the board is [top pocket · moves · bottom pocket] and the controls sit
+  // BELOW it (lichess crazyhouse), so fusing them into the moves strip would
+  // sandwich them above the bottom pocket instead.
+  const hasPocketBox = Boolean(materialTop || materialBottom);
+  const fuseNavigation = config.reviewSurface === 'study' && !config.railPanel && !hasPocketBox;
   railMain.append(
     ...[
       config.enginePanel,
@@ -275,13 +280,26 @@ export function createReviewScaffold(
     config.railPanel.classList.add('review-rail-overlay');
     railMainWrap.append(config.railPanel);
   }
+  // Drop-variant pockets are part of the analysis box, not rail rows floating
+  // above and below it: lichess fuses [pocket · tools · pocket] into one panel
+  // whose top and bottom land on the board's top and bottom. Wrapping the three
+  // gives them a single gapless container to size against the board (CSS pins
+  // its height); the moves region inside flexes, so the pockets stay pinned to
+  // the box edges while the list absorbs the difference.
+  let boardTrackingBox: HTMLElement = railMainWrap;
+  if (hasPocketBox) {
+    const pocketBox = document.createElement('div');
+    pocketBox.className = 'review-rail-pocketbox';
+    pocketBox.append(
+      ...[materialTop, railMainWrap, materialBottom].filter((el): el is HTMLElement => el != null),
+    );
+    boardTrackingBox = pocketBox;
+  }
   const right = railGroup(
     [
-      materialTop,
-      railMainWrap,
+      boardTrackingBox,
       fuseNavigation ? null : config.navigation,
       config.analysisSummary,
-      materialBottom,
       config.railFooter,
     ].filter((el): el is HTMLElement => el != null),
   );

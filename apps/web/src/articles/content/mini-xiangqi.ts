@@ -22,11 +22,12 @@ export const miniXiangqiArticle: Article = {
       {
         kind: 'paragraph',
         text:
-          'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. It is a simplified, reduced version of [xiangqi](/rules/xiangqi): a smaller board, fewer pieces, and no river.',
+          'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. Xiangqi itself is many centuries older: see [Xiangqi rules](/rules/xiangqi). Mini Xiangqi is a simplified, reduced version of it, with a smaller board, fewer pieces, and no river.',
       },
       {
         kind: 'paragraph',
-        text: 'This page describes the open-information base game.',
+        text:
+          'This page describes the open-information base game. Mini Xiangqi is not playable on Mistboard; this is reference only.',
       },
     ],
     sections: [
@@ -107,11 +108,11 @@ export const miniXiangqiArticle: Article = {
       },
       relatedClosing({
         heading: 'Where to next',
-        lead: 'Ready to try the Mistboard version? Play Misty DMX in Dark Mini Xiangqi, the Fog of War variant built on this same 7 by 7 board.',
+        lead: 'Mini Xiangqi is not one of the games you can play here. Xiangqi is: the full 9 by 10 game this one reduces, against an engine or a friend.',
         links: [
           {
-            label: 'Play Misty DMX',
-            href: '/?play=computer&gameSpecId=dark-mini-xiangqi',
+            label: 'Play xiangqi',
+            href: '/?play=computer&gameSpecId=xiangqi',
             emphasis: 'primary',
           },
         ],

@@ -295,6 +295,7 @@ export const ZH_HANT_COMMUNITY = {
   'forum.reportQueueCouldNotLoad': '檢舉佇列載入失敗。',
   'forum.mistboardForum': 'Mistboard 論壇',
   'forum.reports': '檢舉',
+  'forum.discord': 'Discord',
   'forum.searchResults': '搜尋結果',
   'forum.backToForum': '返回論壇',
   'forum.reportsTitle': '論壇檢舉',

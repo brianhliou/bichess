@@ -441,21 +441,30 @@ describe('article public listing gates', () => {
     });
   });
 
-  it('points the Mini Xiangqi rules CTA directly at the bot', () => {
+  // Mini Xiangqi is registered but never built: every request 501s, and the
+  // page kept its rules article after the game went away. It used to close by
+  // offering Dark Mini Xiangqi, which is disabled in production, so the link
+  // silently dropped the reader on the homepage with no mention of either
+  // game. It now sends them to the one live game on the page's own subject.
+  it('sends Mini Xiangqi readers to a game that exists', () => {
     const page = buildArticlePage('mini-xiangqi');
     const ctaLinks = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')].map((link) => ({
       href: link.getAttribute('href'),
       text: link.textContent,
     }));
 
-    expect(page.textContent).toContain('Ready to try the Mistboard version?');
+    expect(page.textContent).toContain('not playable on Mistboard');
     expect(page.innerHTML).toContain('xq-diagram-palace-band');
     expect(ctaLinks).toEqual([
       {
-        href: '/?play=computer&gameSpecId=dark-mini-xiangqi',
-        text: 'Play Misty DMX',
+        href: '/?play=computer&gameSpecId=xiangqi',
+        text: 'Play xiangqi',
       },
     ]);
+    // The page wins "xiangqi was invented in" on a literal phrase match about
+    // a 1973 Japanese variant, so it has to route that reader rather than
+    // leave them with the wrong answer.
+    expect(page.textContent).toContain('Xiangqi itself is many centuries older');
   });
 
   it('keeps the Dark Crossroads Chess rules page directly reachable while unlisted', () => {

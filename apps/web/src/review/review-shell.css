@@ -1346,3 +1346,83 @@
     height: 42px;
   }
 }
+
+/* ── Drop-variant pocket box ─────────────────────────────────────────────────
+   lichess fuses a crazyhouse pocket into the analysis panel rather than floating
+   it above and below: [top pocket · tools · bottom pocket] is ONE box, gapless,
+   whose top and bottom land on the board's top and bottom. The scrub controls
+   then sit below that box, the way the underboard tabs sit below the board.
+
+   The moves region is what absorbs the difference: the pockets keep their band,
+   and the list flexes into whatever is left, so both pockets stay welded to the
+   box edges at any board height. */
+.review-rail-pocketbox {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Square off the seam: the pockets are the box's end caps, so only their outer
+   corners round, and the tools between them keep square edges on both sides. */
+.review-rail-pocketbox > .review-material-row:first-child {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.review-rail-pocketbox > .review-material-row:last-child {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+/* Pin the box to the board's own height so the pockets land on the board's top
+   and bottom lines. Same board-height expression the left rail uses; above col3
+   only, where the columns actually sit side by side. */
+@media (min-width: 1260px) {
+  .review-shell .review-shell__right .review-rail-pocketbox {
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+
+  /* The analyse-table rule earlier in this file pins .review-rail-mainwrap to
+     `flex: none` so the table ALONE is board-height and the controls flow below
+     it. Inside the pocket box that height is shared by [pocket · table ·
+     pocket], so here the table is the part that gives: the pockets keep their
+     bands and the move list absorbs the rest. Higher specificity than that rule
+     on purpose, and confined to this media query because the flex basis of 0
+     only makes sense once the box has a definite height — below col3 the box is
+     auto-height and a 0 basis would collapse the move list to nothing. */
+  :is(.review-shell--analysis, .review-shell--game, .review-shell--study)
+    .review-shell__right
+    .review-rail-pocketbox
+    > .review-rail-mainwrap {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+}
+
+/* ── The board / pocket seam ─────────────────────────────────────────────────
+   Where a pocket column stands beside the board, the two inner edges go square
+   so they read as one continuous division rather than two rounded cards facing
+   each other across a gap. The board keeps its rounded LEFT (page) edge and the
+   pockets keep their rounded RIGHT (page) edge; only the facing corners change.
+
+   Scoped with :has() to surfaces that actually mount a pocket. Analysis and
+   completed-game boards already square their right edge for the eval gauge
+   (--review-board-left-radius above), so this is what brings a STUDY board into
+   the same alignment without disturbing a study that has no pocket beside it. */
+.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child,
+.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child > svg {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/* The pockets are the column's end caps, so squaring their page-side corners is
+   what flattens the whole left edge of the column against the board. */
+.review-rail-pocketbox > .review-material-row:first-child {
+  border-start-start-radius: 0;
+}
+
+.review-rail-pocketbox > .review-material-row:last-child {
+  border-end-start-radius: 0;
+}

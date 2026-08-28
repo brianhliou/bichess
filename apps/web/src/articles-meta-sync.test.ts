@@ -5,8 +5,13 @@ import { describe, expect, it } from 'vitest';
 // updating the server map fails here instead of shipping a wrong-direction
 // 301 (kind falls back to 'article', so /rules/<slug> redirects away from its
 // own prerendered page) or a generic share card.
-import { ARTICLE_META, articleIsUnpublished } from '../../server/src/article-meta.js';
+import {
+  ARTICLE_META,
+  articleIsIndexable,
+  articleIsUnpublished,
+} from '../../server/src/article-meta.js';
 import { articles } from './articles-data.js';
+import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 describe('articles-data <-> server ARTICLE_META sync', () => {
   it('every article has a server ARTICLE_META entry with matching title and kind', () => {
@@ -44,5 +49,30 @@ describe('articles-data <-> server ARTICLE_META sync', () => {
     for (const slug of Object.keys(ARTICLE_META)) {
       expect(slugs.has(slug), `ARTICLE_META has stale slug '${slug}'`).toBe(true);
     }
+  });
+});
+
+// The prerenderer stamps `noindex, follow` on any rules page whose variant is
+// retired from public surfaces, but the sitemap is built server-side and cannot
+// import that table, so it advertised those same pages. The site was telling
+// Google to index pages the pages themselves declined. This keeps the two ends
+// in agreement rather than trusting a second hand-written copy of the list,
+// which is how the archive content digest drifted earlier the same week.
+describe('sitemap indexability <-> public surface sync', () => {
+  it('a rules page is sitemapped exactly when its variant is publicly surfaced', () => {
+    const mismatched = articles
+      .filter((article) => article.kind === 'rules' && !articleIsUnpublished(article.slug))
+      .filter(
+        (article) =>
+          articleIsIndexable(article.slug) !== rulesSlugPublicSurfaceEnabled(article.slug),
+      )
+      .map(
+        (article) =>
+          `${article.slug}: sitemap=${articleIsIndexable(article.slug)} ` +
+          `publicSurface=${rulesSlugPublicSurfaceEnabled(article.slug)}`,
+      );
+    expect(mismatched, `sitemap and public surface disagree:\n${mismatched.join('\n')}`).toEqual(
+      [],
+    );
   });
 });
