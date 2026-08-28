@@ -1,7 +1,7 @@
 {
   "name": "Mistboard",
   "short_name": "Mistboard",
-  "description": "Free online Xiangqi (Chinese chess) in English, built for serious play.",
+  "description": "Free online Chinese chess (xiangqi) in English, built for serious play.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ebefee",

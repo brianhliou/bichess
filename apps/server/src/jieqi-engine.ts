@@ -42,7 +42,16 @@ export const JIEQI_ENGINE_VERSION = '0.2.0';
 // orphans sweeps whose movetime bound, since their evals and pvs are wrong.
 // Fortress is NOT bumped: it runs a pure `go depth N`, which always completes
 // its final iteration. The Misty-backed variants never touch this parser.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.2.0';
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.3.0';
+
+// Short form of the upstream `jieqi_old` commit the prod image builds (pikafish-jieqi.ref).
+// It belongs in the ANALYSIS cache key because that key's whole promise is "same inputs,
+// same evals": the binary is an input, and until 2026-08-28 the build cloned branch tip on
+// every deploy, so two deploys either side of an upstream commit filed evals from different
+// engines under one identical key. Version alone could not catch that, being hand-maintained.
+// jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
+// cannot land without moving the key and forcing a recompute.
+export const PIKAFISH_JIEQI_ENGINE_REF = '23b9466c';
 
 export type JieqiEngineTier = {
   id: string;
@@ -86,9 +95,11 @@ const JIEQI_ENGINE_TIERS = [
 // ~3M nps, so hashfull pegs at 1000 (a fully thrashing table) inside the first
 // second of a 4s search. Measured at the start position, 4000ms:
 //   16MB/1thr -> depth 25 | 256MB/1thr -> depth 28 | 256MB/2thr -> depth 32.
-// Deliberately NOT applied to the analysis path: a fixed-depth sweep is cached by
-// (room, engine, depth) and its comment promises a CPU-independent result, which
-// both a bigger table and a second thread would break.
+// The THREAD count is what the analysis path must not borrow: a fixed-depth sweep is
+// cached by (room, engine, depth) and promises a CPU-independent result, and parallel
+// search is order-dependent. Measured, same position at depth 22, three runs:
+// 1 thread -> cp 1055 / 1055 / 1055; 2 threads -> cp 1046 / 1055 / 1002. Hash is a
+// fixed byte count and carries no such hazard, so analysis sets its own (below).
 //
 // Threads never claims more than HALF the container's cores: the engine shares the
 // `web` box with the WS server's event loop, and the live pool can run
@@ -193,10 +204,29 @@ export function jieqiEngineBinaryAvailable(): boolean {
   }
 }
 
-/** The exact UCI block a fixed-depth analysis eval sends. Exported so the ABSENCE of
- *  the live resource options is testable: a cached sweep is keyed by
- *  (room, engine, depth) and promises a CPU-independent result, which neither a
- *  bigger transposition table nor a second search thread would preserve. */
+// Per-process search resources for ANALYSIS. Single-threaded, because parallel search
+// is non-deterministic and a cached sweep promises a reproducible result. Hash is
+// raised off the 16MB UCI default anyway: 16MB is badly undersized for a ~3M nps binary
+// and hashfull pegs at 1000 mid-search, which does not merely slow the search down, it
+// corrupts it. Measured at the start position, single-threaded, depths 12 through 32:
+// 16MB wanders 238 -> 241 -> 265 -> 299 cp on a fully thrashing table, while 256MB holds
+// 234 -> 238 -> 234 with hashfull under 12%. A fixed byte count is as reproducible as any
+// other fixed option, so this preserves the cache guarantee that Threads would break.
+//
+// SCOPE OF THAT GUARANTEE, measured 2026-08-28 and narrower than this comment used to
+// imply: reproducible means same-architecture. The same pinned commit built arm64/NEON
+// and x86-64-sse41-popcnt disagrees on both eval and node count for one position
+// (depth 20: 1043 cp / 1,106,314 nodes vs 1050 cp / 851,161). The cache key captures
+// engine ref and depth, not ARCH, so ONLY an x86-64 build (what railpack builds) may
+// write these rows. scripts/backfill-jieqi-analysis.mjs enforces that at runtime.
+export function jieqiAnalysisResourceOptions(): string[] {
+  return ['setoption name Hash value 256', 'setoption name Threads value 1'];
+}
+
+/** The exact UCI block a fixed-depth analysis eval sends. Exported so the analysis
+ *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
+ *  by (room, engine, depth) and promises a CPU-independent result, which a second
+ *  search thread would not preserve. */
 export function buildJieqiAnalysisCommands(
   fen: string,
   opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
@@ -204,6 +234,7 @@ export function buildJieqiAnalysisCommands(
   return [
     'uci',
     ...netOption(),
+    ...jieqiAnalysisResourceOptions(),
     'ucinewgame',
     'isready',
     buildJieqiPositionCommand(fen, opts.moves),
@@ -261,7 +292,13 @@ export async function withJieqiAnalysisSession<T>(
   const session = new UciEngineSession({
     bin: pikaJieqiPath(),
     name: 'pikafish-jieqi-analysis',
-    initCommands: ['uci', ...netOption(), 'ucinewgame', 'isready'],
+    initCommands: [
+      'uci',
+      ...netOption(),
+      ...jieqiAnalysisResourceOptions(),
+      'ucinewgame',
+      'isready',
+    ],
   });
   try {
     await session.ready();
@@ -294,6 +331,7 @@ export async function evaluateJieqiMultiPv(
   const commands = [
     'uci',
     ...netOption(),
+    ...jieqiAnalysisResourceOptions(),
     `setoption name MultiPV value ${Math.max(1, Math.floor(opts.multiPv))}`,
     'ucinewgame',
     'isready',

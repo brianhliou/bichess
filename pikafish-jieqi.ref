@@ -1,0 +1,21 @@
+23b9466c981f0f3a1133f92de1a6f86406c4eccc
+# ^ The upstream official-pikafish/Pikafish `jieqi_old` commit the prod image builds
+# (railpack build step reads the first line; this comment is ignored).
+#
+# Pinned 2026-08-28. Before this, the build was `git clone --depth 1 -b jieqi_old`,
+# so every deploy rebuilt the analysis engine from whatever branch tip existed that
+# day. That is a reproducibility hole with teeth: whole-game analysis is cached by
+# (room, engine, depth), and the engine component was a hand-maintained version
+# string that knew nothing about the binary. Two deploys either side of an upstream
+# commit would therefore file evals from two different engines under one identical
+# key, with nothing to detect it. The same shape applies to the xiangqi Pikafish
+# build on the following railpack line, which is still unpinned; pinning it would
+# also change the live xiangqi bot, so it is deliberately left for its own change.
+#
+# The short form of this SHA is part of JIEQI_ANALYSIS_ENGINE_ID, so moving this pin
+# invalidates jieqi analysis caches on purpose rather than silently reusing them.
+# jieqi-engine-ref.test.ts fails if the two drift apart.
+#
+# Bumping: check out the new ref, rebuild, and expect a full recompute of every
+# jieqi review. There is no way to keep the old rows: they were produced by a
+# different engine, which is the whole point of keying on this.

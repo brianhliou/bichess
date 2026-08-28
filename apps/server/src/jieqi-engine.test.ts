@@ -7,6 +7,7 @@ import {
   buildJieqiLiveCommands,
   JIEQI_DEFAULT_ENGINE_ID,
   JIEQI_PLAYABLE_ENGINES,
+  jieqiAnalysisResourceOptions,
   jieqiEngineTierFor,
 } from './jieqi-engine.js';
 
@@ -106,13 +107,36 @@ test('both resource knobs are env-tunable and bounded', () => {
   );
 });
 
-// Analysis deliberately does NOT get the live resource options: `jieqi-analysis.ts`
-// caches sweeps by (room, engine, depth) on the promise that a fixed depth is the
-// same tree on any box, and both a larger transposition table and a second thread
-// break that. Bumping the live config must not silently invalidate cached reviews.
-test('analysis evals stay single-threaded on the default table', () => {
-  const commands = buildJieqiAnalysisCommands(FEN, { depth: 12, movetimeMs: 4_000 });
-  assert.ok(!commands.some((c) => c.startsWith('setoption name Threads')));
-  assert.ok(!commands.some((c) => c.startsWith('setoption name Hash')));
-  assert.equal(commands.at(-1), 'go depth 12 movetime 4000');
+// Analysis sets its OWN resource options rather than borrowing the live ones:
+// `jieqi-analysis.ts` caches sweeps by (room, engine, depth) on the promise that a fixed
+// depth is the same tree on any box. A second thread breaks that promise (parallel search
+// is order-dependent); a FIXED Hash does not, and 256MB is what keeps the table off the
+// thrashing ceiling that corrupts the eval. So: Hash pinned, Threads pinned to 1, and
+// neither may track the live config, which is env-tunable per box.
+test('analysis evals stay single-threaded on a fixed table', () => {
+  const commands = buildJieqiAnalysisCommands(FEN, { depth: 20, movetimeMs: 6_000 });
+  assert.ok(commands.includes('setoption name Threads value 1'));
+  assert.ok(commands.includes('setoption name Hash value 256'));
+  assert.equal(commands.at(-1), 'go depth 20 movetime 6000');
+});
+
+// The analysis options must be literals, not a read of the live env knobs: if
+// MISTBOARD_PIKAFISH_JIEQI_HASH_MB/_THREADS leaked in here, two boxes would cache
+// different evals under the same (room, engine, depth) key.
+test('analysis resource options ignore the live env knobs', () => {
+  const prevHash = process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB;
+  const prevThreads = process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS;
+  process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB = '1024';
+  process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS = '8';
+  try {
+    assert.deepEqual(jieqiAnalysisResourceOptions(), [
+      'setoption name Hash value 256',
+      'setoption name Threads value 1',
+    ]);
+  } finally {
+    if (prevHash === undefined) delete process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB;
+    else process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB = prevHash;
+    if (prevThreads === undefined) delete process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS;
+    else process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS = prevThreads;
+  }
 });
