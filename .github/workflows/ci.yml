@@ -129,10 +129,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The server build is required, not incidental: delta-ws.test.ts spawns
+      # the compiled apps/server/dist/main.js as a real process.
       - name: Build workspace dependencies
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/server
       - name: Unit tests (server)
         run: npm run test:unit --workspace @mistboard/server
 
