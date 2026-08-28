@@ -41,6 +41,7 @@ const RETIRED_RULES_SLUGS = new Set([
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
+  'xiangqi-champions',
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
@@ -80,6 +81,12 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
+  },
+  'xiangqi-champions': {
+    title: 'Who Is the Greatest Xiangqi Player?',
+    kind: 'article',
+    description:
+      'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

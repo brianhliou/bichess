@@ -80,6 +80,9 @@ describe('article public listing gates', () => {
 
     expect(hrefs).toEqual([
       '/blog/titled-players',
+      // Same date as titled-players; ties break alphabetically by title and
+      // 'Titled...' sorts before 'Who Is...'. Draft, so dev-only.
+      '/blog/xiangqi-champions',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
       '/blog/riverbank-cannon',

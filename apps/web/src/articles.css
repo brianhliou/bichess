@@ -1114,6 +1114,207 @@
   cursor: pointer;
 }
 
+/* Annotated replay: a miniature study. Board and its controls in the left
+   column, the move tree beside it with engine lines drawn inline under the move
+   they refute. All additive — a spec with no `annotations` never attaches these
+   nodes, so the plain stepper is untouched. Scoped under .xq-replay-annotated so
+   widget rules cannot lose to chunk order against a same-specificity helper
+   (feedback_css_chunk_order_cascade). */
+.xq-replay-annotated .xq-replay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  width: 100%;
+}
+
+.xq-replay-annotated .xq-replay-board-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.xq-replay-annotated .xq-replay-move-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.xq-replay-annotated .xq-replay-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  list-style: none;
+}
+
+.xq-replay-annotated .xq-replay-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.xq-replay-annotated .xq-replay-move-n {
+  min-width: 22px;
+  color: var(--site-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xq-replay-annotated .xq-replay-move-button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 62px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+}
+
+.xq-replay-annotated .xq-replay-move-button:hover {
+  border-color: var(--site-border);
+}
+
+.xq-replay-annotated .xq-replay-move-button.is-current {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+}
+
+/* The inline variation. Indented and rule-marked so it reads as a branch off
+   the move above rather than as more mainline. */
+.xq-replay-annotated .xq-replay-branch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px;
+  margin: 2px 0 4px 22px;
+  padding: 3px 0 3px 8px;
+  border-left: 2px solid var(--site-border);
+}
+
+.xq-replay-annotated .xq-replay-branch .xq-replay-move-button {
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--site-muted);
+}
+
+.xq-replay-annotated .xq-replay-branch .xq-replay-move-button.is-current {
+  color: var(--site-accent);
+}
+
+.xq-replay-annotated .xq-replay-branch-tag {
+  margin-right: 3px;
+  color: var(--site-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.xq-replay-annotated .xq-replay-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+
+.xq-replay-annotated .xq-replay-line:empty {
+  display: none;
+}
+
+.xq-replay-annotated .xq-replay-line-head {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.xq-replay-annotated .xq-replay-line-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--site-text);
+}
+
+.xq-replay-annotated .xq-replay-engine {
+  flex-basis: 100%;
+  color: var(--site-muted);
+  font-size: 11px;
+}
+
+.xq-replay-annotated .xq-replay-line-exit {
+  padding: 3px 9px;
+  border: 1px solid var(--site-border);
+  border-radius: 5px;
+  background: var(--site-surface);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.xq-replay-annotated .xq-replay-line-exit:hover {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+}
+
+.xq-replay-annotated .xq-replay-glyph {
+  font-weight: 700;
+}
+
+.xq-replay-annotated .xq-replay-glyph-blunder {
+  color: #b3261e;
+}
+
+.xq-replay-annotated .xq-replay-glyph-mistake {
+  color: #b3261e;
+  opacity: 0.75;
+}
+
+.xq-replay-annotated .xq-replay-glyph-inaccuracy {
+  color: #8a6d1f;
+}
+
+/* Narrow: the move tree drops under the board instead of beside it. */
+@media (max-width: 720px) {
+  .xq-replay-annotated .xq-replay-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xq-replay-annotated .xq-replay-moves {
+    max-height: 220px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .xq-replay-annotated .xq-replay-glyph-blunder,
+  .xq-replay-annotated .xq-replay-glyph-mistake {
+    color: #f2b8b5;
+  }
+
+  .xq-replay-annotated .xq-replay-glyph-inaccuracy {
+    color: #e0c168;
+  }
+}
+
 /* Shogi game replay widget: same stepper grammar as chess and xiangqi, with
    compact hands above and below the board because drops are central to shogi. */
 .shogi-replay {

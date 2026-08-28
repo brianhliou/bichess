@@ -60,8 +60,9 @@ import { revealChessTenant } from './reveal-chess-tenant.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
-// biome-ignore lint/suspicious/noExplicitAny: this is a cross-variant harness; each
-// tenant has its own concrete Color/Move/State types, so it drives them through `any`.
+// This is a cross-variant harness: each tenant has its own concrete
+// Color/Move/State types, so it drives them through `any`.
+// biome-ignore lint/suspicious/noExplicitAny: cross-variant harness, see above.
 type AnyTenant = any;
 // biome-ignore lint/suspicious/noExplicitAny: variant state is opaque to the harness.
 type AnyState = any;

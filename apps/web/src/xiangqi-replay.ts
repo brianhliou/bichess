@@ -6,6 +6,7 @@
 import {
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
+  formatXiangqiMoves,
   type XiangqiBoard,
   type XiangqiColor,
   type XiangqiGameState,
@@ -31,6 +32,35 @@ const RADIUS = 8;
 const ARROW = '#15781B';
 const ARROW_END_INSET = 10;
 
+/**
+ * Engine annotation for one mainline ply (1-based). Produced by the postgame
+ * analysis path and shaped by scripts/annotate-game.mjs, so an article never
+ * hand-writes a judgment or a line.
+ */
+export type XiangqiReplayAnnotation = {
+  /** Judgment glyph. Only the negative classes exist today (see analysis.ts). */
+  glyph?: '??' | '?' | '?!';
+  /** Eval AFTER the played move, Red POV, centipawns. */
+  cp?: number | null;
+  /** Mate distance after the played move, Red POV. */
+  mate?: number | null;
+  /**
+   * What the engine wanted instead, from the position BEFORE this ply, as
+   * space-separated ICCS tokens. Steppable: entering it replays the mainline
+   * prefix and then this line.
+   */
+  line?: string;
+  /** Optional human note, shown under the line. Prose is ours, never lifted. */
+  note?: string;
+};
+
+export type XiangqiReplayAnnotations = {
+  /** Keyed by 1-based mainline ply. */
+  byPly: Record<number, XiangqiReplayAnnotation>;
+  /** Shown once under the board, e.g. "Pikafish, 1M nodes per position". */
+  engine?: string;
+};
+
 export type XiangqiReplaySpec = {
   // Space-separated ICCS coordinate tokens (e.g. "h2e2 h9g7 ..."). ICCS ranks
   // are 0-9 with 0 = Red's back rank; engine ranks are 1-10, so rank + 1.
@@ -46,6 +76,12 @@ export type XiangqiReplaySpec = {
   // Shown on the final ply (the records stop at the mating move, so the rules
   // kernel still reports "playing"; the result is supplied explicitly).
   resultText: string;
+  /**
+   * Optional engine annotations. Absent means this renders exactly as it always
+   * has: a bare mainline stepper. Present adds a clickable move list with
+   * judgment glyphs and steppable engine lines.
+   */
+  annotations?: XiangqiReplayAnnotations;
 };
 
 export type XiangqiReplayController = { destroy: () => void };
@@ -230,19 +266,269 @@ export function mountXiangqiReplay(
   const narrative = document.createElement('div');
   narrative.className = 'stepper-narrative';
 
-  host.append(header, frame, controls, slider, narrative);
+  // The annotated surface is additive: without annotations this renders exactly
+  // as it always has, and none of the following nodes are attached.
+  const annotated = spec.annotations;
+  const moveList = document.createElement('ol');
+  moveList.className = 'xq-replay-moves';
+  const lineBox = document.createElement('div');
+  lineBox.className = 'xq-replay-line';
+
+  if (annotated) {
+    // Study layout: board and its controls in one column, the move tree beside
+    // it. The plain stepper keeps its single-column stack untouched.
+    host.classList.add('xq-replay-annotated');
+    const boardCol = document.createElement('div');
+    boardCol.className = 'xq-replay-board-col';
+    boardCol.append(frame, controls, slider, narrative);
+    const moveCol = document.createElement('div');
+    moveCol.className = 'xq-replay-move-col';
+    moveCol.append(moveList, lineBox);
+    const grid = document.createElement('div');
+    grid.className = 'xq-replay-grid';
+    grid.append(boardCol, moveCol);
+    host.append(header, grid);
+  } else {
+    host.append(header, frame, controls, slider, narrative);
+  }
 
   let index = 0;
+  /**
+   * When set, the board is showing the engine's line instead of the game: the
+   * mainline up to `atPly - 1`, then `moves` up to `cursor`. Mainline `index`
+   * is left untouched so leaving a variation lands exactly where it started.
+   */
+  let variation: { atPly: number; moves: XiangqiMove[]; cursor: number } | null = null;
+
+  function annotationAt(ply: number): XiangqiReplayAnnotation | undefined {
+    return annotated?.byPly[ply];
+  }
+
+  // WXF is the notation English xiangqi material actually uses, and it is short
+  // enough for a move column. formatXiangqiMoves always starts from the initial
+  // position, so a variation is formatted as prefix+line with the prefix sliced
+  // back off — no mid-game state to thread, and an illegal line cannot be
+  // notated into something that looks real.
+  const mainlineLabels = annotated ? formatXiangqiMoves(moves, 'wxf') : [];
+  const variationLabels = new Map<number, string[]>();
+
+  function parseLine(ply: number): XiangqiMove[] {
+    const raw = annotationAt(ply)?.line;
+    if (!raw) return [];
+    const parsed = raw
+      .trim()
+      .split(/\s+/)
+      .filter((t) => /^[a-i]\d[a-i]\d$/.test(t))
+      .map(iccsToMove);
+    // Truncate at the first move the rules reject rather than carrying it.
+    let state = states[ply - 1]!;
+    const legal: XiangqiMove[] = [];
+    for (const mv of parsed) {
+      const next = applyXiangqiMove(state, mv);
+      if (next === state) break;
+      legal.push(mv);
+      state = next;
+    }
+    return legal;
+  }
+
+  function labelsForLine(ply: number, line: XiangqiMove[]): string[] {
+    const cached = variationLabels.get(ply);
+    if (cached) return cached;
+    const prefix = moves.slice(0, ply - 1);
+    const all = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
+    variationLabels.set(ply, all);
+    return all;
+  }
+
+  function evalText(a: XiangqiReplayAnnotation | undefined): string {
+    if (!a) return '';
+    if (a.mate != null) return `#${a.mate}`;
+    if (a.cp == null) return '';
+    const pawns = a.cp / 100;
+    return `${pawns >= 0 ? '+' : ''}${pawns.toFixed(2)}`;
+  }
+
+  function leaveVariation(): void {
+    if (!variation) return;
+    variation = null;
+    render();
+  }
+
+  // Board state for the current view. A variation replays from the position the
+  // judged move was played in, so an illegal token (a stale line against a
+  // corrected record) truncates rather than throwing.
+  function viewState(): { board: XiangqiBoard; lastMove: XiangqiMove | undefined; key: number } {
+    if (!variation) {
+      return {
+        board: states[index]!.board,
+        lastMove: index > 0 ? moves[index - 1] : undefined,
+        key: index,
+      };
+    }
+    let state = states[variation.atPly - 1]!;
+    let last: XiangqiMove | undefined;
+    for (let i = 0; i < variation.cursor; i += 1) {
+      const mv = variation.moves[i]!;
+      const next = applyXiangqiMove(state, mv);
+      if (next === state) break;
+      state = next;
+      last = mv;
+    }
+    return { board: state.board, lastMove: last, key: 1000 + variation.cursor };
+  }
+  function moveButton(
+    label: string,
+    opts: { current: boolean; glyph?: string; onClick: () => void; title?: string },
+  ): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'xq-replay-move-button';
+    if (opts.current) b.classList.add('is-current');
+    if (opts.title) b.title = opts.title;
+    const text = document.createElement('span');
+    text.className = 'xq-replay-move-t';
+    text.textContent = label;
+    b.appendChild(text);
+    if (opts.glyph) {
+      const g = document.createElement('span');
+      const kind = opts.glyph === '??' ? 'blunder' : opts.glyph === '?' ? 'mistake' : 'inaccuracy';
+      g.className = `xq-replay-glyph xq-replay-glyph-${kind}`;
+      g.textContent = opts.glyph;
+      b.appendChild(g);
+    }
+    b.addEventListener('click', opts.onClick);
+    return b;
+  }
+
+  // The move tree: mainline in numbered pairs, and a judged move's engine line
+  // rendered INLINE directly beneath the row it belongs to, the way a study
+  // shows a variation.
+  function renderMoveList(): void {
+    if (!annotated) return;
+    moveList.replaceChildren();
+    for (let ply = 1; ply <= total; ply += 1) {
+      const isRed = ply % 2 === 1;
+      let row: HTMLElement;
+      if (isRed) {
+        row = document.createElement('div');
+        row.className = 'xq-replay-row';
+        const n = document.createElement('span');
+        n.className = 'xq-replay-move-n';
+        n.textContent = `${Math.ceil(ply / 2)}.`;
+        row.appendChild(n);
+        moveList.appendChild(row);
+      } else {
+        row = moveList.lastElementChild as HTMLElement;
+        // A line inserted after Red's move means Black's move needs a new row.
+        if (!row?.classList.contains('xq-replay-row') || row.children.length > 2) {
+          row = document.createElement('div');
+          row.className = 'xq-replay-row';
+          const n = document.createElement('span');
+          n.className = 'xq-replay-move-n';
+          n.textContent = `${Math.ceil(ply / 2)}\u2026`;
+          row.appendChild(n);
+          moveList.appendChild(row);
+        }
+      }
+      const a = annotationAt(ply);
+      row.appendChild(
+        moveButton(mainlineLabels[ply - 1] ?? '', {
+          current: !variation && ply === index,
+          glyph: a?.glyph,
+          onClick: () => {
+            variation = null;
+            goto(ply);
+          },
+        }),
+      );
+
+      const line = a?.line ? parseLine(ply) : [];
+      if (line.length === 0) continue;
+      const labels = labelsForLine(ply, line);
+      const branch = document.createElement('div');
+      branch.className = 'xq-replay-branch';
+      const tag = document.createElement('span');
+      tag.className = 'xq-replay-branch-tag';
+      tag.textContent = 'engine';
+      branch.appendChild(tag);
+      line.forEach((_mv, i) => {
+        // Number the line from the move it replaces so it reads like a score.
+        const movesIn = isRed ? i : i + 1;
+        if (movesIn % 2 === 0) {
+          const n = document.createElement('span');
+          n.className = 'xq-replay-move-n';
+          const num = Math.ceil(ply / 2) + Math.floor(movesIn / 2);
+          n.textContent = `${num}.`;
+          branch.appendChild(n);
+        }
+        branch.appendChild(
+          moveButton(labels[i] ?? '', {
+            current: variation?.atPly === ply && variation.cursor === i + 1,
+            onClick: () => {
+              variation = { atPly: ply, moves: line, cursor: i + 1 };
+              render();
+            },
+          }),
+        );
+      });
+      moveList.appendChild(branch);
+    }
+  }
+
+  function renderLineBox(): void {
+    if (!annotated) return;
+    lineBox.replaceChildren();
+    const a = variation ? annotationAt(variation.atPly) : annotationAt(index);
+    if (!a) return;
+    const head = document.createElement('div');
+    head.className = 'xq-replay-line-head';
+    const label =
+      a.glyph === '??'
+        ? 'Blunder'
+        : a.glyph === '?'
+          ? 'Mistake'
+          : a.glyph === '?!'
+            ? 'Inaccuracy'
+            : '';
+    head.textContent = [label, evalText(a) ? `eval ${evalText(a)}` : '']
+      .filter(Boolean)
+      .join(' \u00b7 ');
+    lineBox.appendChild(head);
+    if (a.note) {
+      const note = document.createElement('p');
+      note.className = 'xq-replay-line-note';
+      note.textContent = a.note;
+      lineBox.appendChild(note);
+    }
+    if (variation) {
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'xq-replay-line-exit';
+      back.textContent = 'Back to the game';
+      back.addEventListener('click', leaveVariation);
+      lineBox.appendChild(back);
+    }
+    if (annotated.engine) {
+      const eng = document.createElement('div');
+      eng.className = 'xq-replay-engine';
+      eng.textContent = annotated.engine;
+      lineBox.appendChild(eng);
+    }
+  }
+
   function render(): void {
-    const lastMove = index > 0 ? moves[index - 1] : undefined;
-    frame.innerHTML = boardSvg(states[index]!.board, lastMove, perspective, index);
+    const view = viewState();
+    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key);
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
     next.disabled = index === total;
     last.disabled = index === total;
     slider.value = String(index);
-    if (index === 0) {
+    if (variation) {
+      narrative.textContent = `Engine line, ${variation.cursor} of ${variation.moves.length}`;
+    } else if (index === 0) {
       narrative.textContent = copy.intro;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
@@ -251,9 +537,24 @@ export function mountXiangqiReplay(
       const mover = index % 2 === 1 ? copy.first : copy.second;
       narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
+    renderLineBox();
+    renderMoveList();
   }
 
   function goto(target: number): void {
+    // Stepping while a line is open walks the LINE, not the game; the mainline
+    // cursor is preserved so leaving the line lands where it was entered.
+    if (variation) {
+      const step = target > index ? 1 : -1;
+      const next = variation.cursor + step;
+      if (next < 1) {
+        leaveVariation();
+        return;
+      }
+      variation.cursor = Math.min(variation.moves.length, next);
+      render();
+      return;
+    }
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
       index = clamped;

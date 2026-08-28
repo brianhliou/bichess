@@ -37,6 +37,7 @@ import { titledPlayersArticle } from './articles/content/titled-players.js';
 import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog.js';
 import { shogiArticle } from './articles/content/shogi.js';
 import { shogi4Article } from './articles/content/shogi4.js';
+import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
@@ -48,6 +49,7 @@ export const articles: Article[] = [
   fogOpeningsArticle,
   darkDraft960Article,
   xiangqiArticle,
+  xiangqiChampionsArticle,
   darkXiangqiArticle,
   miniXiangqiArticle,
   darkMiniXiangqiArticle,

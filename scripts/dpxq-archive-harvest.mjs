@@ -154,7 +154,7 @@ function gbEncodeChar(ch) {
   return found;
 }
 
-async function fetchGb(url) {
+async function fetchGbOnce(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -162,10 +162,30 @@ async function fetchGb(url) {
       signal: controller.signal,
       headers: { 'User-Agent': 'Mozilla/5.0', Referer: `${HOST}/hldcg/search/` },
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+    if (!response.ok) {
+      const err = new Error(`HTTP ${response.status} for ${url}`);
+      err.status = response.status;
+      throw err;
+    }
     return new TextDecoder('gb18030').decode(new Uint8Array(await response.arrayBuffer()));
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// dpxq answers 503 when it decides you are going too fast, and a run of deep
+// harvests will trip it. That is a politeness signal, not a failure: back off
+// and try again rather than losing the whole sweep.
+async function fetchGb(url, attempt = 0) {
+  try {
+    return await fetchGbOnce(url);
+  } catch (error) {
+    const retriable = error.status === 503 || error.status === 429 || error.name === 'AbortError';
+    if (!retriable || attempt >= 4) throw error;
+    const backoffMs = POLITE_DELAY_MS * 4 * 2 ** attempt;
+    console.error(`  backing off ${backoffMs}ms after ${error.status ?? error.name}`);
+    await sleep(backoffMs);
+    return await fetchGb(url, attempt + 1);
   }
 }
 
