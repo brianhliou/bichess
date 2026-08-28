@@ -224,9 +224,15 @@ export function mountNotificationBell(nav: HTMLElement): void {
 
   control.append(trigger, panel);
 
-  // Sit just left of the account menu in the utilities row.
-  const account = utilities.querySelector<HTMLElement>('[data-account-nav], [data-account-slot]');
-  if (account) utilities.insertBefore(control, account);
+  // Sit just left of the account menu. The account slot lives inside the
+  // .site-nav-account container (site-shell.ts), which sits in the utilities
+  // on desktop and phones and up on the bar on tablets, so look through the
+  // whole nav and insert as the account's sibling rather than assuming the
+  // utilities are its parent (that assumption threw NotFoundError and left
+  // the signed-in menu unmounted).
+  const scope = utilities.closest<HTMLElement>('.site-nav') ?? utilities;
+  const account = scope.querySelector<HTMLElement>('[data-account-nav], [data-account-slot]');
+  if (account) account.before(control);
   else utilities.append(control);
 
   ensureDismiss();
