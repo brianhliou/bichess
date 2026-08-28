@@ -1,0 +1,49 @@
+/* Styles for the shared xiangqi board surface (xiangqi-board-surface.ts).
+ *
+ * These live beside the module that EMITS the markup, and are imported by it,
+ * so any board drawing a xiangqi-shaped surface gets them automatically. They
+ * used to sit in live-xiangqi.css, which only the standard board's routes
+ * import: the moment fortress started drawing the same markup its cells came
+ * out unstyled, and an SVG <rect> with no fill is black.
+ *
+ * Scoped to `.xq-surface`, which every consumer puts on its <svg>, rather than
+ * to any one variant's board class. The layout modifier has to be shared for
+ * the same reason: `.xq-live-svg--cell` never matched `.fxq-board--cell`.
+ */
+
+.xq-surface .xq-live-line {
+  stroke: var(--xq-live-ink, #5a3a14);
+  stroke-width: 1.2;
+}
+
+.xq-surface .xq-live-cell--light {
+  fill: var(--xq-cell-light, var(--xq-live-board-bg, #f5dca8));
+}
+
+.xq-surface .xq-live-cell--dark {
+  fill: var(
+    --xq-cell-dark,
+    color-mix(in srgb, var(--xq-live-board-bg, #f5dca8) 84%, var(--xq-live-ink, #5a3a14))
+  );
+}
+
+.xq-surface .xq-live-cell-line {
+  stroke: color-mix(in srgb, var(--xq-live-ink, #5a3a14) 42%, transparent);
+  stroke-width: 1;
+}
+
+.xq-surface .xq-live-cell-river {
+  fill: color-mix(in srgb, #4f9bc6 78%, var(--xq-live-board-bg, #f5dca8));
+}
+
+.xq-surface--cell .xq-live-palace-band {
+  fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
+}
+
+.xq-surface .xq-live-coord {
+  fill: var(--xq-coord-ink, color-mix(in srgb, var(--xq-live-ink, #5a3a14) 72%, transparent));
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

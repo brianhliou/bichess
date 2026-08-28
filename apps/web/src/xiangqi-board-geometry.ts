@@ -18,6 +18,11 @@ export interface XiangqiBoardGeometry {
   cell: number;
   margin: number;
   riverGap: number;
+  /** Space reserved OUTSIDE the board for coordinate labels, in board units.
+   *  Reserved permanently rather than added when labels are switched on, so
+   *  toggling the preference never resizes the board or reflows the page around
+   *  it. Omit (or 0) for a board that shows no coordinates. */
+  coordGutter?: number;
 }
 
 /** The 0-indexed row (from the top) that a 1-indexed rank occupies under a given
@@ -28,6 +33,16 @@ export function xiangqiDisplayRow(
   rankCount: number,
 ): number {
   return perspective === 'red' ? rankCount - rank : rank - 1;
+}
+
+/** The 0-indexed column a 0-indexed file occupies under a given perspective.
+ *  Black sees the board rotated, so its own right-hand file sits on the left. */
+export function xiangqiDisplayFile(
+  file: number,
+  perspective: XiangqiColor,
+  fileCount: number,
+): number {
+  return perspective === 'red' ? file : fileCount - 1 - file;
 }
 
 /** Pixel center of a (file, rank) point. In 'cell' layout the bottom half is
@@ -43,9 +58,15 @@ export function xiangqiBoardPoint(
   originY = 0,
 ): { x: number; y: number } {
   const row = xiangqiDisplayRow(rank, perspective, geo.rankCount);
+  // Flipping the board is a 180 degree ROTATION, so the file mirrors along with
+  // the rank. This board mirrored only the rank until 2026-08-27, which put
+  // black's own right-hand file on the reader's right instead of their left --
+  // the opposite of a real board, and the opposite of what every other renderer
+  // here does (jieqi, fortress, and grid-board all mirror the file).
+  const col = xiangqiDisplayFile(file, perspective, geo.fileCount);
   const riverShift = layout === 'cell' && row >= geo.rankCount / 2 ? geo.riverGap : 0;
   return {
-    x: originX + geo.margin + file * geo.cell,
+    x: originX + geo.margin + col * geo.cell,
     y: originY + geo.margin + row * geo.cell + riverShift,
   };
 }
@@ -57,18 +78,21 @@ export function xiangqiBoardViewBox(
   layout: XiangqiBoardLayout,
   geo: XiangqiBoardGeometry,
 ): { minX: number; minY: number; width: number; height: number } {
+  const g = geo.coordGutter ?? 0;
   if (layout === 'cell') {
     return {
-      minX: geo.margin - geo.cell / 2,
-      minY: geo.margin - geo.cell / 2,
-      width: geo.fileCount * geo.cell,
-      height: geo.rankCount * geo.cell + geo.riverGap,
+      minX: geo.margin - geo.cell / 2 - g,
+      minY: geo.margin - geo.cell / 2 - g,
+      width: geo.fileCount * geo.cell + g * 2,
+      height: geo.rankCount * geo.cell + geo.riverGap + g * 2,
     };
   }
   return {
-    minX: 0,
-    minY: 0,
-    width: geo.margin * 2 + (geo.fileCount - 1) * geo.cell,
-    height: geo.margin * 2 + (geo.rankCount - 1) * geo.cell,
+    // `|| 0` because -0 is not 0 to Object.is, and a gutterless board must
+    // report the same origin it always did rather than a negative zero.
+    minX: -g || 0,
+    minY: -g || 0,
+    width: geo.margin * 2 + (geo.fileCount - 1) * geo.cell + g * 2,
+    height: geo.margin * 2 + (geo.rankCount - 1) * geo.cell + g * 2,
   };
 }

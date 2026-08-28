@@ -39,6 +39,12 @@ export type WxfDhtmlXqConversionOptions = {
   roundId?: string;
   roundName?: string;
   sourceUrl?: string;
+  /**
+   * Board number for the first board on this page. Pages that carry one game
+   * each cannot be numbered from their position, because every conversion
+   * sees index 0; the caller knows the ordering and passes it here.
+   */
+  boardNumber?: number;
 };
 
 export const STANDARD_DHTMLXQ_BINIT =
@@ -158,10 +164,19 @@ function sourceBoardIdFromTitle(title: string | undefined, index: number): strin
   return slugPart(token ?? `board-${index + 1}`) || `board-${index + 1}`;
 }
 
-function boardNumberFromSourceId(sourceBoardId: string, index: number): number {
+function boardNumberFromSourceId(
+  sourceBoardId: string,
+  index: number,
+  explicitFirstBoardNumber: number | undefined,
+): number {
   const table = sourceBoardId.match(/t0*(\d+)$/i)?.[1];
   const parsed = Number(table);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : index + 1;
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  // An explicit number applies to the first board and increments across any
+  // further boards on the same page, so a single-game source is numbered by
+  // the caller while a multi-board page still numbers its own boards.
+  if (explicitFirstBoardNumber !== undefined) return explicitFirstBoardNumber + index;
+  return index + 1;
 }
 
 function cleanPlayerName(name: string): string {
@@ -320,7 +335,7 @@ export function convertWxfDhtmlXqPageToSnapshot(
       tourSlug,
       roundId,
       sourceBoardId,
-      boardNumber: boardNumberFromSourceId(sourceBoardId, index),
+      boardNumber: boardNumberFromSourceId(sourceBoardId, index, options.boardNumber),
       red: { name: cleanPlayerName(red.value) },
       black: { name: cleanPlayerName(black.value) },
       status,

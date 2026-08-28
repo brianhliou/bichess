@@ -74,3 +74,22 @@ test('WXF DhtmlXQ parser returns typed sanitized issues for bad frames', () => {
     },
   ]);
 });
+
+// A table number parsed out of the source id is the source's own claim about
+// which board this is, so it outranks a number supplied by the caller. This
+// fixture carries two boards on one page (mr1t02, mr1t06), which is the shape
+// an explicit boardNumber must not disturb.
+test('a table number in the source id outranks an explicit boardNumber', () => {
+  const result = convertWxfDhtmlXqPageToSnapshot(fixtureHtml(), {
+    tourSlug: '2019-wxc-men',
+    roundId: '2019-wxc-men-r01a',
+    boardNumber: 99,
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(
+    result.snapshot.boards.map((board) => board.boardNumber),
+    [2, 6],
+  );
+});

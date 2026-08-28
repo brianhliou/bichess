@@ -1,3 +1,4 @@
+import { forumExcerpt } from './forum-excerpt.js';
 import type { AccountRole } from './persistence-accounts.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { ensureForumTopicWatch, isWatchingForumTopic } from './persistence-forum-watches.js';
@@ -67,6 +68,8 @@ export type ForumTopicLatestPost = {
   };
   author: ForumAuthor;
   createdAt: Date;
+  /** Opening words of the post, plain text, for list surfaces (see forum-excerpt.ts). */
+  excerpt: string;
 };
 
 export type ForumPost = {
@@ -991,12 +994,14 @@ const FORUM_TOPIC_SELECT = `SELECT t.id, t.slug, t.title, t.post_count, t.pinned
           latest_post.id AS latest_post_id,
           latest_post.created_at AS latest_post_created_at,
           latest_u.handle AS latest_post_author_handle,
-          COALESCE(latest_u.display_name, latest_u.handle) AS latest_post_author_display_name, latest_u.title AS latest_post_author_title
+          COALESCE(latest_u.display_name, latest_u.handle) AS latest_post_author_display_name, latest_u.title AS latest_post_author_title,
+          latest_post.body_text AS latest_post_body_text
    FROM forum_topics t
    JOIN forum_categories c ON c.id = t.category_id
    LEFT JOIN users u ON u.id = t.author_account_id
    LEFT JOIN LATERAL (
-     SELECT p.id, p.author_account_id, p.created_at
+     SELECT p.id, p.author_account_id, p.created_at,
+            LEFT(p.body_text, 600) AS body_text
      FROM forum_posts p
      WHERE p.topic_id = t.id AND p.hidden_at IS NULL
      ORDER BY p.created_at DESC, p.id DESC
@@ -1111,6 +1116,7 @@ type ForumTopicRow = {
   latest_post_author_handle: string | null;
   latest_post_author_display_name: string | null;
   latest_post_author_title: PlayerTitle | null;
+  latest_post_body_text: string | null;
 };
 
 type ForumPostRow = {
@@ -1231,6 +1237,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
               row.latest_post_author_title,
             ),
             createdAt: row.latest_post_created_at,
+            excerpt: forumExcerpt(row.latest_post_body_text ?? ''),
           }
         : null,
     postCount: row.post_count,

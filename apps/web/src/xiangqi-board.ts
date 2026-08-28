@@ -22,6 +22,7 @@ import type {
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
+import { readDisplayPreferences } from './display-preferences.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
@@ -35,6 +36,16 @@ import {
   xiangqiBoardPoint,
   xiangqiBoardViewBox,
 } from './xiangqi-board-geometry.js';
+import {
+  type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
+  xiangqiSurfaceGrid,
+  xiangqiSurfacePalace,
+  xiangqiSurfacePalaceBands,
+  xiangqiSurfaceRiver,
+} from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -43,19 +54,35 @@ const FILE_COUNT = 9;
 const RANK_COUNT = 10;
 const CELL = 60;
 const MARGIN = 36;
-const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
-const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
-const RIVER_TOP = MARGIN + 4 * CELL;
-const RIVER_BOTTOM = MARGIN + 5 * CELL;
 const CELL_RIVER_GAP = 12;
 // The live board's config for the shared geometry core; the article diagrams use
 // their own (smaller) config against the same transform.
-const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
+export const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
   fileCount: FILE_COUNT,
   rankCount: RANK_COUNT,
   cell: CELL,
   margin: MARGIN,
   riverGap: CELL_RIVER_GAP,
+  // Reserved always, so turning coordinates on never resizes the board. A fifth
+  // of a cell puts the label clear of a piece sitting on the outer intersection
+  // (radius 0.45 cells) with room to breathe.
+  coordGutter: Math.round(CELL / 5),
+};
+// Same board with NO reserved gutter, for surfaces that are not interactive
+// boards and whose framing is authored: video frames, and anything else that
+// composites the board into a fixed layout. Coordinates are a playing aid, so
+// they and the space they need stop at the edge of the interactive surfaces.
+const LIVE_BOARD_GEO_NO_COORDS: XiangqiBoardGeometry = { ...LIVE_BOARD_GEO, coordGutter: 0 };
+// Board-specific facts for the shared surface renderer. Jieqi supplies the same
+// shape at its own scale; fortress supplies a 7x8 board with no river.
+const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
+  geo: LIVE_BOARD_GEO,
+  palaces: [
+    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
+    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
+  ],
+  riverAfterRank: 5,
+  riverLabel: '楚 河   漢 界',
 };
 const PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
@@ -80,6 +107,11 @@ export function renderXiangqiBoardSvg(
 }
 
 export interface XiangqiBoardSvgState {
+  /** false = draw no coordinates AND reserve no space for them. For surfaces
+   *  whose framing is authored rather than played on (video frames). Interactive
+   *  boards leave this alone: they reserve the gutter always, so toggling the
+   *  coordinate preference never resizes the board. */
+  coordinates?: boolean;
   interactive: boolean;
   selectedSquare: XiangqiSquare | null;
   draggingFrom: XiangqiSquare | null;
@@ -125,15 +157,32 @@ export function xiangqiBoardSvg(
   state: XiangqiBoardSvgState,
 ): string {
   const layout = state.layout ?? readStoredXiangqiBoardLayout();
-  const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_GEO);
+  // The gutter is reclaimed when labels are off, so a reader who never turns
+  // coordinates on sees exactly the board they saw before this shipped. The
+  // trade is that the board resizes when the setting changes -- which happens
+  // once, in settings, where a reflow is expected.
+  const showCoords = state.coordinates !== false && readDisplayPreferences().boardCoordinates;
+  const surface = showCoords
+    ? LIVE_BOARD_SURFACE
+    : { ...LIVE_BOARD_SURFACE, geo: LIVE_BOARD_GEO_NO_COORDS };
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
+  const coords = showCoords
+    ? xiangqiSurfaceCoords(
+        LIVE_BOARD_SURFACE,
+        perspective,
+        layout,
+        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILE_COUNT, RANK_COUNT),
+      )
+    : '';
   return `
-    <svg class="xq-live-svg xq-live-svg--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
-      <rect class="xq-live-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}"/>
-      <g class="xq-live-grid">${gridLayer(layout)}</g>
-      <g class="xq-live-palace-bands">${palaceBands(perspective, layout)}</g>
-      <g class="xq-live-palace">${palaceLayer(perspective, layout)}</g>
-      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${riverLayer(perspective, layout)}</g>
+    <svg class="xq-live-svg xq-live-svg--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
+      <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}</g>
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
+      <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
@@ -143,119 +192,6 @@ export function xiangqiBoardSvg(
       <g class="xq-live-glyphs" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'glyph')}</g>
       <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout) : ''}</g>
     </svg>
-  `;
-}
-
-function gridLayer(layout: XiangqiBoardLayout): string {
-  if (layout === 'cell') return cellGridLayer();
-  const parts: string[] = [];
-  const left = MARGIN;
-  const right = MARGIN + (FILE_COUNT - 1) * CELL;
-  const top = MARGIN;
-  const bottom = MARGIN + (RANK_COUNT - 1) * CELL;
-  for (let rank = 0; rank < RANK_COUNT; rank++) {
-    const y = MARGIN + rank * CELL;
-    parts.push(`<line class="xq-live-line" x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`);
-  }
-  for (let file = 0; file < FILE_COUNT; file++) {
-    const x = MARGIN + file * CELL;
-    if (file === 0 || file === FILE_COUNT - 1) {
-      parts.push(`<line class="xq-live-line" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"/>`);
-    } else {
-      parts.push(`<line class="xq-live-line" x1="${x}" y1="${top}" x2="${x}" y2="${RIVER_TOP}"/>`);
-      parts.push(
-        `<line class="xq-live-line" x1="${x}" y1="${RIVER_BOTTOM}" x2="${x}" y2="${bottom}"/>`,
-      );
-    }
-  }
-  return parts.join('');
-}
-
-function cellGridLayer(): string {
-  const parts: string[] = [];
-  const left = MARGIN - CELL / 2;
-  const top = MARGIN - CELL / 2;
-  const right = left + FILE_COUNT * CELL;
-  const riverTop = top + (RANK_COUNT / 2) * CELL;
-  const riverBottom = riverTop + CELL_RIVER_GAP;
-  const bottom = top + RANK_COUNT * CELL + CELL_RIVER_GAP;
-  for (let row = 0; row < RANK_COUNT; row++) {
-    const y = top + row * CELL + (row >= RANK_COUNT / 2 ? CELL_RIVER_GAP : 0);
-    for (let file = 0; file < FILE_COUNT; file++) {
-      parts.push(
-        `<rect class="xq-live-cell xq-live-cell--${(file + row) % 2 === 0 ? 'light' : 'dark'}" x="${left + file * CELL}" y="${y}" width="${CELL}" height="${CELL}"/>`,
-      );
-    }
-  }
-  // Only internal boundaries are stroked. The first/last cells meet the SVG
-  // viewBox edge directly, so the square layout has no enclosing hairline.
-  for (let boundary = 1; boundary < RANK_COUNT; boundary++) {
-    if (boundary === RANK_COUNT / 2) continue;
-    const y = top + boundary * CELL + (boundary > RANK_COUNT / 2 ? CELL_RIVER_GAP : 0);
-    parts.push(`<line class="xq-live-cell-line" x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`);
-  }
-  for (let boundary = 1; boundary < FILE_COUNT; boundary++) {
-    const x = left + boundary * CELL;
-    parts.push(
-      `<line class="xq-live-cell-line" x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}"/>`,
-    );
-    parts.push(
-      `<line class="xq-live-cell-line" x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}"/>`,
-    );
-  }
-  return parts.join('');
-}
-
-function palaceBands(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
-  return [
-    palaceBand(3, 1, 5, 3, perspective, layout),
-    palaceBand(3, 8, 5, 10, perspective, layout),
-  ].join('');
-}
-
-function palaceBand(
-  fileMin: number,
-  rankMin: number,
-  fileMax: number,
-  rankMax: number,
-  perspective: XiangqiColor,
-  layout: XiangqiBoardLayout,
-): string {
-  const a = intersection(fileMin, rankMin, perspective, layout);
-  const b = intersection(fileMax, rankMax, perspective, layout);
-  const inset = layout === 'cell' ? CELL / 2 : 0;
-  return `<rect class="xq-live-palace-band" x="${Math.min(a.x, b.x) - inset}" y="${Math.min(a.y, b.y) - inset}" width="${Math.abs(b.x - a.x) + inset * 2}" height="${Math.abs(b.y - a.y) + inset * 2}"/>`;
-}
-
-function palaceLayer(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
-  // The square grid uses its tinted 3x3 palace cells as the visual cue. The
-  // traditional diagonals are retained only for the intersection layouts,
-  // where they remain part of the board geometry.
-  if (layout === 'cell') return '';
-
-  const parts: string[] = [];
-  for (const palace of [
-    { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
-    { fileMin: 3, fileMax: 5, rankMin: 8, rankMax: 10 },
-  ]) {
-    const a = intersection(palace.fileMin, palace.rankMax, perspective, layout);
-    const b = intersection(palace.fileMax, palace.rankMin, perspective, layout);
-    const c = intersection(palace.fileMax, palace.rankMax, perspective, layout);
-    const d = intersection(palace.fileMin, palace.rankMin, perspective, layout);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>`);
-  }
-  return parts.join('');
-}
-
-function riverLayer(perspective: XiangqiColor, layout: XiangqiBoardLayout): string {
-  const y = (RIVER_TOP + RIVER_BOTTOM) / 2;
-  void perspective;
-  if (layout === 'cell') {
-    return `<rect class="xq-live-cell-river" x="${MARGIN - CELL / 2}" y="${MARGIN - CELL / 2 + (RANK_COUNT / 2) * CELL}" width="${FILE_COUNT * CELL}" height="${CELL_RIVER_GAP}"/>`;
-  }
-  return `
-    <text class="xq-live-river-label" x="${MARGIN + 4 * CELL}" y="${y + 1}">楚 河   漢 界</text>
   `;
 }
 

@@ -30,6 +30,7 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
+import { setBoardCoordinatesPreference } from './theme.js';
 
 type AccountSettingsSection =
   | 'profile'
@@ -55,6 +56,7 @@ const accountSettingsSections = accountSettingsSectionGroups.flat();
 const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>([
   'pieceAnimation',
   'playerFlairs',
+  'boardCoordinates',
 ]);
 const pieceAnimationSaveQueues = new WeakMap<AuthUser, Promise<void>>();
 
@@ -963,6 +965,14 @@ function buildBooleanDisplayPreference(
   input.name = id;
   input.checked = value;
   input.addEventListener('change', () => {
+    // Board coordinates change the board's geometry, so they go through the
+    // theme setter: it persists, stamps the root attribute CSS reads for the
+    // matching aspect ratio, and fires the event boards re-render on. Writing
+    // the preference alone would leave every mounted board stale until reload.
+    if (id === 'boardCoordinates') {
+      setBoardCoordinatesPreference(input.checked);
+      return;
+    }
     writeDisplayPreference(id, input.checked as DisplayPreferenceValue<typeof id>);
   });
 
@@ -1667,18 +1677,13 @@ function displayPreferenceOptionLabel(
       normal: 'account.displayOption.pieceAnimation.normal',
       slow: 'account.displayOption.pieceAnimation.slow',
     },
-    boardCoordinates: {
-      inside: 'account.displayOption.boardCoordinates.inside',
-      outside: 'account.displayOption.boardCoordinates.outside',
-      none: 'account.displayOption.boardCoordinates.none',
-    },
     moveNotation: {
       symbols: 'account.displayOption.moveNotation.symbols',
       letters: 'account.displayOption.moveNotation.letters',
       coordinates: 'account.displayOption.moveNotation.coordinates',
     },
   } as const;
-  if (id !== 'pieceAnimation' && id !== 'boardCoordinates' && id !== 'moveNotation') {
+  if (id !== 'pieceAnimation' && id !== 'moveNotation') {
     return value;
   }
   const key = keys[id][value as keyof (typeof keys)[typeof id]];

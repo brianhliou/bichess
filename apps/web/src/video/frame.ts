@@ -51,6 +51,9 @@ export function renderShotSvg(plan: ScenePlan, shot: Shot): string {
   };
 
   let boardSvg = xiangqiBoardSvg(view, perspective, {
+    // Video framing is authored against the board's own edges; the coordinate
+    // gutter belongs to the interactive surfaces only.
+    coordinates: false,
     interactive: false,
     selectedSquare: shot.overlays.raysFrom,
     draggingFrom: null,

@@ -10,23 +10,39 @@
 }
 
 .landing-forum .site-box-body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.landing-forum-topic {
+/* Rows keep their natural height; fitRows() adds the fill class when the
+   trimmed rows nearly fill the body, and then they share the remaining slack
+   so the last row meets the bottom edge (zebra stretches with the row, the
+   grid keeps its content vertically centered). */
+.landing-forum .site-box-body > .site-box-row {
+  flex: 0 0 auto;
+}
+
+.landing-forum .landing-forum-body--fill > .site-box-row {
+  flex: 1 0 auto;
+}
+
+/* Two-class selector on purpose: this overrides the .site-box-row helper
+   (display / align-items / gap / padding), and the helper's stylesheet can land
+   in a LATER chunk than this one (Vite hoists shared site-box.css into whichever
+   chunk first pulls it; on prod that was landing-announcements). Same-specificity
+   overrides then lose on order and the row silently falls back to flex, packing
+   the time and reply count against the title. Specificity wins regardless of
+   chunk order. Zebra carries the row rhythm (site-box grammar), no borders. */
+.site-box-row.landing-forum-topic {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(72px, 0.32fr) 42px;
   align-items: center;
   gap: 12px;
   min-height: 38px;
   padding-block: 6px;
-  border-bottom: 1px solid var(--site-border-soft);
-}
-
-.landing-forum-topic:last-child {
-  border-bottom: 0;
 }
 
 .landing-forum-topic-main {
@@ -53,6 +69,18 @@
 .landing-forum-topic:hover .landing-forum-topic-title,
 .landing-forum-topic:focus-visible .landing-forum-topic-title {
   text-decoration: underline;
+}
+
+/* Latest post's opening words (lichess lobby forum shape): body ink, two lines
+   max, so a topic row carries what was actually said, not just its title. */
+.landing-forum-topic-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .landing-forum-topic-meta {

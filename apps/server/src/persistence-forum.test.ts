@@ -114,6 +114,10 @@ definePersistenceTests('forum', () => {
     assert.equal(topics[0]?.author?.handle, 'alice');
     assert.equal(topics[0]?.latestPost?.post.id, 'post_strategy_reply');
     assert.equal(topics[0]?.latestPost?.author?.handle, 'bob');
+    assert.equal(
+      topics[0]?.latestPost?.excerpt,
+      'Developing knights first keeps more fog pressure.',
+    );
 
     const categories = await listForumCategories();
     const general = categories.find((category) => category.slug === 'general-discussion');

@@ -189,6 +189,7 @@ export const EN_REVIEW = {
   'broadcast.eyebrow': 'Xiangqi broadcast',
   'broadcast.tournamentBroadcasts': 'Tournament broadcasts',
   'broadcast.tournamentCount': '{count} tournaments',
+  'broadcast.tournamentCountOne': '{count} tournament',
   'broadcast.liveNowCount': '{count} live now',
   'broadcast.liveNow': 'Live now',
   'broadcast.past': 'Past',

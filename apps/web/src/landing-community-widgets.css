@@ -21,13 +21,15 @@
   overflow: hidden auto;
 }
 
-.landing-study-row,
-.landing-leaderboard-row {
+/* Two-class selectors: these override the .site-box-row helper, whose stylesheet
+   may be bundled into a later chunk (see landing-forum-preview.css). */
+.site-box-row.landing-study-row,
+.site-box-row.landing-leaderboard-row {
   min-height: 38px;
   box-sizing: border-box;
 }
 
-.landing-study-row {
+.site-box-row.landing-study-row {
   align-items: center;
   padding-block: 2px;
 }
@@ -71,7 +73,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.landing-leaderboard-row {
+.site-box-row.landing-leaderboard-row {
   display: grid;
   grid-template-columns: minmax(110px, 0.9fr) minmax(0, 1.25fr) auto;
   align-items: center;

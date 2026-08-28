@@ -212,3 +212,37 @@ test('translated dpxq snapshot caches English names on tour, round, and players'
   assert.equal(board.black.name, '唐丹');
   assert.equal(board.black.nameEn, 'Tang Dan');
 });
+
+// Board numbering. dpxq serves one game per page, so every conversion runs at
+// index 0 and the index+1 fallback numbers every board in a round "Board 1".
+// Prod showed exactly that: three boards on 2026-ewwox2 round 3, all Board 1.
+test('dpxq single-game pages all collapse to board 1 without an explicit number', () => {
+  const numbers = [
+    { red: '王天一', black: '郑惟桐' },
+    { red: '徐腾飞', black: '周开芹' },
+    { red: '崔革', black: '孟繁睿' },
+  ].map((pairing) => {
+    const normalized = normalizeDpxqPageToFrameHtml(liveBoardPage({ ...pairing, plies: 8 }));
+    assert.equal(normalized.ok, true);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+    assert.equal(converted.ok, true);
+    return converted.ok ? converted.snapshot.boards[0].boardNumber : -1;
+  });
+  assert.deepEqual(numbers, [1, 1, 1]);
+});
+
+test('an explicit boardNumber numbers one-game-per-page sources in order', () => {
+  const numbers = [
+    { red: '王天一', black: '郑惟桐' },
+    { red: '徐腾飞', black: '周开芹' },
+    { red: '崔革', black: '孟繁睿' },
+  ].map((pairing, index) => {
+    const normalized = normalizeDpxqPageToFrameHtml(liveBoardPage({ ...pairing, plies: 8 }));
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+      boardNumber: index + 1,
+    });
+    assert.equal(converted.ok, true);
+    return converted.ok ? converted.snapshot.boards[0].boardNumber : -1;
+  });
+  assert.deepEqual(numbers, [1, 2, 3]);
+});

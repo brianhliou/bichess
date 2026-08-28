@@ -15,6 +15,10 @@ import {
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
+import { JIEQI_GEO } from '../live-jieqi-render.js';
+import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import {
   bestMoveArrowWithParser,
   engineArrowsFromLinesWithParser,
@@ -67,7 +71,13 @@ function makeJieqiPresentation(
     boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
     defaultBoardAriaLabel: 'Jieqi board',
     // 9×10 board (WIDTH 660 / HEIGHT 732 from live-jieqi-render).
-    boardAspect: 660 / 732,
+    boardAspect: () => xiangqiBoardAspect(JIEQI_GEO),
+    // Both events matter now that coordinates are drawn ON the board: a notation
+    // change relabels them, and toggling them changes the board's geometry. Before
+    // that, this surface needed neither -- its pieces pick up their set via CSS --
+    // which is why /analysis/{variant} ignored every appearance change until 2026-08-27.
+    appearanceEvent: xiangqiAppearanceChangedEvent,
+    labelsEvent: xiangqiNotationChangedEvent,
     boardCols: 16,
     // Xiangqi pieces pick up their look from the render call; a full re-render
     // happens on every navigation, so no appearance event.

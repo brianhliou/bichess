@@ -41,6 +41,9 @@ describe('standard Xiangqi board SVG', () => {
     const view = getStandardXiangqiPlayerView(state, 'red');
     const svg = renderSharedXiangqiBoardSvg(view, 'red', { layout: 'cell' });
     expect(svg).toContain('data-xiangqi-layout="cell"');
+    // Coordinates default to off, and the label gutter is reclaimed when they
+    // are: a reader who never turns them on sees exactly the board that shipped
+    // before they existed.
     expect(svg).toContain('viewBox="6 6 540 612"');
     expect(svg.match(/class="xq-live-cell xq-live-cell--/g)).toHaveLength(90);
     expect(svg.match(/class="xq-live-cell-line"/g)).toHaveLength(24);
@@ -84,6 +87,8 @@ describe('standard Xiangqi board SVG', () => {
     const view = getStandardXiangqiPlayerView(createInitialXiangqiState('xq-board-corners'), 'red');
     const svg = renderSharedXiangqiBoardSvg(view);
 
+    // Full bleed means the whole viewBox, whatever it currently is. With
+    // coordinates off there is no gutter, so this is the original rectangle.
     expect(svg).toContain('<rect class="xq-live-bg" x="0" y="0" width="552" height="612"/>');
     expect(svg).not.toMatch(/class="xq-live-bg"[^>]*\srx=/);
   });
@@ -107,10 +112,11 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
-    // Black perspective flips ranks: rank 3 lands at y = 36 + 2*60 = 156.
+    // Black rotates the board 180 degrees, so BOTH axes move: file b (index 1)
+    // lands at column 7 -> x = 36 + 7*60 = 456, and rank 3 at y = 36 + 2*60 = 156.
     const flipped = renderSharedXiangqiBoardSvg(view, 'black');
     expect(flipped).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="156" r="31"/>',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="456" cy="156" r="31"/>',
     );
     expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="29"/>');
   });
@@ -136,7 +142,7 @@ describe('standard Xiangqi board SVG', () => {
 
     const flipped = renderSharedXiangqiBoardSvg(view, 'black', { layout: 'cell' });
     expect(flipped).toContain(
-      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="66" y="126" width="60" height="60"/>',
+      '<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="426" y="126" width="60" height="60"/>',
     );
     expect(flipped).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="126" width="60" height="60"/>',
@@ -262,10 +268,11 @@ describe('xiangqiArrowSvg', () => {
   });
 
   it('flips with the board perspective (same transform as the pieces)', () => {
-    // Black perspective flips ranks only: rank 3 lands at y = 36 + 2*60 = 156.
+    // Black rotates 180 degrees: file b -> column 7 (x 456), rank 3 -> y 156.
+    // The arrow is inset from both piece centres, hence 444 -> 296 with the tip at 276.
     const svg = xiangqiArrowSvg({ from: 'b3', to: 'e3' }, 'black');
-    expect(svg).toContain('<line x1="108" y1="156" x2="256" y2="156"');
-    expect(svg).toContain('<polygon points="276,156 256,167 256,145"');
+    expect(svg).toContain('<line x1="444" y1="156" x2="296" y2="156"');
+    expect(svg).toContain('<polygon points="276,156 296,145 296,167"');
   });
 
   it('honours per-arrow class, opacity, width, and dash', () => {
@@ -312,9 +319,11 @@ describe('judgment glyph markers', () => {
   });
 
   it('offsets in SCREEN space, so the badge keeps its corner when the board flips', () => {
-    // Black perspective puts rank 3 at y = 156; the badge is still up-and-right.
+    // Black rotates the board, so b3's anchor moves to (456, 156). The badge
+    // offset stays +21/-21 in SCREEN space rather than rotating with the board,
+    // which is the whole point: a badge is always up-and-right of its piece.
     const svg = xiangqiMarkerSvg({ square: 'b3', kind: 'glyph', text: '?' }, 'black');
-    expect(svg).toContain('cx="117" cy="135"');
+    expect(svg).toContain('cx="477" cy="135"');
   });
 
   it('keeps a corner badge inside the board edge (offset + radius <= margin)', () => {

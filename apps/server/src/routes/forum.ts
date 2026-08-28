@@ -37,6 +37,7 @@ type ForumTopicJson = {
     };
     author: persistence.ForumAuthor;
     createdAt: string;
+    excerpt: string;
   } | null;
   postCount: number;
   pinned: boolean;
@@ -791,6 +792,7 @@ function serializeTopicSummary(topic: persistence.ForumTopicSummary): ForumTopic
           post: topic.latestPost.post,
           author: topic.latestPost.author,
           createdAt: topic.latestPost.createdAt.toISOString(),
+          excerpt: topic.latestPost.excerpt,
         }
       : null,
     postCount: topic.postCount,
