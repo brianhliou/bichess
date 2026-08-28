@@ -5,13 +5,14 @@ describe('landing community widgets', () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('hydrates popular studies and the leader of each returned public ladder', async () => {
     const variant = leaderboardVariants[0]!;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === '/api/studies/public') {
+      if (url.startsWith('/api/studies/public?limit=')) {
         return jsonResponse({
           studies: [
             {
@@ -77,6 +78,53 @@ describe('landing community widgets', () => {
     expect(strip.querySelector('.landing-leaderboard-category')?.textContent).toBe(variant.label);
     expect(strip.querySelector('.landing-leaderboard-rating')?.textContent).toBe('2412');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fits Top studies to whole rows against the body height and fills small slack', async () => {
+    const study = (n: number) => ({
+      id: `study_${n}`,
+      name: `Study ${n}`,
+      owner: { handle: 'teacher', displayName: 'Teacher' },
+      chapterCount: n,
+      likeCount: 0,
+    });
+    // A fresh Response per call: a body reads once, and this test hydrates twice.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ studies: [1, 2, 3, 4, 5].map(study) })),
+    );
+    // jsdom has no layout: stack the rows 40px apart by DOM order, body at 0.
+    const rowHeight = 40;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const index = this.classList.contains('landing-study-row')
+        ? Array.from(this.parentElement?.children ?? []).indexOf(this)
+        : -1;
+      const top = index < 0 ? 0 : index * rowHeight;
+      const bottom = index < 0 ? 0 : top + rowHeight;
+      return { top, bottom, left: 0, right: 0, width: 0, height: bottom - top } as DOMRect;
+    });
+    const { buildTopStudiesWidget } = await import('./landing-community-widgets.js');
+
+    const box = buildTopStudiesWidget();
+    const body = box.querySelector<HTMLElement>('.site-box-body')!;
+    // Four rows fit (160px), a fifth (200px) would clip; 20px of slack is
+    // within the 28px-per-row spread, so the rows grow to fill it.
+    Object.defineProperty(body, 'clientHeight', { value: 180, configurable: true });
+    await vi.waitFor(() => {
+      expect(body.querySelectorAll('.landing-study-row').length).toBe(4);
+    });
+    expect(body.classList.contains('landing-community-body--fill')).toBe(true);
+
+    // Content-starved: the same rows in a much taller body keep their slack.
+    const tall = buildTopStudiesWidget();
+    const tallBody = tall.querySelector<HTMLElement>('.site-box-body')!;
+    Object.defineProperty(tallBody, 'clientHeight', { value: 400, configurable: true });
+    await vi.waitFor(() => {
+      expect(tallBody.querySelectorAll('.landing-study-row').length).toBe(5);
+    });
+    expect(tallBody.classList.contains('landing-community-body--fill')).toBe(false);
   });
 });
 

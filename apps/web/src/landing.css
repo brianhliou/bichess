@@ -315,7 +315,8 @@
 /* Bands 3-4 side rails: News (left) and Top studies (right) each span the blog
    and video rows on desktop, so their boxes stretch from the blog row's top edge
    to the video row's bottom edge (the stretch itself lives in the desktop block;
-   stacked, the boxes keep their own fixed height so their bodies still scroll). */
+   stacked, the boxes keep their own fixed height). News scrolls inside its box;
+   Top studies fits whole rows to it (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -2155,8 +2156,9 @@
 
   /* ── Bands 3-4 side rails ────────────────────────────────────────────────────
      News and Top studies span the blog + video rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the video row, bodies
-     scrolling inside. The boxes are taken out of flow (absolute in the stretched
+     top-aligned with the blog row, bottom-aligned with the video row, the News
+     body scrolling inside and Top studies fitting whole rows to the box. The
+     boxes are taken out of flow (absolute in the stretched
      rail) so their long timelines contribute NOTHING to the auto row heights —
      in flow they would inflate rows 3-4 and tear the blog row away from the
      video row. */

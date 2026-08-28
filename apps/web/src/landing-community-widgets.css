@@ -9,16 +9,43 @@
   min-width: 0;
 }
 
+/* Height: the strip sets --landing-community-widget-height; the standalone
+   Top studies box on the homepage takes the same band height as the News and
+   forum boxes (stacked: the 20em fallback; desktop: landing.css stretches it
+   over the blog + video rows instead). */
 .landing-community-widget {
   display: flex;
   flex-direction: column;
-  height: var(--landing-community-widget-height);
+  height: var(--landing-community-widget-height, var(--landing-lower-widget-height, 20em));
   min-width: 0;
 }
 
 .landing-community-widget .site-box-body {
   min-height: 0;
   overflow: hidden auto;
+}
+
+/* Top studies fits whole rows to its box (site-box-fit.ts) instead of
+   scrolling. The box's height comes from outside (desktop: the blog + video
+   rows it spans; stacked: --landing-community-widget-height), so the body
+   fills it; rows keep their natural height, and once the fitted rows nearly
+   fill the body the fill class lets them share the slack so the last row
+   meets the bottom edge (zebra stretches with the row, the flex row keeps
+   its content vertically centered). Same file as the generic body rule
+   above, so source order settles the tie. */
+.landing-study-widget .site-box-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.landing-study-widget .site-box-body > .site-box-row {
+  flex: 0 0 auto;
+}
+
+.landing-study-widget .landing-community-body--fill > .site-box-row {
+  flex: 1 0 auto;
 }
 
 /* Two-class selectors: these override the .site-box-row helper, whose stylesheet

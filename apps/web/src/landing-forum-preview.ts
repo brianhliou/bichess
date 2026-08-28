@@ -1,5 +1,6 @@
 import { t } from './i18n/catalog.js';
 import { buildSiteBox } from './site-box.js';
+import { fitRowsToBody } from './site-box-fit.js';
 import './landing-forum-preview.css';
 
 type ForumAuthor = {
@@ -33,8 +34,10 @@ type ForumTopicSummary = {
 const postPageSize = 25;
 // More than the box can show. The box height is the daily puzzle board's
 // (band-2 equal heights), so the row count is measured, not configured:
-// fitRows() drops trailing rows that would clip mid-item.
+// fitRowsToBody() (site-box-fit.ts) drops trailing rows that would clip
+// mid-item and adds fillClass when the rest should grow to the bottom edge.
 const landingForumFetchLimit = 8;
+const fillClass = 'landing-forum-body--fill';
 
 export function buildLandingForumPreview(options: { hydrate?: boolean } = {}): HTMLElement {
   const { box, body } = buildSiteBox({
@@ -57,16 +60,7 @@ async function hydrateForumPreview(body: HTMLElement): Promise<void> {
       body.append(plainRow(t('homeForum.empty')));
       return;
     }
-    const rows = topics.map(topicRow);
-    fitRows(body, rows);
-    if (typeof ResizeObserver !== 'undefined') {
-      let fittedHeight = body.clientHeight;
-      new ResizeObserver(() => {
-        if (body.clientHeight === fittedHeight) return;
-        fittedHeight = body.clientHeight;
-        fitRows(body, rows);
-      }).observe(body);
-    }
+    fitRowsToBody(body, topics.map(topicRow), fillClass);
   } catch {
     body.replaceChildren(plainRow(t('homeForum.unavailable')));
   }
@@ -104,34 +98,6 @@ function topicRow(topic: ForumTopicSummary): HTMLElement {
 
   row.append(main, activity, count);
   return row;
-}
-
-// Whole rows only: a row cut mid-excerpt reads as broken. Trimming leaves up
-// to one row of slack under the last row; when that slack is small enough to
-// spread (at most fillSlackPerRow per row) the rows grow to share it, so the
-// last row lands on the box's bottom edge. A content-starved box (two topics
-// in a board-height box) keeps its slack instead of puffing each row up.
-// The body's height is fixed by the band (flex child of a fixed-height box),
-// so neither trimming nor growth changes it. Unlaid-out documents (tests,
-// prerender) report clientHeight 0 and keep every row.
-const fillSlackPerRow = 28;
-const fillClass = 'landing-forum-body--fill';
-
-function fitRows(body: HTMLElement, rows: HTMLElement[]): void {
-  body.classList.remove(fillClass);
-  body.replaceChildren(...rows);
-  const available = body.clientHeight;
-  if (available <= 0) return;
-  const top = body.getBoundingClientRect().top;
-  let lastBottom = 0;
-  while (body.childElementCount > 0) {
-    const last = body.lastElementChild as HTMLElement;
-    lastBottom = last.getBoundingClientRect().bottom - top;
-    if (lastBottom <= available + 0.5 || body.childElementCount === 1) break;
-    last.remove();
-  }
-  const slack = available - lastBottom;
-  body.classList.toggle(fillClass, slack > 0 && slack <= body.childElementCount * fillSlackPerRow);
 }
 
 function span(className: string, text: string): HTMLElement {

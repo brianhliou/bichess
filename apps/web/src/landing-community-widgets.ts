@@ -1,6 +1,7 @@
 import { t } from './i18n/catalog.js';
 import { prependTitleBadge } from './player-titles.js';
 import { buildSiteBox } from './site-box.js';
+import { fitRowsToBody } from './site-box-fit.js';
 import { localizedStudyName } from './study-i18n.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
 import { leaderboardVariants } from './variants.js';
@@ -39,6 +40,16 @@ export function buildTopPlayersWidget(options: { hydrate?: boolean } = {}): HTML
   return buildLeaderboardWidget(options);
 }
 
+// More than the box can show. On the homepage the box spans the blog + video
+// rows (bands 3-4), so its height comes from the band, not from its rows: the
+// row count is measured, not configured. fitRowsToBody() (site-box-fit.ts)
+// drops trailing rows that would clip mid-item and adds the fill class when
+// the rest should grow to meet the bottom edge. The API's own default is 5,
+// which left a third of the box empty once the rows took their intended
+// height (2026-08-27).
+const landingStudiesFetchLimit = 12;
+const studiesFillClass = 'landing-community-body--fill';
+
 /** Standalone Top studies box: the homepage band-2 slot (replaced Top players
  *  2026-07-21 — with no rated liquidity yet, curated studies are the stronger
  *  front-door proof; players return when the ladder has depth). */
@@ -56,14 +67,16 @@ function buildStudyWidget(options: { hydrate?: boolean }): HTMLElement {
 
 async function hydrateStudies(body: HTMLElement): Promise<void> {
   try {
-    const response = await fetch('/api/studies/public', {
+    const response = await fetch(`/api/studies/public?limit=${landingStudiesFetchLimit}`, {
       headers: { accept: 'application/json' },
     });
     if (!response.ok) throw new Error(`public_studies_failed_${response.status}`);
     const { studies } = (await response.json()) as { studies: PublicStudy[] };
-    body.replaceChildren(
-      ...(studies.length > 0 ? studies.map(studyRow) : [statusRow(t('home.noPublicStudies'))]),
-    );
+    if (studies.length === 0) {
+      body.replaceChildren(statusRow(t('home.noPublicStudies')));
+      return;
+    }
+    fitRowsToBody(body, studies.map(studyRow), studiesFillClass);
   } catch {
     body.replaceChildren(statusRow(t('home.studiesUnavailable')));
   }
