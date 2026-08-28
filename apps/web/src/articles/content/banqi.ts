@@ -136,21 +136,6 @@ export const banqiArticle: Article = {
           },
         ],
       },
-      {
-        heading: 'How Mistboard analyzes banqi',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'Half the moves in banqi are flips, so a chess-style review would blame you for the tiles. [Game review](/blog/skill-vs-luck) scores every flip twice: once for the decision you made, once for the tile you got. Only the first is yours.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'The [engine](/blog/mistybanqi) runs on the server and also inside your browser, so a position you never played here still gets analyzed on the [analysis board](/analysis/banqi). The engine, the review, and the site are open source.',
-          },
-        ],
-      },
       playClosing({
         heading: 'Play on Mistboard',
         lead: 'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',

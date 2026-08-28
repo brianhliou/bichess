@@ -79,12 +79,6 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
-  // ── /rules/banqi + /rules/jieqi funnel pass, 2026-08-28 ──
-  'How Mistboard analyzes banqi': 'Mistboard 如何分析暗棋',
-  'Half the moves in banqi are flips, so a chess-style review would blame you for the tiles. [Game review](/blog/skill-vs-luck) scores every flip twice: once for the decision you made, once for the tile you got. Only the first is yours.':
-    '暗棋有一半的着法是翻子，照搬国际象棋那套复盘，就会把运气也算到你头上。[对局复盘](/blog/skill-vs-luck)给每次翻子打两次分：一次评你做的决定，一次评你翻到的棋子。只有前一项算你的。',
-  'The [engine](/blog/mistybanqi) runs on the server and also inside your browser, so a position you never played here still gets analyzed on the [analysis board](/analysis/banqi). The engine, the review, and the site are open source.':
-    '[引擎](/blog/mistybanqi)既在服务器上运行，也能在你的浏览器里运行，所以没有在本站下过的局面，也照样能在[分析棋盘](/analysis/banqi)上分析。引擎、复盘和整个网站都是开源的。',
   // -- Titled players (recruitment page) --
   // MACHINE-DRAFTED 2026-08-27, NOT NATIVE-REVIEWED. Brian cannot validate zh
   // (see memory user_not_fluent_chinese) and no reviewer was available, so this
@@ -1207,12 +1201,6 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // ── /rules/banqi + /rules/jieqi funnel pass, 2026-08-28 ──
-  'How Mistboard analyzes banqi': 'Mistboard 如何分析暗棋',
-  'Half the moves in banqi are flips, so a chess-style review would blame you for the tiles. [Game review](/blog/skill-vs-luck) scores every flip twice: once for the decision you made, once for the tile you got. Only the first is yours.':
-    '暗棋有一半的著法是翻子，照搬國際象棋那套復盤，就會把運氣也算到你頭上。[對局復盤](/blog/skill-vs-luck)給每次翻子打兩次分：一次評你做的決定，一次評你翻到的棋子。只有前一項算你的。',
-  'The [engine](/blog/mistybanqi) runs on the server and also inside your browser, so a position you never played here still gets analyzed on the [analysis board](/analysis/banqi). The engine, the review, and the site are open source.':
-    '[引擎](/blog/mistybanqi)既在伺服器上執行，也能在你的瀏覽器裡執行，所以沒有在本站下過的局面，也照樣能在[分析棋盤](/analysis/banqi)上分析。引擎、復盤和整個網站都是開源的。',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.

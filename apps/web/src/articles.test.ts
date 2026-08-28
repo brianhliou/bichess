@@ -922,12 +922,6 @@ describe('rules variant sidebar', () => {
       'The cannon',
       'Winning and draws',
       'A sample game',
-      // Added 2026-08-28. The rules pages carry the site's whole search
-      // presence, so what Mistboard does with banqi is said where readers
-      // already are rather than on a new page that has to earn its own
-      // traffic. It links out in prose: the one-standardized-closing rule
-      // above still holds, and this page still has exactly one CTA.
-      'How Mistboard analyzes banqi',
       'Play on Mistboard',
     ]);
     expect(headings('jieqi')).toEqual([

@@ -550,6 +550,31 @@ a.site-nav-link[hidden],
   display: contents;
 }
 
+/* The account slot's container (site-shell.ts placeNavAccount). Transparent to
+   layout wherever it sits, except on the tablet bar, where it is a flex row
+   that takes the space before the hamburger. */
+.site-nav-account {
+  display: contents;
+}
+
+@media (min-width: 601px) and (max-width: 1100px) {
+  .site-nav > .site-nav-account {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .site-nav > .site-nav-account + .site-nav-toggle {
+    margin-left: 0;
+  }
+
+  .site-nav > .site-nav-account .site-nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 1100px) {
   .site-nav {
     flex-wrap: nowrap;

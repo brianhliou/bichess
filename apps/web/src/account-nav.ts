@@ -234,8 +234,10 @@ function mountAccountNav(nav: HTMLElement, user: AuthUser): void {
   const locale = currentLocale();
   const utilities = nav.querySelector<HTMLElement>('.site-nav-utilities');
   if (!utilities) return;
-  if (utilities.querySelector('[data-account-nav]')) return;
-  const slot = utilities.querySelector<HTMLElement>('[data-account-slot]');
+  // Through the nav, not the utilities: on tablets site-shell moves the slot's
+  // container up onto the bar beside the hamburger (placeNavAccount).
+  if (nav.querySelector('[data-account-nav]')) return;
+  const slot = nav.querySelector<HTMLElement>('[data-account-slot]');
   if (!slot) return;
 
   // The signed-in nav also carries the notification bell (left of the account
