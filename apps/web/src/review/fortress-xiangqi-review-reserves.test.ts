@@ -76,6 +76,31 @@ describe('Fortress review reserves', () => {
     }
   });
 
+  it('draws a slot for every droppable role, ghosting the ones held none of', () => {
+    // The lichess crazyhouse pocket shape. Drawing the empty slots is what keeps
+    // the row from reading as blank space, and what keeps a given piece in the
+    // SAME slot all game, so a capture fills a gap instead of reflowing the row.
+    const root = mount([]);
+    for (const row of root.querySelectorAll('.review-material-row')) {
+      const slots = row.querySelectorAll('.drop-mini-reserve-piece');
+      expect(slots).toHaveLength(7); // chariot horse cannon soldier treasure advisor elephant
+      // Nothing captured yet, so every slot is a ghost.
+      expect(row.querySelectorAll('.drop-mini-reserve-piece.is-empty')).toHaveLength(7);
+    }
+  });
+
+  it('keeps the slot count fixed once pieces are held, filling in place', () => {
+    const root = mount(MOVES);
+    for (const row of root.querySelectorAll('.review-material-row')) {
+      expect(row.querySelectorAll('.drop-mini-reserve-piece')).toHaveLength(7);
+    }
+    // At least one slot is now filled rather than ghosted.
+    const filled = root.querySelectorAll(
+      '.review-material-row .drop-mini-reserve-piece:not(.is-empty)',
+    );
+    expect(filled.length).toBeGreaterThan(0);
+  });
+
   it('shows captured pieces in the pockets once material has been taken', () => {
     const root = mount(MOVES);
     const tiles = root.querySelectorAll('.review-material-row .drop-mini-reserve-piece');

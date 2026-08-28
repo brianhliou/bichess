@@ -502,6 +502,7 @@ function makeAccount(overrides: Partial<UserAccount> = {}): UserAccount {
     accountPreferences: DEFAULT_ACCOUNT_PREFERENCES,
     profileVisibility: 'public',
     accountRole: 'player',
+    playDisabledAt: null,
     title: null,
     flair: null,
     locale: null,
@@ -556,6 +557,58 @@ test('assignSeat: rated room exempts a server-engine client', async () => {
   const assignment = await assignSeat(ctx, room, 'builtin-random-legal', undefined, null);
 
   assert.equal(assignment.seat, 'white', 'an engine seat is not blocked by the account-gate');
+  assert.equal(assignment.deniedReason, undefined);
+});
+
+// ── assignSeat: per-account play lock ─────────────────────────────────────────
+// An account that is an identity rather than a player (the official @mistboard
+// account) may not take a NEW seat. It keeps any seat it already holds, so
+// locking an account cannot strand a game in progress.
+
+test('assignSeat: a play-disabled account gets no color seat', async () => {
+  const room = makeRoom('locked-account');
+  room.rated = false;
+  const ctx = makeCtx();
+
+  const assignment = await assignSeat(
+    ctx,
+    room,
+    'locked-client',
+    undefined,
+    makeAccount({ playDisabledAt: new Date() }),
+  );
+
+  assert.equal(assignment.seat, 'spectator');
+  assert.equal(assignment.deniedReason, 'play-disabled');
+  assert.equal(room.projection.seats.white, undefined, 'no seat was assigned');
+});
+
+test('assignSeat: the play lock does not strand a seat the account already holds', async () => {
+  const room = makeRoom('locked-reclaim');
+  room.rated = false;
+  const ctx = makeCtx();
+  const account = makeAccount();
+
+  const seated = await assignSeat(ctx, room, 'first-client', undefined, account);
+  assert.equal(seated.seat, 'white', 'precondition: the account took a seat while unlocked');
+
+  const reclaimed = await assignSeat(ctx, room, 'second-client', undefined, {
+    ...account,
+    playDisabledAt: new Date(),
+  });
+
+  assert.equal(reclaimed.seat, 'white', 'the account re-attaches to its own seat by identity');
+  assert.equal(reclaimed.deniedReason, undefined);
+});
+
+test('assignSeat: the play lock leaves a signed-out player alone', async () => {
+  const room = makeRoom('locked-guest');
+  room.rated = false;
+  const ctx = makeCtx();
+
+  const assignment = await assignSeat(ctx, room, 'guest-client', undefined, null);
+
+  assert.equal(assignment.seat, 'white');
   assert.equal(assignment.deniedReason, undefined);
 });
 

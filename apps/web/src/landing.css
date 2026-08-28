@@ -2455,3 +2455,67 @@
     padding: 10px;
   }
 }
+
+/* Showcase pocket, lichess-style: a slot per droppable role with the ones you
+   hold none of ghosted (fillFortressXiangqiReserve `allRoles`). The compact
+   20px/26px tiles above were sized to survive an unknown number of pieces on one
+   line; with a FIXED seven slots that constraint is gone, so the slots can take
+   the row and the band can size itself to them.
+
+   Sized as a fraction of the reserve's OWN width rather than a container query:
+   this strip is a sibling of the pane, not a descendant, so `cqw` never resolves
+   here (the note above). The reserve is width:100% of the board column, so
+   `flex: 1 1 0` across seven slots lands each within a few percent of a board
+   piece at any board size, and tracks it on resize.
+
+   The band grows a little taller than the old 34px. That is the trade the fixed
+   height was avoiding, and it is safe now: seven slots is a constant, so the row
+   cannot grow as pieces accumulate — a capture fills a slot that is already
+   there rather than adding one. */
+.showcase-widget .replay-layout-solo .showcase-reserve.drop-mini-reserve-strip--all-roles {
+  --showcase-slot-gap: 3px;
+
+  height: auto;
+  min-height: 0;
+  padding: 2px 4px;
+  gap: 0;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-reserve.drop-mini-reserve-strip--all-roles
+  .drop-mini-reserve-row {
+  width: 100%;
+  gap: var(--showcase-slot-gap);
+  justify-content: center;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-reserve.drop-mini-reserve-strip--all-roles
+  .drop-mini-reserve-piece {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+  border-color: transparent;
+  background: transparent;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-reserve.drop-mini-reserve-strip--all-roles
+  .drop-mini-reserve-piece
+  svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Line art on a disc needs more than lichess's 0.1 to register at this size. */
+.showcase-widget
+  .replay-layout-solo
+  .showcase-reserve.drop-mini-reserve-strip--all-roles
+  .drop-mini-reserve-piece.is-empty {
+  opacity: 0.24;
+}

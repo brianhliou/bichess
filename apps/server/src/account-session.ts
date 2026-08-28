@@ -109,6 +109,9 @@ export function publicUser(user: persistence.UserAccount): Record<string, unknow
     accountPreferences: user.accountPreferences,
     profileVisibility: user.profileVisibility,
     accountRole: user.accountRole,
+    // Play lock (126). Exposed so the client can explain a refusal it would
+    // otherwise render as a generic error; the server never trusts it back.
+    playDisabled: user.playDisabledAt !== null,
     flair: user.flair,
     locale: user.locale,
     dmPolicy: user.dmPolicy,

@@ -552,6 +552,7 @@ function testUser(): UserAccount {
     accountPreferences: DEFAULT_ACCOUNT_PREFERENCES,
     profileVisibility: 'public',
     accountRole: 'player',
+    playDisabledAt: null,
     title: null,
     flair: null,
     locale: null,

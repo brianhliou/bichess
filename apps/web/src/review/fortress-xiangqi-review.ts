@@ -157,8 +157,12 @@ const fortressPresentation: TreePresentation<
     const bottom: FortressXiangqiColor = flipped ? 'black' : 'red';
     const top: FortressXiangqiColor = bottom === 'red' ? 'black' : 'red';
     const view = getFortressXiangqiPlayerView(truth, bottom);
-    fillFortressXiangqiReserve(hosts.top, view, top);
-    fillFortressXiangqiReserve(hosts.bottom, view, bottom);
+    // allRoles: the rail draws every droppable role and ghosts the empty ones,
+    // the way lichess draws a crazyhouse pocket. Held-only rows read as blank
+    // space for most of a game and shift as the pocket changes; a fixed set of
+    // slots states what CAN be dropped and keeps each piece in the same place.
+    fillFortressXiangqiReserve(hosts.top, view, top, { allRoles: true });
+    fillFortressXiangqiReserve(hosts.bottom, view, bottom, { allRoles: true });
   },
 };
 

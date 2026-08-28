@@ -148,6 +148,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.solved': '已解开。',
   'puzzle.correct': '正确。',
   'puzzle.tryAnotherMove': '换一手试试。',
+  'puzzle.playDisabled': '此账号无法解题。请改用你的对局账号登录。',
   'puzzle.fetchingHint': '正在获取提示。',
   'puzzle.noHint': '没有可用的提示。',
   'puzzle.hintMoveHighlighted': '提示：走高亮的那个子。',
@@ -223,6 +224,8 @@ export const ZH_HANS_PLAY = {
   'live.spectatorOpenReview': '打开复盘即可查看完整棋盘。',
   'live.spectatorWaitingSeats': '等待双方座位都有人就座。',
   'live.spectatorFogView': '对局进行期间，观战者只能看到公开的迷雾视角。',
+  'live.rejectedPlayDisabled':
+    '此账号无法进行对局。它是一个身份账号，而非棋手账号。请改用你的对局账号登录后就座。',
   'live.rejectedPrivateRoom':
     '本局正在进行中。除就座的双方外，Mistboard 从不向任何人透露实时对局状态。对局结束后，完整的复盘会出现在这里。',
   'live.rejectedRatedAccount':
