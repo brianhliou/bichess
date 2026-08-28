@@ -31,10 +31,11 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // engine is the no-net classical Pikafish jieqi_old build; bump on any engine/config change.
 export const JIEQI_ENGINE_VERSION = '0.2.0';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
-// (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the binary and the
-// analysis search config (fixed depth 12, single thread, default hash) are untouched, so
-// cached sweeps stay valid and must not be invalidated. Bump this one only when the binary
-// or the analysis search config itself changes.
+// (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
+// independent, so a live-play change must not invalidate cached sweeps. Bump this one only
+// when the binary or the analysis search config itself changes. Analysis now runs a fixed
+// depth (JIEQI_ANALYSIS_DEPTH_SEARCH), single-threaded, on its OWN fixed Hash — see
+// jieqiAnalysisResourceOptions; it is no longer "default hash", and depth is no longer 12.
 // 0.2.0 (2026-08-27): jieqi analysis runs `go depth N movetime T` and halts on
 // whichever binds first. When movetime wins, the final iteration is aborted and
 // the last `info` line is a bound with a one-move pv — which the UCI reader used
