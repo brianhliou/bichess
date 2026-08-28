@@ -1,0 +1,126 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  isXiangqiBroadcastDiscoveryUrl,
+  parseXiangqiBroadcastDiscoverySource,
+  registerXiangqiBroadcastDiscoveryProvider,
+  resetXiangqiBroadcastDiscoveryProviders,
+  resolveScheduledRound,
+  type ScheduledRound,
+} from './xiangqi-broadcast-discovery.js';
+
+const MAX_BOARDS = 32;
+
+function withFakeProvider(): void {
+  resetXiangqiBroadcastDiscoveryProviders();
+  registerXiangqiBroadcastDiscoveryProvider({
+    name: 'fake-live',
+    discover: async () => ({ ok: true, boards: [] }),
+  });
+}
+
+test('discovery URLs are told apart from ordinary sources', () => {
+  assert.equal(isXiangqiBroadcastDiscoveryUrl('mistboard-discover://fake-live?tourSlug=t'), true);
+  assert.equal(isXiangqiBroadcastDiscoveryUrl('https://example.org/manifest.json'), false);
+  assert.equal(isXiangqiBroadcastDiscoveryUrl('http://www.dpxq.com/x.html'), false);
+});
+
+test('a discovery source parses provider, tour and limits', () => {
+  withFakeProvider();
+  const parsed = parseXiangqiBroadcastDiscoverySource(
+    'mistboard-discover://fake-live?tourSlug=2026-league&tourName=League&event=%E7%94%B2%E7%BA%A7&minViewers=3&maxBoards=8',
+    MAX_BOARDS,
+  );
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) return;
+  assert.equal(parsed.source.provider.name, 'fake-live');
+  assert.equal(parsed.source.tourSlug, '2026-league');
+  assert.equal(parsed.source.tourName, 'League');
+  assert.equal(parsed.source.event, '甲级');
+  assert.equal(parsed.source.minViewers, 3);
+  assert.equal(parsed.source.maxBoards, 8);
+});
+
+// Fail-closed, same rule as variant dispatch: an unrecognised member is
+// rejected, never mapped onto a neighbour or retried as a plain http fetch.
+test('an unknown provider is rejected rather than treated as an http source', () => {
+  withFakeProvider();
+  const parsed = parseXiangqiBroadcastDiscoverySource(
+    'mistboard-discover://nope?tourSlug=t',
+    MAX_BOARDS,
+  );
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.match(parsed.message, /unknown discovery provider "nope"/);
+});
+
+test('an ordinary https URL is not a discovery source', () => {
+  withFakeProvider();
+  const parsed = parseXiangqiBroadcastDiscoverySource('https://example.org/x.json', MAX_BOARDS);
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.equal(parsed.message, 'not a discovery source');
+});
+
+test('a discovery source without a tourSlug is rejected', () => {
+  withFakeProvider();
+  const parsed = parseXiangqiBroadcastDiscoverySource('mistboard-discover://fake-live', MAX_BOARDS);
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.match(parsed.message, /requires a tourSlug/);
+});
+
+test('maxBoards may not exceed the manifest ceiling', () => {
+  withFakeProvider();
+  const parsed = parseXiangqiBroadcastDiscoverySource(
+    `mistboard-discover://fake-live?tourSlug=t&maxBoards=${MAX_BOARDS + 1}`,
+    MAX_BOARDS,
+  );
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.match(parsed.message, /maxBoards must be an integer between 1 and 32/);
+});
+
+const SCHEDULE: ScheduledRound[] = [
+  { id: 'r01', name: 'Round 1', startsAt: new Date('2026-10-08T14:30:00+08:00') },
+  { id: 'r02', name: 'Round 2', startsAt: new Date('2026-10-08T19:30:00+08:00') },
+  { id: 'r03', name: 'Round 3', startsAt: new Date('2026-10-09T14:30:00+08:00') },
+];
+
+// The gap case first: it is the one that silently files round 3's games under
+// round 2 if resolution falls back to "most recent".
+test('a poll between rounds resolves to no round at all', () => {
+  const resolved = resolveScheduledRound(
+    SCHEDULE,
+    new Date('2026-10-09T12:00:00+08:00'),
+    4 * 60 * 60 * 1000,
+  );
+  assert.equal(resolved.ok, false);
+  if (resolved.ok) return;
+  assert.equal(resolved.message, 'no scheduled round is active');
+});
+
+test('a poll before the first round resolves to no round', () => {
+  const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-08T09:00:00+08:00'));
+  assert.equal(resolved.ok, false);
+});
+
+test('a poll inside a round window resolves to that round', () => {
+  const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-09T15:10:00+08:00'));
+  assert.equal(resolved.ok, true);
+  if (!resolved.ok) return;
+  assert.equal(resolved.roundId, 'r03');
+  assert.equal(resolved.roundName, 'Round 3');
+});
+
+test('overlapping windows resolve to the latest started round', () => {
+  const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-08T20:00:00+08:00'));
+  assert.equal(resolved.ok, true);
+  if (!resolved.ok) return;
+  assert.equal(resolved.roundId, 'r02');
+});
+
+test('a poll long after the last round resolves to no round', () => {
+  const resolved = resolveScheduledRound(SCHEDULE, new Date('2026-10-20T14:30:00+08:00'));
+  assert.equal(resolved.ok, false);
+});
