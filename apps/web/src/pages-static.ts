@@ -466,6 +466,10 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
   const q5 = aboutSubheading(t('faq.ratedQuestion', {}, locale));
   const a5 = aboutParagraph([t('faq.ratedAnswer', {}, locale)]);
 
+  const qLibrary = aboutSubheading(t('faq.libraryQuestion', {}, locale));
+  const aLibrary = aboutParagraph([t('faq.libraryAnswer', {}, locale)]);
+  const aLibraryExplorer = aboutParagraph([t('faq.libraryExplorer', {}, locale)]);
+
   section.append(
     heading,
     q1,
@@ -482,6 +486,9 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
     aWatch,
     q5,
     a5,
+    qLibrary,
+    aLibrary,
+    aLibraryExplorer,
   );
   return section;
 }
