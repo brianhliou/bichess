@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { XiangqiMove, XiangqiMoveFormat } from '@mistboard/game';
 import type pg from 'pg';
+import { historicalXiangqiDigest } from './historical-xiangqi-digest.js';
 import { getPool, withTransaction } from './persistence-db.js';
 
 export type HistoricalXiangqiResult = '1-0' | '0-1' | '1/2-1/2' | '*';
@@ -222,18 +223,19 @@ function playerIdForName(normalizedName: string): string {
   return prefixedHash('hxqp', normalizedName);
 }
 
+// The writer's half of the identity contract. It MUST stay a thin call into the
+// shared digest: this function once had its own copy keyed on sourceId and the
+// anonymized player names, and because ElephantChess re-randomizes both every
+// release, a re-import matched nothing and inserted the whole corpus again.
+// The repair script was migrated to the shared digest in 2026-08 and this was
+// not, which is worse than either alone -- the rows and the writer then disagree
+// about what "the same game" is. Do not inline a variant here.
 export function contentHashForHistoricalXiangqiGame(input: HistoricalXiangqiGameInput): string {
-  return sha256(
-    JSON.stringify({
-      sourceId: input.sourceId,
-      sourceGameId: input.sourceGameId ?? null,
-      red: input.redNameRaw ?? null,
-      black: input.blackNameRaw ?? null,
-      playedOn: input.playedOn ?? null,
-      result: input.result,
-      moves: input.moves.map((move) => `${move.from}${move.to}`),
-    }),
-  );
+  return historicalXiangqiDigest({
+    playedOn: input.playedOn ?? null,
+    result: input.result,
+    moves: input.moves,
+  });
 }
 
 function sourceFromRow(row: SourceRow): HistoricalXiangqiSource {

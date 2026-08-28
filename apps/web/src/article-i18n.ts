@@ -170,8 +170,10 @@ const ZH_HANS: Record<string, string> = {
     '同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负。若双方都不是唯一的长将方，则重复局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '对局也可能因超时、认输或弃局而结束。',
-  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Soldier drop.':
-    '这盘引擎对局展示持子的两种用途：士先打回九宫防守，随后红方打入兵将死。',
+  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.':
+    '这盘引擎对局展示持子的两种用途：士先打回九宫防守，随后红方打入宝将死。',
+  'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
+    '这盘棋选自二十盘以同样方式生成的引擎对局。二十盘全部收录在[配套研究](/study/NUVBVjFf)里，每盘一章，并注明引擎评估认为局势发生转折的时刻。',
 
   // -- How Misty Plays --
   'Misty is the bot you play on Mistboard in Fog of War chess. It is not allowed to peek. The server sends it the same kind of limited view a human player gets, then Misty has to choose a move from that uncertainty.':
@@ -1291,8 +1293,10 @@ const ZH_HANT: Record<string, string> = {
     '同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負。若雙方都不是唯一的長將方，則重複局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '對局也可能因超時、認輸或棄局而結束。',
-  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Soldier drop.':
-    '這盤引擎對局展示持子的兩種用途：士先打回九宮防守，隨後紅方打入兵將死。',
+  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.':
+    '這盤引擎對局展示持子的兩種用途：士先打回九宮防守，隨後紅方打入寶將死。',
+  'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
+    '這盤棋選自二十盤以同樣方式生成的引擎對局。二十盤全部收錄在[配套研究](/study/NUVBVjFf)裡，每盤一章，並註明引擎評估認為局勢發生轉折的時刻。',
 
   // -- How Misty Plays --
   'Misty is the bot you play on Mistboard in Fog of War chess. It is not allowed to peek. The server sends it the same kind of limited view a human player gets, then Misty has to choose a move from that uncertainty.':

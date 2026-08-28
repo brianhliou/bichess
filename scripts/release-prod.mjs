@@ -4,6 +4,12 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { DRAIN_TOKEN_KEYCHAIN_SERVICE, resolveDrainToken } from './lib/drain-token.mjs';
+import {
+  DEFAULT_TEST_DATABASE_URL,
+  isDatabaseReachable,
+  needsPersistenceGate,
+  persistenceGateWarning,
+} from './persistence-gate.mjs';
 
 const DEFAULT_BASE_URL = 'https://mistboard.com';
 const DEFAULT_CI_WORKFLOW = 'ci.yml';
@@ -119,6 +125,12 @@ try {
 
   if (options.localCi) {
     runTimed('local ci:quick', ['npm', 'run', 'ci:quick']);
+    // ci:quick does NOT include test:persistent, and the push below goes out
+    // with --no-verify, which skips the pre-push hook that WOULD have run it.
+    // So without this a persistence change reaches hosted CI unproven: that is
+    // exactly how 2026-08-27 put three red persistent tests on main and froze
+    // the next deploy behind them.
+    await runReleasePersistenceGate(ciPlan.changedFiles);
   } else {
     console.log('skip: local ci:quick (--skip-local-ci)');
   }
@@ -510,6 +522,20 @@ function listGithubRuns(headRevision) {
   } catch (error) {
     throw new Error(`could not parse gh run list JSON: ${error.message}`);
   }
+}
+
+async function runReleasePersistenceGate(changedFiles) {
+  if (!needsPersistenceGate(changedFiles)) return;
+  if (process.env.MISTBOARD_SKIP_PREPUSH_DB === '1') {
+    console.log('release: persistence gate skipped via MISTBOARD_SKIP_PREPUSH_DB=1');
+    return;
+  }
+  const databaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
+  if (await isDatabaseReachable(databaseUrl)) {
+    runTimed('test:persistent', ['npm', 'run', 'test:persistent']);
+    return;
+  }
+  console.warn(persistenceGateWarning('release'));
 }
 
 function readChangedFiles({ base, head }) {

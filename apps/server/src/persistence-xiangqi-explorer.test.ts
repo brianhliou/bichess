@@ -200,6 +200,9 @@ definePersistenceTests('xiangqi opening explorer', () => {
       license: 'GPL-3.0',
       licenseStatus: 'cleared',
     });
+    // Two DIFFERENT games. Row identity is the content digest and not the
+    // source labels, so sharing MOVES here would make these one row and the
+    // count below would be measuring an upsert rather than the rights gate.
     await insertHistoricalXiangqiGame({
       sourceId: source.id,
       sourceGameId: 'listed-1',
@@ -213,7 +216,7 @@ definePersistenceTests('xiangqi opening explorer', () => {
       sourceGameId: 'hidden-1',
       result: '1-0',
       moveFormat: 'coordinate',
-      moves: MOVES,
+      moves: [MOVES[0]!, { from: 'h10', to: 'i8' }] as XiangqiMove[],
       visibility: 'private',
     });
 
@@ -234,13 +237,18 @@ definePersistenceTests('xiangqi opening explorer', () => {
       license: 'GPL-3.0',
       licenseStatus: 'cleared',
     });
+    // Five DIFFERENT games. Each needs its own move list: row identity is the
+    // content digest, so games separated only by sourceGameId collapse into one
+    // row and the paging assertion below would run over fewer games than it
+    // thinks. The knight's five destinations give five distinct digests.
+    const knightTo = ['g8', 'i8', 'g6', 'i6', 'f9'] as const;
     for (let i = 0; i < 5; i += 1) {
       await insertHistoricalXiangqiGame({
         sourceId: source.id,
         sourceGameId: `page-${i}`,
         result: '1-0',
         moveFormat: 'coordinate',
-        moves: [MOVES[0]!, { from: 'h10', to: i % 2 === 0 ? 'g8' : 'i8' }],
+        moves: [MOVES[0]!, { from: 'h10', to: knightTo[i]! }] as XiangqiMove[],
       });
     }
 

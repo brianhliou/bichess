@@ -191,6 +191,35 @@ test('a jumpNow baseline refresh freezes on the new head instead of airing it', 
   tv.destroy();
 });
 
+// A followed game can leave the feed without ever becoming a retrievable
+// finished game: abandoned by both players and reaped, or lost to a restart.
+// Its last live frame is a dead position, so the hero goes back to the pool head
+// rather than parking the homepage on a game that went nowhere.
+test('a handoff whose finished-game load fails falls back to the pool head', async () => {
+  featuredResponse = { featured: liveFeatured('deadGame', 2) };
+  const tv = await mountController([entryA]);
+  await flush();
+
+  // Boot froze on gameA, then the live game took the board.
+  expect(mounts).toHaveLength(2);
+  const live = mounts[1]!;
+  expect(live.roomId).toBe('deadGame');
+  expect(live.options.live).toBe(true);
+
+  // The room vanishes and its finished-game load 404s.
+  live.handle.loadGame.mockImplementation(async () => {
+    live.options.onLoadError?.();
+  });
+  featuredResponse = { featured: null };
+  await tick();
+
+  expect(mounts).toHaveLength(3);
+  expect(mounts[2]!.roomId).toBe('gameA');
+  expect(mounts[2]!.options.live).toBeUndefined();
+  expect(mounts[2]!.options.autoplay).toBe(false);
+  tv.destroy();
+});
+
 test('a live featured game mounts paused+live, follows new plies, and hands off on finish', async () => {
   featuredResponse = { featured: liveFeatured('liveGame', 3) };
   const tv = await mountController([]);

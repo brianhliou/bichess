@@ -53,7 +53,10 @@ function boardSvg(
   options: FortressXiangqiBoardRenderOptions,
 ): string {
   installFortressXiangqiBoardStyles();
-  return renderFortressXiangqiBoardSvg(view, 'red', options);
+  // Article framing is authored: the figure is sized by its own width cap, and
+  // a coordinate gutter appearing only for readers who play with coordinates on
+  // would reflow the prose around it.
+  return renderFortressXiangqiBoardSvg(view, 'red', { coordinates: false, ...options });
 }
 
 function diagram(

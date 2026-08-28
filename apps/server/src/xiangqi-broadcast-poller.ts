@@ -8,6 +8,16 @@ import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 
 export type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
+import { listXiangqiBroadcastRounds } from './persistence-xiangqi-broadcasts.js';
+import {
+  buildDiscoveryManifestSources,
+  isXiangqiBroadcastDiscoveryUrl,
+  NO_ACTIVE_ROUND_MESSAGE,
+  parseXiangqiBroadcastDiscoverySource,
+  resolveScheduledRound,
+} from './xiangqi-broadcast-discovery.js';
+import { registerDefaultXiangqiBroadcastDiscoveryProviders } from './xiangqi-broadcast-discovery-dpxq.js';
+
 import {
   validateXiangqiBroadcastSourceUrl,
   type XiangqiBroadcastSourceUrlPolicy,
@@ -130,6 +140,8 @@ function validateSourceSnapshot(value: unknown): SnapshotValidationResult {
     },
   };
 }
+
+registerDefaultXiangqiBroadcastDiscoveryProviders();
 
 const MANIFEST_SOURCE_STRING_OPTIONS = ['tourSlug', 'tourName', 'roundId', 'roundName'] as const;
 
@@ -501,13 +513,99 @@ async function applySourceUnit(
   };
 }
 
-async function pollSourceOutcomes(
+type BodyResolution =
+  | { ok: true; body: Exclude<XiangqiBroadcastSourceBody, { kind: 'malformed' }> }
+  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string };
+
+// Discovery: run the provider, work out which round the poll belongs to, and
+// return a manifest built in memory rather than parsed from a response.
+//
+// The discovery URL is never fetched, so it never meets the host allowlist.
+// That is safe because every board URL a provider yields goes through
+// resolveLeafSource below, which re-runs validateXiangqiBroadcastSourceUrl per
+// entry; the fail-closed property lives at the leaves, which is where it has to.
+async function discoverManifest(
   context: PollContext,
   sourceUrl: string,
 ): Promise<
-  | { ok: true; outcomes: XiangqiBroadcastPollSourceOutcome[] }
-  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string }
+  | { ok: true; manifest: XiangqiBroadcastSourceManifest }
+  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
 > {
+  const parsed = parseXiangqiBroadcastDiscoverySource(
+    sourceUrl,
+    XIANGQI_BROADCAST_MANIFEST_MAX_SOURCES,
+  );
+  if (!parsed.ok) return { ok: false, kind: 'source_malformed', message: parsed.message };
+
+  const rounds = await listXiangqiBroadcastRounds(parsed.source.tourSlug);
+  const round = resolveScheduledRound(
+    rounds.flatMap((row) =>
+      row.startsAt ? [{ id: row.id, name: row.name, startsAt: new Date(row.startsAt) }] : [],
+    ),
+    new Date(),
+  );
+  // Between sessions there is no active round, and importing nothing is the
+  // correct outcome: guessing the most recent round would file the next
+  // round's games under the previous one.
+  //
+  // That state holds for most of a multi-day event, so it is marked quiet. A
+  // sync log per tick would be tens of thousands of rows across an eleven-day
+  // tournament and would leave the ops console's source health red exactly
+  // when it most needs to mean something.
+  if (!round.ok) {
+    return {
+      ok: false,
+      kind: 'source_malformed',
+      message: round.message,
+      ...(round.message === NO_ACTIVE_ROUND_MESSAGE ? { quiet: true as const } : {}),
+    };
+  }
+
+  const discovered = await parsed.source.provider.discover({
+    config: parsed.source.config,
+    fetchImpl: context.fetchImpl,
+    timeoutMs: context.timeoutMs,
+  });
+  if (!discovered.ok) {
+    return { ok: false, kind: 'source_fetch_error', message: discovered.message };
+  }
+
+  const built = buildDiscoveryManifestSources({
+    source: parsed.source,
+    boards: discovered.boards,
+    round: { roundId: round.roundId, ...(round.roundName ? { roundName: round.roundName } : {}) },
+  });
+  if (!built.ok) return { ok: false, kind: 'source_malformed', message: built.message };
+  if (built.droppedForCap > 0) {
+    // A silent cap reads as full coverage.
+    console.warn(
+      `[xiangqi-broadcast] discovery kept ${built.sources.length} board(s) and dropped ${built.droppedForCap} over the manifest cap`,
+    );
+  }
+
+  return {
+    ok: true,
+    manifest: { schema: XIANGQI_BROADCAST_MANIFEST_SCHEMA, sources: built.sources },
+  };
+}
+
+async function resolveSourceBody(context: PollContext, sourceUrl: string): Promise<BodyResolution> {
+  if (isXiangqiBroadcastDiscoveryUrl(sourceUrl)) {
+    const discovered = await discoverManifest(context, sourceUrl);
+    if (!discovered.ok) {
+      if (!discovered.quiet) {
+        await recordSourceError(context, {
+          sourceUrl,
+          kind: discovered.kind,
+          message: discovered.message,
+          payload: { discovery: true },
+        });
+      }
+      return { ok: false, kind: discovered.kind, message: discovered.message };
+    }
+    return { ok: true, body: { kind: 'manifest', manifest: discovered.manifest } };
+  }
+
   const decision = validateXiangqiBroadcastSourceUrl(sourceUrl, context.sourcePolicy);
   if (!decision.ok) {
     await recordSourceError(context, {
@@ -549,6 +647,21 @@ async function pollSourceOutcomes(
     });
     return { ok: false, kind: 'source_malformed', message: body.message };
   }
+  return { ok: true, body };
+}
+
+async function pollSourceOutcomes(
+  context: PollContext,
+  sourceUrl: string,
+): Promise<
+  | { ok: true; outcomes: XiangqiBroadcastPollSourceOutcome[] }
+  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string }
+> {
+  const resolvedBody = await resolveSourceBody(context, sourceUrl);
+  if (!resolvedBody.ok) {
+    return { ok: false, kind: resolvedBody.kind, message: resolvedBody.message };
+  }
+  const body = resolvedBody.body;
 
   // Resolve every leaf source first, then apply. Dry runs wrap the whole
   // apply phase in one always-rollback transaction so the preview exercises

@@ -28,6 +28,7 @@ import type {
   XiangqiColor,
   XiangqiPieceRole,
 } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import { type PieceSet, readStoredPieceSet } from './theme.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
@@ -155,7 +156,7 @@ export function renderCrossroadsChessBoardSvg(
     arrows: (options.arrows ?? []).map((a) => ({ from: coordOf(a.from), to: coordOf(a.to) })),
     fogHidden: showFog ? hiddenSquares(visible) : null,
     interactive: options.interactive ?? false,
-    coords: options.coords ?? true,
+    coords: options.coords ?? boardCoordinatesEnabled(),
     squareName: (file, rank) => squareAt(file, rank),
   });
 }

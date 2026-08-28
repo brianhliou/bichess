@@ -89,6 +89,9 @@ export async function mountLandingTv(
   // endpoint (the live→finished handoff).
   let livePayload: { roomId: string; payload: Record<string, unknown> } | null = null;
   let shownLivePly = -1;
+  // Set by the live handle's onLoadError. Only the live->frozen handoff can
+  // trip it: while following, loadPostgameOverride always answers.
+  let liveLoadFailed = false;
   let pollTimer: number | null = null;
 
   // Serializes every mount/load: poll ticks, pool swaps, and onGameEnd all
@@ -161,7 +164,16 @@ export async function mountLandingTv(
         // wiping to an error: normal following never sees one (the override
         // always answers), and the live→frozen handoff drives its finished-game
         // load through THIS handle, so an idle/unpersisted game freezes in place.
-        ...(mountOptions.live ? { live: true, loadPostgameOverride, onLoadError: () => true } : {}),
+        ...(mountOptions.live
+          ? {
+              live: true,
+              loadPostgameOverride,
+              onLoadError: () => {
+                liveLoadFailed = true;
+                return true;
+              },
+            }
+          : {}),
       });
       if (destroyed) {
         next.destroy();
@@ -232,23 +244,33 @@ export async function mountLandingTv(
   // endpoint. That endpoint 404s whenever the game isn't retrievable as finished
   // yet (idle-but-still-playing, unpersisted, or gone after a restart); the live
   // handle's onLoadError then keeps the last frame instead of wiping the board to
-  // "This game could not be loaded." Either way the board freezes on its last
-  // known position. Re-mounting a fresh finished handle (the old approach) could
-  // not do this: destroy() clears root before the failing load runs, so a 404
-  // left an empty error box.
+  // "This game could not be loaded." Re-mounting a fresh finished handle (the old
+  // approach) could not do this: destroy() clears root before the failing load
+  // runs, so a 404 left an empty error box.
+  //
+  // A failed load means the game never became a retrievable finished game, so
+  // its last live frame is a dead position and the hero hands back to the pool
+  // head. Keeping that frame is only right when there is no completed game to
+  // fall back to.
   const finishLiveHandoff = async (): Promise<void> => {
     const roomId = currentRoomId;
     const specId = currentSpecId;
     if (!roomId || !specId) return;
     livePayload = null;
-    if (handle) {
-      await handle.loadGame(roomId);
-      jumpToEnd();
-    } else {
+    if (!handle) {
       // No live handle to reuse (shouldn't happen while mode === 'live'): fall
       // back to freezing on the pool head rather than leaving a blank board.
+      // freezeOnHead notifies for the game it actually mounts.
       await freezeOnHead();
+      return;
     }
+    liveLoadFailed = false;
+    await handle.loadGame(roomId);
+    if (liveLoadFailed && completedPool[0]) {
+      await freezeOnHead();
+      return;
+    }
+    jumpToEnd();
     notify(roomId, specId, 'frozen');
   };
 

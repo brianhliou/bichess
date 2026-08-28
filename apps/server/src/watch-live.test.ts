@@ -186,6 +186,7 @@ function tenantRoom(args: {
   status?: 'playing' | 'finished' | 'waiting';
   seats?: Record<string, string>;
   lastEventAt?: number;
+  moveNumber?: number;
   setup?: unknown;
 }): TenantManagedRoom {
   const lastEventAt = args.lastEventAt ?? NOW - 1_000;
@@ -201,7 +202,7 @@ function tenantRoom(args: {
       { type: 'move-played', at: lastEventAt },
     ],
     projection: {
-      state: { status: { type: args.status ?? 'playing' }, moveNumber: 4 },
+      state: { status: { type: args.status ?? 'playing' }, moveNumber: args.moveNumber ?? 4 },
       seats: args.seats ?? { black: 'client-b', red: 'client-a' },
       rated: false,
     },
@@ -291,6 +292,21 @@ test('finished, stale, and half-seated rooms are excluded', () => {
   );
   openRooms.set('fko_half', tenantRoom({ id: 'fko_half', seats: { red: 'client-a' } }));
   assert.deepEqual(collectLiveTvCandidates(context(), NOW), []);
+});
+
+// The hero board is not a lobby: a room nobody has answered yet can be
+// abandoned a move later, which leaves the homepage frozen on an untouched
+// board. moveNumber 2 is the first position both players have moved in.
+test('a room where only the first player has moved is not a candidate', () => {
+  openRooms.set('fko_opening', tenantRoom({ id: 'fko_opening', moveNumber: 1 }));
+  assert.deepEqual(collectLiveTvCandidates(context(), NOW), []);
+
+  openRooms.set('fko_answered', tenantRoom({ id: 'fko_answered', moveNumber: 2 }));
+  const candidates = collectLiveTvCandidates(context(), NOW);
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.roomId),
+    ['fko_answered'],
+  );
 });
 
 test('an engine seat labels the game pve and surfaces the engine client id', () => {
