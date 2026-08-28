@@ -27,6 +27,8 @@ export type StudyChapterRecord = {
   /** SerializedTree (tree-serialize.ts); node-pg parses JSONB, so already an object. */
   root: unknown;
   denorm: unknown;
+  /** PGN-style tag pairs (who had Red, the result, the event). See StudyChapterTags. */
+  tags: StudyChapterTags;
   version: number;
   /** Gamebook (interactive-lesson) chapter: the guess-the-move player is the
    *  default presentation. Same tree data; per-node hint/deviation live in it. */
@@ -75,6 +77,24 @@ export type PublicStudySummary = StudySummary & {
   likeCount: number;
 };
 
+/**
+ * PGN-style tag pairs for a chapter. Authored or imported, never derived, which
+ * is what separates this from `denorm`. A study of a real game needs these to
+ * say who had Red; without them the only place identity can live is the chapter
+ * title, and a title cannot follow a board flip.
+ */
+export type StudyChapterTags = {
+  red?: string;
+  black?: string;
+  /** PGN result token: '1-0' | '0-1' | '1/2-1/2' | '*'. */
+  result?: string;
+  event?: string;
+  /** ISO-8601 or PGN's own YYYY.MM.DD; stored as given. */
+  date?: string;
+  round?: string;
+  site?: string;
+};
+
 export type NewChapterInput = {
   name: string;
   /** Optional per-locale overrides for `name`. */
@@ -83,6 +103,7 @@ export type NewChapterInput = {
   orientation: string;
   root: unknown;
   denorm?: unknown;
+  tags?: StudyChapterTags;
 };
 
 export type CreateStudyInput = {
@@ -134,6 +155,7 @@ type ChapterRow = {
   orientation: string;
   root: unknown;
   denorm: unknown;
+  tags: StudyChapterTags;
   version: number;
   gamebook: boolean;
   created_at: Date;
@@ -167,6 +189,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
     orientation: row.orientation,
     root: row.root,
     denorm: row.denorm,
+    tags: row.tags ?? {},
     version: row.version,
     gamebook: row.gamebook,
     createdAt: row.created_at,
@@ -177,7 +200,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
 const STUDY_COLS =
   'id, owner_id, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
-  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, version, gamebook, created_at, updated_at';
+  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, created_at, updated_at';
 
 /** Correlated scalar subquery yielding the first few chapters (by ordinal) as a
  *  jsonb array of `{name, i18n}`, for a study aliased `s`. This is the preview
@@ -263,8 +286,8 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
     );
     await client.query(
       `INSERT INTO study_chapters
-         (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm)
-         VALUES ($1, $2, 0, $3, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb)`,
+         (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags)
+         VALUES ($1, $2, 0, $3, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)`,
       [
         shortId(),
         studyId,
@@ -274,6 +297,7 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
         input.chapter.orientation,
         JSON.stringify(input.chapter.root),
         JSON.stringify(input.chapter.denorm ?? {}),
+        JSON.stringify(input.chapter.tags ?? {}),
       ],
     );
     await client.query('COMMIT');
@@ -627,10 +651,10 @@ export async function addChapter(
   const now = new Date();
   const inserted = await getPool().query<ChapterRow>(
     `INSERT INTO study_chapters
-       (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm)
+       (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags)
        VALUES ($1, $2,
                (SELECT COALESCE(MAX(ordinal), -1) + 1 FROM study_chapters WHERE study_id = $2),
-               $3, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb)
+               $3, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb)
      RETURNING ${CHAPTER_COLS}`,
     [
       shortId(),
@@ -641,6 +665,7 @@ export async function addChapter(
       input.orientation,
       JSON.stringify(input.root),
       JSON.stringify(input.denorm ?? {}),
+      JSON.stringify(input.tags ?? {}),
     ],
   );
   await getPool().query(`UPDATE studies SET updated_at = $1 WHERE id = $2`, [now, studyId]);

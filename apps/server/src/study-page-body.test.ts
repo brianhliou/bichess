@@ -18,6 +18,7 @@ function chapter(overrides: Partial<StudyChapterRecord> = {}): StudyChapterRecor
     variant: 'xiangqi',
     orientation: 'red',
     root: { version: 1, root: { children: [] } },
+    tags: {},
     denorm: {},
     version: 0,
     gamebook: false,

@@ -108,9 +108,32 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     orientation: chapter.orientation,
     root: chapter.root,
     denorm: chapter.denorm,
+    tags: chapter.tags,
     version: chapter.version,
     gamebook: chapter.gamebook,
   };
+}
+
+/**
+ * PGN-style chapter tags off a request body. Whitelisted and length-capped: a
+ * chapter tag renders straight into a player bar, so it is untrusted display
+ * text like any other user field, and an open-ended object would let a client
+ * store whatever it liked on our row.
+ */
+const CHAPTER_TAG_KEYS = ['red', 'black', 'result', 'event', 'date', 'round', 'site'] as const;
+const CHAPTER_TAG_MAX = 120;
+
+function parseChapterTags(value: unknown): persistence.StudyChapterTags {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const source = value as Record<string, unknown>;
+  const tags: Record<string, string> = {};
+  for (const key of CHAPTER_TAG_KEYS) {
+    const raw = source[key];
+    if (typeof raw !== 'string') continue;
+    const trimmed = raw.trim().slice(0, CHAPTER_TAG_MAX);
+    if (trimmed) tags[key] = trimmed;
+  }
+  return tags;
 }
 
 export async function tryHandle(
@@ -353,6 +376,7 @@ async function createStudy(
       orientation,
       root: chapter.root,
       denorm: chapter.denorm ?? {},
+      tags: parseChapterTags(chapter.tags),
     },
   });
   if (!created) {
@@ -432,6 +456,7 @@ async function addChapter(
     orientation,
     root: body.root,
     denorm: body.denorm ?? {},
+    tags: parseChapterTags(body.tags),
   });
   if (!result.ok) {
     writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });

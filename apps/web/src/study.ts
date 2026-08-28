@@ -77,6 +77,9 @@ type ChapterDto = {
   root: SerializedTree;
   version: number;
   gamebook: boolean;
+  /** PGN-style tags: who had Red, the result, the event. Absent on chapters
+   *  authored before migration 128, and on chapters that are not a real game. */
+  tags?: { red?: string; black?: string; result?: string; event?: string; date?: string };
 };
 
 type LoadResult =
@@ -660,6 +663,17 @@ function renderStudy(
       // rail info card. The compact chapter rail carries save state.
       summary: '',
       boardAriaLabel: `${studyVariantLabel(variant)} board`,
+      // A chapter of a real game can now say who had which side. Without this
+      // the only place identity could live was the chapter title, which cannot
+      // follow a board flip and reads as a spoiler.
+      ...(chapter.tags?.red || chapter.tags?.black
+        ? {
+            players: {
+              ...(chapter.tags.red ? { red: chapter.tags.red } : {}),
+              ...(chapter.tags.black ? { black: chapter.tags.black } : {}),
+            },
+          }
+        : {}),
       actions: rail(status),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
       // PGN download sits with FEN/Share/Moves rather than in the owner-only

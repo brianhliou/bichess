@@ -80,6 +80,10 @@ export function buildStudyChat(studyId: string): HTMLElement {
     pollMs: POLL_MS,
     title: t('study.chatRoom'),
     apiUrl: studyChatApiUrl(studyId),
+    // The live and review chats have had the drag separator all along; the study
+    // chat was the one call site that never asked for it, so a study reader had
+    // no way to give a busy thread more room.
+    resizable: true,
   });
 }
 

@@ -15,7 +15,10 @@
   overflow-y: auto;
   scrollbar-width: thin;
 }
-/* The chat never collapses below a usable feed, even under a tall info card. */
+/* The chat never collapses below a usable feed, even under a tall info card.
+   Resizing is the shared drag separator from chat-resize.ts (the same control
+   the live and review pages use), NOT a native `resize` corner — the study chat
+   simply was not asking for it. */
 .study-review .review-spectator-chat {
   min-height: 13rem;
 }

@@ -441,6 +441,7 @@ export type {
   ReorderStudyChaptersResult,
   SetStudyFeaturedResult,
   StudyChapterRecord,
+  StudyChapterTags,
   StudyRecord,
   StudySummary,
   StudyVisibility,

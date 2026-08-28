@@ -61,93 +61,100 @@ type AnnotationRow = {
 type AnnotationFile = { accuracy: { first: number; second: number }; rows: AnnotationRow[] };
 
 /** The curated list. Order is chronological; the blurb is the only prose. */
+/**
+ * Chapter names describe the OCCASION, never the result. "1960 - Hu Ronghua
+ * beats Yang Guanlin" spoils the game before a move is played; who had which
+ * side and how it ended now ride in the chapter tags, where the board can show
+ * them and a flip keeps them straight.
+ */
 const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' | 'black' }[] = [
   {
     key: 'm_17036',
-    name: '1956 · Li Yiting beats Yang Guanlin',
+    name: '1956 · The first national championship',
     orientation: 'red',
     blurb:
-      'The first national championship ever played. Yang Guanlin won it; this is the game he lost, to a nineteen-year-old from Hubei who would take the title himself two years later.',
+      'The first national championship ever played, and the first great upset in it. Li Yiting is nineteen, from Hubei, and beats the man who goes on to win the tournament. He takes the title himself two years later.',
   },
   {
     key: 'u_345428',
-    name: '1960 · Hu Ronghua beats Yang Guanlin',
+    name: '1960 · Hu Ronghua, aged fifteen',
     orientation: 'black',
     blurb:
-      'Round three. Hu is fifteen, in his first national tournament, with Black against the reigning champion the sport called 第一国手. He is a horse and an elephant ahead by move 43, Yang wins almost all of it back through the endgame, and Hu converts anyway. Hu held the title for the next twenty years.',
+      'Shanghai against Guangdong, and the handover between them. Round three: Hu is fifteen, in his first national tournament, with Black against the reigning champion, the man the sport called 第一国手, the first hand of the nation. He is a horse and an elephant ahead by move 43, Yang wins almost all of it back through the endgame, and Hu converts anyway. Hu held the title for the next twenty years.',
   },
   {
     key: 'm_17225',
-    name: '1965 · Yang Guanlin beats Hu Ronghua',
+    name: '1965 · The champion Hu could not shake',
     orientation: 'red',
     blurb:
-      'Five years after the handover, the old champion is still beating the new one. 183 plies, and the longest game of the pair.',
+      'Guangdong answers. Five years after the handover the old champion is still beating the new one, and Hu will not have the country to himself for another decade. 183 plies, the longest game in the study.',
   },
   {
     key: 'm_17496',
-    name: '1980 · Liu Dahua beats Yang Guanlin',
+    name: '1980 · The summer the run ended',
     orientation: 'black',
     blurb:
       'The summer Hu Ronghua’s run finally ended. Seventy plies, the shortest game in the study, and Liu takes Yang apart in it.',
   },
   {
     key: 'm_44977',
-    name: '1980 · Liu Dahua beats Li Laiqun',
+    name: '1980 · Eight days earlier',
     orientation: 'black',
     blurb:
       'Eight days earlier in the same championship, against the man who would take the title off him two years later.',
   },
   {
     key: 'm_23400',
-    name: '1982 · Li Laiqun beats Hu Ronghua',
+    name: '1982 · Li Laiqun takes the title',
     orientation: 'red',
     blurb:
       'Li Laiqun’s title year, and he takes it through Hu Ronghua directly. Our engine grades Li at 98.4, the cleanest game in the study.',
   },
   {
-    key: 'm_25675',
-    name: '1990 · Lü Qin at the first World Championship',
+    key: 'm_18198',
+    name: '1986 · Lü Qin arrives',
     orientation: 'red',
     blurb:
-      'The inaugural World Xiangqi Championship, in Singapore, which Lü Qin won. He would win four more, more than anyone.',
+      'Guangdong\u2019s third great player, in the year he won his first national title, against Yu Youhua, who would win one himself. Lü Qin went on to five national titles and five world titles, more of the latter than anyone before or since. Our engine grades him at 95.7 here.',
   },
   {
     key: 'm_2071',
-    name: '1990 · Xu Tianhong beats Xu Yinchuan',
+    name: '1990 · Xu Yinchuan, also aged fifteen',
     orientation: 'red',
     blurb:
       'The defending national champion against a fifteen-year-old Xu Yinchuan. It is 1960 in reverse: the same age, the same stage, the opposite result. Xu Yinchuan won his own first title three years later.',
   },
   {
-    key: 'm_18615',
-    name: '1991 · Zhao Guorong at the World Championship',
+    key: 'm_18360',
+    name: '1989 · Zhao Guorong before the titles',
     orientation: 'red',
     blurb:
-      'Zhao against Wu Guilin of Chinese Taipei in the event Zhao won. Four blunders between them, the most in any game here, and a reminder that a world championship is not automatically the cleanest chess.',
+      'Heilongjiang against Shanghai: Zhao Guorong beats Hu Ronghua the year before the first of his four national titles. At 97.7 it is the most accurate game in the study, and the shortest decisive one.',
   },
   {
-    key: 'm_141464',
-    name: '1994 · Tao Hanming',
+    key: 'm_19406',
+    name: '1996 · Tao Hanming over Liu Dahua',
     orientation: 'red',
-    blurb: 'From the championship Tao Hanming won, his only national title.',
+    blurb:
+      'Tao Hanming won a single national title, in 1994, in an era owned by four or five other men. Two years later he takes down Liu Dahua, a two-time champion, which is the better evidence of what he could do.',
   },
   {
     key: 'm_137202',
-    name: '1994 · Hu Ronghua beats Liu Dahua',
+    name: '1994 · Fourteen years later',
     orientation: 'red',
     blurb:
       'Hu is forty-nine, and this is the man who ended his run fourteen years earlier. Six years after this he won the national title again, at fifty-five.',
   },
   {
     key: 'm_129045',
-    name: '1995 · Xu Yinchuan beats Liu Dahua',
+    name: '1995 · Guangdong\u2019s next champion',
     orientation: 'red',
     blurb:
-      'Guangdong’s next champion against Hu’s old nemesis. Xu grades 97.7 here with no blunder and no mistake.',
+      'The third of Guangdong’s champions, against the man who ended Hu’s run. Xu Yinchuan grades 97.7 here with no blunder and no mistake, and would hold the top of the game for the next fifteen years.',
   },
   {
     key: 'm_135530',
-    name: '2025 · Lại Lý Huynh at the World Championship',
+    name: '2025 · Shanghai, and the title leaves China',
     orientation: 'red',
     blurb:
       'From the championship in Shanghai that Lại Lý Huynh won, the first man from outside China to take the standard world title in the thirty-five years the event has existed.',
@@ -173,6 +180,69 @@ function parseArgs(): Record<string, string> {
 }
 
 const uciOf = (m: XiangqiMove) => `${m.from}${m.to}`;
+
+/**
+ * dpxq stores "province name" in Chinese. The site reads English first, so the
+ * seat label does too: every player across these thirteen chapters is mapped
+ * explicitly rather than transliterated on the fly, because a wrong romanisation
+ * on a public page is worse than a missing one -- an unmapped name falls back to
+ * the Chinese it came with rather than to a guess.
+ *
+ * Chinese seat labels come back when the English is frozen and the whole study
+ * is translated, through the same i18n mechanism chapter names use. Doing it
+ * now would mean translating text that is still moving.
+ */
+const PLAYER_NAMES: Record<string, string> = {
+  胡荣华: 'Hu Ronghua',
+  杨官璘: 'Yang Guanlin',
+  李义庭: 'Li Yiting',
+  柳大华: 'Liu Dahua',
+  李来群: 'Li Laiqun',
+  吕钦: 'Lü Qin',
+  赵国荣: 'Zhao Guorong',
+  徐天红: 'Xu Tianhong',
+  陶汉明: 'Tao Hanming',
+  许银川: 'Xu Yinchuan',
+  李雪松: 'Li Xuesong',
+  刘伯良: 'Liu Boliang',
+  吴贵临: 'Wu Guilin',
+  冯家俊: 'Fung Ka-chun',
+  赖理兄: 'Lại Lý Huynh',
+};
+
+/**
+ * dpxq event strings are Chinese and carry a year, an occasional sponsor cup,
+ * and an edition number. The site reads English first, so these are mapped
+ * explicitly for the same reason the names are: an unmapped event falls back to
+ * the Chinese it came with rather than to a machine rendering of it.
+ */
+const EVENT_NAMES: [RegExp, string][] = [
+  [/第(\d+)届世界象棋锦标赛/, 'World Xiangqi Championship'],
+  [/世界象棋锦标赛/, 'World Xiangqi Championship'],
+  [/全国象棋个人赛|全国象棋个人锦标赛/, 'National Individual Championship'],
+];
+
+function englishEvent(raw: string): string {
+  const year = raw.match(/^(\d{4})年/)?.[1];
+  for (const [pattern, name] of EVENT_NAMES) {
+    const hit = raw.match(pattern);
+    if (!hit) continue;
+    const edition = hit[1] ? `${ordinal(Number(hit[1]))} ` : '';
+    return `${year ? `${year} ` : ''}${edition}${name}`;
+  }
+  return raw;
+}
+
+function ordinal(n: number): string {
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+  return `${n}${suffix}`;
+}
+
+/** Team/federation prefix dpxq puts before the name; not part of the player. */
+const cleanPlayer = (value: string): string => {
+  const bare = value.trim().split(/\s+/).slice(-1)[0] ?? value;
+  return PLAYER_NAMES[bare] ?? bare;
+};
 
 /** Pikafish UCI is rank-shifted by one against our squares. */
 function fromPikafish(uci: string): XiangqiMove | null {
@@ -220,11 +290,18 @@ function evalText(row: AnnotationRow): string {
 }
 
 function chapterFor(game: HarvestedGame, anno: AnnotationFile, meta: (typeof CHAPTERS)[number]) {
+  // The provenance line is BUILT in English rather than passing dpxq's own
+  // title through: its title is Chinese and encodes the result in 胜/负, which
+  // reads as untranslated noise on an English page.
+  const red = cleanPlayer(game.red);
+  const black = cleanPlayer(game.black);
+  const outcome =
+    game.result === '1-0' ? `${red} won` : game.result === '0-1' ? `${black} won` : 'Drawn';
   const root: SerializedNode = {
     annotations: {
       comments: [
         {
-          text: `${meta.blurb}\n\n${game.title} · ${game.event} · ${game.date}. Engine notes are Pikafish at 1,000,000 nodes a position, the same path the review page uses. Accuracy: Red ${anno.accuracy.first.toFixed(1)}, Black ${anno.accuracy.second.toFixed(1)}.`,
+          text: `${meta.blurb}\n\n${red} (Red) vs ${black} (Black) · ${englishEvent(game.event)} · ${game.date.slice(0, 10)} · ${outcome}. Engine notes are Pikafish at 1,000,000 nodes a position, the same path the review page uses. Accuracy: Red ${anno.accuracy.first.toFixed(1)}, Black ${anno.accuracy.second.toFixed(1)}.`,
         },
       ],
     },
@@ -268,6 +345,16 @@ function chapterFor(game: HarvestedGame, anno: AnnotationFile, meta: (typeof CHA
     variant: 'xiangqi' as const,
     orientation: meta.orientation,
     root: { version: 1 as const, root },
+    // Identity and outcome as PGN-style tags, so the board can label the seats
+    // and a flip keeps them attached to the right side.
+    tags: {
+      red,
+      black,
+      result: game.result,
+      event: englishEvent(game.event),
+      date: game.date.slice(0, 10),
+      ...(game.sourceUrl ? { site: game.sourceUrl } : {}),
+    },
   };
 }
 
@@ -337,7 +424,9 @@ async function main(): Promise<void> {
   const createResponse = await post('/api/studies', {
     name: 'Every Xiangqi Champion',
     description:
-      'One game for each national and world champion, from the first championship in 1956 to Shanghai in 2025, annotated by our own engine. Companion to /blog/xiangqi-champions.',
+      'One game for each national champion, from the first championship in 1956 to Shanghai in 2025, annotated by our own engine.\n\n' +
+      'Read in order it is one argument: for most of these seventy years the best xiangqi player alive came from Shanghai or from Guangdong, and the two cities took turns. Guangdong produced Yang Guanlin, then Lü Qin, then Xu Yinchuan. Shanghai produced Hu Ronghua, who held the rest of the country off by himself for twenty years. Almost every chapter here is one of them against another, which is the point: none of these men were champions of an empty room.\n\n' +
+      'Companion to /blog/xiangqi-champions.',
     visibility: args.visibility ?? 'unlisted',
     chapter: first,
   });

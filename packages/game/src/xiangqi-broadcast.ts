@@ -1,5 +1,6 @@
 import { XIANGQI_SPEC_ID } from './game-specs.js';
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   createInitialXiangqiState,
   type XiangqiGameEndReason,
   type XiangqiMove,
@@ -305,17 +306,6 @@ export function validateXiangqiBroadcastBoards(
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: boards };
 }
-
-/**
- * End reasons our kernel decides on its own but a human arbiter decides in real
- * play. Xiangqi's perpetual-check/chase (长打) rules mean a repetition is not
- * automatically a draw, and a long endgame outlasts the progress clock without
- * the game being over. Tournament records therefore run straight past both.
- *
- * Checkmate and stalemate are NOT in here: no ruleset lets play continue.
- */
-export const ARBITER_ADJUDICATED_DRAWS: ReadonlySet<XiangqiGameEndReason> =
-  new Set<XiangqiGameEndReason>(['repetition', 'progress-clock']);
 
 export type ReplayXiangqiBroadcastBoardOptions = {
   /**

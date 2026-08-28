@@ -15,6 +15,7 @@
 // drop variants have no relative-notation drop form.
 
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   coordOf,
   createInitialXiangqiState,
   type XiangqiColor,
@@ -276,6 +277,12 @@ export function formatXiangqiMove(
  * Format a whole game line, replaying from the standard opening. If a move is
  * illegal at its turn, that move and the rest of the line render as
  * coordinate labels (the board state is no longer trustworthy).
+ *
+ * A record is not live play, so an ARBITER-ADJUDICATED draw does not end the
+ * line: this kernel auto-draws on repetition and on the progress clock, and real
+ * tournament games run past both. Before this, notating such a game silently
+ * dropped to raw coordinates from the auto-draw onward -- 18 plies of a 1965
+ * championship game and 16 of the 2025 world final rendered as `f6-g6`.
  */
 export function formatXiangqiMoves(
   moves: readonly XiangqiMove[],
@@ -283,7 +290,15 @@ export function formatXiangqiMoves(
 ): string[] {
   let state: XiangqiGameState | null = createInitialXiangqiState('notation-format');
   const labels: string[] = [];
-  for (const move of moves) {
+  for (const [index, move] of moves.entries()) {
+    // Resume through an auto-draw the record clearly played past. Red moves
+    // first, so an even index is Red's turn.
+    if (
+      state?.status.type === 'finished' &&
+      ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)
+    ) {
+      state = { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+    }
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {
       labels.push(formatXiangqiMove(state, move, style));
       state = applyStandardXiangqiMove(state, move);

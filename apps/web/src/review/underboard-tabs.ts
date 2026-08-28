@@ -101,6 +101,57 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
 
   const buttons = new Map<string, HTMLButtonElement>();
   let crosstableLoaded = false;
+
+  /**
+   * Tab bodies have very different natural heights, so switching tabs reflowed
+   * the whole page: the board column and the rail beside it are aligned to this
+   * panel, and every click moved them.
+   *
+   * The floor only ever GROWS, and only from a body that has actually rendered.
+   * A fixed min-height would be a guess that is wrong on some viewport, and
+   * stacking every body to take the max would force lazy tabs (the crosstable)
+   * to load and would size the panel to its tallest content forever. Growing to
+   * the tallest tab the reader has actually opened settles after a click or two
+   * and never shrinks under them mid-session.
+   */
+  let heightFloor = 0;
+  const raiseFloor = (height: number): void => {
+    if (height <= heightFloor) return;
+    heightFloor = height;
+    bodies.style.minHeight = `${Math.round(heightFloor)}px`;
+  };
+
+  /**
+   * Measure EVERY body once at mount rather than learning heights a click at a
+   * time. Growing-on-visit still left the first visit to a taller tab (Share &
+   * export is the tall one) moving the page, which is the jar this exists to
+   * stop. Each body is briefly unhidden off-screen, measured, and restored.
+   */
+  const measureAll = (): void => {
+    for (const def of tabDefs) {
+      if (!def.body.hidden) {
+        raiseFloor(def.body.getBoundingClientRect().height);
+        continue;
+      }
+      const { position, visibility, left } = def.body.style;
+      def.body.style.position = 'absolute';
+      def.body.style.visibility = 'hidden';
+      def.body.style.left = '-9999px';
+      def.body.hidden = false;
+      raiseFloor(def.body.getBoundingClientRect().height);
+      def.body.hidden = true;
+      def.body.style.position = position;
+      def.body.style.visibility = visibility;
+      def.body.style.left = left;
+    }
+  };
+
+  // A body whose content arrives later (the lazy crosstable, a populated share
+  // input) can outgrow the mount-time floor, so keep raising it on visit too.
+  const holdHeight = (body: HTMLElement): void => {
+    requestAnimationFrame(() => raiseFloor(body.getBoundingClientRect().height));
+  };
+
   const show = (id: string): void => {
     if (id === 'crosstable' && opts.crosstable && !crosstableLoaded) {
       crosstableLoaded = true;
@@ -111,6 +162,7 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
       const active = def.id === id;
       def.body.hidden = !active;
       buttons.get(def.id)?.classList.toggle('review-underboard-tab--active', active);
+      if (active) holdHeight(def.body);
     }
     opts.onTabChange?.(id);
   };
@@ -127,6 +179,8 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   }
   panel.append(tabs, bodies);
   show(tabDefs[0]!.id);
+  // After the panel is in the document, so the bodies have a width to wrap at.
+  requestAnimationFrame(measureAll);
   return panel;
 }
 

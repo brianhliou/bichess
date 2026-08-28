@@ -1,0 +1,28 @@
+{
+  "schema": "mistboard.xiangqi.notation-cases.v1",
+  "note": "Real championship games whose records play PAST this kernel auto-drawing on repetition or the progress clock. Before 2026-08-28 the notation formatter degraded to raw coordinate labels from that ply onward, in a shipped article and study.",
+  "cases": [
+    {
+      "key": "m_17225",
+      "adjudicatedAt": 166,
+      "reason": "repetition",
+      "plies": 183,
+      "red": "杨官璘",
+      "black": "胡荣华",
+      "event": "1965年全国象棋个人赛",
+      "date": "1965-11-12",
+      "iccs": "h2e2 b9c7 h0g2 h9g7 i0h0 i9h9 g3g4 c6c5 b0a2 c9e7 b2b6 g6g5 g4g5 e7g5 b6c6 a9b9 a0b0 b7b3 c3c4 c5c4 h0h4 g7f5 a2c1 c4c3 h4c4 g9e7 c6c3 b3e3 e2e6 c7e6 b0b9 h7g7 b9b2 g7g2 b2g2 e6d4 g2d2 e3e6 c4d4 f5d4 d2d4 h9h3 c3c4 h3e3 d0e1 e3c3 e0d0 c3c1 d4d9 e9e8 c0e2 c1c3 d9d6 e6e4 i3i4 a6a5 c4c6 c3a3 c6i6 e8f8 d6d5 f9e8 i4i5 f8f9 i6i9 a5a4 d5d4 e4e5 i5i6 e5c5 i6h6 c5c9 i9i4 a3a0 d0d1 a4a3 d4f4 f9e9 f4a4 c9d9 i4e4 e9f9 e1f2 a0f0 a4a3 f0f1 d1d0 e8d7 d0e0 f1f2 a3a9 f2f0 e0e1 f0f1 e1e0 d9c9 h6g6 f1f5 g6g7 f5f0 e0e1 f0f8 a9b9 d7e8 b9b5 c9c7 b5b9 c7c9 e4h4 c9e9 h4h9 e7c9 b9c9 e8d9 h9e9 f9e9 c9c5 g5i7 c5e5 d9e8 e2g4 i7g9 g0i2 e9d9 e5d5 d9e9 d5b5 e9d9 g4e2 d9e9 e2g0 e9d9 e1e0 g9i7 i2g4 i7g9 b5d5 d9e9 d5a5 e9d9 a5b5 g9i7 b5d5 d9e9 d5d7 i7g9 g7f7 f8i8 d7d8 i8h8 d8d5 h8h7 f7f8 h7e7 e0d0 g9i7 d5b5 e7d7 d0e0 d7e7 e0d0 e7d7 d0e0 d7e7 e0d0 e7d7 d0e0 d7e7 e0d0 e8d9 g0e2 e7d7 d0e0 d7e7 b5h5 i7g9 h5h9 e7g7 h9h8 g7e7 h8g8 g9i7 g8h8"
+    },
+    {
+      "key": "m_135530",
+      "adjudicatedAt": 202,
+      "reason": "progress-clock",
+      "plies": 217,
+      "red": "赖理兄",
+      "black": "冯家俊",
+      "event": "2025年农行杯第19届世界象棋锦标赛",
+      "date": "2025-09-23",
+      "iccs": "h2d2 g6g5 h0g2 h9g7 i0h0 i9h9 h0h4 h7i7 h4f4 b9c7 c3c4 b7a7 b0c2 a9b9 a0b0 b9b3 b2a2 b3b0 c2b0 a7a3 a2c2 c9e7 c2c3 h9h8 d2d7 h8h2 b0c2 a3a4 c4c5 h2g2 c3c6 e7c5 d7i7 c5e7 c2e1 g2d2 f4a4 g9i7 c0e2 d2d6 c6c0 c7b5 e1c2 g7f5 f0e1 f5g3 a4b4 d6d5 c2a3 b5d4 a3c4 e7c5 b4b6 g3f1 b6e6 d9e8 c0c1 f1h2 e3e4 g5g4 c1d1 d4e2 c4d2 e2d4 e6h6 h2f3 d2f3 d4b3 h6b6 d5d1 b6b3 g4f4 f3d2 f4e4 b3b9 e8d9 b9b4 e4e3 b4e4 d9e8 e4e3 i7g9 e3e6 i6i5 e6e5 c5e7 e5i5 d1c1 i5i6 c1c5 i3i4 c5g5 g0e2 g5e5 d2c4 e5e2 i6a6 e7c5 i4i5 e2e4 c4b2 e4e7 b2a4 e7c7 a6d6 c5a7 a4b6 g9e7 i5i6 e7c9 i6h6 c9e7 h6g6 e7c9 d6e6 c7b7 e6d6 b7c7 g6g7 c7b7 g7g8 b7c7 d6g6 c7b7 b6c4 b7c7 c4d6 c7d7 g8f8 e9d9 g6f6 d9e9 e0f0 e9d9 e1d2 c9e7 d0e1 e7c9 f8f9 e8f9 f6f9 d9d8 d6f5 d8e8 f5h6 c9e7 f9f8 e8e9 f8f7 a7c5 h6f5 d7d3 f5g7 e9d9 f7f9 d9d8 f9f6 d8d9 f0e0 d3d4 g7f5 d4d7 f6b6 d9e9 f5d6 e9d9 d6e4 d7d4 e4f6 d9d8 f6h7 d4d5 h7f8 d8e8 f8e6 e8e9 e6g7 e9d9 b6b9 d9d8 b9e9 d5d3 g7f9 d3f3 e1f0 f3e3 d2e1 e3f3 e9b9 d8e8 b9d9 f3f4 e0d0 f4f3 d9d5 f3f6 f9g7 f6f7 g7f5 f7f6 f5g3 e8e9 g3e4 f6f4 d5e5 e9f9 e5e6 f4f7 e4d6 f9f8 d0e0 f8f9 e1f2 f9f8 e0e1 f8f9 e6e5"
+    }
+  ]
+}

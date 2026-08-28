@@ -571,7 +571,55 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   boardEl.className = presentation.boardHostClassName;
   const boardAriaLabel = config.boardAriaLabel ?? presentation.defaultBoardAriaLabel;
   boardEl.setAttribute('aria-label', boardAriaLabel);
-  wrap.append(boardEl);
+
+  // Seat labels: thin strips above and below the board naming who has which
+  // side. `config.players` alone was not enough -- it only ever reached the
+  // crosstable and the accuracy summary, both of which need an analysis a study
+  // chapter does not have, so a chapter of a real game had no way to say who
+  // had Red except its own title, which cannot follow a flip.
+  //
+  // The strips are laid out by ORIENTATION, so flipping the board moves the
+  // names with it: the side at the bottom is always the one facing the reader.
+  const seatNames = config.players;
+  const topSeat = seatNames ? document.createElement('div') : null;
+  const bottomSeat = seatNames ? document.createElement('div') : null;
+  function paintSeats(): void {
+    if (!topSeat || !bottomSeat || !seatNames) return;
+    // `perspective(false)` is the variant's unflipped side, which is Red for
+    // every red/black variant and White for chess. Comparing against it avoids
+    // hardcoding an ink name in the shared controller.
+    const bottomIsRed = orientation() === presentation.perspective(false);
+    const near = bottomIsRed ? seatNames.red : seatNames.black;
+    const far = bottomIsRed ? seatNames.black : seatNames.red;
+    const paint = (
+      el: HTMLElement,
+      name: string | undefined,
+      isRed: boolean,
+      slot: 'top' | 'bottom',
+    ): void => {
+      el.className = `review-seat review-seat--${slot} review-seat--${isRed ? 'red' : 'black'}`;
+      el.replaceChildren();
+      const disc = document.createElement('span');
+      disc.className = 'review-seat__disc';
+      const label = document.createElement('span');
+      label.className = 'review-seat__name';
+      label.textContent = name ?? (isRed ? 'Red' : 'Black');
+      el.append(disc, label);
+    };
+    paint(topSeat, far, !bottomIsRed, 'top');
+    paint(bottomSeat, near, bottomIsRed, 'bottom');
+  }
+  if (topSeat && bottomSeat) {
+    // The strips are taken OUT of the flow and anchored to the wrapper. Adding
+    // them as grid rows pushed the board down and broke its alignment with the
+    // columns either side, which is the whole thing lichess gets right: the
+    // identity is added around the board without the board moving.
+    wrap.classList.add('review-board-wrap--seated');
+    paintSeats();
+    wrap.append(boardEl, topSeat, bottomSeat);
+  } else {
+    wrap.append(boardEl);
+  }
   const interactive = presentation.createBoard({
     board: boardEl,
     getInteractionView: () => viewForKey(currentPov),
@@ -1256,6 +1304,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   function flipBoard(): void {
     flipped = !flipped;
+    // The names travel with the board: whoever is at the bottom is the side the
+    // reader is looking from.
+    paintSeats();
     render();
   }
   function lineEnd(path: TreePath): TreePath {

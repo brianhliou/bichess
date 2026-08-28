@@ -106,6 +106,20 @@ export type XiangqiGameEndReason =
   | 'chasing'
   | 'progress-clock';
 
+/**
+ * End reasons this kernel decides on its own but a human arbiter decides in real
+ * play. Xiangqi's perpetual-check/chase (长打) rules mean a repetition is not
+ * automatically a draw, and a long endgame outlasts the progress clock without
+ * the game being over, so tournament RECORDS run straight past both.
+ *
+ * Anything replaying a finished record -- broadcast ingestion, notation, export
+ * -- must continue past these. Anything adjudicating LIVE play must not.
+ * Checkmate and stalemate are deliberately absent: no ruleset lets play go on.
+ */
+export const ARBITER_ADJUDICATED_DRAWS: ReadonlySet<XiangqiGameEndReason> = new Set<
+  XiangqiGameEndReason
+>(['repetition', 'progress-clock']);
+
 export type XiangqiGameStatus =
   | { type: 'playing'; turn: XiangqiColor }
   | { type: 'finished'; winner: XiangqiColor | null; reason: XiangqiGameEndReason }
