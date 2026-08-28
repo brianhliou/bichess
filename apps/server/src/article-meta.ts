@@ -10,6 +10,28 @@ export type ArticleKind = 'rules' | 'article';
 
 const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 
+// Rules pages for variants retired from public surfaces (the source of truth is
+// VARIANT_PUBLIC_SURFACE_ENABLED in apps/web/src/variant-public-surfaces.ts).
+// Their URLs stay live on purpose and the prerenderer already stamps them
+// `noindex, follow`; this set is what keeps the SITEMAP from advertising them
+// anyway, which had the site telling Google to index pages the pages
+// themselves declined.
+//
+// This is a second copy of a list the server cannot import, so it is only safe
+// because articles-meta-sync.test.ts fails when the two disagree. Do not edit
+// one end alone.
+const RETIRED_RULES_SLUGS = new Set([
+  'crossroads-chess',
+  'dark-crazyhouse',
+  'dark-crossroads-chess',
+  'dark-draft960',
+  'dark-mini-xiangqi',
+  'drop-mini-xiangqi',
+  'kriegspiel',
+  'mini-xiangqi',
+  'reveal-chess',
+]);
+
 // Slugs that exist in articles-data but are not published yet. A draft is
 // hidden in the production web build (the route 404s client-side), but the
 // server still answers /blog/<slug> with a 200 shell and injects this file's
@@ -30,7 +52,11 @@ export function articleIsUnpublished(slug: string): boolean {
 }
 
 export function articleIsIndexable(slug: string): boolean {
-  return !NON_INDEXED_ARTICLE_SLUGS.has(slug) && !UNPUBLISHED_ARTICLE_SLUGS.has(slug);
+  return (
+    !NON_INDEXED_ARTICLE_SLUGS.has(slug) &&
+    !UNPUBLISHED_ARTICLE_SLUGS.has(slug) &&
+    !RETIRED_RULES_SLUGS.has(slug)
+  );
 }
 
 export const ARTICLE_META: Record<
