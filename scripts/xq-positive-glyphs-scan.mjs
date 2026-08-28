@@ -14,7 +14,7 @@
 // Read-only. Prints a report; changes nothing.
 
 import { spawn } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   pikafishXiangqiNetPath,
@@ -237,6 +237,7 @@ for (const file of files) {
         second,
         legal: result.legalMoves,
       };
+      hit.key = key;
       hits.push(hit);
       gameHits.push(hit);
     }
@@ -261,6 +262,16 @@ console.log(
 );
 console.log(`marked !! : ${hits.filter((h) => h.glyph === '!!').length}`);
 console.log(`marked !  : ${hits.filter((h) => h.glyph === '!').length}`);
+// Emit the hits so a seeder can attach the NAGs without running an engine of
+// its own: the inputs this needs (second-best win, the capture line) are not in
+// the persisted analysis, so the scan is the only place they exist.
+const outPath = process.argv[process.argv.indexOf('--out') + 1];
+if (process.argv.includes('--out') && outPath) {
+  const byKey = {};
+  for (const hit of hits) (byKey[hit.key] ??= []).push(hit);
+  writeFileSync(outPath, `${JSON.stringify({ schema: 'mistboard.xiangqi.positive-glyphs.v1', byKey }, null, 2)}\n`);
+  console.log(`\nwrote ${hits.length} hits to ${outPath}`);
+}
 console.log('\nwhy plies were not marked:');
 for (const [reason, n] of [...reasons.entries()].sort((a, b) => b[1] - a[1])) {
   console.log(`  ${reason.padEnd(28)} ${n}`);
