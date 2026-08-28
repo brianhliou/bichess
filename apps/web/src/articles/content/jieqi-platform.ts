@@ -1,8 +1,9 @@
+import { JIEQI_PLATFORM_GAME } from '../../jieqi-platform-game.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// Platform showcase for jieqi: what Mistboard offers, stated plainly, with four
-// figures captured from one real production game rather than mocked. The
-// persuasion is meant to come from the screenshots; the copy states capability
+// Platform showcase for jieqi: what Mistboard offers, stated plainly, built
+// around one real production game rather than mocked material. The persuasion is
+// meant to come from the replay and the screenshots; the copy states capability
 // and stops.
 //
 // Facts checked against the code and against prod rather than assumed: three
@@ -13,9 +14,11 @@ import type { Article, ArticleBlock } from '../types.js';
 // `publicSurface: 'casual'`, so the rating pool exists while games are not
 // actually rated: the copy says casual and promises no ladder.
 //
-// Every figure comes from jq_96f40ebb, one 146-ply game the engine lost. Keeping
-// them from a single game is deliberate: a reader can follow one game across the
-// board, the graph and the reveal table instead of re-orienting four times.
+// The opening replay and every figure come from jq_96f40ebb, one 146-ply game the
+// engine lost. Keeping them from a single game is deliberate: a reader steps
+// through the game up top, then meets the same game in the graph and the reveal
+// table instead of re-orienting each time. The replay used to be a cropped
+// screenshot of a board, which cut badly at every width; a widget has no crop.
 // Figures are captured from CACHED analysis, so a change to
 // JIEQI_ANALYSIS_DEPTH invalidates them (the cache key carries depth) and they
 // have to be re-shot. That has already bitten once.
@@ -41,11 +44,19 @@ export const jieqiPlatformArticle: Article = {
         'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps its true identity for the rest of the game. The [rules page](/rules/jieqi) has the details.',
     },
     {
-      kind: 'image-figure',
-      src: '/article-thumbs/jieqi-midgame-board.png',
-      alt: 'A jieqi board partway through a game. Some pieces are plain coloured discs, still face-down, while others have been revealed and show a chariot, horses, elephants, a cannon and soldiers in red and black outlines.',
+      kind: 'jieqi-replay',
+      spec: {
+        red: JIEQI_PLATFORM_GAME.red,
+        black: JIEQI_PLATFORM_GAME.black,
+        event: JIEQI_PLATFORM_GAME.event,
+        outcome: JIEQI_PLATFORM_GAME.outcome,
+        resultText: JIEQI_PLATFORM_GAME.result,
+        deal: JIEQI_PLATFORM_GAME.deal,
+        moves: JIEQI_PLATFORM_GAME.moves,
+        perspective: 'black',
+      },
       caption:
-        'Move 18 of a real game. The plain discs are still face-down; everything else has been turned over and is committed to what it turned out to be.',
+        'A real game on Mistboard: a guest beats the engine in 73 moves. Step through it. Face-down pieces are plain discs and turn over the first time they move, keeping whatever they turned out to be.',
     } as ArticleBlock,
     {
       kind: 'paragraph',
@@ -66,17 +77,6 @@ export const jieqiPlatformArticle: Article = {
           kind: 'paragraph',
           text:
             'Every game is saved. You can replay it move by move, share the link, and run analysis over it whenever you like, including games you played as a guest. Jieqi here is casual: there is no jieqi ladder yet.',
-        },
-        {
-          kind: 'cta',
-          buttons: [
-            {
-              label: 'Play the engine',
-              href: '/?play=computer&gameSpecId=jieqi',
-              emphasis: 'primary',
-            },
-            { label: 'Play a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
-          ],
         },
       ],
     },
@@ -105,7 +105,17 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Each reveal is evaluated across every piece the tile could have been, with each outcome scored as its own position and weighted by how likely it was. The review then shows a ranked set of candidate moves with the played move marked, and a dice badge giving what the draw itself was worth in win percentage.',
+            'Each reveal is evaluated across every piece the tile could have been, with each outcome scored as its own position and weighted by how many of that piece you have left. The review then shows a ranked set of candidate moves with your move marked, and a dice badge giving what the draw itself was worth.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The percentage beside each candidate is that move\'s win percentage for the player to move, averaged the same way over every piece the tile could turn out to be. It is not a probability that the move is best, and it is not an engine rank. So a candidate at 52% is a move that wins a little over half the time across all the pieces that tile might have been.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The list is the engine\'s top three, plus the move you actually played when that is not already among them. That is why some reveals show three candidates and others show four.',
         },
         {
           kind: 'image-figure',
@@ -156,30 +166,34 @@ export const jieqiPlatformArticle: Article = {
     {
       heading: 'The engine',
       blocks: [
+        { kind: 'sub-heading', text: 'What it is' },
         {
           kind: 'paragraph',
           text:
-            'PikaJieQi is a fork of Pikafish, the open-source xiangqi engine, on a branch built for jieqi. Classical search with a hand-written evaluation, no neural network. It is listed as Pikafish in the lobby.',
+            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on a branch built for jieqi. Classical search with a hand-written evaluation and no neural network, which is why it is beatable in a way a top xiangqi engine is not. It is listed as Pikafish in the lobby.',
         },
         {
           kind: 'paragraph',
           text:
-            'It receives only the redacted board, with every face-down piece written as a faceless x. It does not know the deal, and a test fails the build if the wire format ever leaks a true identity.',
+            'The build is pinned to one upstream commit rather than tracking a branch, so the engine behind your analysis does not quietly change under you between one game and the next.',
         },
+        { kind: 'sub-heading', text: 'What it is allowed to see' },
         {
           kind: 'paragraph',
           text:
-            'Its known weakness is that it values its own hidden pieces optimistically, so it over-commits them. That bias sits in the evaluation rather than the search depth, which means more thinking time does not remove it. The game above is one it lost that way.',
+            'It receives the redacted board only, with every face-down piece written as a faceless x. It does not know the deal. That boundary is the whole reason the engine can be trusted to play and to analyse the same game, so it is enforced by a test that fails the build if the wire format ever leaks a true identity.',
         },
-      ],
-    },
-    {
-      heading: 'Open source',
-      blocks: [
+        { kind: 'sub-heading', text: 'What it is bad at' },
         {
           kind: 'paragraph',
           text:
-            'The site is open source, including the redaction boundary that keeps the engine honest and the tests that guard it.',
+            'It values its own hidden pieces optimistically, so it over-commits them. That bias sits in the evaluation rather than the search depth, which means more thinking time does not remove it. The game at the top of this page is one it lost that way.',
+        },
+        { kind: 'sub-heading', text: 'All of it is open source' },
+        {
+          kind: 'paragraph',
+          text:
+            'Mistboard is [open source](https://github.com/brianhliou/mistboard): the jieqi rules engine, the redaction boundary, the decision-versus-luck maths described above, and the tests that hold them in place. If you think a number on this page is wrong, the code that produced it is readable.',
         },
       ],
     },
