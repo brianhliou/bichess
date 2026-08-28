@@ -309,12 +309,16 @@
   text-decoration: underline;
 }
 
+/* Flat cards: the border does the separating, the shadow is the same hairline
+   as .static-page-panel / .patron-card. These used to carry
+   0 2px 5px var(--site-shadow), which on the warm-gray puzzle page read as a
+   gray band under every card (and 0.42 black in dark). */
 .puzzle-trainer-panel,
 .puzzle-left-card {
   border: 1px solid var(--site-border-soft);
   border-radius: 8px;
   background: var(--site-panel);
-  box-shadow: 0 2px 5px var(--site-shadow);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .puzzle-trainer-panel {
