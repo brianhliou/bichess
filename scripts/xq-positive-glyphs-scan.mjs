@@ -268,7 +268,10 @@ console.log(`marked !  : ${hits.filter((h) => h.glyph === '!').length}`);
 const outPath = process.argv[process.argv.indexOf('--out') + 1];
 if (process.argv.includes('--out') && outPath) {
   const byKey = {};
-  for (const hit of hits) (byKey[hit.key] ??= []).push(hit);
+  for (const hit of hits) {
+    byKey[hit.key] ??= [];
+    byKey[hit.key].push(hit);
+  }
   writeFileSync(
     outPath,
     `${JSON.stringify({ schema: 'mistboard.xiangqi.positive-glyphs.v1', byKey }, null, 2)}\n`,
