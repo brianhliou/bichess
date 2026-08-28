@@ -36,7 +36,12 @@ export function mountFortressXiangqiWatchReplay(
     viewAtPly: postgameViewAtPly,
     paneKind: () => 'truth',
     renderBoard: (view, orientation) => renderFortressXiangqiBoardSvg(view, orientation),
-    fillCaptures: (host, view, owner) => fillFortressXiangqiReserve(host, view, owner),
+    // allRoles: the showcase draws every droppable role and ghosts the ones
+    // held none of, the way lichess draws a crazyhouse pocket. Held-only rows
+    // render the common empty pocket as a blank band, and shift the pieces
+    // already in hand every time a new one arrives.
+    fillCaptures: (host, view, owner) =>
+      fillFortressXiangqiReserve(host, view, owner, { allRoles: true }),
     sidedCaptures: true,
   });
 }
