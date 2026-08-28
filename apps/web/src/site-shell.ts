@@ -5,6 +5,7 @@ import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './
 import {
   adminNavItems,
   communityNavItems,
+  DISCORD_INVITE_URL,
   donateNavItem,
   learnNavItems,
   type NavItem,
@@ -296,9 +297,14 @@ function buildSignedOutAccountLinks(locale: Locale = currentLocale()): HTMLEleme
 
 function navLink(item: NavItem, locale: Locale): HTMLAnchorElement {
   const link = document.createElement('a');
-  link.href = localizedHref(item.href, locale);
+  link.href = item.external ? item.href : localizedHref(item.href, locale);
   link.textContent = t(item.labelKey, {}, locale);
   link.className = 'site-nav-link';
+  if (item.external) {
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener';
+    return link;
+  }
   if (item.signedInOnly) {
     // Initial visibility comes from the persisted signed-in hint so the common
     // case paints right immediately (no reveal jank); account-nav reconciles
@@ -444,6 +450,7 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   { href: '/faq', labelKey: 'footer.faq' },
   { href: '/patron', labelKey: 'footer.patron' },
   { href: '/contact', labelKey: 'footer.contact' },
+  { href: DISCORD_INVITE_URL, labelKey: 'footer.discord', external: true },
   { href: '/source', labelKey: 'footer.source' },
   { href: '/terms', labelKey: 'footer.terms' },
   { href: '/privacy', labelKey: 'footer.privacy' },

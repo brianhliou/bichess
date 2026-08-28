@@ -65,6 +65,14 @@ describe('site shell nav', () => {
     expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/blog"]')?.textContent).toBe(
       'Blog',
     );
+    // Off-site invite: no locale prefix, new tab, never marked active.
+    const discord = communityPanel?.querySelector<HTMLAnchorElement>(
+      'a[href^="https://discord.gg/"]',
+    );
+    expect(discord?.textContent).toBe('Discord');
+    expect(discord?.target).toBe('_blank');
+    expect(discord?.rel).toContain('noopener');
+    expect(discord?.classList.contains('active')).toBe(false);
     // The Community title is a link to the player page, not just a toggle.
     const communityToggle = [
       ...nav.querySelectorAll<HTMLElement>('.site-nav-menu > .site-nav-menu-toggle'),
@@ -175,6 +183,9 @@ describe('site shell nav', () => {
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
+    const footerDiscord = footer.querySelector<HTMLAnchorElement>('a[href^="https://discord.gg/"]');
+    expect(footerDiscord?.textContent).toBe('Discord');
+    expect(footerDiscord?.target).toBe('_blank');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
   });
 });
