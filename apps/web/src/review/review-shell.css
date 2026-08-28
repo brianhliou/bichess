@@ -1400,3 +1400,29 @@
     min-height: 0;
   }
 }
+
+/* ── The board / pocket seam ─────────────────────────────────────────────────
+   Where a pocket column stands beside the board, the two inner edges go square
+   so they read as one continuous division rather than two rounded cards facing
+   each other across a gap. The board keeps its rounded LEFT (page) edge and the
+   pockets keep their rounded RIGHT (page) edge; only the facing corners change.
+
+   Scoped with :has() to surfaces that actually mount a pocket. Analysis and
+   completed-game boards already square their right edge for the eval gauge
+   (--review-board-left-radius above), so this is what brings a STUDY board into
+   the same alignment without disturbing a study that has no pocket beside it. */
+.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child,
+.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child > svg {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/* The pockets are the column's end caps, so squaring their page-side corners is
+   what flattens the whole left edge of the column against the board. */
+.review-rail-pocketbox > .review-material-row:first-child {
+  border-start-start-radius: 0;
+}
+
+.review-rail-pocketbox > .review-material-row:last-child {
+  border-end-start-radius: 0;
+}
