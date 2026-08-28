@@ -162,6 +162,13 @@ export async function handleWebSocketConnection(
     socket.close(1008, 'rated requires account');
     return;
   }
+  if (assignment.deniedReason === 'play-disabled') {
+    // The account is an identity, not a player (126). Distinct close reason so
+    // the client explains the lock instead of showing the generic spectator or
+    // private-room message, which would read as a bug.
+    socket.close(1008, 'play disabled');
+    return;
+  }
   if (seat === 'spectator' && !solo && !canObserveLiveRoom(room.projection, room.gameSpecId)) {
     socket.close(1008, 'private room');
     return;

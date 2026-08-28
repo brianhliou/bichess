@@ -30,6 +30,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
+import { isPlayDisabled } from '../persistence.js';
 import {
   isPuzzleQualitySessionId,
   type PuzzleQualityVote,
@@ -233,6 +234,7 @@ export async function tryHandle(
   const attemptMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/attempt$/);
   if (attemptMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
+    if (await refusedForPlayLock(request, response)) return true;
     const puzzle = await puzzleById(decodeURIComponent(attemptMatch[1]!));
     if (!puzzle) {
       writeJson(response, 404, { error: 'not_found' });
@@ -282,6 +284,7 @@ export async function tryHandle(
   const revealMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/reveal$/);
   if (revealMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
+    if (await refusedForPlayLock(request, response)) return true;
     const puzzle = await puzzleById(decodeURIComponent(revealMatch[1]!));
     if (!puzzle) {
       writeJson(response, 404, { error: 'not_found' });
@@ -414,6 +417,19 @@ function attemptOutcome(attempt: PuzzleAttempt): boolean | null {
   return attempt.code === 'incorrect-move' ? false : null;
 }
 
+// The per-account play lock (126) on the two routes that write a puzzle_attempts
+// row. Refused outright rather than silently unrated: an account that is an
+// identity rather than a player should be told, not left solving puzzles that
+// quietly do not count. A signed-out solver is never locked.
+async function refusedForPlayLock(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<boolean> {
+  if (!isPlayDisabled(await currentAccountUser(request))) return false;
+  writeJson(response, 403, { error: 'play_disabled' });
+  return true;
+}
+
 // Record + rate the outcome for a signed-in user, once per (user, puzzle). Anon
 // users, non-terminal moves, and persistence-off all return null (no rating).
 async function recordAttemptRating(
@@ -441,6 +457,9 @@ async function recordOutcomeRating(
 ): Promise<PuzzleAttemptRating | null> {
   const user = await currentAccountUser(request);
   if (!user) return null;
+  // Second line of defence behind refusedForPlayLock: no caller may book an
+  // attempt against a locked account, whatever route it arrives on.
+  if (isPlayDisabled(user)) return null;
   const result = await recordPuzzleAttempt({
     userId: user.id,
     puzzleId: puzzle.id,

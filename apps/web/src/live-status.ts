@@ -233,6 +233,7 @@ export function reasonPhraseLabel(reason: GameEndReason): string {
 }
 
 function rejectedBody(): string {
+  if (liveState.closeReason === 'play disabled') return t('live.rejectedPlayDisabled');
   if (liveState.closeReason === 'private room') return t('live.rejectedPrivateRoom');
   if (liveState.closeReason === 'rated requires account') return t('live.rejectedRatedAccount');
   if (liveState.closeReason === 'correspondence requires account')

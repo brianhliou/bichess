@@ -34,6 +34,7 @@ type CtxOverrides = Partial<{
   view: TenantWebView<Color> | null;
   seat: unknown;
   connectionState: string;
+  closeReason: string;
   connectedSeats: Partial<Record<Color, boolean>>;
   seatDisplayNames: Partial<Record<Color, string>>;
   clock: {
@@ -56,6 +57,7 @@ function chromeHarness(
     view: () => overrides.view ?? playingView(),
     seat: () => overrides.seat ?? 'white',
     connectionState: () => overrides.connectionState ?? 'connected',
+    closeReason: () => overrides.closeReason ?? '',
     clock: () => overrides.clock ?? null,
     timeControl: () => overrides.timeControl ?? null,
     connectedSeats: () => overrides.connectedSeats ?? { white: true, red: true },
@@ -93,6 +95,27 @@ describe('tenant room chrome action status', () => {
     const { chrome, refs } = chromeHarness();
     chrome.renderActionStatus();
     expect(refs.actionSection.hidden).toBe(true);
+  });
+
+  it('names the per-account play lock instead of the tenant room-not-active line', () => {
+    const { chrome, refs } = chromeHarness({
+      connectionState: 'rejected',
+      closeReason: 'play disabled',
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.textContent).toContain('Playing is off');
+    expect(refs.actionStatus.textContent).toContain('This account cannot play games.');
+    expect(refs.actionStatus.textContent).not.toContain('Room not active.');
+  });
+
+  it('falls back to the tenant rejected line for every other close reason', () => {
+    const { chrome, refs } = chromeHarness({
+      connectionState: 'rejected',
+      closeReason: 'private room',
+    });
+    chrome.renderActionStatus();
+    expect(refs.actionStatus.textContent).toContain('Room unavailable');
+    expect(refs.actionStatus.textContent).toContain('Room not active.');
   });
 
   it('shows a replay notice while scrubbed off live', () => {

@@ -148,6 +148,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.solved': '已解開。',
   'puzzle.correct': '正確。',
   'puzzle.tryAnotherMove': '換一手試試。',
+  'puzzle.playDisabled': '此帳號無法解題。請改用你的對局帳號登入。',
   'puzzle.fetchingHint': '正在取得提示。',
   'puzzle.noHint': '沒有可用的提示。',
   'puzzle.hintMoveHighlighted': '提示：走高亮的那個子。',
@@ -223,6 +224,8 @@ export const ZH_HANT_PLAY = {
   'live.spectatorOpenReview': '開啟覆盤即可查看完整棋盤。',
   'live.spectatorWaitingSeats': '等待雙方座位都有人就座。',
   'live.spectatorFogView': '對局進行期間，觀戰者只能看到公開的迷霧視角。',
+  'live.rejectedPlayDisabled':
+    '此帳號無法進行對局。它是一個身分帳號，而非棋手帳號。請改用你的對局帳號登入後就座。',
   'live.rejectedPrivateRoom':
     '本局正在進行中。除就座的雙方外，Mistboard 從不向任何人透露即時對局狀態。對局結束後，完整的覆盤會出現在這裡。',
   'live.rejectedRatedAccount':
