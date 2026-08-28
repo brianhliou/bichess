@@ -11,7 +11,15 @@ export interface NavItem {
   // resolves, so site-shell picks the initial visibility from the persisted
   // signed-in hint and account-nav reconciles it once /api/auth/me settles.
   signedInOnly?: boolean;
+  // An off-site destination (the Discord invite): rendered as-is (no locale
+  // prefix), opens in a new tab, never marked active.
+  external?: boolean;
 }
+
+// The public invite to the Mistboard Discord (never expires, unlimited uses).
+// Set up 2026-08-27. A discord.com/channels/... URL would only work for
+// members, so the invite is the one link the site hands out.
+export const DISCORD_INVITE_URL = 'https://discord.gg/Qp6AZ6qAYm';
 
 export function primaryNavItems(): NavItem[] {
   return [
@@ -23,7 +31,7 @@ export function primaryNavItems(): NavItem[] {
 
 // Top-nav Community dropdown (lichess-aligned order): Players (the leaderboard),
 // Coaches (the verified-coach directory), Friends (your following list), Forum,
-// Blog (the articles surface). Teams is deliberately deferred. Kept distinct
+// Blog (the articles surface), Discord (off-site invite). Teams is deliberately deferred. Kept distinct
 // from communityRailItems(): the dropdown is the wide social entry, the rail is
 // the leaderboard/bots sub-nav.
 export function communityNavItems(): NavItem[] {
@@ -32,6 +40,7 @@ export function communityNavItems(): NavItem[] {
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
     { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
+    { label: 'Discord', labelKey: 'nav.discord', href: DISCORD_INVITE_URL, external: true },
   ];
 }
 
