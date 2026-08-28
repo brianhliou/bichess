@@ -19,7 +19,14 @@ import { withXiangqiAnalysisSession, type XiangqiPositionEval } from './xiangqi-
 // different semantics than depth-12 (deeper in quiet positions, no depth-parity
 // sawtooth), so @1 rows must NOT be served as if comparable — the id bump
 // orphans them deliberately instead of silently mixing cache semantics.
-export const XIANGQI_ANALYSIS_ENGINE_VERSION = 2;
+// @3 (2026-08-27): every @2 row is WRONG, not merely differently-scaled. The UCI
+// reader took the last scored `info` line, which under a node budget is the
+// fail-high/fail-low line of the ABORTED final iteration — a bound score with a
+// one-move pv. Measured over a 156-ply game: 38% of positions carried a
+// truncated pv, evals were off by up to 163cp, and a real blunder was graded an
+// inaccuracy. Fixed in uci-engine-harness (prefer the last COMPLETE iteration);
+// this bump orphans the corrupted rows so they recompute on demand.
+export const XIANGQI_ANALYSIS_ENGINE_VERSION = 3;
 
 // Cache engine id, version-suffixed so an engine/config change invalidates stored
 // evals (the sibling pattern: JIEQI/BANQI/JUNGLE_ANALYSIS_ENGINE_ID). Xiangqi

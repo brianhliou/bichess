@@ -338,6 +338,14 @@ export function parseInfoScore(line: string):
       pv: string[];
       nodes: number | null;
       timeMs: number | null;
+      /**
+       * Set when the engine flagged the score as a fail-high/fail-low bound
+       * (`score cp -34 lowerbound`). Such a line is an ABORTED iteration, not a
+       * result: the score is only a bound and the pv is usually one move. The
+       * last line before `bestmove` is very often one of these, because the node
+       * budget expires mid-iteration. Consumers must prefer the last EXACT line.
+       */
+      bound: 'lower' | 'upper' | null;
     }
   | undefined {
   if (!line.startsWith('info ') || !line.includes(' score ')) return undefined;
@@ -350,10 +358,13 @@ export function parseInfoScore(line: string):
   // reports far fewer than its node budget, or a `time` at the movetime cap, was cut short.
   let nodes: number | null = null;
   let timeMs: number | null = null;
+  let bound: 'lower' | 'upper' | null = null;
   for (let i = 1; i < tokens.length; i += 1) {
     if (tokens[i] === 'depth') depth = Number(tokens[i + 1]);
     else if (tokens[i] === 'nodes') nodes = Number(tokens[i + 1]);
     else if (tokens[i] === 'time') timeMs = Number(tokens[i + 1]);
+    else if (tokens[i] === 'lowerbound') bound = 'lower';
+    else if (tokens[i] === 'upperbound') bound = 'upper';
     else if (tokens[i] === 'score') {
       if (tokens[i + 1] === 'cp') cp = Number(tokens[i + 2]);
       else if (tokens[i + 1] === 'mate') mate = Number(tokens[i + 2]);
@@ -362,7 +373,7 @@ export function parseInfoScore(line: string):
       break;
     }
   }
-  return { depth, cp, mate, pv, nodes, timeMs };
+  return { depth, cp, mate, pv, nodes, timeMs, bound };
 }
 
 export type UciEval = {
@@ -396,6 +407,8 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
     let buf = '';
     let settled = false;
     let latest: ReturnType<typeof parseInfoScore> | null = null;
+    // Only used when the whole search produced nothing but bounded lines.
+    let fallback: ReturnType<typeof parseInfoScore> | null = null;
     const advertisedOptions = new Set<string>();
 
     const finish = (run: () => void): void => {
@@ -427,20 +440,25 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           return;
         }
         const score = parseInfoScore(line);
-        if (score) latest = score;
+        // A bounded line is an aborted iteration; keep it only as a last resort.
+        if (score) {
+          if (score.bound === null) latest = score;
+          else if (latest === null) fallback = score;
+        }
         const move = parseBestmoveLine(line);
         if (move !== undefined) {
           finish(() => {
             try {
               validateConfiguredUciOptions(commands, advertisedOptions);
+              const chosen = latest ?? fallback;
               resolveEval({
                 best: move,
-                cp: latest?.cp ?? null,
-                mate: latest?.mate ?? null,
-                depth: latest?.depth ?? 0,
-                pv: latest?.pv,
-                nodes: latest?.nodes ?? undefined,
-                timeMs: latest?.timeMs ?? undefined,
+                cp: chosen?.cp ?? null,
+                mate: chosen?.mate ?? null,
+                depth: chosen?.depth ?? 0,
+                pv: chosen?.pv,
+                nodes: chosen?.nodes ?? undefined,
+                timeMs: chosen?.timeMs ?? undefined,
               });
             } catch (err) {
               reject(err);
@@ -643,6 +661,8 @@ export class UciEngineSession {
       await this.readyPromise;
       return await new Promise<UciEval>((resolveEval, reject) => {
         let latest: ReturnType<typeof parseInfoScore> | null = null;
+        // Only used when the whole search produced nothing but bounded lines.
+        let fallback: ReturnType<typeof parseInfoScore> | null = null;
         const timer = setTimeout(() => {
           this.fail(new Error(args.timeoutMessage));
         }, args.timeoutMs);
@@ -650,19 +670,24 @@ export class UciEngineSession {
         this.consume({
           onLine: (line) => {
             const score = parseInfoScore(line);
-            if (score) latest = score;
+            // A bounded line is an aborted iteration; keep it only as a last resort.
+            if (score) {
+              if (score.bound === null) latest = score;
+              else if (latest === null) fallback = score;
+            }
             const move = parseBestmoveLine(line);
             if (move !== undefined) {
               clearTimeout(timer);
               this.consumer = null;
+              const chosen = latest ?? fallback;
               resolveEval({
                 best: move,
-                cp: latest?.cp ?? null,
-                mate: latest?.mate ?? null,
-                depth: latest?.depth ?? 0,
-                pv: latest?.pv,
-                nodes: latest?.nodes ?? undefined,
-                timeMs: latest?.timeMs ?? undefined,
+                cp: chosen?.cp ?? null,
+                mate: chosen?.mate ?? null,
+                depth: chosen?.depth ?? 0,
+                pv: chosen?.pv,
+                nodes: chosen?.nodes ?? undefined,
+                timeMs: chosen?.timeMs ?? undefined,
               });
             }
           },
