@@ -544,9 +544,13 @@ export function installFortressXiangqiBoardStyles(): void {
     .fxq-palace-band {
       fill: var(--fxq-palace-band, var(--fxq-board-bg, #f5dca8));
     }
+    /* 1.2 matches .xq-live-line, the class the shared surface stamps on the grid
+       lines. Only the palace diagonals reach this rule (xiangqiSurfacePalace
+       emits them unclassed), so a different value here shows up as four
+       conspicuously thicker lines inside each palace. */
     .fxq-grid line {
       stroke: var(--fxq-grid, #4b3c2a);
-      stroke-width: 2;
+      stroke-width: 1.2;
       stroke-linecap: round;
     }
     .fxq-selection {

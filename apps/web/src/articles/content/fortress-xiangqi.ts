@@ -190,20 +190,24 @@ export const fortressXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Soldier drop.',
+          text: 'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.',
         },
         {
           kind: 'fortress-xiangqi-replay',
           spec: {
             red: 'Fairy-Stockfish',
             black: 'Fairy-Stockfish',
-            event: 'Engine self-play · 450 ms per move',
+            event: 'Engine self-play · 2.5 s per move',
             moves:
-              'e1e4 b7b6 e4f4 d8f6 f2f3 c8d8 f1e3 b8c6 e3c4 c6e7 c4b6 a8b8 b6d7 b8b7 d7c5 b7c7 P@d7 c7c5 d7d8 N@c3 P@c2 c3e2 g1e1 c5e5 C@a8 e7c6 d8e8 f8e8 a8g8 e8f8 T@d6 e5e4 d6c6 f8g8 f4f7 f6d8 A@b3 P@a3 c6d5 e4e7 a2a3 C@a6 f7f4 a6a1 P@f8 g8f8 P@f7 f8g8 f7e7 e2f4 R@e8 P@f8 N@f6 C@f7 e8f8 g8f8 e7e8 f8g8 P@f8',
+              'b2b3 f7f6 f2f3 c8c5 c1b2 b7c7 f1e3 g8f7 e3c4 c5f5 g2f2 b8c6 a2a3 a7b7 g1g4 f6g6 a1a2 f7f6 g4e4 f5f2 e1e8 a8a6 e4e2 f2f1 e2e1 f1f2 e8e6 a6a7 e6e4 P@d4 d2e2 f2g2 e4f4 f6e5 f4g4 e5f5 g4g3 d4c4 e1g1 g2b2 a2b2 A@f7 g3g7 f5f6 g7d7 c7d7 C@c8 d8b6 P@d8 f7e8 P@e6 f6e6 g1g6 N@f6 d8e8 f8f7 c8c4 c6d4 P@g7 f7e7 g6f6 C@f1 A@c1 f1f6 N@c8 e7e8 c8a7 P@f8 R@e4 R@e5 e4e5 e6e5 P@f7 R@d8 f7f8 e8e7 R@e3 P@a1 b2a1 d8f8 e3e5 P@e6 c4c7 b7c7 P@f7 f8f7 T@d8',
             resultText:
-              'Red checkmates with the soldier drop P@f8. The dropped soldier attacks the general from the side, the soldier on e8 guards the drop point, and Black\'s own cannon and soldier block the escape squares.',
+              'Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black\'s own soldier on e6 and chariot on f7 take away the last two palace squares.',
           },
         } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.',
+        },
       ],
     },
     playClosing({
