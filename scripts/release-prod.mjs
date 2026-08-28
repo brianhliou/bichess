@@ -2,7 +2,9 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
+import { hostname } from 'node:os';
 import { performance } from 'node:perf_hooks';
+import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { DRAIN_TOKEN_KEYCHAIN_SERVICE, resolveDrainToken } from './lib/drain-token.mjs';
 import {
   DEFAULT_TEST_DATABASE_URL,
@@ -54,6 +56,9 @@ const startedAt = performance.now();
 const release = {
   ciRequired: false,
   ciReason: null,
+  // Identifies this release run to production's drain endpoint, so the cleanup
+  // on our failure path cancels OUR drain and not a concurrent release's.
+  drainOwner: `release-${hostname()}-${process.pid}-${Date.now().toString(36)}`,
   drainCommitted: false,
   drainRequired: false,
   deployRequired: false,
@@ -421,33 +426,18 @@ async function waitForGithubCi({ headRevision }) {
     attempt += 1;
     const runs = listGithubRuns(headRevision);
     run = runs.find((candidate) => candidate.headSha === headRevision) ?? null;
-    if (!run) {
-      console.log(`attempt ${attempt}: waiting for ${options.ciWorkflow} run`);
-    } else if (run.status !== 'completed') {
-      console.log(`attempt ${attempt}: ${run.status} ${run.url ?? ''}`.trim());
-    } else if (run.conclusion === 'success') {
-      console.log(`hosted CI passed: ${run.url ?? run.databaseId ?? headRevision}`);
+    // Checked every poll, not once: another session can win the push race at any
+    // point in the several minutes this wait runs for, and the moment it does,
+    // ci.yml's cancel-in-progress kills the run we are watching.
+    const superseded = supersededBy(headRevision);
+    const verdict = run?.status === 'completed' ? jobVerdict(run) : null;
+    const decision = ciOutcome({ run, verdict, headRevision, superseded });
+    if (decision.outcome === 'pass') {
+      console.log(decision.message);
       return;
-    } else {
-      // A run's top-level conclusion is not a verdict on its tests: cancelled or
-      // skipped housekeeping jobs poison the badge to `cancelled`/`failure` while
-      // every real job passed. That has stopped a release whose CI was green, so
-      // the badge is treated as a prompt to look rather than as an answer.
-      const verdict = jobVerdict(run);
-      if (verdict.blocking.length === 0 && verdict.succeeded > 0) {
-        console.log(
-          `hosted CI conclusion is ${run.conclusion ?? 'unknown'}, but no job failed: ` +
-            `${verdict.succeeded} passed, forgiving [${verdict.forgiven.join(', ')}]`,
-        );
-        console.log(`hosted CI passed: ${run.url ?? run.databaseId ?? headRevision}`);
-        return;
-      }
-      throw new Error(
-        `hosted CI failed with conclusion ${run.conclusion ?? 'unknown'}` +
-          (verdict.blocking.length > 0 ? `; failing jobs: ${verdict.blocking.join(', ')}` : '') +
-          `: ${run.url ?? run.databaseId ?? headRevision}`,
-      );
     }
+    if (decision.outcome === 'fail') throw new Error(decision.message);
+    console.log(`attempt ${attempt}: ${decision.message}`);
 
     if (Date.now() + GITHUB_POLL_MS > deadline) break;
     await sleep(GITHUB_POLL_MS);
@@ -460,13 +450,8 @@ async function waitForGithubCi({ headRevision }) {
   );
 }
 
-// Split a run's jobs into ones that genuinely failed and ones that merely did
-// not succeed. Only `failure` and `timed_out` block a release; `cancelled` and
-// `skipped` are forgiven and named in the log so nothing is quietly waved past.
-//
-// The limitation worth knowing: a run a human cancelled mid-flight also reports
-// its unfinished test jobs as `cancelled`, so this would forgive it. The printed
-// job list is what keeps that visible to whoever is running the release.
+// Read a run's per-job conclusions. The decision made from them, including when
+// a cancelled job may be forgiven, lives in lib/ci-run-verdict.mjs.
 function jobVerdict(run) {
   const runId = run.databaseId;
   if (!runId) return { blocking: [], forgiven: [], succeeded: 0 };
@@ -485,16 +470,27 @@ function jobVerdict(run) {
     console.log(`warn: could not read job conclusions (${error.message})`);
     return { blocking: [], forgiven: [], succeeded: 0 };
   }
-  const blocking = [];
-  const forgiven = [];
-  let succeeded = 0;
-  for (const job of jobs) {
-    if (job.conclusion === 'success') succeeded += 1;
-    else if (job.conclusion === 'failure' || job.conclusion === 'timed_out')
-      blocking.push(job.name);
-    else forgiven.push(`${job.name}:${job.conclusion ?? 'none'}`);
+  return classifyJobs(jobs);
+}
+
+// The branch tip, when it is no longer the revision being released. Null means
+// this release still owns main.
+//
+// Polled on every CI-wait tick, so it fails soft: a transient ls-remote failure
+// must not kill a release that is otherwise fine. Reading null just restores the
+// behaviour this check was added to improve on, and says so out loud.
+function supersededBy(headRevision) {
+  let remote;
+  try {
+    remote = readRemoteTargetRevision();
+  } catch (error) {
+    console.log(
+      `warn: could not read ${options.remote} ${options.targetBranch} (${error.message})`,
+    );
+    return null;
   }
-  return { blocking, forgiven, succeeded };
+  if (!remote || revisionMatches(remote, headRevision)) return null;
+  return remote;
 }
 
 function listGithubRuns(headRevision) {
@@ -725,7 +721,11 @@ function baseArgs() {
 }
 
 function safeDeployBaseArgs() {
-  return options.baseUrl ? ['--base-url', options.baseUrl] : [];
+  return [
+    ...(options.baseUrl ? ['--base-url', options.baseUrl] : []),
+    '--owner',
+    release.drainOwner,
+  ];
 }
 
 // Read production's live-game count so the release can decide whether a drain

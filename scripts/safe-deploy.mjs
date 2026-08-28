@@ -20,6 +20,12 @@
 //   --yes                 skip interactive confirmation
 //   --commit              broadcast "Server restarting now" after reaching zero
 //   --cancel              cancel an active drain
+//   --owner <id>          claim the drain for this release run. A cancel that
+//                         names an owner only cancels a drain with the same
+//                         one, so a release cleaning up after its own failure
+//                         cannot cancel a CONCURRENT release's drain and let it
+//                         deploy into live games. Omit it and a cancel takes
+//                         any drain, which is what a human at a terminal wants.
 //
 // Exit codes:
 //   0   drain complete, ready to deploy
@@ -157,7 +163,7 @@ async function startDrain() {
   const res = await fetchJson(new URL('/admin/drain', baseUrl), {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ windowMs }),
+    body: JSON.stringify({ windowMs, ...(options.owner ? { owner: options.owner } : {}) }),
   });
   if (res.status !== 200) {
     throw withExit(3, `/admin/drain returned ${res.status}: ${JSON.stringify(res.body)}`);
@@ -191,8 +197,19 @@ async function commitRestart() {
 async function cancelDrain() {
   const res = await fetchJson(new URL('/admin/drain/cancel', baseUrl), {
     method: 'POST',
-    headers: { authorization: `Bearer ${token}` },
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(options.owner ? { owner: options.owner } : {}),
   });
+  if (res.status === 409 && res.body?.error === 'drain_owned_by_another') {
+    // Someone else's release is mid-drain. Leaving it alone is the whole point:
+    // it is waiting for active games to finish before its own deploy.
+    console.error(
+      `drain belongs to ${res.body.owner ?? 'another release'}; leaving it active. ` +
+        'Cancel it by hand only if you know that release is dead.',
+    );
+    drainActive = false;
+    return;
+  }
   if (res.status !== 200) {
     throw new Error(`/admin/drain/cancel returned ${res.status}: ${JSON.stringify(res.body)}`);
   }
@@ -254,12 +271,13 @@ function parseArgs(argv) {
     else if (arg === '--yes') out.yes = true;
     else if (arg === '--commit') out.commit = true;
     else if (arg === '--cancel') out.cancel = true;
+    else if (arg === '--owner') out.owner = argv[++i];
     else if (arg === '--force') {
       console.error('error: --force was removed. Use --yes only to skip confirmation.');
       process.exit(1);
     } else if (arg === '--help' || arg === '-h') {
       console.log(
-        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel]',
+        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel] [--owner ID]',
       );
       console.log(
         `Drain token: MISTBOARD_DRAIN_TOKEN, else keychain service "${DRAIN_TOKEN_KEYCHAIN_SERVICE}".`,

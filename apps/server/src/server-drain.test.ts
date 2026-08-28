@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import type { WebSocket } from 'ws';
 import { createDrainController } from './server-drain.js';
+import type { Room } from './server-types.js';
 import { clientFixture, gameProjectionFixture, roomFixture } from './test-builders.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
@@ -369,4 +370,83 @@ test('drain broadcasts reach variant-tenant room clients', async () => {
   await drain.handleRequest(request(), captureResponse(), '/admin/drain/cancel');
   assert.equal(tenantSent.length, 2);
   assert.equal((JSON.parse(tenantSent[1]!) as { type: string }).type, 'server_restart_cancelled');
+});
+
+// Two sessions releasing at once. The first drains, fails before pushing, and
+// runs its cleanup; without an owner on the drain that cleanup cancelled the
+// SECOND session's drain, and the second session then deployed into live games.
+test('a drain cancel from another release is refused, and leaves the drain running', async () => {
+  const rooms = new Map<string, Room>();
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms,
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500, owner: 'release-b' } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+
+  const refused = captureResponse();
+  await drain.handleRequest(
+    request({ body: { owner: 'release-a' } }),
+    refused,
+    '/admin/drain/cancel',
+  );
+
+  assert.equal(refused.status, 409);
+  assert.equal(responseJson(refused).error, 'drain_owned_by_another');
+  assert.equal(responseJson(refused).owner, 'release-b');
+  assert.equal(drain.isDraining(), true, 'release-b is still waiting for its games to finish');
+});
+
+test('a release can cancel the drain it started', async () => {
+  const rooms = new Map<string, Room>();
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms,
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500, owner: 'release-b' } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+
+  const cancel = captureResponse();
+  await drain.handleRequest(
+    request({ body: { owner: 'release-b' } }),
+    cancel,
+    '/admin/drain/cancel',
+  );
+
+  assert.equal(cancel.status, 200);
+  assert.equal(drain.isDraining(), false);
+});
+
+// The escape hatch has to stay open: a human cancelling by hand is the remedy
+// when the automation is the thing that went wrong, so an unowned cancel takes
+// any drain.
+test('a cancel that names no owner still cancels an owned drain', async () => {
+  const rooms = new Map<string, Room>();
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms,
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500, owner: 'release-b' } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+
+  const cancel = captureResponse();
+  await drain.handleRequest(request(), cancel, '/admin/drain/cancel');
+
+  assert.equal(cancel.status, 200);
+  assert.equal(drain.isDraining(), false);
 });
