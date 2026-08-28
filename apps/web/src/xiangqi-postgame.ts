@@ -167,6 +167,10 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    // Name the seats at the board. The meta card carries the pairing too, but it
+    // sits below the fold on a normal viewport, so without these a reader sees a
+    // board and has to scroll past it to learn who is playing.
+    seatLabels: true,
     players: playerNames,
     result: { score: resultScore(postgame.game.result), label: status },
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),

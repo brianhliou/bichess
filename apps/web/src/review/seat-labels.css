@@ -1,0 +1,65 @@
+/* Seat labels: thin strips naming who has which side, drawn by tree-review when
+   a surface opts in with `seatLabels`.
+
+   These live BESIDE tree-review.ts and are imported BY it, the same rule
+   board-resize.css states for the drag grip: a component's styles belong with
+   the component. They started in game-shell.css, which the study imports and the
+   postgame surfaces do not, so on every game page the strips rendered with NO
+   styling at all -- static instead of absolute, so both stacked below the board;
+   16px inherited instead of 13px; and the slot grew by their height, which
+   dragged the resize grip (positioned by measuring that slot) off the board. */
+.review-board-wrap--seated {
+  position: relative;
+  margin-bottom: 26px;
+}
+
+.review-seat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+/* `bottom: 100%` is the wrapper's top edge; the wrapper has no top padding, so
+   this is the board's top edge, and the bottom padding below cannot move it. */
+.review-seat--top {
+  bottom: calc(100% + 4px);
+}
+
+/* In the reserved margin below the board, so nothing beneath is overlapped. */
+.review-seat--bottom {
+  top: calc(100% + 4px);
+}
+
+.review-seat__disc {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--site-border);
+  border-radius: 50%;
+  background: var(--site-surface);
+}
+
+.review-seat--red .review-seat__disc {
+  border-color: #a63328;
+  background: #a63328;
+}
+
+.review-seat--black .review-seat__disc {
+  border-color: var(--site-text);
+  background: var(--site-text);
+}
+
+.review-seat__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

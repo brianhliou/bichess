@@ -125,6 +125,10 @@ export function mountDarkChessPostgame(
     // Underboard parity with the xiangqi-family siblings (lichess anatomy):
     // Move times, Crosstable, and Share & export carrying the PGN/JSON downloads.
     moveTimes: moveTimesFromEvents(events, moveEvents),
+    // Name the seats at the board. The meta card carries the pairing too, but it
+    // sits below the fold on a normal viewport, so without these a reader sees a
+    // board and has to scroll past it to learn who is playing.
+    seatLabels: true,
     players: reviewPlayers(game),
     result: { score: resultScore(game.result), label: status },
     ...crosstableConfig(game.roomId, game.players),

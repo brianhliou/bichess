@@ -199,6 +199,10 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    // Name the seats at the board. The meta card carries the pairing too, but it
+    // sits below the fold on a normal viewport, so without these a reader sees a
+    // board and has to scroll past it to learn who is playing.
+    seatLabels: true,
     players: playerNames,
     seatColors,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
