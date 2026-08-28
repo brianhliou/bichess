@@ -52,20 +52,30 @@ import {
 import * as persistence from './persistence.js';
 import type { UciMultiPvLine } from './uci-engine-harness.js';
 
-// Search budget. A fixed DEPTH is CPU-independent in RESULT (the eval at a given depth is the
-// same tree on any box), so the cached analysis stays stable; the movetime cap only bounds
-// per-ply latency on a slow box. Depth 20 rather than the old 12: measured single-threaded with
-// the analysis Hash, a midgame ply costs 10ms at depth 12 and ~300ms at depth 20, against a
-// 4000ms cap that was therefore never within an order of magnitude of binding. The eval is also
-// still moving over that range (a sampled midgame: 1023 cp at depth 12, 1024 at 20, 1050 at 24),
-// so depth 12 was not a converged number, it was an unspent budget.
-const JIEQI_ANALYSIS_DEPTH_SEARCH = 20;
+// Search budget. A fixed DEPTH is reproducible in RESULT on a given architecture (see the ARCH
+// note in jieqi-engine.ts), so the cached analysis stays stable; the movetime cap only bounds
+// per-ply latency on a slow box. Depth 16, up from the old 12 but down from the 20 first shipped
+// on 2026-08-28.
+//
+// 12 was unspent budget: measured single-threaded with the analysis Hash, a midgame ply costs
+// 10ms at depth 12 against a 4000ms cap, and the eval was still moving (a sampled midgame:
+// 1023 cp at 12, 1024 at 20, 1050 at 24), so 12 was not convergence.
+//
+// 20 overshot in the other direction, which only showed up in prod. A 146-ply game took ~10min
+// of sweep plus ~7min of decisions, peaking at 1.57 CPU cores and 690MB on the `web` container,
+// on a job queue whose execution chain is concurrency 1 across EVERY variant. A post-game review
+// is a user-facing wait, so that is the binding constraint, not the CPU. Depth 16 costs ~2.3x
+// less per eval than 20 (131ms vs 298ms on a midgame ply) and keeps nearly all of the quality:
+// most of the 2026-08-28 gain came from the Hash fix (16MB thrashed and CORRUPTED the eval),
+// which is free, rather than from the depth. Going deeper again needs the compute off the
+// request path first, not just a bigger number here (see #316).
+const JIEQI_ANALYSIS_DEPTH_SEARCH = 16;
 const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 6_000;
 
 // Nominal cache dimension: `depth` only has to be STABLE for the (room, engine, depth) cache
 // key. Tracks JIEQI_ANALYSIS_DEPTH_SEARCH so a depth change self-invalidates the cache; it no
 // longer matches the banqi/jungle family default of 12, which is fine (the key is per-variant).
-export const JIEQI_ANALYSIS_DEPTH = 20;
+export const JIEQI_ANALYSIS_DEPTH = 16;
 
 // Red-SEAT-POV cp for a decisive finished position (no engine query is made there).
 const TERMINAL_CP = 30_000;
