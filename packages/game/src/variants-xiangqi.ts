@@ -116,9 +116,8 @@ export type XiangqiGameEndReason =
  * -- must continue past these. Anything adjudicating LIVE play must not.
  * Checkmate and stalemate are deliberately absent: no ruleset lets play go on.
  */
-export const ARBITER_ADJUDICATED_DRAWS: ReadonlySet<XiangqiGameEndReason> = new Set<
-  XiangqiGameEndReason
->(['repetition', 'progress-clock']);
+export const ARBITER_ADJUDICATED_DRAWS: ReadonlySet<XiangqiGameEndReason> =
+  new Set<XiangqiGameEndReason>(['repetition', 'progress-clock']);
 
 export type XiangqiGameStatus =
   | { type: 'playing'; turn: XiangqiColor }

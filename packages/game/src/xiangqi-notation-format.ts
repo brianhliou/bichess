@@ -293,10 +293,7 @@ export function formatXiangqiMoves(
   for (const [index, move] of moves.entries()) {
     // Resume through an auto-draw the record clearly played past. Red moves
     // first, so an even index is Red's turn.
-    if (
-      state?.status.type === 'finished' &&
-      ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)
-    ) {
+    if (state?.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
       state = { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
     }
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {

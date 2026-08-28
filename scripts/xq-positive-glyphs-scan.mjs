@@ -269,7 +269,10 @@ const outPath = process.argv[process.argv.indexOf('--out') + 1];
 if (process.argv.includes('--out') && outPath) {
   const byKey = {};
   for (const hit of hits) (byKey[hit.key] ??= []).push(hit);
-  writeFileSync(outPath, `${JSON.stringify({ schema: 'mistboard.xiangqi.positive-glyphs.v1', byKey }, null, 2)}\n`);
+  writeFileSync(
+    outPath,
+    `${JSON.stringify({ schema: 'mistboard.xiangqi.positive-glyphs.v1', byKey }, null, 2)}\n`,
+  );
   console.log(`\nwrote ${hits.length} hits to ${outPath}`);
 }
 console.log('\nwhy plies were not marked:');
