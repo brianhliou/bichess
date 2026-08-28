@@ -260,8 +260,13 @@ async function buildManifest(args, boards) {
     if (candidates.length >= Math.min(args.maxBoards, MANIFEST_MAX_SOURCES)) break;
   }
 
-  const sources = candidates.map((board) => {
-    const entry = { url: `${args.host}/hldcg/search/view.asp?owner=u&id=${board.id}` };
+  // dpxq serves one game per page, so the converter sees index 0 every time and
+  // would number every board 1. The manifest carries the ordinal instead.
+  const sources = candidates.map((board, index) => {
+    const entry = {
+      url: `${args.host}/hldcg/search/view.asp?owner=u&id=${board.id}`,
+      boardNumber: index + 1,
+    };
     if (args.tourSlug) entry.tourSlug = args.tourSlug;
     if (args.tourName) entry.tourName = args.tourName;
     if (args.roundId) entry.roundId = args.roundId;
@@ -281,9 +286,9 @@ function emitManifest(result, args) {
   console.error(
     `matched ${candidates.length} board(s)${args.event ? ` on event ~ "${args.event}"` : ''}:`,
   );
-  for (const board of candidates) {
+  for (const [index, board] of candidates.entries()) {
     console.error(
-      `  id=${board.id.padEnd(9)} ${String(board.plies).padStart(3)} plies  ${board.red || '?'} vs ${board.black || '?'}  [${board.event || 'no event'} / ${board.round || 'no round'}]`,
+      `  board ${String(index + 1).padStart(2)}  id=${board.id.padEnd(9)} ${String(board.plies).padStart(3)} plies  ${board.red || '?'} vs ${board.black || '?'}  [${board.event || 'no event'} / ${board.round || 'no round'}]`,
     );
   }
   console.log(JSON.stringify(manifest, null, 2));
