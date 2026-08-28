@@ -33,6 +33,41 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // Copied verbatim from article-i18n.ts: the feed entry and the article
+  // summary are the same sentence, and a reader who sees both should not get
+  // two renderings of it.
+  'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.':
+    '红方的起手炮抢先赶到河沿，只差一步就能沿五条纵线中的任何一条开火，而在迷雾里你根本看不见它的到来。这会不会毁掉整个棋种，最终落在一步飞象、一个有毒的防守，以及一次我们用引擎算清了价码的硬币对赌上。',
+
+  // ── 2026-08-23 .. 2026-08-27 backfill ──
+  'Set up any position, then share it.': '任意摆一个局面，然后分享出去。',
+  'A head-to-head record on every finished game.': '每局终局都有对阵记录。',
+  'Board coordinates, on every board that has them.': '棋盘坐标，凡是有坐标的棋盘都能显示。',
+  'Follow a forum thread without refreshing it.': '关注论坛主题，不用反复刷新。',
+  'Chess titles count for verification now.': '国际象棋头衔现在也可以认证。',
+  'Studies read and write PGN.': '研习支持导入和导出 PGN。',
+  'The Riverbank Cannon Problem.': '巡河炮问题。',
+  'Puzzles are rated by how hard they play.': '题目难度改按实际难解程度评定。',
+  'Pick a flair for your name.': '给你的名字挑一个个性图标。',
+  'A board editor for eight variants: place pieces by hand, set the side to move, and hand the position straight to the analysis board. The analysis board also takes a FEN directly, and every position you build has its own link.':
+    '八种变体都有了棋盘编辑器：手动摆子、指定轮谁走，再把局面直接交给分析棋盘。分析棋盘也可以直接读入 FEN，你摆出的每个局面都有自己的链接。',
+  'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
+    '复盘页新增对阵表，显示你在该变体中与这位对手的交手记录，引擎也算在内；分享与导出可以把整局导出为 PGN 或 JSON。',
+  'One switch in Display settings reaches the xiangqi family, the chess boards, jungle, and shogi. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
+    '显示设置里的一个开关，现在管得到象棋系列、国际象棋类棋盘、斗兽棋和将棋。象棋的纵线从各自的右手边数起，所以标注会跟随你的着法记谱设置，并在翻转棋盘时换边。',
+  'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
+    '关注一个主题，铃铛就会统计它的未读回复。引用他人现在也会通知对方，铃铛报告的每一类消息都有各自的开关。',
+  'GM, IM, FM and the rest join the xiangqi titles. A verified title puts a badge beside your name wherever people are listed, and opens a coaching page students can find. Verification takes about two minutes.':
+    'GM、IM、FM 等头衔加入了原有的象棋头衔。认证通过后，凡是列出棋手的地方，你的名字旁都会显示头衔徽章，并会开通一个学生能找到的教练页面。认证大约需要两分钟。',
+  'Import a PGN to build a study, export one chapter or all of them, and add a finished game to a study from its link. The opening explorer sits beside the board while you work.':
+    '导入 PGN 即可建立研习，可以导出单个章节或全部章节，也可以凭链接把一局终局加入研习。编写时，开局库就在棋盘旁边。',
+  'A puzzle’s rating used to come from how many moves the mate took, which says little about how hard it is to find. It now comes from the position itself, so what you are served sits closer to your rating.':
+    '题目的等级分以前取自杀棋的步数，而步数说明不了它有多难找。现在等级分来自局面本身，所以派给你的题目会更贴近你的水平。',
+  'Choose a small icon that shows beside your handle across the site, from the variant markers and xiangqi characters the boards already use. The bell also reports new followers and incoming challenges now.':
+    '从棋盘已经在用的变体标记和象棋棋子字中挑一个小图标，它会显示在全站你的用户名旁边。铃铛现在还会报告新的关注者和收到的挑战。',
+  'Open the editor': '打开编辑器',
+  'Open settings': '打开设置',
+  'Edit your profile': '编辑资料页',
   // ── headlines ──
   'Both house bots play stronger.': '两台自家引擎都变强了。',
   'Four times as many xiangqi puzzles.': '象棋题目增至四倍。',
@@ -177,6 +212,41 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // Copied verbatim from article-i18n.ts: the feed entry and the article
+  // summary are the same sentence, and a reader who sees both should not get
+  // two renderings of it.
+  'Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.':
+    '紅方的起手炮搶先趕到河沿，只差一步就能沿五條縱線中的任何一條開火，而在迷霧裡你根本看不見它的到來。這會不會毀掉整個棋種，最終落在一步飛象、一個有毒的防守，以及一次我們用引擎算清了價碼的硬幣對賭上。',
+
+  // ── 2026-08-23 .. 2026-08-27 backfill ──
+  'Set up any position, then share it.': '任意擺一個局面，然後分享出去。',
+  'A head-to-head record on every finished game.': '每局終局都有對陣記錄。',
+  'Board coordinates, on every board that has them.': '棋盤座標，凡是有座標的棋盤都能顯示。',
+  'Follow a forum thread without refreshing it.': '關注論壇主題，不用反覆重新整理。',
+  'Chess titles count for verification now.': '國際象棋頭銜現在也可以認證。',
+  'Studies read and write PGN.': '研習支援匯入和匯出 PGN。',
+  'The Riverbank Cannon Problem.': '巡河炮問題。',
+  'Puzzles are rated by how hard they play.': '題目難度改按實際難解程度評定。',
+  'Pick a flair for your name.': '給你的名字挑一個個性圖示。',
+  'A board editor for eight variants: place pieces by hand, set the side to move, and hand the position straight to the analysis board. The analysis board also takes a FEN directly, and every position you build has its own link.':
+    '八種變體都有了棋盤編輯器：手動擺子、指定輪誰走，再把局面直接交給分析棋盤。分析棋盤也可以直接讀入 FEN，你擺出的每個局面都有自己的連結。',
+  'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
+    '復盤頁新增對陣表，顯示你在該變體中與這位對手的交手記錄，引擎也算在內；分享與匯出可以把整局匯出為 PGN 或 JSON。',
+  'One switch in Display settings reaches the xiangqi family, the chess boards, jungle, and shogi. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
+    '顯示設定裡的一個開關，現在管得到象棋系列、國際象棋類棋盤、鬥獸棋和將棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
+  'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
+    '關注一個主題，鈴鐺就會統計它的未讀回覆。引用他人現在也會通知對方，鈴鐺報告的每一類訊息都有各自的開關。',
+  'GM, IM, FM and the rest join the xiangqi titles. A verified title puts a badge beside your name wherever people are listed, and opens a coaching page students can find. Verification takes about two minutes.':
+    'GM、IM、FM 等頭銜加入了原有的象棋頭銜。認證通過後，凡是列出棋手的地方，你的名字旁都會顯示頭銜徽章，並會開通一個學生能找到的教練頁面。認證大約需要兩分鐘。',
+  'Import a PGN to build a study, export one chapter or all of them, and add a finished game to a study from its link. The opening explorer sits beside the board while you work.':
+    '匯入 PGN 即可建立研習，可以匯出單個章節或全部章節，也可以憑連結把一局終局加入研習。編寫時，開局庫就在棋盤旁邊。',
+  'A puzzle’s rating used to come from how many moves the mate took, which says little about how hard it is to find. It now comes from the position itself, so what you are served sits closer to your rating.':
+    '題目的等級分以前取自殺棋的步數，而步數說明不了它有多難找。現在等級分來自局面本身，所以派給你的題目會更貼近你的水準。',
+  'Choose a small icon that shows beside your handle across the site, from the variant markers and xiangqi characters the boards already use. The bell also reports new followers and incoming challenges now.':
+    '從棋盤已經在用的變體標記和象棋棋子字中挑一個小圖示，它會顯示在全站你的使用者名稱旁邊。鈴鐺現在還會報告新的追蹤者和收到的挑戰。',
+  'Open the editor': '開啟編輯器',
+  'Open settings': '開啟設定',
+  'Edit your profile': '編輯資料頁',
   // ── headlines ──
   'Both house bots play stronger.': '兩台自家引擎都變強了。',
   'Four times as many xiangqi puzzles.': '象棋題目增至四倍。',
