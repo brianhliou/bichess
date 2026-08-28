@@ -626,7 +626,6 @@
     color-mix(in srgb, var(--site-accent) 22%, var(--site-panel)),
     color-mix(in srgb, var(--site-accent) 8%, var(--site-panel))
   );
-  box-shadow: var(--site-shadow);
   color: inherit;
   text-decoration: none;
   transition: transform 120ms ease;

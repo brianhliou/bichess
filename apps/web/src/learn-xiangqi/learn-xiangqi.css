@@ -23,7 +23,6 @@
   background: var(--site-panel);
   border: 1px solid var(--site-border-soft);
   border-radius: 10px;
-  box-shadow: var(--site-shadow);
   padding: 24px 16px;
   text-align: center;
 }
@@ -445,7 +444,6 @@
   background: var(--site-panel);
   border: 1px solid var(--site-border-soft);
   border-radius: 10px;
-  box-shadow: var(--site-shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -639,7 +637,6 @@
   width: min(350px, calc(100vw - 32px));
   background: var(--site-panel);
   border-radius: var(--site-radius);
-  box-shadow: var(--site-shadow);
   padding: 36px 0 24px;
   text-align: center;
   animation: learn-xq-card-in 350ms ease both;
