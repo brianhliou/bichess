@@ -79,6 +79,11 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Vietnamese landing page, newest. It sits in this English index because
+      // the index lists every published article; the page itself declares
+      // lang="vi" and is aimed at readers who arrive by search, not by
+      // browsing here.
+      '/blog/co-up',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.

@@ -63,6 +63,12 @@ export const ARTICLE_META: Record<
   string,
   { title: string; description: string; kind: ArticleKind }
 > = {
+  'co-up': {
+    title: 'Chơi cờ úp online',
+    kind: 'article',
+    description:
+      'Cờ úp trên Mistboard: chơi với engine hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích của engine.',
+  },
   chess: {
     title: 'Chess Rules',
     kind: 'rules',

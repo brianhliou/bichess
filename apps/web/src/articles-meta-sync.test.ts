@@ -10,7 +10,9 @@ import {
   articleIsIndexable,
   articleIsUnpublished,
 } from '../../server/src/article-meta.js';
+import { isArticleTranslationPublished } from './article-i18n.js';
 import { articles } from './articles-data.js';
+import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 describe('articles-data <-> server ARTICLE_META sync', () => {
@@ -74,5 +76,30 @@ describe('sitemap indexability <-> public surface sync', () => {
     expect(mismatched, `sitemap and public surface disagree:\n${mismatched.join('\n')}`).toEqual(
       [],
     );
+  });
+});
+
+// A page written in its own language is not a translation of an English
+// original, so it must never enter the zh translation pipeline: the coverage
+// gate would then demand Chinese renderings of Vietnamese prose, and the
+// prerenderer would emit zh variants of a document that has none.
+describe('non-English source articles', () => {
+  it('are never treated as translation targets', () => {
+    for (const article of articles) {
+      if (!article.sourceLang) continue;
+      expect(
+        isArticleTranslationPublished(article.slug),
+        `'${article.slug}' is written in ${article.sourceLang} but is queued for zh translation`,
+      ).toBe(false);
+    }
+  });
+
+  it('declare a language the interface does not have to speak', () => {
+    // The guard against someone "fixing" sourceLang by adding a locale: the
+    // interface locale set is settled and closed, and this field exists
+    // precisely so content can run ahead of it.
+    const vietnamese = articles.filter((article) => article.sourceLang === 'vi');
+    expect(vietnamese.length).toBeGreaterThan(0);
+    expect(SUPPORTED_LOCALES).not.toContain('vi');
   });
 });

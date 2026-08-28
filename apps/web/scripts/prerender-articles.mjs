@@ -293,11 +293,18 @@ try {
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
   // sets <html lang> and JSON-LD inLanguage; langDir is the output-path segment.
   // The base segment (articles vs rules) is chosen per-article from its kind.
-  const variants = [
+  const baseVariants = [
     { lang: null, urlPrefix: '', htmlLang: 'en', langDir: null },
     { lang: 'zh-Hans', urlPrefix: '/zh-hans', htmlLang: 'zh-Hans', langDir: 'zh-hans' },
     { lang: 'zh-Hant', urlPrefix: '/zh-hant', htmlLang: 'zh-Hant', langDir: 'zh-hant' },
   ];
+
+  // An article written in a language the interface does not speak keeps the
+  // same output path and canonical, and only changes what it DECLARES itself
+  // to be. Without this a Vietnamese page ships as <html lang="en"> with
+  // hreflang="en", which is the site telling Google the page is English.
+  const variantsFor = (article) =>
+    article.sourceLang ? [{ ...baseVariants[0], htmlLang: article.sourceLang }] : baseVariants;
 
   const shell = await fs.readFile(resolve(distDir, 'index.html'), 'utf-8');
   if (!shell.includes('<div id="app"></div>')) {
@@ -344,8 +351,9 @@ try {
     // translation publication boundary.
     const imageUrl = `${host}/og/article/${slug}.png`;
     const translationPublished = isArticleTranslationPublished(article.slug);
+    const selfHreflang = article.sourceLang ?? 'en';
     const hreflang = [
-      `<link rel="alternate" hreflang="en" href="${host}/${base}/${slug}" />`,
+      `<link rel="alternate" hreflang="${selfHreflang}" href="${host}/${base}/${slug}" />`,
       ...(translationPublished
         ? [
             `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
@@ -355,7 +363,8 @@ try {
       `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
     ].join('');
 
-    const articleVariants = translationPublished ? variants : variants.slice(0, 1);
+    const localeVariants = variantsFor(article);
+    const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
       const main = buildArticlePage(article.slug, v.lang ?? undefined);

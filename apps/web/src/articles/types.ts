@@ -384,6 +384,18 @@ type ArticleBase = {
    * Set this to serve search without renaming the variant on the page.
    */
   seoTitle?: string;
+  /**
+   * BCP-47 language of the article's own prose, when it is not English. The
+   * three interface locales are settled and closed (en / zh-Hans / zh-Hant),
+   * but content in a language was never gated: a page can be written in a
+   * language the UI does not speak. Setting this stamps <html lang>, the
+   * hreflang self-reference, and JSON-LD inLanguage, without which the page
+   * would declare itself English and rank for nothing in its own language.
+   *
+   * A page with this set has no zh variants: it is not a translation of an
+   * English original, it is its own document.
+   */
+  sourceLang?: 'vi';
   summary: string;
   /**
    * Guest byline. Set when someone other than Mistboard wrote the piece: a
