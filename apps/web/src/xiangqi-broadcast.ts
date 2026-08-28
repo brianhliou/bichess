@@ -237,6 +237,13 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+// These counts render as bare English on surfaces the catalog does not cover,
+// so "1 boards" reaches the page. Chinese needs no plural form, which is why
+// only the English catalog entry gains a singular sibling.
+function countLabel(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   root.replaceChildren(buildNav(), buildNotice(t('broadcast.unavailable'), message));
@@ -325,7 +332,9 @@ function renderIndex(data: BroadcastIndexResponse): HTMLElement {
       eyebrow: t('broadcast.eyebrow'),
       title: t('broadcast.tournamentBroadcasts'),
       meta: [
-        t('broadcast.tournamentCount', { count: data.tours.length }),
+        t(data.tours.length === 1 ? 'broadcast.tournamentCountOne' : 'broadcast.tournamentCount', {
+          count: data.tours.length,
+        }),
         live.length > 0 ? t('broadcast.liveNowCount', { count: live.length }) : null,
       ].filter(Boolean) as string[],
     }),
@@ -380,7 +389,7 @@ function renderTour(data: BroadcastTourResponse): HTMLElement {
       meta: [
         data.tour.location,
         dateRange(data.tour.startsAt, data.tour.endsAt),
-        `${data.rounds.length} rounds`,
+        countLabel(data.rounds.length, 'round', 'rounds'),
       ].filter(Boolean) as string[],
     }),
   );
@@ -406,7 +415,7 @@ function renderTour(data: BroadcastTourResponse): HTMLElement {
     const meta = document.createElement('span');
     meta.textContent = [
       formatDate(round.startsAt),
-      round.boardCount !== undefined ? `${round.boardCount} boards` : null,
+      round.boardCount !== undefined ? countLabel(round.boardCount, 'board', 'boards') : null,
       roundPhaseLabel(phase),
     ]
       .filter(Boolean)
@@ -497,7 +506,7 @@ function renderRound(data: BroadcastRoundResponse): HTMLElement {
       href: data.round.sourceUrl ?? data.tour.sourceUrl,
       meta: [
         formatDate(data.round.startsAt),
-        `${data.boards.length} boards`,
+        countLabel(data.boards.length, 'board', 'boards'),
         liveCount > 0 ? `${liveCount} live` : null,
       ].filter(Boolean) as string[],
       backHref: `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`,
@@ -764,8 +773,8 @@ function tourCard(entry: BroadcastIndexEntry): HTMLElement {
   const counts = document.createElement('span');
   counts.className = 'xqb-tour-card-meta';
   counts.textContent = [
-    `${entry.roundCount} rounds`,
-    `${entry.boardCount} boards`,
+    countLabel(entry.roundCount, 'round', 'rounds'),
+    countLabel(entry.boardCount, 'board', 'boards'),
     live ? `${entry.liveBoardCount} live` : null,
   ]
     .filter(Boolean)

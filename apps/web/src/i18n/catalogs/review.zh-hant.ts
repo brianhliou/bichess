@@ -323,6 +323,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.eyebrow': '象棋賽事直播',
   'broadcast.tournamentBroadcasts': '賽事直播',
   'broadcast.tournamentCount': '{count} 項賽事',
+  'broadcast.tournamentCountOne': '{count} 項賽事',
   'broadcast.liveNowCount': '{count} 項正在直播',
   'broadcast.liveNow': '正在直播',
   'broadcast.past': '往期',

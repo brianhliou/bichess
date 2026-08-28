@@ -33,6 +33,8 @@ export type XiangqiBroadcastManifestSource = {
   tourName?: string;
   roundId?: string;
   roundName?: string;
+  /** Board number to assign, for sources that serve one game per page. */
+  boardNumber?: number;
 };
 
 export type XiangqiBroadcastSourceManifest = {
@@ -150,6 +152,16 @@ function validateSourceManifest(value: Record<string, unknown>): ManifestValidat
       return { ok: false, message: `manifest source ${index + 1} must have a url` };
     }
     const source: XiangqiBroadcastManifestSource = { url: rawSource.url };
+    if (rawSource.boardNumber !== undefined) {
+      const boardNumber = rawSource.boardNumber;
+      if (typeof boardNumber !== 'number' || !Number.isInteger(boardNumber) || boardNumber < 1) {
+        return {
+          ok: false,
+          message: `manifest source ${index + 1} boardNumber must be a positive integer`,
+        };
+      }
+      source.boardNumber = boardNumber;
+    }
     for (const key of MANIFEST_SOURCE_STRING_OPTIONS) {
       const optionValue = rawSource[key];
       if (optionValue === undefined) continue;

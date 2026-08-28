@@ -323,6 +323,7 @@ export const ZH_HANS_REVIEW = {
   'broadcast.eyebrow': '象棋赛事直播',
   'broadcast.tournamentBroadcasts': '赛事直播',
   'broadcast.tournamentCount': '{count} 项赛事',
+  'broadcast.tournamentCountOne': '{count} 项赛事',
   'broadcast.liveNowCount': '{count} 项正在直播',
   'broadcast.liveNow': '正在直播',
   'broadcast.past': '往期',
