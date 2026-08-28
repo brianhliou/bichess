@@ -1,0 +1,72 @@
+{
+  "schema": "mistboard.xiangqi.move-classification-cases.v1",
+  "note": "Hand-verified plies that a positive-annotation classifier must NOT mark. See docs and issue; every entry here defeated a detector version that looked right on the numbers.",
+  "cases": [
+    {
+      "key": "m_23400",
+      "ply": 18,
+      "verdict": "capture",
+      "why": "Black CAPTURES a chariot. Any detector that reads the material dip after the recapture, or a trough later in the sequence, calls this a nine-point sacrifice. It is the opposite of one.",
+      "side": "black",
+      "moveNumber": 9,
+      "wxf": "R6+4",
+      "game": {
+        "title": "河北 李来群 胜 上海 胡荣华",
+        "event": "1982年全国象棋个人赛",
+        "date": "1982-12-07",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_m_23400.html"
+      },
+      "iccs": "b2e2 b7e7 b0c2 b9c7 a0b0 c6c5 h0i2 h9g7 i0i1 a9a8 i1f1 i9i8 b0b4 a8f8 b4f4 e9e8 g3g4 f8f4 f1f4 i8f8 f4f8 e8f8 h2g2 g9i7 g4g5 i7g5",
+      "balanceMoverPov": {
+        "before": 0,
+        "after": 9,
+        "next6": [0, 0, -9, 0, 0, 0]
+      },
+      "mustNotBeMarked": true
+    },
+    {
+      "key": "u_345428",
+      "ply": 57,
+      "verdict": "quiet",
+      "why": "Captures nothing and leaves the balance untouched. A settle-on-quiet-plies horizon runs past two later captures and attributes their swing to this move.",
+      "side": "red",
+      "moveNumber": 29,
+      "wxf": "R8.6",
+      "game": {
+        "title": "广东 杨官璘 负 上海 胡荣华",
+        "event": "1960年全国象棋个人赛",
+        "date": "1960-10-28",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_u_345428.html"
+      },
+      "iccs": "h2e2 h9g7 h0g2 g6g5 i0h0 i9h9 c3c4 h7h3 b0c2 c9e7 b2b9 a9b9 a0b0 b7b3 c2d4 f9e8 c4c5 b9b4 d4b3 h3e3 d0e1 h9h0 g2h0 g7f5 b0b1 e3c3 c5c6 e6e5 e2g2 f5g3 h0i2 g3e4 c0e2 c3c5 g2h2 c5b5 h2h4 e4c3 h4h9 e8f9 b1b2 b5b3 i2g3 g5g4 e2g4 c3e4 g3e2 b4c4 b2b0 b3e3 c6d6 e4c3 h9h6 f9e8 h6e6 c3a2 b0d0 e5e4 e6e3 e4e3 e2g3 c4g4 d0d2 a2c1 d2d1",
+      "balanceMoverPov": {
+        "before": 0,
+        "after": 0,
+        "next6": [0, 4.5, 0, 0, -2, -2]
+      },
+      "mustNotBeMarked": true
+    },
+    {
+      "key": "m_17225",
+      "ply": 30,
+      "verdict": "losing-trade",
+      "why": "A horse-for-cannon trade Black comes out behind on. Material really is lost, so a balance-only test fires, but a bad trade is not a sacrifice and must not be marked.",
+      "side": "black",
+      "moveNumber": 15,
+      "wxf": "H3+5",
+      "game": {
+        "title": "广东 杨官璘 胜 上海 胡荣华",
+        "event": "1965年全国象棋个人赛",
+        "date": "1965-11-12",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_m_17225.html"
+      },
+      "iccs": "h2e2 b9c7 h0g2 h9g7 i0h0 i9h9 g3g4 c6c5 b0a2 c9e7 b2b6 g6g5 g4g5 e7g5 b6c6 a9b9 a0b0 b7b3 c3c4 c5c4 h0h4 g7f5 a2c1 c4c3 h4c4 g9e7 c6c3 b3e3 e2e6 c7e6 b0b9 h7g7 b9b2 g7g2 b2g2 e6d4 g2d2 e3e6",
+      "balanceMoverPov": {
+        "before": 0,
+        "after": 4.5,
+        "next6": [-4.5, -4.5, -4.5, -0.5, -5, -5]
+      },
+      "mustNotBeMarked": true
+    }
+  ]
+}

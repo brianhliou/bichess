@@ -34,8 +34,12 @@
   fill: #b7950b;
 }
 
-/* User-authored NAGs (annotations editor). Good moves read green, the
-   speculative ones purple, so they never masquerade as an engine verdict. */
+/* Positive glyphs, engine-computed (!! brilliant, ! great) or user-authored.
+   Brilliant reads teal, good green, the speculative ones purple. */
+.xq-marker--brilliant .xq-marker__disc {
+  fill: #0f8b8d;
+}
+
 .xq-marker--good .xq-marker__disc {
   fill: #2e7d32;
 }

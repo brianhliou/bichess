@@ -10,6 +10,7 @@
 // (play a move → it branches the tree, promote/delete variations).
 
 import {
+  classifyXiangqiMove,
   fsfUciToXiangqiSquares,
   type StandardXiangqiPlayerView,
   standardXiangqiEngineFen,
@@ -71,6 +72,19 @@ const xiangqiPresentation: TreePresentation<
     formatPvMove: formatXiangqiEngineMove,
     engineArrowsFromLines,
     bestMoveArrow,
+    // `!!` / `!` by the shared xiangqi rules. The server hands the whole-game PV
+    // in our own square notation (same dialect as `best`), decoded to the first
+    // token the rules engine cannot read.
+    praiseMove: ({ before, move, winBefore, winAfter, playedBest, pv }) => {
+      if (before.status.type !== 'playing') return null;
+      const pvAfter: XiangqiMove[] = [];
+      for (const uci of pv) {
+        const decoded = fsfUciToXiangqiSquares(uci);
+        if (!decoded) break;
+        pvAfter.push(decoded);
+      }
+      return classifyXiangqiMove({ before, move, winBefore, winAfter, playedBest, pvAfter }).glyph;
+    },
   },
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',

@@ -1,0 +1,105 @@
+{
+  "schema": "mistboard.xiangqi.move-classification-positive-cases.v1",
+  "note": "Hand-verified plies the positive-glyph classifier MUST mark, with the engine numbers (1M-node Pikafish, 2026-08-28) that decided them. iccs = the game up to and including the ply, Pikafish squares (ranks 0-9). pvAfter = the engine line from the position after the move; pvAfterCapture = its line after the opponent takes the offered piece.",
+  "cases": [
+    {
+      "key": "u_345428",
+      "ply": 48,
+      "side": "black",
+      "moveNumber": 24,
+      "wxf": "R2.3",
+      "chinese": "车2平3",
+      "expect": "brilliant",
+      "why": "The chariot steps off the cannon it was defending: taking the cannon is mate in three. The engine line declines it, so the capture line settles the offer.",
+      "game": {
+        "title": "广东 杨官璘 负 上海 胡荣华",
+        "event": "1960年全国象棋个人赛",
+        "date": "1960-10-28",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_u_345428.html"
+      },
+      "iccs": "h2e2 h9g7 h0g2 g6g5 i0h0 i9h9 c3c4 h7h3 b0c2 c9e7 b2b9 a9b9 a0b0 b7b3 c2d4 f9e8 c4c5 b9b4 d4b3 h3e3 d0e1 h9h0 g2h0 g7f5 b0b1 e3c3 c5c6 e6e5 e2g2 f5g3 h0i2 g3e4 c0e2 c3c5 g2h2 c5b5 h2h4 e4c3 h4h9 e8f9 b1b2 b5b3 i2g3 g5g4 e2g4 c3e4 g3e2 b4c4",
+      "evals": {
+        "winBefore": 66,
+        "winAfter": 66.2,
+        "playedBest": true
+      },
+      "pvAfter": "b2b0 b3e3 c6d6 e4c5 b0d0 e5e4 h9h2 c4b4",
+      "pvAfterCapture": "c4c0 e1d0 e4d2 e0e1 c0c1"
+    },
+    {
+      "key": "m_17036",
+      "ply": 99,
+      "side": "red",
+      "moveNumber": 50,
+      "wxf": "C7.6",
+      "chinese": "炮七平六",
+      "expect": "great",
+      "why": "Cannon behind the horse screen hits the chariot: the only move after an error.",
+      "game": {
+        "title": "湖北 李义庭 胜 广东 杨官璘",
+        "event": "1956年全国象棋个人赛",
+        "date": "1956-12-27",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_m_17036.html"
+      },
+      "iccs": "h2e2 h9g7 h0g2 b9c7 i0h0 i9h9 c3c4 g6g5 b2b4 c9e7 b0c2 b7b5 h0h6 h7i7 h6h9 g7h9 a0a1 d9e8 a1h1 h9g7 g3g4 a9d9 g4g5 d9d2 g2e1 e7g5 h1h7 b5b7 e2g2 e6e5 h7h6 g5e7 h6c6 c7e6 c0e2 d2d5 b4b6 e6g5 e2g4 e5e4 c4c5 e7c5 b6b5 c5e7 b5g5 e7g5 c6g6 g9e7 e3e4 d5c5 g4e2 i7i3 g6b6 b7c7 b6b3 i3i0 b3i3 i0h0 i3h3 h0i0 c2b4 c5b5 e1c2 g7e6 g2g1 i0i4 g1b1 b5c5 h3h4 c7c2 h4i4 e6d4 i4i3 c2b2 i3d3 c5c1 b1b0 d4e6 e4e5 e6c5 d3e3 c1b1 b0c0 b2d2 b4d5 d2a2 c0c4 b1d1 d0e1 a2a0 d5c7 d1d7 e3b3 c5e4 b3b9 e8d9 c7d5 f9e8 c4d4",
+      "evals": {
+        "winBefore": 78.8,
+        "winAfter": 79.7,
+        "playedBest": true,
+        "secondBestWin": 62.8,
+        "winTwoPliesAgo": 59.6
+      },
+      "pvAfter": "d7a7 b9b3 a0a1 b3e3 a1d1 e3e4 d1d5 e5d5 a7b7 e4e6 b7b3 e6a6 b3d3 a6a4 i6i5 d5e5 i5i4 d4c4 i4i3 a4a6 e7c9"
+    },
+    {
+      "key": "m_17225",
+      "ply": 81,
+      "side": "red",
+      "moveNumber": 41,
+      "wxf": "C1.5",
+      "chinese": "炮一平五",
+      "expect": "great",
+      "why": "Central cannon on the advisor through the elephant screen: the only move after an error.",
+      "game": {
+        "title": "广东 杨官璘 胜 上海 胡荣华",
+        "event": "1965年全国象棋个人赛",
+        "date": "1965-11-12",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_m_17225.html"
+      },
+      "iccs": "h2e2 b9c7 h0g2 h9g7 i0h0 i9h9 g3g4 c6c5 b0a2 c9e7 b2b6 g6g5 g4g5 e7g5 b6c6 a9b9 a0b0 b7b3 c3c4 c5c4 h0h4 g7f5 a2c1 c4c3 h4c4 g9e7 c6c3 b3e3 e2e6 c7e6 b0b9 h7g7 b9b2 g7g2 b2g2 e6d4 g2d2 e3e6 c4d4 f5d4 d2d4 h9h3 c3c4 h3e3 d0e1 e3c3 e0d0 c3c1 d4d9 e9e8 c0e2 c1c3 d9d6 e6e4 i3i4 a6a5 c4c6 c3a3 c6i6 e8f8 d6d5 f9e8 i4i5 f8f9 i6i9 a5a4 d5d4 e4e5 i5i6 e5c5 i6h6 c5c9 i9i4 a3a0 d0d1 a4a3 d4f4 f9e9 f4a4 c9d9 i4e4",
+      "evals": {
+        "winBefore": 64.1,
+        "winAfter": 63.5,
+        "playedBest": true,
+        "secondBestWin": 52.5,
+        "winTwoPliesAgo": 52.9
+      },
+      "pvAfter": "e9f9 e4e8 a0a1 d1d0 a1a0 d0d1 a0b0 a4a9 b0b1 d1d0 b1b0 d0d1 d9c9 e8d8 b0b1 d1d0 b1b0 d0d1 b0c0 h6g6 a3b3 e1f2 b3b2 d1e1 c0c8 d8d4 b2c2 g6f6 c2d2"
+    },
+    {
+      "key": "m_17496",
+      "ply": 34,
+      "side": "black",
+      "moveNumber": 17,
+      "wxf": "P7+1",
+      "chinese": "卒7进1",
+      "expect": "great",
+      "why": "A soldier crosses to fork chariot and horse: the only move after a blunder.",
+      "game": {
+        "title": "广东 杨官璘 负 湖北 柳大华",
+        "event": "1980年全国象棋个人赛",
+        "date": "1980-09-03",
+        "sourceUrl": "http://www.dpxq.com/hldcg/search/view_m_17496.html"
+      },
+      "iccs": "h2e2 h9g7 h0g2 g6g5 c3c4 b9c7 b0c2 i9h9 i0i1 a9a8 i1f1 a8d8 b2a2 b7b3 a0b0 b3g3 g0i2 g3h3 f1f4 d8d1 f0e1 h7i7 c2d4 h3h0 g2h4 d1d3 b0b8 f9e8 e2g2 g7h5 a2c2 g9e7 d4c6 g5g4",
+      "evals": {
+        "winBefore": 63.8,
+        "winAfter": 65.8,
+        "playedBest": true,
+        "secondBestWin": 50.8,
+        "winTwoPliesAgo": 43.5
+      },
+      "pvAfter": "f4g4 h5f6 g4g7 i7i8 b8b7 h9h4 c6e7 c9e7 c2c7 e7c9 c7c6 h0i0 c6f6 d3e3 g2c2 c9a7 b7a7 h4h0 f6f0 i0f0 c2b2 f0f9 g7g0 h0g0 i2g0 e3b3 b2e2 i8i3 g0i2 i3e3 a7a6 e6e5"
+    }
+  ]
+}
