@@ -29,6 +29,7 @@ import {
   type PieceRole,
   type Square,
 } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 
 const FILES = 8;
@@ -109,6 +110,9 @@ export function renderCrazyhouseBoardSvg(
 
   return renderGridBoardSvg(CRAZYHOUSE_DESCRIPTOR, {
     id,
+    // Omitting this drew the labels unconditionally: grid-board treats only an
+    // explicit false as off, so the site-wide setting never reached this board.
+    coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
       [
