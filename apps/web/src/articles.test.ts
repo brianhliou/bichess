@@ -84,6 +84,9 @@ describe('article public listing gates', () => {
       // lang="vi" and is aimed at readers who arrive by search, not by
       // browsing here.
       '/blog/co-up',
+      // Same publish date as the Vietnamese landing page; ties break
+      // alphabetically by title and 'Chơi' sorts before 'Jieqi'.
+      '/blog/jieqi-platform',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
