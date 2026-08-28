@@ -233,7 +233,12 @@ function jieqiWatchMaskedView(state: JieqiGameState): JieqiPlayerView {
 // Shared loader for the analysis tiers (both `/analysis` and `/decisions`): the per-game deal
 // (from the room-created event) + the move list, but only for a FINISHED game. Returns null for
 // a missing / non-jieqi / unfinished game or a log with no deal.
-async function loadFinishedJieqiGameInputs(
+// Exported for the off-box backfill script (scripts/backfill-jieqi-analysis.mjs),
+// which warms the analysis cache from a workstation instead of burning the single
+// global compute lane on prod. It must reuse THIS loader rather than re-deriving the
+// deal from events[0].setup: a second copy of that extraction is exactly the kind of
+// drift that silently produces a differently-keyed cache row.
+export async function loadFinishedJieqiGameInputs(
   roomId: string,
 ): Promise<{ deal: JieqiDeal; moves: JieqiMove[] } | null> {
   const events = await persistence.loadRoomEvents<JieqiEvent>(roomId);
