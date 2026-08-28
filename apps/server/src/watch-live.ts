@@ -80,6 +80,14 @@ export async function liveWatchPayloadForFeatured(
 // on the hero board.
 export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
 
+// A game earns the hero board only once BOTH sides have moved. A candidate's
+// `ply` is the state's moveNumber, which every variant starts at 1 and advances
+// after the second mover's ply, so 2 is the first position both players have
+// touched. Below that the board is untouched or one move old, and a room
+// abandoned at that point strands the homepage on an all-face-down board
+// (2026-08-27: the hero sat on a one-flip banqi room after both guests left).
+export const LIVE_TV_MIN_MOVE_NUMBER = 2;
+
 export type LiveTvComposition = 'pvp' | 'pve';
 
 export type LiveTvPlayer = {
@@ -219,6 +227,7 @@ function finishCandidate(args: {
   // Headless EvE never creates rooms; a both-engine live room would be a new
   // code path this module has not vetted, so refuse rather than mislabel.
   if (args.players.every((player) => player.isEngine)) return null;
+  if (args.ply < LIVE_TV_MIN_MOVE_NUMBER) return null;
   const lastActivityAt = latestEventAt(args.events);
   if (lastActivityAt === null || args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS) return null;
   return {
