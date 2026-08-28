@@ -61,11 +61,31 @@ const REQUIRED_COLUMNS = [
   'game_status',
   'outcome',
   'game_join_source',
-  'analysis',
   'cpl',
 ] as const;
 
-type ElephantChessColumn = (typeof REQUIRED_COLUMNS)[number];
+// The July 2026 release renamed `analysis` to `move_analysis` and added an
+// `engine_analysis` column beside it. Both releases are still downloadable and
+// both are legitimate inputs, so the analysis column is resolved by alias
+// rather than by one hardcoded name. A header carrying neither is a real
+// schema break and still throws.
+const ANALYSIS_COLUMN_ALIASES = ['analysis', 'move_analysis'] as const;
+
+// Columns that exist in some releases and not others. A missing one reads as
+// the empty string; it never fails the import. Keep genuinely load-bearing
+// columns in REQUIRED_COLUMNS instead, so a silent schema drop stays loud.
+const OPTIONAL_COLUMNS = [
+  'engine_analysis',
+  'red_account_age',
+  'red_user_type',
+  'black_account_age',
+  'black_user_type',
+] as const;
+
+type ElephantChessColumn =
+  | (typeof REQUIRED_COLUMNS)[number]
+  | 'analysis'
+  | (typeof OPTIONAL_COLUMNS)[number];
 
 type Args = {
   input: string;
@@ -212,6 +232,10 @@ export async function* parseCsvRecords(input: Readable): AsyncGenerator<string[]
   }
 }
 
+// -1 means "this release does not carry the column". Only optional columns are
+// ever allowed to land on it.
+const MISSING_COLUMN = -1;
+
 function columnIndexes(header: readonly string[]): Record<ElephantChessColumn, number> {
   const normalized = header.map((value, index) =>
     index === 0 ? value.replace(/^\uFEFF/, '') : value,
@@ -222,6 +246,18 @@ function columnIndexes(header: readonly string[]): Record<ElephantChessColumn, n
     if (index < 0) throw new Error(`missing required ElephantChess CSV column: ${column}`);
     indexes[column] = index;
   }
+  const analysis = ANALYSIS_COLUMN_ALIASES.map((alias) => normalized.indexOf(alias)).find(
+    (index) => index >= 0,
+  );
+  if (analysis === undefined) {
+    throw new Error(
+      `missing required ElephantChess CSV column: one of ${ANALYSIS_COLUMN_ALIASES.join(', ')}`,
+    );
+  }
+  indexes.analysis = analysis;
+  for (const column of OPTIONAL_COLUMNS) {
+    indexes[column] = normalized.indexOf(column);
+  }
   return indexes;
 }
 
@@ -230,7 +266,10 @@ function plyRow(
   indexes: Record<ElephantChessColumn, number>,
 ): ElephantChessPlyRow {
   const values = {} as Record<ElephantChessColumn, string>;
-  for (const column of REQUIRED_COLUMNS) values[column] = record[indexes[column]] ?? '';
+  for (const column of [...REQUIRED_COLUMNS, 'analysis' as const, ...OPTIONAL_COLUMNS]) {
+    const index = indexes[column];
+    values[column] = index === MISSING_COLUMN ? '' : (record[index] ?? '');
+  }
   const moveIndex = Number.parseInt(values.move_index, 10);
   if (!Number.isInteger(moveIndex) || moveIndex < 0) {
     throw new Error(`invalid move_index ${JSON.stringify(values.move_index)}`);
@@ -349,6 +388,7 @@ function buildGame(file: string, rows: readonly ElephantChessPlyRow[]): Elephant
   const blackEloAfter = nullableInteger(first.black_elo_after);
   const analysisPlies = ordered.filter((row) => row.analysis.trim()).length;
   const cplPlies = ordered.filter((row) => row.cpl.trim()).length;
+  const engineAnalysisPlies = ordered.filter((row) => row.engine_analysis.trim()).length;
   return {
     ok: true,
     rows: rows.length,
@@ -381,6 +421,13 @@ function buildGame(file: string, rows: readonly ElephantChessPlyRow[]): Elephant
         gameJoinSource: first.game_join_source || null,
         analysisPlies,
         cplPlies,
+        // 0 on releases before July 2026, which carried no engine_analysis
+        // column at all. Read it with sourceMonth, not on its own.
+        engineAnalysisPlies,
+        redUserType: first.red_user_type || null,
+        blackUserType: first.black_user_type || null,
+        redAccountAge: first.red_account_age || null,
+        blackAccountAge: first.black_account_age || null,
       },
     },
   };
