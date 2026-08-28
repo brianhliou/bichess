@@ -185,6 +185,7 @@ Edit task → find file → open only that file.
 | `server-config.ts` | Runtime config parsing and room-region normalization |
 | `server-types.ts` | Shared server types: `Client`, `Room`, `SeatTokenState`, `SeatAssignment`, `LobbyTicket` |
 | `server-policy.ts` | Access control: `canObserveLiveRoom`, `liveObservePolicy`/`canServeLiveBoard` (visibility-keyed live-TV gate, fail-closed on fog), `eventReplayResponse`, `visibleEventsForLiveSnapshot`, `modeForProjection`, `isAdminDebugToken`, `isAllowedWebSocketOrigin`, `isClientRoute`, `PARKED_CLIENT_ROUTES` |
+| `viewer-country.ts` | Viewer country from Cloudflare's `CF-IPCountry` to the browser: `viewerCountryFromRequest` (two-letter code; XX/T1/absent are unknown) and the readable day-long `mb_cc` cookie that `server-http.ts` sets on page navigations so the client can skip links blocked where the viewer is |
 | `server-ws-messages.ts` | Client WebSocket message parser and known-message allowlist used by `server-ws-connection.ts` dispatch |
 | `server-seat-session.ts` | Seat assignment/session helpers: seat-token hashing and verification, account/token credential gate, new/existing seat assignment, and duplicate seat displacement. |
 | `server-live-engine-reservations.ts` | Live engine reservation helpers: PvE engine-seat detection, legacy engine ID normalization, engine-worker reservation create/release, and reservation logging. |
@@ -673,6 +674,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `web-utils.ts` | `escapeHtml`, `isColor`, `formatClock`, `oppositeColor`, file/rank helpers |
 | `captures.ts` | Captured-piece list derivation |
 | `nav-items.ts` | Nav item definitions (shared between top-nav and footer) |
+| `viewer-geo.ts` | Client side of the viewer country: `viewerCountry()` reads the `mb_cc` cookie synchronously, `isBlockedForViewer(blockedIn)` gates `NavItem.blockedIn` items (Discord in mainland China) in the nav, footer, and forum; no cookie means show everything |
 | `announcements.ts` | Card list for /announcements + landing widget |
 | `variant-public-surfaces.ts` | Single public-surface switchboard per `GameSpecId`: controls variant discoverability in rules rails/tiles, homepage article cards, homepage News, and `/news` without per-content visibility flags |
 | `annotations.ts` | Annotation read/write for the research feedback workflow |
@@ -1044,6 +1046,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 | Group | Files |
 |-------|-------|
+| Announcements | `announce-tweet.mjs` posts each new /feed.xml item to X once, oldest first: the LIVE feed is the source (so the megaphone can never run ahead of the deploy) and `data/tweeted-announcements.json` is the committed guid ledger. `--mark-all` bootstraps the ledger without posting, `--max` caps a run, dry run is the default. OAuth 1.0a from `X_API_*` env vars, never printed. `announce-tweet.test.mjs` covers the 280-char composition |
 | Build/start | `build.mjs`, `start.mjs`; `release-prod.mjs` is the main-push path and runs CI → (drain-to-zero only when games are live, else token-free) → push/deploy → smoke; the pre-push hook steers to it but keeps a `SKIP_PREPUSH=1` escape hatch; `safe-deploy.mjs` owns the fail-closed drain helper, tested by `safe-deploy.test.mjs`; `lib/drain-token.mjs` resolves the drain token from `MISTBOARD_DRAIN_TOKEN` else the macOS keychain (`drain-token.test.mjs`) so a live-game release never needs the secret typed into a shell |
 | Agent/dev loop | `agent-scan.mjs`, `dev.mjs`, `product-profile.mjs`, `worktree-role.mjs`, `worktree-local-files.mjs`, `ci-browser-smoke-plan.mjs`, `ci-checks.mjs`, `drift-check.mjs`, `gate-evidence.mjs`, `i18n-check-lib.mjs`, `verify.mjs`, `worktree-new.mjs`, `worktree-prepare.mjs`, `mobile-loop.mjs`, `visual-check.mjs`; `config/product-profile.json` is the product-shaped local variant list shared by dev and QA seeding; `seed-variant-corpus.mjs` seeds SEVERAL games per variant instead of the one committed fixture (generates into a scratch dir at distinct seeds and deletes it, so nothing new is committed) — one game cannot exercise a games list, a crosstable, or an opening explorer |
 | Engine artifacts | `archive-engine-artifact.mjs`, `engine-artifact-{audit,closeout}.mjs`, `capture-belief-artifacts.mjs`, `generate-fow-corpus.mjs` |

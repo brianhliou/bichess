@@ -362,9 +362,10 @@ const ZH_HANS: Record<string, string> = {
   // -- Mini Xiangqi (rules) --
   'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.':
     '迷你象棋规则，迷雾迷你象棋的 7×7 入门基础：没有士象、没有河界、兵可横走，以将死取胜。',
-  'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. It is a simplified, reduced version of [xiangqi](/rules/xiangqi): a smaller board, fewer pieces, and no river.':
-    '迷你象棋由日本大阪的楠本茂信于 1973 年发明。它是[象棋](/rules/xiangqi)的简化精简版本：棋盘更小、棋子更少，且没有河界。',
-  'This page describes the open-information base game.': '本页介绍的是信息公开的底层游戏。',
+  'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. Xiangqi itself is many centuries older: see [Xiangqi rules](/rules/xiangqi). Mini Xiangqi is a simplified, reduced version of it, with a smaller board, fewer pieces, and no river.':
+    '迷你象棋由日本大阪的楠本茂信于 1973 年发明。象棋本身要早上许多个世纪，见[象棋规则](/rules/xiangqi)。迷你象棋是它的简化精简版本：棋盘更小、棋子更少，且没有河界。',
+  'This page describes the open-information base game. Mini Xiangqi is not playable on Mistboard; this is reference only.':
+    '本页介绍的是信息公开的底层游戏。迷你象棋不能在 Mistboard 上对弈，本页仅作参考。',
   'Board and setup': '棋盘与布局',
   'Mini Xiangqi is xiangqi compressed onto a 7 by 7 board with a smaller army. The advisors and elephants are dropped and there is no river, but each general still keeps a 3 by 3 palace.':
     '迷你象棋是把象棋压缩到 7×7 棋盘、并削减子力的版本。去掉了士和象，也没有河界，但每一方的将帅仍保有一个 3×3 的九宫。',
@@ -383,8 +384,9 @@ const ZH_HANS: Record<string, string> = {
   'A complete game': '一盘完整对局',
   'Mini Xiangqi has no canon of famous human games, so to watch the full army work together, step through a game in which Fairy-Stockfish, a strong open-source engine, plays both sides with full information. Notice how fast the chariots and cannons open lines: on a tight 7 by 7 board with no river, the generals come under fire far sooner than in full xiangqi.':
     '迷你象棋没有著名的人类对局传统，因此若想看全部子力协同作战，可以逐步重演一盘由强大的开源引擎 Fairy-Stockfish 在完全信息下执双方对弈的棋局。注意车和炮开线有多快：在紧凑、无河界的 7×7 棋盘上，将帅遭受火力的时间远比完整象棋来得早。',
-  'Ready to try the Mistboard version? Play Misty DMX in Dark Mini Xiangqi, the Fog of War variant built on this same 7 by 7 board.':
-    '准备试试 Mistboard 版本？在迷雾迷你象棋中对战 Misty DMX，这是建立在同一张 7×7 棋盘上的战争迷雾变体。',
+  'Mini Xiangqi is not one of the games you can play here. Xiangqi is: the full 9 by 10 game this one reduces, against an engine or a friend.':
+    '迷你象棋不在本站可下的棋类之列，象棋则可以：那是被它精简的完整 9×10 棋局，可以对战引擎或好友。',
+  'Play xiangqi': '下象棋',
 
   // -- Dark Mini Xiangqi (rules) --
   'Mini Xiangqi under Fog of War: each side sees only the points its pieces reach on the 7×7 board, and the general falls by capture.':
@@ -1485,9 +1487,10 @@ const ZH_HANT: Record<string, string> = {
   // -- Mini Xiangqi (rules) --
   'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.':
     '迷你象棋規則，迷霧迷你象棋的 7×7 入門基礎：沒有士象、沒有河界、兵可橫走，以將死取勝。',
-  'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. It is a simplified, reduced version of [xiangqi](/rules/xiangqi): a smaller board, fewer pieces, and no river.':
-    '迷你象棋由日本大阪的楠本茂信於 1973 年發明。它是[象棋](/rules/xiangqi)的簡化精簡版本：棋盤更小、棋子更少，且沒有河界。',
-  'This page describes the open-information base game.': '本頁介紹的是資訊公開的底層遊戲。',
+  'Mini Xiangqi was invented in 1973 by Shigenobu Kusumoto of Osaka, Japan. Xiangqi itself is many centuries older: see [Xiangqi rules](/rules/xiangqi). Mini Xiangqi is a simplified, reduced version of it, with a smaller board, fewer pieces, and no river.':
+    '迷你象棋由日本大阪的楠本茂信於 1973 年發明。象棋本身要早上許多個世紀，見[象棋規則](/rules/xiangqi)。迷你象棋是它的簡化精簡版本：棋盤更小、棋子更少，且沒有河界。',
+  'This page describes the open-information base game. Mini Xiangqi is not playable on Mistboard; this is reference only.':
+    '本頁介紹的是資訊公開的底層遊戲。迷你象棋不能在 Mistboard 上對弈，本頁僅作參考。',
   'Board and setup': '棋盤與佈局',
   'Mini Xiangqi is xiangqi compressed onto a 7 by 7 board with a smaller army. The advisors and elephants are dropped and there is no river, but each general still keeps a 3 by 3 palace.':
     '迷你象棋是把象棋壓縮到 7×7 棋盤、並削減子力的版本。去掉了士和象，也沒有河界，但每一方的將帥仍保有一個 3×3 的九宮。',
@@ -1506,8 +1509,9 @@ const ZH_HANT: Record<string, string> = {
   'A complete game': '一盤完整對局',
   'Mini Xiangqi has no canon of famous human games, so to watch the full army work together, step through a game in which Fairy-Stockfish, a strong open-source engine, plays both sides with full information. Notice how fast the chariots and cannons open lines: on a tight 7 by 7 board with no river, the generals come under fire far sooner than in full xiangqi.':
     '迷你象棋沒有著名的人類對局傳統，因此若想看全部子力協同作戰，可以逐步重演一盤由強大的開源引擎 Fairy-Stockfish 在完全資訊下執雙方對弈的棋局。注意車和炮開線有多快：在緊湊、無河界的 7×7 棋盤上，將帥遭受火力的時間遠比完整象棋來得早。',
-  'Ready to try the Mistboard version? Play Misty DMX in Dark Mini Xiangqi, the Fog of War variant built on this same 7 by 7 board.':
-    '準備試試 Mistboard 版本？在迷霧迷你象棋中對戰 Misty DMX，這是建立在同一張 7×7 棋盤上的戰爭迷霧變體。',
+  'Mini Xiangqi is not one of the games you can play here. Xiangqi is: the full 9 by 10 game this one reduces, against an engine or a friend.':
+    '迷你象棋不在本站可下的棋類之列，象棋則可以：那是被它精簡的完整 9×10 棋局，可以對戰引擎或好友。',
+  'Play xiangqi': '下象棋',
 
   // -- Dark Mini Xiangqi (rules) --
   'Mini Xiangqi under Fog of War: each side sees only the points its pieces reach on the 7×7 board, and the general falls by capture.':

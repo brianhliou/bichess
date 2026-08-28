@@ -56,6 +56,11 @@ const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
     description:
       'Browse public xiangqi (Chinese chess) studies: annotated games, classical endgame compositions, and opening lines on an interactive board.',
   },
+  '/feed': {
+    title: 'Updates and Announcements | Mistboard',
+    description:
+      'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
+  },
   '/stats': {
     title: 'Statistics | Mistboard',
     description:
@@ -477,7 +482,7 @@ function gamePageParticipantName(game: persistence.GameRecord, color: Color): st
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
-  file: 'home.html' | 'leaderboard.html' | 'player.html' | 'learn-xiangqi.html';
+  file: 'home.html' | 'leaderboard.html' | 'player.html' | 'learn-xiangqi.html' | 'feed.html';
 }): Promise<void> {
   const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -503,6 +508,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/analysis',
   '/editor',
   '/study',
+  '/feed',
   '/videos',
   '/streamer',
   '/player',

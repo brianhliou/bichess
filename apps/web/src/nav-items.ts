@@ -14,7 +14,15 @@ export interface NavItem {
   // An off-site destination (the Discord invite): rendered as-is (no locale
   // prefix), opens in a new tab, never marked active.
   external?: boolean;
+  // Countries (ISO 3166-1 alpha-2) where the destination is unreachable, so the
+  // item is not rendered for viewers there (viewer-geo.ts reads the country the
+  // server stamped). A link that hangs is worse than no link.
+  blockedIn?: readonly string[];
 }
+
+// Discord (discord.com and discord.gg) is blocked in mainland China, which was
+// about a third of visitors in Aug 2026. Those visitors get the forum instead.
+export const DISCORD_BLOCKED_IN: readonly string[] = ['CN'];
 
 // The public invite to the Mistboard Discord (never expires, unlimited uses).
 // Set up 2026-08-27. A discord.com/channels/... URL would only work for
@@ -40,7 +48,13 @@ export function communityNavItems(): NavItem[] {
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
     { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
-    { label: 'Discord', labelKey: 'nav.discord', href: DISCORD_INVITE_URL, external: true },
+    {
+      label: 'Discord',
+      labelKey: 'nav.discord',
+      href: DISCORD_INVITE_URL,
+      external: true,
+      blockedIn: DISCORD_BLOCKED_IN,
+    },
   ];
 }
 

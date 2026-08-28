@@ -180,13 +180,36 @@ describe('site shell nav', () => {
 
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/rules"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')).toBeNull();
-    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
+    // The announcement archive joined the footer 2026-08-27, when it stopped
+    // being a noindexed dead end. It is not a content path, so it keeps its
+    // bare href under a zh locale.
+    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     const footerDiscord = footer.querySelector<HTMLAnchorElement>('a[href^="https://discord.gg/"]');
     expect(footerDiscord?.textContent).toBe('Discord');
     expect(footerDiscord?.target).toBe('_blank');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
+  });
+});
+
+describe('site shell geo-blocked links', () => {
+  afterEach(() => {
+    document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+    document.body.innerHTML = '';
+  });
+
+  it('hides the Discord invite for viewers in mainland China, keeps it elsewhere', () => {
+    document.cookie = 'mb_cc=CN; Path=/';
+    const cnNav = buildNav();
+    expect(cnNav.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+    // The rest of the Community menu is untouched.
+    expect(cnNav.querySelector('a[href="/forum"]')).not.toBeNull();
+    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+
+    document.cookie = 'mb_cc=US; Path=/';
+    expect(buildNav().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
+    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
   });
 });
 

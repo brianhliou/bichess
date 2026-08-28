@@ -102,24 +102,33 @@ describe('landing announcements', () => {
     expect(hrefs).toContain('/?play=computer');
   });
 
-  it('keeps the header title-only and ends the timeline with an All updates star link', () => {
+  it('reaches the archive from a linked header, the way Top studies does', () => {
     const panel = buildLandingAnnouncements();
-    const top = panel.querySelector<HTMLElement>('.site-box-top');
-    const allUpdates = panel.querySelector<HTMLAnchorElement>('a.landing-news-all-updates');
+    const top = panel.querySelector<HTMLAnchorElement>('a.site-box-top');
 
-    expect(top?.tagName).toBe('DIV');
-    expect(top?.querySelector('.site-box-more')).toBeNull();
-    expect(allUpdates?.getAttribute('href')).toBe('/feed');
-    expect(allUpdates?.querySelector('.landing-news-marker-all')?.textContent).toBe('☆');
-    expect(allUpdates?.querySelector('.landing-news-all-label')?.textContent).toBe('All updates »');
-    expect(panel.querySelector('.landing-news-updates')?.lastElementChild).toBe(allUpdates);
+    // The affordance used to be a terminal ☆ row at the bottom of the timeline,
+    // which the reader had to scroll to reach once the box overflowed.
+    expect(top?.getAttribute('href')).toBe('/feed');
+    expect(top?.querySelector('.site-box-more')?.textContent).toBe('More »');
+    expect(panel.querySelector('.landing-news-all-updates')).toBeNull();
+  });
+
+  it('renders more rows than the box shows, and scrolls the rest', () => {
+    const panel = buildLandingAnnouncements();
+    const rows = panel.querySelectorAll('.landing-news-update');
+    const visible = [...panel.querySelectorAll<HTMLElement>('.landing-news-headline')];
+
+    // The box's height comes from the band beside it, so the cap is only there
+    // to bound the DOM: it has to clear what any plausible box height shows.
+    expect(rows.length).toBeGreaterThan(6);
+    expect(visible).toHaveLength(rows.length);
   });
 
   it('links each hoverable relative date to the full feed', () => {
     const panel = buildLandingAnnouncements();
     const dates = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-date')];
 
-    expect(dates).toHaveLength(3);
+    expect(dates).toHaveLength(panel.querySelectorAll('.landing-news-update').length);
     for (const date of dates) {
       expect(date.getAttribute('href')).toBe('/feed');
       expect(date.getAttribute('title')).toMatch(/2026/);
@@ -142,15 +151,17 @@ describe('landing announcements', () => {
     const kind = firstRow?.dataset.announcementKind;
     expect(kind).toBeTruthy();
     expect(marker?.dataset.announcementKind).toBe(kind);
-    // Kinds share icons ('update' draws the release icon, 'status' the article
-    // one), so the icon has to be resolved through the same mapping the view
-    // uses. Asserting `ui-icon-announcement-${kind}` passes only while every
-    // newest entry happens to be a kind whose name matches its icon.
+    // Resolved through the same mapping the view uses, rather than assuming the
+    // icon is named after the kind, so the assertion survives a remap.
     const icon = uiIconForAnnouncementKind(kind as AnnouncementKind);
     expect(marker?.querySelector(`svg.ui-icon-${icon}`)).not.toBeNull();
-    // The slot is assigned from the kind, so assert it is present and
-    // well-formed rather than pinning whichever kind is currently newest.
-    expect(marker?.dataset.futureDobutsuSlot).toMatch(/^announcement-[a-z]$/);
+  });
+
+  it('gives every announcement kind its own glyph', () => {
+    const kinds: AnnouncementKind[] = ['release', 'update', 'article', 'status'];
+    const icons = kinds.map((kind) => uiIconForAnnouncementKind(kind));
+
+    expect(new Set(icons).size).toBe(kinds.length);
   });
 
   it('localizes the News rail and feed chrome', () => {
@@ -158,16 +169,19 @@ describe('landing announcements', () => {
 
     const landing = buildLandingAnnouncements('zh-Hant');
     const firstRow = landing.querySelector<HTMLAnchorElement>('a.landing-news-link');
-    const more = landing.querySelector<HTMLElement>('.landing-news-all-label');
+    const more = landing.querySelector<HTMLElement>('.site-box-more');
     const news = buildNewsPage('zh-Hant');
 
     const newestHref = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0]?.href;
     expect(landing.getAttribute('aria-label')).toBe('新聞');
     expect(firstRow?.getAttribute('href')).toBe(newestHref);
-    expect(more?.textContent).toBe('全部更新 »');
+    expect(more?.textContent).toBe('更多 »');
     expect(news.querySelector('.site-section-heading')?.textContent).toBe('Mistboard 更新');
     expect(news.querySelector('.news-page-intro')?.textContent).toBe(
-      'Mistboard 的發布、狀態更新和公告。',
+      'Mistboard 的發布、狀態更新和公告。 訂閱 RSS',
+    );
+    expect(news.querySelector<HTMLAnchorElement>('.news-page-subscribe')?.href).toContain(
+      '/feed.xml',
     );
     expect(news.querySelector<HTMLAnchorElement>('.news-page-link')?.getAttribute('href')).toBe(
       newestHref,
