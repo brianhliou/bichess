@@ -26,11 +26,18 @@
 // slots, not search); raising MISTBOARD_PIKAFISH_JIEQI_THREADS is NOT, and would
 // poison the cache with box-specific numbers.
 //
-// CAVEAT worth checking once: the engine version in the cache key is hand-maintained
-// (JIEQI_ANALYSIS_ENGINE_VERSION), not derived from the binary. If this machine's
-// PikaJieQi build differs from the deploy image's, results land under the same key
-// with different evals and nothing complains. Verify one game against a
-// prod-computed one before trusting a full run.
+// ARCHITECTURE IS A HARD REQUIREMENT, not a caveat. Measured 2026-08-28: the same
+// pinned engine commit built arm64/NEON and x86-64-sse41-popcnt produces different
+// evals AND different node counts (depth 20 on one midgame position: 1043 cp over
+// 1,106,314 nodes vs 1050 cp over 851,161). The cache key carries the engine ref and
+// the depth, not the ARCH, so rows written by a non-x86-64 build are indistinguishable
+// from prod's own and permanently wrong. railpack builds x86-64-sse41-popcnt, so this
+// script refuses to run anywhere else. --allow-foreign-arch exists only for computing
+// into a THROWAWAY database (a local comparison run); never point it at prod.
+//
+// The engine commit itself is pinned in pikafish-jieqi.ref and its short sha is part of
+// the cache key, so a future engine bump invalidates instead of silently reusing rows
+// (jieqi-engine-ref.test.ts enforces the two stay in step).
 //
 // Idempotent: a game whose cache row already exists is served from cache and skipped,
 // so re-running after an interrupt only does the remaining work.
@@ -53,6 +60,19 @@ const limit = Number(flagValue('--limit')) || null;
 
 if (!process.env.DATABASE_URL) {
   console.error('DATABASE_URL is required (see the railway run pattern in this file).');
+  process.exit(1);
+}
+
+// Fail closed on the one mistake that cannot be detected after the fact: a foreign-arch
+// row looks exactly like a prod-computed one. --dry-run is exempt: it writes nothing, and
+// the listing is the normal way to pick games from a workstation.
+if (process.arch !== 'x64' && !has('--allow-foreign-arch') && !dryRun) {
+  console.error(
+    `refusing to run on ${process.arch}: prod builds PikaJieQi as x86-64-sse41-popcnt and a\n` +
+      'different architecture produces different evals under an identical cache key.\n' +
+      'Run this on an x86-64 host, or pass --allow-foreign-arch when writing to a\n' +
+      'throwaway database you are about to discard.',
+  );
   process.exit(1);
 }
 

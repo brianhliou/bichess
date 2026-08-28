@@ -41,6 +41,7 @@ import {
   evaluateJieqiFen,
   evaluateJieqiMultiPv,
   JIEQI_ANALYSIS_ENGINE_VERSION,
+  PIKAFISH_JIEQI_ENGINE_REF,
   withJieqiAnalysisSession,
 } from './jieqi-engine.js';
 import {
@@ -70,7 +71,7 @@ export const JIEQI_ANALYSIS_DEPTH = 20;
 const TERMINAL_CP = 30_000;
 
 // The history suffix invalidates earlier FEN-only cached sweeps.
-export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+history1`;
+export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1`;
 
 export type JieqiRepetitionWindow = {
   fen: string;
@@ -586,7 +587,7 @@ export async function analyzeJieqiDecisions(
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
 // to invalidate cached decisions when the algorithm changes without an engine change. d3 adds
 // the live repetition window; d2 fixed counterfactual hidden-role-multiset preservation.
-export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+d3`;
+export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d3`;
 
 export type JieqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<JieqiDecision[] | null>;

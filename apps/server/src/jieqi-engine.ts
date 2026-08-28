@@ -44,6 +44,15 @@ export const JIEQI_ENGINE_VERSION = '0.2.0';
 // its final iteration. The Misty-backed variants never touch this parser.
 export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.3.0';
 
+// Short form of the upstream `jieqi_old` commit the prod image builds (pikafish-jieqi.ref).
+// It belongs in the ANALYSIS cache key because that key's whole promise is "same inputs,
+// same evals": the binary is an input, and until 2026-08-28 the build cloned branch tip on
+// every deploy, so two deploys either side of an upstream commit filed evals from different
+// engines under one identical key. Version alone could not catch that, being hand-maintained.
+// jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
+// cannot land without moving the key and forcing a recompute.
+export const PIKAFISH_JIEQI_ENGINE_REF = '23b9466c';
+
 export type JieqiEngineTier = {
   id: string;
   name: string;
@@ -196,13 +205,20 @@ export function jieqiEngineBinaryAvailable(): boolean {
 }
 
 // Per-process search resources for ANALYSIS. Single-threaded, because parallel search
-// is non-deterministic and a cached sweep promises a CPU-independent result. Hash is
+// is non-deterministic and a cached sweep promises a reproducible result. Hash is
 // raised off the 16MB UCI default anyway: 16MB is badly undersized for a ~3M nps binary
 // and hashfull pegs at 1000 mid-search, which does not merely slow the search down, it
 // corrupts it. Measured at the start position, single-threaded, depths 12 through 32:
 // 16MB wanders 238 -> 241 -> 265 -> 299 cp on a fully thrashing table, while 256MB holds
 // 234 -> 238 -> 234 with hashfull under 12%. A fixed byte count is as reproducible as any
 // other fixed option, so this preserves the cache guarantee that Threads would break.
+//
+// SCOPE OF THAT GUARANTEE, measured 2026-08-28 and narrower than this comment used to
+// imply: reproducible means same-architecture. The same pinned commit built arm64/NEON
+// and x86-64-sse41-popcnt disagrees on both eval and node count for one position
+// (depth 20: 1043 cp / 1,106,314 nodes vs 1050 cp / 851,161). The cache key captures
+// engine ref and depth, not ARCH, so ONLY an x86-64 build (what railpack builds) may
+// write these rows. scripts/backfill-jieqi-analysis.mjs enforces that at runtime.
 export function jieqiAnalysisResourceOptions(): string[] {
   return ['setoption name Hash value 256', 'setoption name Threads value 1'];
 }
