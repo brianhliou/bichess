@@ -18,6 +18,7 @@ import {
   renderGridBoardSvg,
 } from '@mistboard/board-render';
 import type { Color, KriegspielPlayerView, Move, PieceRole, Square } from '@mistboard/game';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import { type PieceSet, readStoredPieceSet } from './theme.js';
 
@@ -137,7 +138,7 @@ export function renderKriegspielBoardSvg(
     fogHidden: null,
     threats: (options.threats ?? []).map(coordOf),
     interactive: options.interactive ?? false,
-    coords: false,
+    coords: boardCoordinatesEnabled(),
     squareName: (file, rank) => squareAt(file, rank),
   });
 }

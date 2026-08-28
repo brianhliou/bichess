@@ -34,6 +34,7 @@ import {
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
   framedTokenSvg,
@@ -334,7 +335,7 @@ export function renderJungleBoardSvg(
     id: gid,
     flip: options.perspective === 'black',
     extraDefs: shadow ? defs(gid) : '',
-    coords: false,
+    coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
       furniture(geom, options.lastMove ?? null, boardSkin) +
       pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
