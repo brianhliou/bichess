@@ -68,10 +68,7 @@ test('throws instead of proceeding when a replace delete fails', async () => {
   // Proceeding here would create a duplicate on top of the one it failed to
   // remove, which is worse than the state it was asked to fix.
   const { lookup } = fakeApi([{ id: 'OctrDSma', name: NAME }], { delOk: false });
-  await assert.rejects(
-    () => resolveExistingStudy(lookup, NAME, { replace: true }),
-    /500/,
-  );
+  await assert.rejects(() => resolveExistingStudy(lookup, NAME, { replace: true }), /500/);
 });
 
 test('still seeds when the lookup itself fails', async () => {
