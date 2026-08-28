@@ -73,21 +73,21 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
     name: '1956 · The first national championship',
     orientation: 'red',
     blurb:
-      'The first national championship ever played, and the first great upset in it. Li Yiting is nineteen, from Hubei, and beats the man who goes on to win the tournament. He takes the title himself two years later.',
+      'The first national championship ever played, and the first great upset in it. Li Yiting, the teenager from Hubei they called 小神童, the little prodigy, beats the man who goes on to win the tournament. He takes the title himself two years later, at twenty.',
   },
   {
     key: 'u_345428',
     name: '1960 · Hu Ronghua, aged fifteen',
     orientation: 'black',
     blurb:
-      'Shanghai against Guangdong, and the handover between them. Round three: Hu is fifteen, in his first national tournament, with Black against the reigning champion, the man the sport called 第一国手, the first hand of the nation. He is a horse and an elephant ahead by move 43, Yang wins almost all of it back through the endgame, and Hu converts anyway. Hu held the title for the next twenty years.',
+      'Shanghai against Guangdong, and the handover between them. Round three: Hu is fifteen, in his first national tournament, with Black against the reigning champion, the man the sport called 第一国手, the first hand of the nation. He is a horse and an elephant ahead by move 43, Yang wins almost all of it back through the endgame, and Hu converts anyway. Hu went on to win ten national championships in a row between 1960 and 1979, and fourteen in all.',
   },
   {
     key: 'm_17225',
     name: '1965 · The champion Hu could not shake',
     orientation: 'red',
     blurb:
-      'Guangdong answers. Five years after the handover the old champion is still beating the new one, and Hu will not have the country to himself for another decade. 183 plies, the longest game in the study.',
+      'Guangdong answers. Five years after the handover the old champion is still beating the new one, and Hu will not have the country to himself for another decade. 183 plies, and the longest game of the pair.',
   },
   {
     key: 'm_17496',
@@ -108,7 +108,7 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
     name: '1982 · Li Laiqun takes the title',
     orientation: 'red',
     blurb:
-      'Li Laiqun’s title year, and he takes it through Hu Ronghua directly. Our engine grades Li at 98.4, the cleanest game in the study.',
+      'Li Laiqun’s title year, and he takes it through Hu Ronghua directly. Our engine grades Li at 98.4 with a single inaccuracy.',
   },
   {
     key: 'm_18198',
@@ -129,7 +129,7 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
     name: '1989 · Zhao Guorong before the titles',
     orientation: 'red',
     blurb:
-      'Heilongjiang against Shanghai: Zhao Guorong beats Hu Ronghua the year before the first of his four national titles. At 97.7 it is the most accurate game in the study, and the shortest decisive one.',
+      'Heilongjiang against Shanghai: Zhao Guorong beats Hu Ronghua the year before the first of his four national titles. Zhao grades 97.7 across 73 plies, one of the cleanest games here and among the shortest.',
   },
   {
     key: 'm_19406',
@@ -150,7 +150,7 @@ const CHAPTERS: { key: string; name: string; blurb: string; orientation: 'red' |
     name: '1995 · Guangdong\u2019s next champion',
     orientation: 'red',
     blurb:
-      'The third of Guangdong’s champions, against the man who ended Hu’s run. Xu Yinchuan grades 97.7 here with no blunder and no mistake, and would hold the top of the game for the next fifteen years.',
+      'The third of Guangdong’s champions, against the man who ended Hu’s run. Xu Yinchuan grades 97.7 here with no blunder and no mistake, and won six national titles between 1993 and 2009.',
   },
   {
     key: 'm_135530',
