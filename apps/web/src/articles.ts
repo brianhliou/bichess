@@ -53,6 +53,7 @@ import {
   type StaticBoardsBlock,
   type SubHeadingBlock,
   type SvgRowBlock,
+  type FaqBlock,
   type TableBlock,
   withXiangqiBoardLayout,
   withXiangqiPieceSet,
@@ -1152,6 +1153,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
+  if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
@@ -1830,6 +1832,26 @@ function highlightCode(text: string): string {
                 : '';
     return cls ? `<span class="${cls}">${m}</span>` : m;
   });
+}
+
+// A <dl> rather than heading/paragraph pairs: the questions are labels for their
+// answers, not sections of the document, and keeping them out of the heading
+// hierarchy stops them colonising the on-this-page rail. The prerender reads the
+// same block to emit FAQPage JSON-LD, so the markup and the structured data can
+// never describe different questions.
+function renderFaqBlock(block: FaqBlock): HTMLElement {
+  const list = document.createElement('dl');
+  list.className = 'article-faq';
+  for (const item of block.items) {
+    const dt = document.createElement('dt');
+    dt.className = 'article-faq-question';
+    dt.textContent = item.question;
+    const dd = document.createElement('dd');
+    dd.className = 'article-faq-answer';
+    dd.textContent = item.answer;
+    list.append(dt, dd);
+  }
+  return list;
 }
 
 function renderTableBlock(block: TableBlock): HTMLElement {

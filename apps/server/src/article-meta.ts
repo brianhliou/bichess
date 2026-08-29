@@ -71,10 +71,16 @@ export const ARTICLE_META: Record<
   { title: string; description: string; kind: ArticleKind }
 > = {
   'co-up': {
-    title: 'Chơi cờ úp online',
+    title: 'Cờ úp trên Mistboard',
     kind: 'article',
     description:
-      'Cờ úp trên Mistboard: chơi với engine hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích của engine.',
+      'Chơi cờ úp với máy hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích engine tách riêng phần may rủi khỏi phần quyết định.',
+  },
+  'luat-co-up': {
+    title: 'Luật cờ úp',
+    kind: 'article',
+    description:
+      'Luật cờ úp đầy đủ: cách bày quân, cách đi quân úp trước và sau khi lật, ăn quân úp, chiếu bí và các trường hợp hòa.',
   },
   'jieqi-platform': {
     title: 'Jieqi on Mistboard',

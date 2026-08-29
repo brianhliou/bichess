@@ -2152,3 +2152,23 @@
 a.article-meta-author:hover .article-meta-author-name {
   text-decoration: underline;
 }
+
+/* FAQ blocks. A <dl>, so the question is a label for its answer rather than a
+   heading in the document outline; these styles give it the weight a heading
+   would have carried without putting it in the on-this-page rail. */
+.article-faq {
+  margin: 1.25rem 0;
+}
+
+.article-faq-question {
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.article-faq-question:first-child {
+  margin-top: 0;
+}
+
+.article-faq-answer {
+  margin: 0.35rem 0 0;
+}

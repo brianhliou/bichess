@@ -424,7 +424,36 @@ try {
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
         ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
       };
-      const ldScript = `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`;
+      // FAQ blocks become a second FAQPage document rather than being folded into
+      // the Article one: they are different schema types and Google reads them
+      // independently. Built from the SAME block the page renders, so the markup
+      // and the structured data cannot describe different questions. Localized
+      // article, so a zh or vi variant emits its own language's questions.
+      const faqItems = [
+        ...(localized.intro ?? []),
+        ...(localized.sections ?? []).flatMap((sec) => sec.blocks ?? []),
+      ]
+        .filter((b) => b.kind === 'faq')
+        .flatMap((b) => b.items ?? []);
+      const faqLd =
+        faqItems.length > 0
+          ? {
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              inLanguage: v.htmlLang,
+              mainEntity: faqItems.map((item) => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: { '@type': 'Answer', text: item.answer },
+              })),
+            }
+          : null;
+      const ldScript = [jsonLd, ...(faqLd ? [faqLd] : [])]
+        .map(
+          (doc) =>
+            `<script type="application/ld+json">${JSON.stringify(doc).replace(/</g, '\\u003c')}</script>`,
+        )
+        .join('');
       // Self-referencing canonical: each language variant declares its OWN clean
       // URL as canonical (not all three → English). hreflang expresses the
       // language relationship; the canonical consolidates query-param, SPA-shell,

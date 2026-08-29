@@ -130,6 +130,23 @@ export const jieqiPlatformArticle: Article = {
             { label: 'Open the analysis board', href: '/analysis/jieqi', emphasis: 'primary' },
           ],
         },
+        {
+          // Deliberately no competitor named. The claims are about what this site
+          // does; a table asserting what someone else lacks would need checking
+          // every time they ship, and would be wrong before anyone noticed.
+          kind: 'table',
+          headers: ['', 'On Mistboard'],
+          rows: [
+            ['Play the engine or a friend', 'Free, no account'],
+            ['Full-game analysis', 'Every finished game'],
+            ['Luck measured separately', 'Every flip priced'],
+            ['Engine in your browser', 'No queue, no account'],
+            ['Studies with your own deals', 'Yes'],
+            ['Open-source engine', 'Yes'],
+            ['Rated ladder', 'Not yet'],
+          ],
+          caption: 'What you get, including what you do not.',
+        },
       ],
     },
     {
@@ -158,6 +175,41 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'cta',
           buttons: [{ label: 'Open the study', href: '/study/wd6c7qvG', emphasis: 'primary' }],
+        },
+      ],
+    },
+    {
+      heading: 'Common questions',
+      blocks: [
+        {
+          kind: 'faq',
+          items: [
+            {
+              question: 'What is jieqi?',
+              answer:
+                'Jieqi is a xiangqi variant played on the same board with the same pieces, except every piece except the general starts face-down. A face-down piece moves as whatever normally starts on its square, then turns over and keeps that identity for the rest of the game. It is also called cờ úp in Vietnamese and 揭棋 in Chinese.',
+            },
+            {
+              question: 'How is jieqi different from xiangqi?',
+              answer:
+                'The board, the pieces and the moves are identical to xiangqi. The difference is that you do not know which piece is which at the start, including your own, so about half your moves turn a piece over and find out. The goal is still checkmate.',
+            },
+            {
+              question: 'Where can I play jieqi online for free?',
+              answer:
+                'You can play jieqi on Mistboard against the engine or against a friend. It is free, needs no account and nothing to install, and you can review any finished game with engine analysis afterwards.',
+            },
+            {
+              question: 'Is jieqi just luck?',
+              answer:
+                'Reveals are random, but what you do with them is not. Mistboard measures the two separately: each flip is priced for how lucky it was, and your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.',
+            },
+            {
+              question: 'Can a computer play jieqi well?',
+              answer:
+                'Reasonably, not brilliantly. Mistboard runs PikaJieQi, a fork of the open-source Pikafish xiangqi engine. It is beatable by a strong human, mainly because no neural network has been trained for jieqi and it evaluates positions by hand.',
+            },
+          ],
         },
       ],
     },
