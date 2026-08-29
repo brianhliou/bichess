@@ -312,3 +312,41 @@ test('a judged move is badged on the board, and only on the mainline', () => {
   expect(el.querySelector('.xq-marker--glyph')).toBeNull();
   c.destroy();
 });
+
+test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
+  // The margin was once sized to clear the piece alone, which cropped the
+  // last-move ring on every edge move and cut the top off a badge on any piece
+  // reaching the back rank. A corner move exercises both axes at once.
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    // a1-a10: Red's chariot up the edge file to Black's back rank.
+    iccs: 'a0a4 h9g7 a4a9',
+    annotations: { byPly: { 3: { glyph: '?!' } } },
+  });
+  const buttons = mainButtons(el);
+  (buttons[buttons.length - 1] as HTMLButtonElement | undefined)?.click();
+
+  const svg = el.querySelector('svg');
+  const [, , vw, vh] = (svg?.getAttribute('viewBox') ?? '0 0 0 0').split(/\s+/).map(Number) as [
+    number,
+    number,
+    number,
+    number,
+  ];
+  // The board content sits inside a <g transform="translate(PAD PAD)">, so the
+  // circle coordinates below are already in the same space as the viewBox.
+  const circles = [...el.querySelectorAll('circle')];
+  expect(circles.length).toBeGreaterThan(0);
+  for (const circle of circles) {
+    const cx = Number(circle.getAttribute('cx'));
+    const cy = Number(circle.getAttribute('cy'));
+    const r = Number(circle.getAttribute('r'));
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) continue;
+    const label = circle.getAttribute('class') ?? 'circle';
+    expect(cx - r, `${label} crosses the left edge`).toBeGreaterThanOrEqual(-0.5);
+    expect(cy - r, `${label} crosses the top edge`).toBeGreaterThanOrEqual(-0.5);
+    expect(cx + r, `${label} crosses the right edge`).toBeLessThanOrEqual(vw + 0.5);
+    expect(cy + r, `${label} crosses the bottom edge`).toBeLessThanOrEqual(vh + 0.5);
+  }
+  c.destroy();
+});

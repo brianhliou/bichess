@@ -17,7 +17,7 @@ import {
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import './board-glyph-marker.css';
-import { boardLastMoveMarkersSvg } from './board-lastmove.js';
+import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -27,17 +27,29 @@ import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
 const CELL = 31;
-// A piece at an edge intersection overhangs the grid by half its width, which
-// is the only thing this margin has to clear (PIECE is 28, so 14). It was 18
-// with another 4 of PAD outside it: 8px per side of dead space, which at a
-// fixed column width is 8% of board scale given away.
-const MARGIN = 15;
 const PIECE = tokenPieceSize(CELL);
 // The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
 // Same proportions here so the badge sits in the same place relative to the
 // piece; the markup and palette are the shared ones (board-glyph-marker.css).
 const GLYPH_RADIUS = (13 / 60) * CELL;
 const GLYPH_OFFSET = (21 / 60) * CELL;
+
+/**
+ * The margin has to clear everything drawn around a piece on an EDGE
+ * intersection, not just the piece. Three things reach past its centre:
+ *
+ *   the piece itself         PIECE / 2                 14.0 at CELL 31
+ *   the last-move ring       outer radius              15.6
+ *   the judgment badge       offset + its own radius   17.6
+ *
+ * A previous version set this to 15 by reasoning only about the piece, which
+ * clipped the ring on every edge move and cut the top off a `?!` badge on any
+ * piece that reached the back rank. Derived rather than chosen, so adding a
+ * fourth decoration that reaches further cannot silently crop it.
+ */
+const MARGIN = Math.ceil(
+  Math.max(PIECE / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
+);
 const GLYPH_CLASS: Record<string, string> = {
   '??': 'xq-marker--blunder',
   '?': 'xq-marker--mistake',
