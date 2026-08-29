@@ -197,7 +197,15 @@ const wantsForum =
   page === 'forum';
 const wantsLegacyPlay = path === '/play' || page === 'play';
 const wantsWatch = path === '/watch' || page === 'watch';
-const wantsVideos = path === '/videos' || page === 'videos';
+// Locale-prefixed too. localeFromPath() is generic over any /zh-han[st]/*
+// pathname and outranks both the stored choice and the browser language, so the
+// prefix alone lands a visitor on the Chinese catalogue -- which is the whole
+// point of a shareable, indexable Chinese URL (#293).
+const wantsVideos =
+  path === '/videos' ||
+  path === '/zh-hans/videos' ||
+  path === '/zh-hant/videos' ||
+  page === 'videos';
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);

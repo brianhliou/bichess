@@ -30,7 +30,37 @@ export type PageMeta = {
 // of one another. Keyed by exact pathname; a route absent here keeps the default
 // homepage meta. Only list a route in SITEMAP_STATIC_ROUTES once it has an entry
 // here, or the sitemap advertises a set of identical shells.
-const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
+type SpaRouteMeta = {
+  title: string;
+  description: string;
+  /** Sets <html lang> on the served shell. Omit for English routes. */
+  htmlLang?: string;
+  /** The unprefixed path shared by this route's locale variants (e.g.
+   *  '/videos'). Present on all three, it emits hreflang alternates so the set
+   *  reads as one page in three languages rather than three near-duplicates
+   *  competing with each other. */
+  localeGroup?: string;
+};
+
+const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+  '/videos': {
+    title: 'Xiangqi Video Library | Mistboard',
+    description:
+      'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+    localeGroup: '/videos',
+  },
+  '/zh-hans/videos': {
+    title: '象棋视频库 | Mistboard',
+    description: '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/videos',
+  },
+  '/zh-hant/videos': {
+    title: '象棋影片庫 | Mistboard',
+    description: '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/videos',
+  },
   '/learn/xiangqi': {
     title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:
@@ -270,6 +300,17 @@ export async function routePreloadLinksForPath(params: {
   return null;
 }
 
+/** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant'. */
+function localeAlternateLinks(publicHost: string, basePath: string): string {
+  return (['en', 'zh-hans', 'zh-hant'] as const)
+    .map((slug) => {
+      const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
+      const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
+      return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
+    })
+    .join('');
+}
+
 // Serves the SPA shell with the matched route's preload hints baked into <head>.
 // Returns false without touching the response when the route has no hints (or
 // the manifest is absent), so the caller can fall back to the plain static
@@ -284,7 +325,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   const positionMeta = positionRouteMeta(params.pathname, params.search ?? '');
-  const routeMeta = positionMeta ?? SPA_ROUTE_META[params.pathname];
+  // Read separately from routeMeta: that one is a union with the position-route
+  // shape, which carries no locale of its own (a FEN is not a language).
+  const spaMeta = SPA_ROUTE_META[params.pathname];
+  const routeMeta = positionMeta ?? spaMeta;
   const noindex = isNoindexRoute(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
@@ -303,6 +347,15 @@ export async function serveSpaShellWithRoutePreloads(params: {
         ? `${params.publicHost}${positionMeta.imagePath}`
         : undefined,
     });
+  }
+  if (spaMeta?.htmlLang) {
+    html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
+  }
+  if (spaMeta?.localeGroup && params.publicHost) {
+    html = html.replace(
+      '</head>',
+      `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
+    );
   }
   if (noindex) {
     html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
@@ -510,6 +563,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/study',
   '/feed',
   '/videos',
+  '/zh-hans/videos',
+  '/zh-hant/videos',
   '/streamer',
   '/player',
   '/player/rating-stats',

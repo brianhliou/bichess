@@ -201,6 +201,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/play' ||
     normalized === '/watch' ||
     normalized === '/videos' ||
+    normalized === '/zh-hans/videos' ||
+    normalized === '/zh-hant/videos' ||
     normalized === '/streamer' ||
     normalized === '/puzzles' ||
     normalized === '/source' ||

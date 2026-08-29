@@ -5,10 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { POSITION_OG_VARIANTS } from './og-position.js';
+import { isClientRoute } from './server-policy.js';
 import {
   injectPageMeta,
   positionRouteMeta,
   routePreloadLinksForPath,
+  SITEMAP_STATIC_ROUTES,
   serveArticlePage,
   serveArticlesIndexPage,
   serveNotFoundShell,
@@ -44,7 +46,11 @@ function captureResponse(): ServerResponse & ResponseCapture {
 
 function indexHtml(): string {
   return [
-    '<html>',
+    // Carries lang="en" because the real dist/index.html does, and the servers
+    // rewrite that exact attribute for a localized route. Two tests used to
+    // patch it in by hand, which is a fixture disagreeing with production on
+    // precisely the attribute under test.
+    '<html lang="en">',
     '<head>',
     '<title>Mistboard</title>',
     '<meta name="description" content="old">',
@@ -274,11 +280,7 @@ test('serveArticlePage 301s legacy /articles/<article-slug> to /blog/<slug>', as
 
 test('serveArticlesIndexPage injects localized metadata', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
-  await writeFile(
-    join(staticDir, 'index.html'),
-    indexHtml().replace('<html>', '<html lang="en">'),
-    'utf-8',
-  );
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
   const response = captureResponse();
 
   await serveArticlesIndexPage({
@@ -318,11 +320,7 @@ test('serveArticlesIndexPage keeps the community-posts view canonical', async ()
 
 test('serveRulesIndexPage injects rules metadata', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
-  await writeFile(
-    join(staticDir, 'index.html'),
-    indexHtml().replace('<html>', '<html lang="en">'),
-    'utf-8',
-  );
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
   const response = captureResponse();
 
   await serveRulesIndexPage({
@@ -476,12 +474,42 @@ test('serveSpaShellWithRoutePreloads serves route meta even with no preload mani
   assert.match(response.body, /<title>Learn Chinese Chess \(Xiangqi\) \| Mistboard<\/title>/);
 });
 
-test('every sitemap SPA route that is not prerendered carries its own title', async () => {
-  // Guard against re-advertising a set of byte-identical shells: a client route
-  // in the sitemap must be distinguishable to a crawler.
+// Sitemap routes that do NOT get their meta from SPA_ROUTE_META. Two kinds:
+// served by a dedicated per-locale renderer (the article and rules indexes, and
+// '/' which is the static index itself), or genuinely still serving the default
+// homepage shell. The second group is real debt, listed rather than fixed
+// blind: each one needs a title and description written for it, which is an
+// editorial call and not this change's business. /videos was in that group
+// until #293; the test below is what stops anything else joining it quietly.
+const SITEMAP_ROUTES_WITH_OWN_RENDERER = new Set([
+  '/',
+  '/blog',
+  '/rules',
+  '/zh-hans/rules',
+  '/zh-hant/rules',
+]);
+const SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL = new Set([
+  '/about',
+  '/streamer',
+  '/player',
+  '/player/rating-stats',
+  '/coach',
+  '/forum',
+  '/source',
+  '/faq',
+  '/patron',
+  '/contribute',
+]);
+
+// The old version of this test hand-listed four routes while claiming "every".
+// That is how /videos came to sit in the sitemap with no meta at all, serving
+// the homepage title to a crawler. It iterates the real list now.
+test('every sitemap SPA route carries its own title, or is a known exception', async () => {
   const staticDir = await staticDirWithPreloadManifest();
-  const titles = new Set<string>();
-  for (const route of ['/learn/xiangqi', '/analysis', '/editor', '/puzzles']) {
+  const titles = new Map<string, string>();
+  for (const route of SITEMAP_STATIC_ROUTES) {
+    if (SITEMAP_ROUTES_WITH_OWN_RENDERER.has(route)) continue;
+    assert.ok(isClientRoute(route), `${route} is advertised but is not a client route`);
     const response = captureResponse();
     await serveSpaShellWithRoutePreloads({
       response,
@@ -489,11 +517,57 @@ test('every sitemap SPA route that is not prerendered carries its own title', as
       pathname: route,
       publicHost: 'https://mistboard.com',
     });
-    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1];
-    assert.ok(title && title !== 'Mistboard', `${route} still serves the default shell title`);
-    titles.add(title);
+    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? 'Mistboard';
+    if (SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL.has(route)) continue;
+    assert.ok(
+      title !== 'Mistboard',
+      `${route} still serves the default shell title. Give it an SPA_ROUTE_META entry, or add it to SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL deliberately.`,
+    );
+    const clash = [...titles.entries()].find(([, other]) => other === title);
+    assert.ok(!clash, `${route} shares a title with ${clash?.[0]}`);
+    titles.set(route, title);
   }
-  assert.equal(titles.size, 4, 'sitemap SPA routes must not share a title');
+  assert.ok(titles.size >= 5);
+});
+
+// The point of #293: a Chinese-language visitor arriving at a prefixed URL used
+// to get the 404 page, and a crawler had no Chinese URL to index at all.
+test('the videos library serves all three locales, each distinct and cross-linked', async () => {
+  const staticDir = await staticDirWithPreloadManifest();
+  const seen = new Map<string, { title: string; body: string }>();
+  for (const route of ['/videos', '/zh-hans/videos', '/zh-hant/videos']) {
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: route,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.equal(served, true, `${route} fell through to the plain shell`);
+    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+    assert.ok(title && title !== 'Mistboard', `${route} serves the default title`);
+    seen.set(route, { title, body: response.body });
+    // hreflang, so the three read as one page in three languages rather than
+    // three near-duplicates competing with each other.
+    for (const [lang, href] of [
+      ['en', 'https://mistboard.com/videos'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/videos'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/videos'],
+    ]) {
+      assert.ok(
+        response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
+        `${route} is missing the ${lang} alternate`,
+      );
+    }
+  }
+  assert.equal(new Set([...seen.values()].map((v) => v.title)).size, 3, 'titles must differ');
+  // <html lang> follows the prefix, so a crawler and a screen reader both get
+  // the served language rather than index.html's baked-in English.
+  assert.match(seen.get('/zh-hans/videos')!.body, /<html lang="zh-Hans">/);
+  assert.match(seen.get('/zh-hant/videos')!.body, /<html lang="zh-Hant">/);
+  assert.match(seen.get('/videos')!.body, /<html lang="en">/);
 });
 
 // --- position routes (/analysis, /editor) --------------------------------------
