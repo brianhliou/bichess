@@ -12,6 +12,7 @@ import {
   renderXiangqiBoardSvg as renderSharedXiangqiBoardSvg,
   type XiangqiBoardArrow,
   xiangqiArrowSvg,
+  xiangqiBoardSvg,
   xiangqiMarkerSvg,
 } from './xiangqi-board.js';
 
@@ -485,5 +486,55 @@ describe('interactive board arrow overlay', () => {
     expect(host.querySelectorAll('.xq-live-arrows .xq-arrow')).toHaveLength(0);
     host.remove();
     expect(SHOW_PV1_REPLY_SEGMENT).toBe(false);
+  });
+});
+
+// The `coordinates` option is tri-state, and the two forced states exist for
+// surfaces where the labels are the subject rather than a convenience.
+describe('board coordinate labels', () => {
+  const view = getStandardXiangqiPlayerView(createInitialXiangqiState('xq-coords'), 'red');
+  const base = { interactive: false, selectedSquare: null, draggingFrom: null } as const;
+  const labelCount = (svg: string): number => svg.split('class="xq-live-coord"').length - 1;
+
+  it('follows the reader preference when the option is omitted', () => {
+    writeDisplayPreference('boardCoordinates', false);
+    expect(labelCount(xiangqiBoardSvg(view, 'red', { ...base }))).toBe(0);
+    writeDisplayPreference('boardCoordinates', true);
+    expect(labelCount(xiangqiBoardSvg(view, 'red', { ...base }))).toBeGreaterThan(0);
+  });
+
+  // The coordinate trainer's training-wheels toggle would be inert without
+  // this: boardCoordinates defaults to OFF, so `true` has to mean on rather
+  // than "on if the reader already turned it on".
+  it('forces labels on over a preference that is off', () => {
+    writeDisplayPreference('boardCoordinates', false);
+    const svg = xiangqiBoardSvg(view, 'red', { ...base, coordinates: true });
+    expect(labelCount(svg)).toBeGreaterThan(0);
+  });
+
+  it('forces labels off over a preference that is on', () => {
+    writeDisplayPreference('boardCoordinates', true);
+    expect(labelCount(xiangqiBoardSvg(view, 'red', { ...base, coordinates: false }))).toBe(0);
+  });
+
+  // A surface teaching one system must be able to pin it. Without this the
+  // trainer labels the board in whatever the reader's move notation happens to
+  // be, which can be the opposite system from the one it is drilling.
+  it('pins the label system when asked, over the notation preference', () => {
+    const algebraic = xiangqiBoardSvg(view, 'red', {
+      ...base,
+      coordinates: true,
+      coordinateStyle: 'coordinate',
+    });
+    expect(algebraic).toContain('>a<');
+    expect(algebraic).not.toContain('>一<');
+
+    const chinese = xiangqiBoardSvg(view, 'red', {
+      ...base,
+      coordinates: true,
+      coordinateStyle: 'chinese-simplified',
+    });
+    expect(chinese).toContain('>一<');
+    expect(chinese).not.toContain('>a<');
   });
 });

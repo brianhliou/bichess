@@ -16,6 +16,7 @@ import type {
   StandardXiangqiPlayerView,
   XiangqiColor,
   XiangqiMove,
+  XiangqiNotationStyle,
   XiangqiPiece,
   XiangqiSquare,
 } from '@mistboard/game';
@@ -108,12 +109,23 @@ export function renderXiangqiBoardSvg(
 }
 
 export interface XiangqiBoardSvgState {
-  /** false = draw no coordinates AND reserve no space for them, whatever the
-   *  reader's preference says. For surfaces whose framing is authored rather
-   *  than played on: video frames, article diagrams, the homepage puzzle
-   *  thumbnail. Boards you actually play on leave this alone and follow the
-   *  preference, reclaiming the gutter when it is off. */
+  /** Tri-state, and the middle state is the default.
+   *    undefined -- follow the reader's boardCoordinates display preference.
+   *    false     -- force off, and reserve no gutter for them either. For
+   *                 surfaces whose framing is authored rather than played on:
+   *                 video frames, article diagrams, the puzzle thumbnail.
+   *    true      -- force ON, whatever the preference says. For a surface where
+   *                 the labels are the subject rather than a convenience: the
+   *                 coordinate trainer's training-wheels toggle would otherwise
+   *                 be inert, since the preference defaults to off.
+   *  Boards you actually play on leave this alone. */
   coordinates?: boolean;
+  /** Which notation the edge labels are drawn in. Defaults to the reader's
+   *  notation preference, which is right for a board they are playing on. A
+   *  surface that is TEACHING one system has to pin it: the coordinate trainer
+   *  would otherwise label the board in WXF file numbers while asking for
+   *  algebraic points. */
+  coordinateStyle?: XiangqiNotationStyle;
   interactive: boolean;
   selectedSquare: XiangqiSquare | null;
   draggingFrom: XiangqiSquare | null;
@@ -163,7 +175,7 @@ export function xiangqiBoardSvg(
   // coordinates on sees exactly the board they saw before this shipped. The
   // trade is that the board resizes when the setting changes -- which happens
   // once, in settings, where a reflow is expected.
-  const showCoords = state.coordinates !== false && readDisplayPreferences().boardCoordinates;
+  const showCoords = state.coordinates ?? readDisplayPreferences().boardCoordinates;
   const surface = showCoords
     ? LIVE_BOARD_SURFACE
     : { ...LIVE_BOARD_SURFACE, geo: LIVE_BOARD_GEO_NO_COORDS };
@@ -174,7 +186,11 @@ export function xiangqiBoardSvg(
         LIVE_BOARD_SURFACE,
         perspective,
         layout,
-        xiangqiCoordLabels(currentXiangqiNotationStyle(), FILE_COUNT, RANK_COUNT),
+        xiangqiCoordLabels(
+          state.coordinateStyle ?? currentXiangqiNotationStyle(),
+          FILE_COUNT,
+          RANK_COUNT,
+        ),
       )
     : '';
   return `

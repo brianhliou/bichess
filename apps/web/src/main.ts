@@ -12,7 +12,12 @@ import {
   reloadForChunkLoadError,
 } from './chunk-load-recovery.js';
 import { editorVariantFromPath } from './editor/editor-catalog.js';
-import { correspondenceEnabled, friendsOnlineEnabled, learnEnabled } from './feature-flags.js';
+import {
+  coordinateTrainerEnabled,
+  correspondenceEnabled,
+  friendsOnlineEnabled,
+  learnEnabled,
+} from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
@@ -192,6 +197,10 @@ const wantsLearn = learnEnabled() && (path === '/learn' || page === 'learn');
 // Interactive beginner course (lichess /learn parity), xiangqi first. Ungated —
 // distinct from the legacy /learn hub above.
 const wantsLearnXiangqi = path === '/learn/xiangqi';
+// Coordinate + file-number drill. Its own surface rather than a Learn stage:
+// Learn levels are declarative positions graded by board asserts, and this is a
+// timed generator whose answer is a typed or tapped name. Parked: see #327.
+const wantsNotationTrainer = coordinateTrainerEnabled() && path === '/learn/coordinates';
 // The one route rendered inside someone else's page. Checked before everything
 // else so the embed never picks up site chrome.
 const embedStudyRoute = embedStudyRouteFromPath(path);
@@ -749,6 +758,13 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./learn-xiangqi/learn-xiangqi-page.js').then(({ mountLearnXiangqi }) =>
       mountLearnXiangqi(appRoot),
+    ),
+  );
+} else if (wantsNotationTrainer) {
+  setTitleKey('nav.learn');
+  void mountOrReport(() =>
+    import('./notation-trainer/notation-trainer-page.js').then(({ mountNotationTrainer }) =>
+      mountNotationTrainer(appRoot),
     ),
   );
 } else if (wantsLearn) {
