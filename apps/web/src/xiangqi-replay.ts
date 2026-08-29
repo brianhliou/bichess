@@ -505,7 +505,10 @@ export function mountXiangqiReplay(
         // A line inserted after Red's move means Black's move needs a new row.
         if (!row?.classList.contains('xq-replay-row') || row.children.length > 2) {
           row = document.createElement('div');
-          row.className = 'xq-replay-row';
+          // A sideline between the pair splits the move number across two rows, so
+          // Black's move has to land in Black's column rather than sliding into the
+          // empty Red slot beside it.
+          row.className = 'xq-replay-row xq-replay-row-black';
           const n = document.createElement('span');
           n.className = 'xq-replay-move-n';
           n.textContent = `${Math.ceil(ply / 2)}\u2026`;

@@ -1381,7 +1381,7 @@
      about 54/46, which gave the list more room than it can use. The floor on
      the second track keeps a move pair (number + two moves) on one line at the
      narrowest width before the layout stacks. */
-  grid-template-columns: minmax(0, 2.2fr) minmax(196px, 1fr);
+  grid-template-columns: minmax(0, 2.85fr) minmax(170px, 1fr);
   align-items: stretch;
   width: 100%;
   overflow: hidden;
@@ -1568,10 +1568,17 @@
   text-align: center;
 }
 
+/* A score sheet, not a flow: the number, then Red and Black in fixed halves, so
+   moves line up down the column instead of drifting with label length. */
 .xq-replay-annotated .xq-replay-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
-  gap: 4px;
+  gap: 2px;
+}
+
+.xq-replay-annotated .xq-replay-row-black > .xq-replay-move-button {
+  grid-column: 3;
 }
 
 .xq-replay-annotated .xq-replay-move-n {
@@ -1585,8 +1592,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: 3px;
-  min-width: 58px;
-  padding: 3px 6px;
+  min-width: 0;
+  padding: 3px 5px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
@@ -1615,14 +1622,18 @@
   color: var(--site-on-accent);
 }
 
+/* Full width, no indent. A 22px margin plus an 8px pad plus a rule spent 32px
+   of a 170px column on saying "this is a branch", which the tag and the tint
+   already say. */
 .xq-replay-annotated .xq-replay-branch {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px;
-  margin: 2px 0 4px 22px;
-  padding: 3px 0 3px 8px;
-  border-left: 2px solid var(--site-border);
+  gap: 1px 2px;
+  margin: 1px 0 3px;
+  padding: 4px 4px 5px;
+  border-radius: 4px;
+  background: var(--site-bg-soft);
 }
 
 .xq-replay-annotated .xq-replay-branch .xq-replay-move-button {
