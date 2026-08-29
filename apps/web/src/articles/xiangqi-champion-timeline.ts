@@ -235,6 +235,25 @@ export function xiangqiChampionTimelineSvg(): string {
     }
   }
 
+  // Half-decade rules, a tier fainter than the decades. With 22 rows and a
+  // seventy-year span, reading a bar back to a year across a ten-year gap is
+  // guesswork; a five-year grid halves the distance without adding a label.
+  for (let year = 1965; year <= LAST_YEAR; year += 10) {
+    parts.push(
+      `<line x1="${x(year).toFixed(1)}" y1="${AXIS_H - 8}" x2="${x(year).toFixed(1)}" ` +
+        `y2="${AXIS_H + PLOT_H}" stroke="var(--site-border)" stroke-width="1" opacity="0.22"/>`,
+    );
+  }
+
+  // Credit inside the artwork, not just on an exported file: the figure travels
+  // as a screenshot far more often than as a download, and a screenshot carries
+  // whatever is drawn in it and nothing else. Top right, clear of the legend
+  // row it used to crowd.
+  parts.push(
+    `<text x="${WIDTH - PAD_R}" y="16" text-anchor="end" font-size="11" ` +
+      `class="xq-champ-credit">mistboard.com</text>`,
+  );
+
   // Decade rules + axis labels.
   for (let year = 1960; year <= 2020; year += 10) {
     parts.push(
@@ -308,7 +327,16 @@ export function xiangqiChampionTimelineSvg(): string {
     { style: 'banned', label: 'title, champion later banned' },
     { style: 'void', label: 'no championship held' },
   ];
-  let lx = PAD_L;
+  // Measured first, then centred under the plot. It used to start hard against
+  // the label column and trail off with the credit hanging on the end.
+  const SWATCH_W = 16;
+  const SWATCH_GAP = 6;
+  const ITEM_GAP = 22;
+  const CHAR_W = 5.6;
+  const legendWidth =
+    items.reduce((sum, item) => sum + SWATCH_W + SWATCH_GAP + item.label.length * CHAR_W, 0) +
+    ITEM_GAP * (items.length - 1);
+  let lx = PAD_L + Math.max(0, (PLOT_W - legendWidth) / 2);
   for (const item of items) {
     const cls =
       item.style === 'solid'
@@ -326,18 +354,12 @@ export function xiangqiChampionTimelineSvg(): string {
       parts.push(`<rect x="${lx}" y="${ly - 8}" width="16" height="10" rx="2" class="${cls}"/>`);
     }
     parts.push(
-      `<text x="${lx + 22}" y="${ly + 1}" font-size="11" class="xq-champ-legend">${esc(item.label)}</text>`,
+      `<text x="${(lx + SWATCH_W + SWATCH_GAP).toFixed(1)}" y="${ly + 1}" font-size="11" ` +
+        `class="xq-champ-legend">${esc(item.label)}</text>`,
     );
-    lx += 30 + item.label.length * 5.6;
+    lx += SWATCH_W + SWATCH_GAP + item.label.length * CHAR_W + ITEM_GAP;
   }
 
-  // Credit inside the artwork, not just on an exported file. The figure travels
-  // as a screenshot far more often than as a download, and a screenshot carries
-  // whatever is drawn in it and nothing else.
-  parts.push(
-    `<text x="${WIDTH - PAD_R}" y="${ly + 1}" text-anchor="end" font-size="11" ` +
-      `class="xq-champ-credit">mistboard.com</text>`,
-  );
 
   parts.push('</svg>');
   return parts.join('');
