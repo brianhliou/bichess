@@ -1900,11 +1900,27 @@ function currentArticleSlug(): string {
   return document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ?? '';
 }
 
+/**
+ * An internal /blog or /rules link whose target is not visible in this build.
+ * A draft's URL 404s in production, so a published page linking to one ships a
+ * dead button; in dev everything is visible, so the link renders and can be
+ * reviewed. This is what lets a piece carry a link to its companion before the
+ * companion publishes: the button appears when the target does.
+ */
+function pointsAtHiddenArticle(href: string): boolean {
+  const match = /^\/(blog|rules)\/([^/?#]+)/.exec(href);
+  if (!match) return false;
+  const target = articles.find((a) => a.slug === decodeURIComponent(match[2] as string));
+  if (!target) return false;
+  return !isArticleVisibleInThisEnv(target);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
   for (const btn of block.buttons) {
+    if (pointsAtHiddenArticle(btn.href)) continue;
     const a = document.createElement('a');
     a.className = `article-cta article-cta-${btn.emphasis ?? 'primary'}`;
     a.href = btn.href;

@@ -111,3 +111,22 @@ describe('claims about who is clean', () => {
     for (const champ of clean) expect(text).toContain(champ.name);
   });
 });
+
+describe('structured data', () => {
+  it('lists every champion, in the order the page presents them', () => {
+    // Hand-writing twenty-two names into JSON-LD is a second copy that drifts
+    // from the figure and the table without anything noticing.
+    const nodes = xiangqiChampionsArticle.structuredData?.() ?? [];
+    const list = nodes.find((n) => n['@type'] === 'ItemList') as
+      | { numberOfItems: number; itemListElement: Array<{ position: number; item: { name: string; alternateName: string } }> }
+      | undefined;
+    expect(list, 'the article should declare an ItemList').toBeDefined();
+    expect(list?.numberOfItems).toBe(CHAMPIONS.length);
+    expect(list?.itemListElement).toHaveLength(CHAMPIONS.length);
+    list?.itemListElement.forEach((entry, index) => {
+      expect(entry.position).toBe(index + 1);
+      expect(entry.item.name).toBe(CHAMPIONS[index]?.name);
+      expect(entry.item.alternateName).toBe(CHAMPIONS[index]?.zh);
+    });
+  });
+});

@@ -396,7 +396,15 @@ try {
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
         ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
       };
-      const ldScript = `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`;
+      // Extra nodes (ItemList and friends) ride alongside the Article node, each
+      // in its own script tag so a malformed one cannot take the Article with it.
+      const extraLd = (article.structuredData?.() ?? [])
+        .map(
+          (node) =>
+            `<script type="application/ld+json">${JSON.stringify(node).replace(/</g, '\\u003c')}</script>`,
+        )
+        .join('');
+      const ldScript = `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>${extraLd}`;
       // Self-referencing canonical: each language variant declares its OWN clean
       // URL as canonical (not all three → English). hreflang expresses the
       // language relationship; the canonical consolidates query-param, SPA-shell,

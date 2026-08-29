@@ -1,6 +1,7 @@
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import {
+  CHAMPIONS,
   championTableRows,
   editionGapSentence,
   xiangqiChampionTimelineSvg,
@@ -888,6 +889,30 @@ export const xiangqiChampionsArticle: Article = {
   seoTitle: 'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games',
   summary:
     'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
+  // The page's subject is a list, so it declares one. Built from CHAMPIONS, the
+  // same data the figure and the table render, because a hand-written second
+  // copy of twenty-two names is a copy that will drift.
+  structuredData: () => [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: 'Chinese national xiangqi champions, 1956 to 2025',
+      description:
+        'Every winner of the Chinese national xiangqi championship, in the order they first took the title.',
+      numberOfItems: CHAMPIONS.length,
+      itemListOrder: 'https://schema.org/ItemListOrderAscending',
+      itemListElement: CHAMPIONS.map((champ, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'Person',
+          name: champ.name,
+          alternateName: champ.zh,
+          jobTitle: 'Xiangqi grandmaster',
+        },
+      })),
+    },
+  ],
   status: 'draft',
   publishedAt: '2026-08-28',
   audience:

@@ -891,6 +891,9 @@ const ZH_HANS: Record<string, string> = {
   'Equal animals remove each other.': '同等级动物会一起离场。',
   'Play on Mistboard': '在 Mistboard 上对弈',
   'Play vs computer': '对战电脑',
+  // Machine-drafted like the rest of this dictionary (see the note at the top
+  // of TRANSLATED_ARTICLE_SLUGS); not native-reviewed.
+  'Every xiangqi champion since 1956': '1956年以来的每一位全国象棋冠军',
   'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
     '象棋可在 Mistboard 上对弈：与其他玩家进行休闲或积分对局，挑战引擎等级阶梯，或邀请好友。无需账户即可对弈，登录后可进行积分对局。',
   'Find an opponent': '寻找对手',

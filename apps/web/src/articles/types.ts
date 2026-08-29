@@ -392,6 +392,16 @@ type ArticleBase = {
    */
   seoTitle?: string;
   /**
+   * Extra JSON-LD nodes emitted alongside the Article node, each in its own
+   * script tag. A thunk because the payload is usually derived from the same
+   * data the page renders, and a second hand-written copy would drift from it.
+   *
+   * Exists for pages whose subject IS a list: "every xiangqi champion" is a
+   * list query, and an ItemList is the difference between ranking for the
+   * question and being the answer to it.
+   */
+  structuredData?: () => Record<string, unknown>[];
+  /**
    * BCP-47 language of the article's own prose, when it is not English. The
    * three interface locales are settled and closed (en / zh-Hans / zh-Hant),
    * but content in a language was never gated: a page can be written in a
