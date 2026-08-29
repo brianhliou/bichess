@@ -9,32 +9,29 @@
 // PIECE_SIZE 54): origin disc at the piece radius, destination ring one unit
 // inside it, 4-unit stroke. Everything below is that ratio, so a board with a
 // different cell renders the same picture at its own scale.
+import { TOKEN_PIECE_RATIO } from './board-metrics.js';
 import './board-lastmove.css';
 
 /** Piece size the canonical radii/stroke were tuned against (xiangqi, CELL 60). */
 const CANONICAL_PIECE_SIZE = 54;
 const CANONICAL_STROKE = 4;
 /**
- * How far the destination ring's CENTRE line sits outside the piece radius. The
- * marker layer is painted UNDER the pieces, so what the eye sees is only the
- * part of the stroke clearing the disc: at +2 with a 4-wide stroke the ring
- * spans 27..31 against a 27 piece radius, showing a full 4-unit halo.
+ * Both marks end on the same radius, and that radius is chosen so a one-step
+ * move does not collide with itself. Adjacent intersections are one CELL apart
+ * and a piece is TOKEN_PIECE_RATIO of a cell, so the marks meet exactly when
+ * each outer edge sits at CELL / 2 = pieceRadius / TOKEN_PIECE_RATIO.
  *
- * This was r=29 (a 4-unit halo) when the treatment shipped, went to r=26 in a
- * broad polish commit on 2026-07-10, and nobody noticed because the CSS comment
- * still described r=29: at 26 the ring spans 24..28, so 1 unit of a 4-unit
- * stroke clears the piece and the destination marker is ~0.6px of gold at
- * homepage size. Restored 2026-08-27 — a marker you cannot see is not a marker.
+ * At canonical scale that is 30 against a 27 piece radius: 3 units beyond the
+ * piece. The previous numbers put the origin's outer edge at 32 and the ring's
+ * at 31, needing 63 units where a cell gives 60, so every move between adjacent
+ * intersections drew the origin wash through the destination ring.
+ *
+ * The two outsets are DERIVED from that shared edge rather than tuned
+ * separately. They were separate constants before and drifted: the ring went
+ * from 29 to 26 in an unrelated polish commit and nobody noticed for six weeks
+ * because the comment still described 29.
  */
-const CANONICAL_RING_OUTSET = 2;
-/**
- * The origin marker sits OUTSIDE where the piece stood, not flush with it: the
- * square is empty now, so a piece-sized disc read as a smaller, heavier mark
- * than the ring opposite it. +4 with the pale fill below is the treatment the
- * jieqi board carried before the 2026-08-27 unification, chosen for every board
- * on 2026-08-27 because it is the one that reads at a glance.
- */
-const CANONICAL_ORIGIN_OUTSET = 4;
+const CANONICAL_MARK_OUTER_EDGE = round2(CANONICAL_PIECE_SIZE / 2 / TOKEN_PIECE_RATIO);
 /** Outline weight on the origin marker, in canonical units (see the CSS). */
 const CANONICAL_ORIGIN_STROKE = 2;
 
@@ -76,7 +73,7 @@ export function boardLastMoveUnit(pieceSize: number): number {
  * outer stroke edge land on the same radius, so the pair reads as one size.
  */
 export function boardLastMoveOuterRadius(pieceSize: number): number {
-  return round2(pieceSize / 2 + CANONICAL_ORIGIN_OUTSET * (pieceSize / CANONICAL_PIECE_SIZE));
+  return round2(CANONICAL_MARK_OUTER_EDGE * (pieceSize / CANONICAL_PIECE_SIZE));
 }
 
 /**
@@ -89,8 +86,11 @@ export function boardLastMoveMarkersSvg(
   pieceSize: number,
 ): string {
   const scale = pieceSize / CANONICAL_PIECE_SIZE;
-  const originRadius = round2(pieceSize / 2 + CANONICAL_ORIGIN_OUTSET * scale);
-  const ringRadius = round2(pieceSize / 2 + CANONICAL_RING_OUTSET * scale);
+  // A stroke is centred on its circle, so a mark's centre line sits half its
+  // own stroke inside the shared outer edge. That is what makes the origin
+  // wash and the destination halo finish on the same radius.
+  const originRadius = round2((CANONICAL_MARK_OUTER_EDGE - CANONICAL_ORIGIN_STROKE / 2) * scale);
+  const ringRadius = round2((CANONICAL_MARK_OUTER_EDGE - CANONICAL_STROKE / 2) * scale);
   const parts: string[] = [];
   if (endpoints.from) {
     parts.push(

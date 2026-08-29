@@ -104,21 +104,26 @@ describe('standard Xiangqi board SVG', () => {
     // Red perspective geometry: x = 36 + file*60, y = 36 + (10 - rank)*60.
     // b3 -> (96, 456); e3 -> (276, 456). Origin = the darker -from shadow disc;
     // destination = the gold ring around the moved piece (r=29 > piece r=27).
+    // Positions are asserted here; the radii belong to board-lastmove.test.ts,
+    // which derives them. Restating them meant this failed on a deliberate
+    // geometry change rather than on a bug.
     const svg = renderSharedXiangqiBoardSvg(view);
-    expect(svg).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="31"/>',
+    expect(svg).toMatch(
+      /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="[\d.]+"\/>/,
     );
-    expect(svg).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"/>');
+    expect(svg).toMatch(/<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="[\d.]+"\/>/);
     expect(svg.match(/xq-live-lastmove-from/g)).toHaveLength(1);
     expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
 
     // Black rotates the board 180 degrees, so BOTH axes move: file b (index 1)
     // lands at column 7 -> x = 36 + 7*60 = 456, and rank 3 at y = 36 + 2*60 = 156.
     const flipped = renderSharedXiangqiBoardSvg(view, 'black');
-    expect(flipped).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="456" cy="156" r="31"/>',
+    expect(flipped).toMatch(
+      /<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="456" cy="156" r="[\d.]+"\/>/,
     );
-    expect(flipped).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="29"/>');
+    expect(flipped).toMatch(
+      /<circle class="xq-live-lastmove-ring" cx="276" cy="156" r="[\d.]+"\/>/,
+    );
   });
 
   it('marks the last move with complete source and destination cells on a square grid', () => {
