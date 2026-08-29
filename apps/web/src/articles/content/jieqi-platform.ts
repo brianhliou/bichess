@@ -44,6 +44,11 @@ export const jieqiPlatformArticle: Article = {
         'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps its true identity for the rest of the game. The [rules page](/rules/jieqi) has the details.',
     },
     {
+      kind: 'paragraph',
+      text:
+        'It is a young game. Jieqi (揭棋) grew out of Hong Kong and Guangdong and has spread over the last couple of decades, mostly among Chinese and Vietnamese players, who know it as cờ úp. The board, the pieces and the moves are xiangqi\'s; what is new is that you start without knowing which piece is which, including your own.',
+    },
+    {
       kind: 'jieqi-replay',
       spec: {
         red: JIEQI_PLATFORM_GAME.red,
@@ -61,35 +66,10 @@ export const jieqiPlatformArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Mistboard supports jieqi in full: play it, analyse it, review it and study it. Free, no account, open source.',
+        'Mistboard supports jieqi in full. Play the engine at 1+1, 3+2 or 5+5 or send a friend a link, then review the game with an engine that handles the reveals honestly. Free, no sign-up, nothing to install.',
     },
   ],
   sections: [
-    {
-      heading: 'Playing',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text:
-            'Open a board and play the engine at 1+1, 3+2 or 5+5, or send a link to a friend and play them. Neither route asks you to sign up, and there is nothing to install.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The board is the one from the replay above: intersection or square-grid layout, a few piece sets, coordinates on or off, and full size on a phone rather than a shrunken desktop board.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'Every game is kept, including games you played as a guest. You can replay it move by move, send the link to someone, and run the analysis below over it whenever you like, months later if you want.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'What is missing: jieqi here is casual. The rating pool exists but no games are rated yet and there is no jieqi ladder, so nothing you play changes a number.',
-        },
-      ],
-    },
     {
       heading: 'Analysis',
       blocks: [
@@ -110,22 +90,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'About half the moves in a jieqi game are reveals, and a reveal is a decision plus a random draw. Grading those together would score you on your luck. Mistboard scores them apart.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'Each reveal is evaluated across every piece the tile could have been, with each outcome scored as its own position and weighted by how many of that piece you have left. The review then shows a ranked set of candidate moves with your move marked, and a dice badge giving what the draw itself was worth.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The percentage beside each candidate is that move\'s win percentage for the player to move, averaged the same way over every piece the tile could turn out to be. It is not a probability that the move is best, and it is not an engine rank. So a candidate at 52% is a move that wins a little over half the time across all the pieces that tile might have been.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The list is the engine\'s top three, plus the move you actually played when that is not already among them. That is why some reveals show three candidates and others show four.',
+            'About half the moves in a jieqi game are reveals, and a reveal is a decision plus a random draw. Grading them together would score you on your luck, so Mistboard scores them apart: every reveal is evaluated across each piece the tile could have been, weighted by how many of that piece you have left.',
         },
         {
           kind: 'image-figure',
@@ -137,7 +102,12 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Accuracy is graded on the decision half only. A lucky tile cannot inflate it and an unlucky one cannot dent it, so the number says how you played rather than what you drew.',
+            'Each percentage is that move\'s win percentage for the player to move, averaged over every piece the tile could turn out to be. It is not a probability that the move is best and not an engine rank. The list is the engine\'s top three plus your move when your move is not already there, which is why some reveals show three rows and others four.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Accuracy is then graded on the decision half only, so a lucky tile cannot inflate it and an unlucky one cannot dent it.',
         },
         { kind: 'sub-heading', text: 'The same engine runs in your browser' },
         {
@@ -165,12 +135,12 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Studies work for jieqi the way they do for xiangqi. Build one from a game or from a position you set up, keep several chapters in it, write notes against the moves, and share the link. Because a jieqi game starts from a deal rather than a fixed position, each chapter carries its own deal, so a study opens on exactly the board you saved rather than a fresh shuffle.',
+            'Build a study from a game or a position you set up, keep several chapters in it, annotate the moves and share the link. A jieqi game starts from a deal rather than a fixed position, so each chapter carries its own deal and reopens on the board you saved rather than a fresh shuffle.',
         },
         {
           kind: 'paragraph',
           text:
-            'There is not much jieqi to study in English, so we made some. [Jieqi engine reference games](/study/wd6c7qvG) is eighteen chapters of PikaJieQi against itself, every game played out to a real finish. They are engine games, not master games, and the engine has the bias described below, so read them as a starting point rather than as authority. You can step through any of them, branch off to try your own line, and run the browser engine over the result.',
+            'There is little jieqi to study in English, so we made some. [Jieqi engine reference games](/study/wd6c7qvG) is PikaJieQi against itself, every game played out to a real finish. Engine games, not master games: step through them, branch off, and run the browser engine over your line.',
         },
         {
           kind: 'cta',
@@ -184,55 +154,26 @@ export const jieqiPlatformArticle: Article = {
     {
       heading: 'The engine',
       blocks: [
-        { kind: 'sub-heading', text: 'What it is' },
         {
           kind: 'paragraph',
           text:
-            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical search with a hand-written evaluation and no neural network. It is listed as Pikafish in the lobby.',
+            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch: classical search, hand-written evaluation, no neural network. [Our fork and the WebAssembly build](https://github.com/brianhliou/pikafish-jieqi-wasm) are public, and one source produces both the engine that plays you and the one that analyses in your browser. The server build is pinned to a single upstream commit, so it does not change under you between games.',
         },
         {
           kind: 'paragraph',
           text:
-            'Our [fork and the WebAssembly build](https://github.com/brianhliou/pikafish-jieqi-wasm) are public. The same source produces both the engine that plays you on the server and the one that analyses in your browser tab, so the two never disagree about the rules.',
+            'It only ever sees the redacted board, with every face-down piece written as a faceless x. It does not know the deal, and a test fails the build if the wire format ever leaks a true identity.',
+        },
+        { kind: 'sub-heading', text: 'Where it is weak' },
+        {
+          kind: 'paragraph',
+          text:
+            'It values its own face-down pieces optimistically and over-commits them. We measured that bias holding steady from depth 8 to depth 48, which puts it in the evaluation rather than the search, so more thinking time will not remove it. The game at the top of this page is one the engine lost that way.',
         },
         {
           kind: 'paragraph',
           text:
-            'The server build is pinned to one upstream commit rather than tracking a branch, so the engine behind your analysis does not quietly change under you between one game and the next.',
-        },
-        { kind: 'sub-heading', text: 'What it is allowed to see' },
-        {
-          kind: 'paragraph',
-          text:
-            'It receives the redacted board only, with every face-down piece written as a faceless x. It does not know the deal. That boundary is the whole reason the engine can be trusted to play and to analyse the same game, so it is enforced by a test that fails the build if the wire format ever leaks a true identity.',
-        },
-        { kind: 'sub-heading', text: 'What it is bad at, and why' },
-        {
-          kind: 'paragraph',
-          text:
-            'It values its own face-down pieces optimistically, so it over-commits them. We measured that bias holding steady from depth 8 all the way to depth 48, which places it in the evaluation rather than the search. More thinking time cannot remove it. The game at the top of this page is one the engine lost that way.',
-        },
-        { kind: 'sub-heading', text: 'The missing piece is a net' },
-        {
-          kind: 'paragraph',
-          text:
-            'Almost all of modern Pikafish\'s strength lives in its NNUE, a small neural network that does the evaluating. There is no trained jieqi net. The branch we ship predates it and evaluates by hand, which is why a careful human can beat it and why the bias above survives any depth we throw at the position.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The hook is already in place: point the engine at a net file and it will load one. Producing that net is the part we have not solved. It needs jieqi training data at a scale we do not have and a build of the newer branch, and it is the single change that would most improve both the bot and the analysis on this page.',
-        },
-        { kind: 'sub-heading', text: 'Open source, and help wanted' },
-        {
-          kind: 'paragraph',
-          text:
-            'Mistboard is [open source](https://github.com/brianhliou/mistboard): the jieqi rules engine, the redaction boundary, the decision-versus-luck maths described above, and the tests that hold them in place. If you think a number on this page is wrong, the code that produced it is readable.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'If you train nets, or you know jieqi well enough to say where the evaluation goes wrong, that is the contribution we would most like to have. The engine work is in the [fork](https://github.com/brianhliou/pikafish-jieqi-wasm) and the platform work is in the [main repo](https://github.com/brianhliou/mistboard).',
+            'The fix is a net. Almost all of modern Pikafish\'s strength lives in its NNUE, and there is no trained jieqi one; the branch we ship predates it and evaluates by hand. The hook is wired, so pointing the engine at a net file would load it. Producing that net needs jieqi training data at a scale we do not have, and it is the single change that would most improve both the bot and the analysis on this page. If you train nets, or you know jieqi well enough to say where the evaluation goes wrong, that is the contribution we would most like to have.',
         },
       ],
     },
