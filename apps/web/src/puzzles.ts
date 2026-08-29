@@ -898,6 +898,90 @@ function resolveToFullPuzzleId(idOrCode: string, summaries: readonly PuzzleSumma
   );
 }
 
+// Build-time prerender of the puzzles landing frame: nav, heading, and the
+// static explainer. /puzzles is in the sitemap but served the bare shell, so a
+// crawler saw a <title> and 27 characters of body. The trainer itself needs the
+// API, so what bakes here is the explanation a first-time visitor reads; the
+// client mount replaces all of it on takeover (mountPuzzles calls
+// root.replaceChildren), so there is no hydration contract to keep.
+//
+// Default locale only, matching /player and /learn/xiangqi: prefixed paths stay
+// on the client-rendered shell, so this copy is deliberately not in the catalog.
+export function renderPuzzlesShellForPrerender(): string {
+  const shell = document.createElement('main');
+  shell.className = 'site-section puzzles-shell';
+
+  // Not .puzzles-header: that one is clipped to 1px for screen readers because
+  // the live trainer shows the board instead. The baked page is what a no-JS
+  // visitor actually reads, so its heading is visible.
+  const header = document.createElement('div');
+  header.className = 'puzzles-intro-header';
+  const title = document.createElement('h1');
+  title.className = 'site-section-heading';
+  title.textContent = t('puzzle.heading');
+  header.append(title);
+
+  const intro = document.createElement('section');
+  intro.className = 'puzzles-intro';
+  const lead = document.createElement('p');
+  lead.className = 'puzzles-intro-lead';
+  lead.textContent =
+    'Xiangqi tactics training on positions taken from real games. Every puzzle has one winning line. Find it move by move, and the trainer plays the defence against you.';
+  intro.append(lead);
+
+  const sections = [
+    {
+      heading: 'How it works',
+      items: [
+        'Each position comes from a game that was actually played, then gets checked by an engine so the solution is forced rather than merely strong.',
+        'You play the attacking side. The defence answers with its toughest reply, so a line only completes if every move you pick is the right one.',
+        'Puzzles are rated and so are you. Only your first attempt on a puzzle moves either rating, and asking for a hint counts as a miss.',
+      ],
+    },
+    {
+      heading: 'What you will practise',
+      items: [
+        'Forced mates in two, three and four moves, where the general has no escape.',
+        'Winning-advantage puzzles, where the reward is decisive material rather than mate.',
+        'Middlegame and endgame positions across the full range of difficulty.',
+      ],
+    },
+  ];
+  for (const section of sections) {
+    const heading = document.createElement('h2');
+    heading.textContent = section.heading;
+    const list = document.createElement('ul');
+    for (const item of section.items) {
+      const entry = document.createElement('li');
+      entry.textContent = item;
+      list.append(entry);
+    }
+    intro.append(heading, list);
+  }
+
+  const link = (href: string, text: string): HTMLAnchorElement => {
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.textContent = text;
+    return anchor;
+  };
+  const footer = document.createElement('p');
+  footer.className = 'puzzles-intro-footer';
+  footer.append(
+    document.createTextNode('New to the game? Read the '),
+    link('/rules/xiangqi', 'rules of xiangqi'),
+    document.createTextNode(' or work through the '),
+    link('/learn/xiangqi', 'beginner course'),
+    document.createTextNode('. To study a position of your own, open the '),
+    link('/analysis', 'analysis board'),
+    document.createTextNode('.'),
+  );
+  intro.append(footer);
+
+  shell.append(header, intro);
+  return `${buildNav().outerHTML}${shell.outerHTML}`;
+}
+
 const ICON_FIRST =
   '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M4 3.5h1.7v9H4zM13 3.5v9L6.5 8z" fill="currentColor"/></svg>';
 const ICON_LAST =

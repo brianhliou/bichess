@@ -493,6 +493,21 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The puzzles landing page gets its prerendered explainer. Deep links
+    // (/puzzles/:idOrShortCode) stay on the client-rendered shell: they open a
+    // specific puzzle, so a baked landing frame would be wrong for them.
+    if (pathname === '/puzzles') {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: 'puzzles.html',
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     if (pathname === '/leaderboard') {
       response.writeHead(308, { location: '/player' });
       response.end();

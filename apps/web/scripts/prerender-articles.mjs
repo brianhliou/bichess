@@ -577,16 +577,48 @@ try {
   );
   const learnInner = renderLearnXiangqiShellForPrerender();
   let learnHtml = shell.replace('<div id="app"></div>', `<div id="app">${learnInner}</div>`);
-  learnHtml = learnHtml.replace(
-    /<title>[^<]*<\/title>/,
-    '<title>Learn Chinese Chess (Xiangqi) | Mistboard</title>',
-  );
+  // Full meta, not a title-only replace: this baked file is served as-is by
+  // servePrerenderedPage, so until now /learn/xiangqi shipped the homepage's
+  // description. Same copy as the server's SPA_ROUTE_META['/learn/xiangqi'].
+  learnHtml = injectPageMeta(learnHtml, {
+    title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
+    description:
+      'A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.',
+    url: `${host}/learn/xiangqi`,
+  });
   learnHtml = learnHtml.replace(
     '</head>',
     `<link rel="canonical" href="${host}/learn/xiangqi" />${learnAssetLinks}</head>`,
   );
   await fs.writeFile(resolve(distDir, 'learn-xiangqi.html'), learnHtml, 'utf-8');
   console.log('prerendered /learn/xiangqi (learn-xiangqi.html)');
+
+  // Puzzles: bake the heading and the static explainer. /puzzles has been in
+  // the sitemap all along while serving 27 characters of body, because the
+  // trainer needs the API before it can render anything. The puzzles
+  // themselves still arrive client-side; what bakes is the copy explaining
+  // what the trainer is.
+  const { renderPuzzlesShellForPrerender } = await server.ssrLoadModule('/src/puzzles.ts');
+  const puzzlesAssetLinks = routeAssetLinks(manifest, 'src/puzzles.ts', shell);
+  const puzzlesInner = renderPuzzlesShellForPrerender();
+  let puzzlesHtml = shell.replace('<div id="app"></div>', `<div id="app">${puzzlesInner}</div>`);
+  // Same copy as the server's SPA_ROUTE_META['/puzzles'], which covers the
+  // fallback path when this file is missing. Injecting the FULL meta matters:
+  // servePrerenderedPage returns the baked file as-is and never runs the
+  // server's meta injection, so a title-only replace would have shipped the
+  // homepage's description on this page.
+  puzzlesHtml = injectPageMeta(puzzlesHtml, {
+    title: 'Xiangqi Puzzles | Mistboard',
+    description:
+      'Free xiangqi (Chinese chess) puzzles drawn from real games, with puzzles for Mistboard variants alongside.',
+    url: `${host}/puzzles`,
+  });
+  puzzlesHtml = puzzlesHtml.replace(
+    '</head>',
+    `<link rel="canonical" href="${host}/puzzles" />${puzzlesAssetLinks}</head>`,
+  );
+  await fs.writeFile(resolve(distDir, 'puzzles.html'), puzzlesHtml, 'utf-8');
+  console.log('prerendered /puzzles (puzzles.html)');
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;
