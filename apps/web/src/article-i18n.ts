@@ -2585,9 +2585,9 @@ const ZH_HANT: Record<string, string> = {
   'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.':
     '徐天红對孙勇征，2010年10月18日，奪冠的前一年。六十著，是本頁最短的一局。',
   'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. His is the only game below in which the opponent appears nowhere else, and that is a consequence of the section above rather than an editorial choice.':
-    '第二十二位奪冠者，2025年12月在濟南奪冠，是北京棋手第一次拿到這個頭銜，他的教練是特級大師張強。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
+    '第二十二位奪冠者，2025年12月在濟南奪冠，是北京棋手第一次拿到這個頭銜，他的教練是特級大師张强。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
   'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
-    '王禹博對蘇奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
+    '王禹博對苏奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
   'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.':
     '圖表裡的紅條就是這份名單需要加註的原因。2024到2026年間，中國象棋協會處理了一起中文媒體稱為錄音門的假棋案。2025年1月12日，它一次處罰四十一人，其中三人終身禁賽。同年9月，杭州一家法院判決六名特級大師有罪。2026年4月的第三批處罰又增加了三個終身禁賽。',
   'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
