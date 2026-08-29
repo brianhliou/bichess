@@ -36,7 +36,10 @@ export type HistoricalXiangqiSearchResponse = {
   limit: number;
 };
 
+export type GamesSort = 'recent' | 'oldest' | 'longest' | 'shortest';
+
 type Filters = {
+  sort: GamesSort;
   player: string;
   event: string;
   source: string;
@@ -50,6 +53,12 @@ type Filters = {
 };
 
 const DEFAULT_LIMIT = 50;
+const SORTS: readonly GamesSort[] = ['recent', 'oldest', 'longest', 'shortest'];
+
+function isGamesSort(value: string): value is GamesSort {
+  return (SORTS as readonly string[]).includes(value);
+}
+
 const STRING_FILTER_KEYS = [
   'player',
   'event',
@@ -115,6 +124,7 @@ export function historicalXiangqiSearchApiUrl(filters: Filters): string {
     const value = filters[key].trim();
     if (value) params.set(key, value);
   }
+  if (filters.sort !== 'recent') params.set('sort', filters.sort);
   if (filters.offset > 0) params.set('offset', String(filters.offset));
   params.set('limit', String(filters.limit));
   return `/api/historical-xiangqi/games?${params.toString()}`;
@@ -139,7 +149,9 @@ function readFilters(): Filters {
   const str = (key: string): string => params.get(key) ?? '';
   const offset = Number.parseInt(params.get('offset') ?? '', 10);
   const limit = Number.parseInt(params.get('limit') ?? '', 10);
+  const sort = str('sort');
   return {
+    sort: isGamesSort(sort) ? sort : 'recent',
     player: str('player'),
     event: str('event'),
     source: str('source'),
@@ -159,6 +171,7 @@ function writeFilters(filters: Filters): void {
     const value = filters[key].trim();
     if (value) params.set(key, value);
   }
+  if (filters.sort !== 'recent') params.set('sort', filters.sort);
   if (filters.offset > 0) params.set('offset', String(filters.offset));
   if (filters.limit !== DEFAULT_LIMIT) params.set('limit', String(filters.limit));
   const query = params.toString();
@@ -211,6 +224,19 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   inputs.set('plyMax', plyMax.input);
   form.append(plyMax.field);
 
+  const sortField = selectInput(
+    t('historical.sortLabel'),
+    [
+      { value: 'recent', label: t('historical.sortRecent') },
+      { value: 'oldest', label: t('historical.sortOldest') },
+      { value: 'longest', label: t('historical.sortLongest') },
+      { value: 'shortest', label: t('historical.sortShortest') },
+    ],
+    filters.sort,
+  );
+  selects.set('sort', sortField.select);
+  form.append(sortField.field);
+
   const limit = selectInput(
     t('historical.rowsLabel'),
     [
@@ -242,6 +268,7 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
     for (const [key, input] of inputs) (next[key] as string) = input.value.trim();
     for (const [key, select] of selects) {
       if (key === 'limit') next.limit = Number.parseInt(select.value, 10);
+      else if (key === 'sort') next.sort = isGamesSort(select.value) ? select.value : 'recent';
       else (next[key] as string) = select.value;
     }
     return next;
@@ -253,6 +280,7 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   });
   reset.addEventListener('click', () => {
     onApply({
+      sort: 'recent',
       player: '',
       event: '',
       source: '',
@@ -430,9 +458,14 @@ function selectInput(
     const item = document.createElement('option');
     item.value = option.value;
     item.textContent = option.label;
-    if (option.value === selected) item.selected = true;
     select.append(item);
   }
+  // Assign through the select, not by setting `selected` on each option before
+  // appending it. Appending an option re-runs the selectedness reset, which
+  // discards a flag set while the option was still detached for anything past
+  // the second position: `?result=0-1`, `1/2-1/2` and `*` all rendered as the
+  // "Red wins" row while the results below them were correctly filtered.
+  select.value = selected;
   const { field } = fieldFor(label, select);
   return { field, select };
 }

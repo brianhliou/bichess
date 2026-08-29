@@ -297,6 +297,7 @@ export type {
   HistoricalXiangqiSourceInput,
   HistoricalXiangqiSourceLicenseStatus,
   HistoricalXiangqiVisibility,
+  XiangqiGameSort,
 } from './persistence-historical-xiangqi.js';
 export {
   buildHistoricalXiangqiGameQueryWhere,
@@ -306,11 +307,13 @@ export {
   getHistoricalXiangqiGame,
   getHistoricalXiangqiSource,
   insertHistoricalXiangqiGame,
+  isXiangqiGameSort,
   listAggregatableXiangqiGames,
   normalizeHistoricalXiangqiPlayerName,
   queryHistoricalXiangqiGames,
   upsertHistoricalXiangqiPlayer,
   upsertHistoricalXiangqiSource,
+  XIANGQI_GAME_SORTS,
 } from './persistence-historical-xiangqi.js';
 export type {
   ActivePlayerEntry,
