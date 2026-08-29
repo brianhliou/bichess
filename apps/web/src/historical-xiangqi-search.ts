@@ -130,6 +130,10 @@ async function fetchHistoricalXiangqiGames(
   return (await response.json()) as HistoricalXiangqiSearchResponse;
 }
 
+// The canonical route for this page. `/historical-xiangqi` and
+// `/historical-xiangqi/games` still 301 here for old links.
+const SEARCH_PATH = '/games';
+
 function readFilters(): Filters {
   const params = new URLSearchParams(window.location.search);
   const str = (key: string): string => params.get(key) ?? '';
@@ -158,11 +162,10 @@ function writeFilters(filters: Filters): void {
   if (filters.offset > 0) params.set('offset', String(filters.offset));
   if (filters.limit !== DEFAULT_LIMIT) params.set('limit', String(filters.limit));
   const query = params.toString();
-  window.history.replaceState(
-    null,
-    '',
-    query ? `/historical-xiangqi/games?${query}` : '/historical-xiangqi/games',
-  );
+  // Write the canonical path. `/historical-xiangqi/games` is retired: the server
+  // 301s it back here and isClientRoute rejects it, so rewriting the bar to it
+  // meant a filtered URL survived neither a copy-paste nor a reload.
+  window.history.replaceState(null, '', query ? `${SEARCH_PATH}?${query}` : SEARCH_PATH);
 }
 
 function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HTMLElement {

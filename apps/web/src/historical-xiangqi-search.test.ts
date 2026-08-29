@@ -9,7 +9,7 @@ import {
 
 describe('historical xiangqi search page', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/historical-xiangqi/games');
+    window.history.replaceState(null, '', '/games');
   });
 
   afterEach(() => {
@@ -144,6 +144,28 @@ describe('historical xiangqi search page', () => {
       '2026全国象棋团体赛',
     );
     expect(event?.querySelector('.historical-xiangqi-zh')?.textContent).toContain('第3轮');
+  });
+
+  // Applying a filter used to rewrite the bar to `/historical-xiangqi/games`,
+  // a retired path that 301s back here, so a copied or reloaded filtered URL
+  // took a redirect hop and lost its query.
+  it('keeps the canonical /games path when filters are applied', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),
+    );
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+    const form = root.querySelector<HTMLFormElement>('form.historical-xiangqi-filters');
+    const player = form?.querySelector<HTMLInputElement>('input[type="search"]');
+    if (!form || !player) throw new Error('filter form did not render');
+    player.value = 'Hu Ronghua';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await Promise.resolve();
+
+    expect(window.location.pathname).toBe('/games');
+    expect(window.location.search).toBe('?player=Hu+Ronghua');
   });
 
   it('uses server-provided review URLs for non-archive rows', async () => {

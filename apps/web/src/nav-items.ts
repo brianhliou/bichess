@@ -107,10 +107,6 @@ export function watchNavItems(): NavItem[] {
   return [
     { label: 'Mistboard TV', labelKey: 'nav.tv', href: '/watch' },
     { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
-    // The games database belongs with the watching surfaces because that is what
-    // it holds: other people's finished games, from broadcasts, from the
-    // archive, and from play here. It was reachable only by URL until now.
-    { label: 'Games', labelKey: 'nav.games', href: '/games' },
     // Streamers appears only once the curated directory has someone in it.
     // Deriving the link from the data means an empty /streamer is never
     // reachable from the nav, and seeding the first entry needs no second edit.
@@ -128,12 +124,20 @@ export function utilityNavItems(): NavItem[] {
 }
 
 // Tools dropdown (lichess parity): the analysis board is the anchor tool, the
-// board editor sits beside it, and the engine Lab link folds in after them when
-// enabled. Import / search are deferred until those surfaces exist.
+// board editor sits beside it, and the games database closes the set the way
+// lichess's advanced search does. Import is deferred until that surface exists.
+//
+// Games moved here from Watch (2026-08-28) on live-vs-finished, not
+// browse-vs-query: Mistboard TV and Broadcasts are things happening now, and a
+// finished-games list between them reads as a third live surface. Note the page
+// is NOT lichess's empty search form. Unfiltered it lists the 50 most recently
+// finished games, so it browses as well as queries; that landing feed is the
+// part worth keeping if this ever gets rebuilt for parity.
 export function toolsNavItems(): NavItem[] {
   return [
     { label: 'Analysis board', labelKey: 'nav.analysis', href: '/analysis/xiangqi' },
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
+    { label: 'Games', labelKey: 'nav.games', href: '/games' },
     ...utilityNavItems(),
   ];
 }
