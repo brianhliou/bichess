@@ -46,7 +46,7 @@ export const jieqiPlatformArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'It is a young game. Jieqi (揭棋) came out of Hong Kong and Guangdong and has spread over the last couple of decades, mostly among Chinese and Vietnamese players, who call it cờ úp.',
+        'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players.',
     },
     {
       // A reader who arrived from a "play jieqi" search wants a board, not an
@@ -91,7 +91,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Ask for analysis on a finished game and you get a graph of the whole thing, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move you should have played.',
+            'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.',
         },
         {
           kind: 'image-figure',
@@ -145,22 +145,6 @@ export const jieqiPlatformArticle: Article = {
             { label: 'Open the analysis board', href: '/analysis/jieqi', emphasis: 'primary' },
           ],
         },
-        {
-          // Deliberately no competitor named. The claims are about what this site
-          // does; a table asserting what someone else lacks would need checking
-          // every time they ship, and would be wrong before anyone noticed.
-          kind: 'table',
-          headers: ['', 'On Mistboard'],
-          rows: [
-            ['Play the engine or a friend', 'Free, no account'],
-            ['Full-game analysis', 'Every finished game'],
-            ['Luck measured separately', 'Every flip priced'],
-            ['Engine in your browser', 'No queue, no account'],
-            ['Studies with your own deals', 'Yes'],
-            ['Open-source engine', 'Yes'],
-            ['Rated ladder', 'Not yet'],
-          ],
-        },
       ],
     },
     {
@@ -205,14 +189,14 @@ export const jieqiPlatformArticle: Article = {
                 'Same board, same pieces, same moves, same goal. You just do not know which piece is which, so about half your moves flip one over and find out.',
             },
             {
-              question: 'Where can I play jieqi online for free?',
-              answer:
-                'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.',
-            },
-            {
               question: 'Is jieqi just luck?',
               answer:
                 'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.',
+            },
+            {
+              question: 'Can a computer play jieqi well?',
+              answer:
+                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.',
             },
             {
               question: 'Can the engine see my hidden pieces?',
@@ -225,9 +209,9 @@ export const jieqiPlatformArticle: Article = {
                 'The deal is random, made on the server, and told to nobody: not you, not your opponent, not the engine.',
             },
             {
-              question: 'Can a computer play jieqi well?',
+              question: 'Where can I play jieqi online for free?',
               answer:
-                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.',
+                'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.',
             },
           ],
         },
@@ -236,6 +220,23 @@ export const jieqiPlatformArticle: Article = {
     {
       heading: 'Start playing',
       blocks: [
+        {
+          // Deliberately no competitor named. The claims are about what this site
+          // does; a table asserting what someone else lacks would need checking
+          // every time they ship, and would be wrong before anyone noticed.
+          kind: 'table',
+          headers: ['', 'On Mistboard'],
+          rows: [
+            ['Play the engine or a friend', 'Free, no account'],
+            ['Full-game analysis', 'Every finished game'],
+            ['Luck measured separately', 'Every flip priced'],
+            ['Engine in your browser', 'No queue, no account'],
+            ['Studies with your own deals', 'Yes'],
+            ['Open-source engine', 'Yes'],
+            ['Rated ladder', 'Not yet'],
+          ],
+        },
+
         {
           kind: 'cta',
           buttons: [
