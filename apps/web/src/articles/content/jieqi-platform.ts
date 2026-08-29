@@ -174,6 +174,16 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
+            'The search is classical alpha-beta with iterative deepening and a transposition table, and a hand-written evaluation rather than a neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node: instead of one line it scores a move as the probability-weighted average over each piece that tile could still be. That is also why the transposition table matters so much here, and why a table too small to hold the search does not just slow it down but changes the numbers it reports.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The review layer on top is ours. It asks the engine for several candidate moves at once, then re-scores each one itself as an explicit average over the mover\'s remaining hidden pieces, which is what separates the move you chose from the piece you drew.',
+        },
+        {
+          kind: 'paragraph',
+          text:
             "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). What would fix it is a trained net: almost all of modern Pikafish's strength lives in one, and jieqi has none yet. If you train nets, or you know jieqi well enough to say where its judgement goes wrong, that is the help we would most like.",
         },
       ],
