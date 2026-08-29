@@ -800,6 +800,10 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷雾国际象棋规则',
+  // The seoTitle: English carries two names for this game and Chinese carries
+  // one, so both English keys land on the same Chinese title. That is the
+  // point of seoTitle -- 'fog of war chess' is what players type.
+  'Fog of War Chess Rules': '迷雾国际象棋规则',
   'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
     '迷雾国际象棋规则：战争迷雾下的国际象棋。每一方只能看到己方棋子可及的格子，没有将军提示，王被吃掉即负。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
@@ -976,6 +980,9 @@ const ZH_HANS: Record<string, string> = {
   'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
     '红方无棋可走，黑方获胜。决策数字说红方下出的棋更好；棋子们说了反话，从第 6 个半回合的那次翻子开始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的实力和运气分开',
+  // The seoTitle, which names the three variants where the on-page title does not.
+  'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
+    '暗棋、揭棋和翻翻棋的对局复盘：实力与运气',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
     '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
@@ -1216,6 +1223,11 @@ const ZH_HANS: Record<string, string> = {
   // twenty-two are mainland players. champion-name-script.test.ts enforces it.
   // Chart labels and table cells are keys too, so the figure and the ruling
   // column localize with the prose instead of staying English under it.
+  // seoTitle: drives the localized <title> and og:title. It sits OUTSIDE
+  // articleProse, so the coverage contract cannot see it missing; the zh
+  // pages shipped an English <title> over Chinese prose until this landed.
+  'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games':
+    '历届全国象棋冠军：中国象棋冠军名录与对局讲解',
   'Every Xiangqi Champion': '历届全国象棋冠军',
   'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
     '1956年以来中国象棋全国个人赛的每一位冠军，其中十三位各配一局讲解棋谱。另有这个头衔出现之前的九百年，以及被从纪录里抹去的十年。',
@@ -2079,6 +2091,10 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷霧國際象棋規則',
+  // The seoTitle: English carries two names for this game and Chinese carries
+  // one, so both English keys land on the same Chinese title. That is the
+  // point of seoTitle -- 'fog of war chess' is what players type.
+  'Fog of War Chess Rules': '迷霧國際象棋規則',
   'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
     '迷霧國際象棋規則：戰爭迷霧下的國際象棋。每一方只能看到己方棋子可及的格子，沒有將軍提示，王被吃掉即負。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
@@ -2224,6 +2240,9 @@ const ZH_HANT: Record<string, string> = {
   'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
     '紅方無棋可走，黑方獲勝。決策數字說紅方下出的棋更好；棋子們說了反話，從第 6 個半回合的那次翻子開始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的實力和運氣分開',
+  // The seoTitle, which names the three variants where the on-page title does not.
+  'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
+    '暗棋、揭棋和翻翻棋的對局複盤：實力與運氣',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
     '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
@@ -2462,6 +2481,8 @@ const ZH_HANT: Record<string, string> = {
   // conversion renders 体育项目 as 體育專案, the software sense of "project").
   // Champion names were masked through the conversion, so 杨官璘 stays 杨官璘.
   // Only values that actually fork appear here; the rest inherit via the spread.
+  'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games':
+    '歷屆全國象棋冠軍：中國象棋冠軍名錄與對局講解',
   'Every Xiangqi Champion': '歷屆全國象棋冠軍',
   'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
     '1956年以來中國象棋全國個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
