@@ -965,7 +965,7 @@ export const xiangqiChampionsArticle: Article = {
   title: 'Every Xiangqi Champion',
   seoTitle: 'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games',
   summary:
-    'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for each of the thirteen who built the game\u2019s first fifty years. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
+    'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
   status: 'draft',
   publishedAt: '2026-08-28',
   audience:
@@ -985,7 +985,7 @@ export const xiangqiChampionsArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'What follows is every winner, and then the thirteen who defined the first fifty years of it, in the order they first took the title, one annotated game each. The boards carry our own engine\u2019s reading: it marks what it judges a mistake, and what it judges brilliant, and hangs the line it preferred off the move. The analysis is Pikafish at a million nodes a position.',
+        'What follows is every winner, and then thirteen of them in the order they first took the title, one annotated game each. The boards carry our own engine\u2019s reading: it marks what it judges a mistake, and what it judges brilliant, and hangs the line it preferred off the move. The analysis is Pikafish at a million nodes a position.',
     },
   ],
   sections: [
@@ -1010,7 +1010,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and raised war funds through simultaneous displays, blindfold play and games with human pieces. In September 1939 he drew with Zhou Enlai in Chongqing and they named the game 共抖国难, bearing the national crisis together. He died in 1987, aged ninety-nine.',
+            'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and raised war funds through simultaneous displays, blindfold play and games with human pieces. In 1939 he played Zhou Enlai in Chongqing, and the drawn game they published in the Ta Kung Pao was titled 共抒国难, relieving the national crisis together. He died in 1987, aged ninety-nine.',
         },
         {
           kind: 'paragraph',
@@ -1037,7 +1037,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Three things fall out of the shape. Hu Ronghua holds the middle of the chart for forty years, in two long runs either side of a gap that history took rather than a rival, then four scattered singles that land after the men who replaced him had themselves come and gone. The 1980s and 1990s are the only stretch where four or five names trade the title year to year. And from 2005 the bars turn red, because with three exceptions every man who has won it since has been banned.',
+            'Three things fall out of the shape. Hu Ronghua holds the middle of the chart for forty years, in two long runs either side of a gap that history took rather than a rival, then four scattered singles that land after the men who replaced him had themselves come and gone. The 1980s and 1990s are the only stretch where four or five names trade the title year to year. And from 2005 the bars turn red: thirteen men have won it since, and ten of them have a ruling against them.',
         },
         {
           kind: 'paragraph',
@@ -1059,7 +1059,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Four national titles: 1956, 1957, 1959, and a fourth in 1962 shared with the boy who had just taken the game off him. He came out of Guangdong, played for money in Hong Kong between 1949 and 1951, and by the time the sport was organised he was good enough that it called him 第一国手, the first hand of the nation. Other players called him 魔叔, Magic Uncle. His reputation rested on endgames, which is a polite way of saying he beat people in positions everyone had agreed were drawn.',
+            'Four national titles: 1956, 1957, 1959, and a fourth in 1962 shared with the boy who had just taken the game off him. He came out of Guangdong, played for money in Hong Kong between 1949 and 1951, and by the time the sport was organised he was good enough that it called him 第一国手, the nation\'s foremost player. Other players called him 魔叔, Magic Uncle. His reputation rested on endgames, which is a polite way of saying he beat people in positions everyone had agreed were drawn.',
         },
         {
           kind: 'paragraph',
@@ -1070,7 +1070,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_kkN9Bwhq },
           caption:
-            'Yang Guanlin vs Hu Ronghua, 12 November 1965, round six. At 183 plies this is the longest game on the page, and it is what an endgame reputation looks like in practice: Yang keeps the position alive for ninety moves until Hu runs out of ways to hold it. Watch move 41, where our engine marks his cannon swing to the centre as the move that finally breaks the balance.',
+            'Yang Guanlin vs Hu Ronghua, 12 November 1965, round six. At 183 plies this is the longest of the national championship games here, and it is what an endgame reputation looks like in practice: Yang keeps the position alive for ninety moves until Hu runs out of ways to hold it. Watch move 41, where our engine marks his cannon swing to the centre as the move that finally breaks the balance.',
         },
       ],
     },
@@ -1085,13 +1085,13 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Then he stopped. Poor health and the politics of the late 1960s ended his competitive career in 1966, at twenty-eight, which is the whole reason a player this good has one championship. He coached afterwards, and the player he pushed forward was Liu Dahua, who appears four sections down.',
+            'Then he stopped. Poor health and the politics of the late 1960s ended his competitive career in 1966, at twenty-eight, which is the whole reason a player this good has one championship. He coached afterwards, and the player he pushed forward was Liu Dahua, two sections down.',
         },
         {
           kind: 'xq-replay',
           spec: { ...C_Ue0EgpS7 },
           caption:
-            'Li Yiting vs Yang Guanlin, 27 December 1956, the fifth round of the final group. Li was eighteen and playing the reigning best player in the country. Our engine grades his side at 99.0, the highest on this page, and singles out his cannon shift on move 50: the alternative it likes second is eighteen percentage points worse.',
+            'Li Yiting vs Yang Guanlin, 27 December 1956, the fifth round of the final group. Li was eighteen and playing the reigning best player in the country. Our engine grades his side at 99.0, the highest of any player here, and singles out his cannon shift on move 50: the alternative it likes second is eighteen percentage points worse.',
         },
       ],
     },
@@ -1150,7 +1150,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_nj9VX8BK },
           caption:
-            'Yang Guanlin vs Liu Dahua, 3 September 1980, round nine. Seventy plies, the shortest game on the page, and the outgoing era losing to the incoming one in under thirty-five moves.',
+            'Yang Guanlin vs Liu Dahua, 3 September 1980, round nine. Seventy plies, and the outgoing era losing to the incoming one in under thirty-five moves.',
         },
       ],
     },
@@ -1187,7 +1187,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_DCNGV4UV },
           caption:
-            'Lü Qin vs Yu Youhua, 23 November 1986, round twelve of the championship that gave Lü Qin his first national title. Our engine marks a brilliant move on each side of this game: Lü Qin\'s cannon offer on move 21, and Yu Youhua\'s horse on move 32. It is the only game on the page where both players get one.',
+            'Lü Qin vs Yu Youhua, 23 November 1986, round twelve of the championship that gave Lü Qin his first national title. Our engine marks a brilliant move on each side of this game: Lü Qin\'s cannon offer on move 21, and Yu Youhua\'s horse on move 32. It is the only game where both players get one.',
         },
       ],
     },
@@ -1234,7 +1234,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Six national titles and three world titles. He won the first at eighteen, second only to Hu\'s fifteen, and spent the 1990s and 2000s as the best player in the country not named Hu Ronghua. Like Yang Guanlin before him he built it on endgames, and like Yang he came out of Guangdong. He is also one of only three men to win a title after 2004 and have no ruling against him since.',
+            'Six national titles and three world titles. He won the first at eighteen, second only to Hu\'s fifteen, and spent the 1990s and 2000s as the best player in the country not named Hu Ronghua. Like Yang Guanlin before him he built it on endgames, and like Yang he came out of Guangdong. He is one of the three men to have won a national title since 2005 with no ruling against him.',
         },
         {
           kind: 'paragraph',
@@ -1245,7 +1245,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_ZBE8Dp5U },
           caption:
-            'Xu Yinchuan vs Liu Dahua, 11 October 1995, round seven. Six inaccuracies between them and nothing worse: no mistakes, no blunders, on either side. It is the most error-free game on this page.',
+            'Xu Yinchuan vs Liu Dahua, 11 October 1995, round seven. Six inaccuracies between them and nothing worse. It is the only game here in which our engine finds neither a blunder nor a mistake from either player.',
         },
       ],
     },
@@ -1255,18 +1255,18 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The only champion here who came up outside the system. Tao learned at street chess stalls in Jilin, turned professional late, and in 1994 became the first amateur-trained player to win the national title, taking it from Lü Qin on tiebreak in the final round. The sport named him 绿林棋王, chess king of the greenwood, which is the Chinese phrase for outlaws living in the forest.',
+            'The only champion here who came up outside the system. Tao grew up on the street chess stalls of Haicheng in Liaoning, turned professional late, and in 1994 became the first amateur-trained player to win the national title, playing for Jilin and taking it from Lü Qin on tiebreak in the final round. The sport named him 绿林棋王, chess king of the greenwood, which is the Chinese phrase for outlaws in the forest, and it is a verdict on his game rather than his upbringing: unorthodox, and ferocious in the middlegame.',
         },
         {
           kind: 'paragraph',
           text:
-            'His game is wild by the standards of everyone else on this page, built on prepared surprises rather than accumulation. Here he is two years after the title, against a two-time champion.',
+            'His game is wild by the standards of every other champion in this sequence, built on prepared surprises rather than accumulation. Here he is two years after the title, against a two-time champion.',
         },
         {
           kind: 'xq-replay',
           spec: { ...C_hLWs5hR5 },
           caption:
-            'Tao Hanming vs Liu Dahua, 21 October 1996, round two. A hundred and thirty-one plies, and the engine faults both players more than it faults most games here. That is the trade Tao made: sharper positions, more chances for everyone, and he was better at taking them.',
+            'Tao Hanming vs Liu Dahua, 21 October 1996, round two. A hundred and thirty-one plies against a two-time champion. Tao\'s game asks more of both players than a positional grind does: more chances for everyone, and he was better at taking them.',
         },
       ],
     },
@@ -1292,7 +1292,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One title, in 2011, won without losing a game: five wins and six draws. He is the last champion on this page with an annotated game, and he is also where the record stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.',
+            'One title, in 2011, won without losing a game: five wins and six draws. He is also where the record stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.',
         },
         {
           kind: 'paragraph',
@@ -1303,7 +1303,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_fOnPsRe1 },
           caption:
-            'Xu Tianhong vs Sun Yongzheng, 18 October 2010, round three, the year before his title. Sixty plies, the shortest decisive game here, and move 18 is his: a central pawn push the engine rates seventeen points clear of the alternative.',
+            'Xu Tianhong vs Sun Yongzheng, 18 October 2010, round three, the year before his title. Sixty plies, the shortest game here, and move 18 is his: a central pawn push the engine rates seventeen points clear of the alternative.',
         },
       ],
     },
@@ -1313,7 +1313,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. He is the only champion here whose game is against a player who appears nowhere else on the page, and that is a consequence of the section above rather than an editorial choice.',
+            'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. His is the only game below in which the opponent appears nowhere else, and that is a consequence of the section above rather than an editorial choice.',
         },
         {
           kind: 'xq-replay',
@@ -1360,7 +1360,7 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The bracketed notes in both tables are rulings, not allegations. On 12 January 2025 the Chinese Xiangqi Association sanctioned forty-one people over the case the Chinese press calls 录音门, the recording gate, with lifetime bans for three of them; a court in Hangzhou convicted six grandmasters in September 2025; and a third batch of rulings in April 2026 added three more lifetime bans. Line the outcome up against the national table and every champion from 2010 to 2023 has a ruling against him. Line it up against the world table and every men\u2019s world champion from 2009 to 2023 does. Xu Yinchuan and Zhao Guorong, who won five titles between them from 2006 to 2009, are the only holders in that whole span with nothing against their names. The names stay in the tables because a list that quietly dropped them would be a worse record, and because the source is the sport\u2019s own governing body. The full account is its own piece.',
+          text: 'The bracketed notes in both tables are rulings, not allegations. On 12 January 2025 the Chinese Xiangqi Association sanctioned forty-one people over the case the Chinese press calls 录音门, the recording gate, with lifetime bans for three of them; a court in Hangzhou convicted six grandmasters in September 2025; and a third batch of rulings in April 2026 added three more lifetime bans. Line the outcome up against the national table and every champion from 2010 to 2023 has a ruling against him. Line it up against the world table and every men\u2019s world champion from 2009 to 2023 does. Only three men have won the national title since 2005 and kept it clean: Xu Yinchuan, Zhao Guorong, and Wang Yubo in 2025. The names stay in the tables because a list that quietly dropped them would be a worse record, and because the source is the sport\u2019s own governing body. The full account is its own piece.',
         },
       ],
     },

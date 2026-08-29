@@ -6,7 +6,19 @@
 export type ChampionRecord = {
   /** English name, as used in the article headings. */
   name: string;
-  /** Simplified Chinese, shown in the table only; the figure has no room. */
+  /**
+   * The player's name in Chinese, shown in the table and the section heading
+   * (the figure has no room for it).
+   *
+   * Script follows the PERSON, not the page: mainland players are written in
+   * simplified, and a player from Hong Kong, Taiwan or Macau would be written
+   * in traditional. Every champion to date is from the mainland, so this field
+   * is currently all simplified; that is a fact about the winners, not a
+   * default to apply to the next entry.
+   *
+   * This is separate from interface locale. A zh-Hant reader still sees a
+   * mainland player's name in simplified, because it is his name.
+   */
   zh: string;
   /** Every edition this player won outright. */
   years: number[];
