@@ -913,8 +913,8 @@ export const xiangqiChampionsArticle: Article = {
       })),
     },
   ],
-  status: 'draft',
-  publishedAt: '2026-08-28',
+  status: 'published',
+  publishedAt: '2026-08-29',
   audience:
     'English-speaking chess players who know the world chess champions by heart and cannot name a single xiangqi player.',
   // The chart, not a board: it is what the article is actually about, it is the

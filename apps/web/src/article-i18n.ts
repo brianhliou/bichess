@@ -35,6 +35,11 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // most titled xiangqi players read Chinese, so English-only was the wrong
   // default for THIS page specifically. Re-review when a reader is available.
   'titled-players',
+  // Machine-drafted, not native-reviewed (2026-08-29), by explicit decision.
+  // Champion names stay in simplified for the Traditional reader, because a
+  // person's name is written in the script that person uses and all twenty-two
+  // are mainland players; champion-name-script.test.ts enforces that.
+  'xiangqi-champions',
   'riverbank-cannon',
   'skill-vs-luck',
   'fog-chess',
@@ -1203,6 +1208,181 @@ const ZH_HANS: Record<string, string> = {
   'Misty (this article’s line)': 'Misty（本文推荐线）',
   Red: '红方',
   Black: '黑方',
+
+  // -- Every Xiangqi Champion (xiangqi-champions) --
+  // MACHINE-DRAFTED 2026-08-28, NOT NATIVE-REVIEWED, by explicit decision.
+  // Champion names are deliberately NOT converted for the Traditional reader:
+  // a person's name is written in the script that person uses, and all
+  // twenty-two are mainland players. champion-name-script.test.ts enforces it.
+  // Chart labels and table cells are keys too, so the figure and the ruling
+  // column localize with the prose instead of staying English under it.
+  'Every Xiangqi Champion': '历届全国象棋冠军',
+  'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
+    '1956年以来中国象棋全国个人赛的每一位冠军，其中十三位各配一局讲解棋谱。另有这个头衔出现之前的九百年，以及被从纪录里抹去的十年。',
+  'Ask who the greatest chess player was and you get an argument with a shape to it: Fischer or Kasparov or Carlsen, measured against a title that has passed hand to hand since 1886. Ask the same about xiangqi and most English answers stop at the question.':
+    '问国际象棋史上谁最强，你会得到一场有章法的争论：菲舍尔、卡斯帕罗夫还是卡尔森，衡量的标尺是一个自1886年起代代相传的头衔。同样的问题放到象棋上，多数英文的回答止步于提问本身。',
+  'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.':
+    '答案是有的，而且几乎无人异议。胡荣华拿过十四次全国冠军，十五岁夺得第一次，五十五岁夺得最后一次，1960年到1979年间举办的十届全国赛，冠军全部由他独得或并列分享。更难解释的是，他统治的这个头衔为什么只有六十九年历史，而这门棋在南宋灭亡之时就已经是今天的模样。下面列出每一位冠军，并按他们首次夺冠的先后，为其中十三位各选一局棋。棋谱讲解由我们自己的引擎完成，分析用的是 Pikafish，每个局面一百万个节点。',
+  'Before there was a title': '头衔出现之前',
+  'Xiangqi reached its modern form at the end of the Northern Song: sixteen pieces a side, nine files by ten ranks, the river, the palace, the general and advisors confined to it. By the Southern Song it was played widely enough that Wen Tianxiang, the statesman the Mongols executed in 1283, grew up in a family of players and left a book of forty endgame problems. Nine hundred years of the game, and composed positions like his are nearly all that survives: not one record of a game anyone actually played.':
+    '象棋在北宋末年定型为今天的样子：每方十六子，纵九横十，有河界，有九宫，将帅与士不出九宫。到南宋时它已流传甚广，被蒙古人于1283年处死的文天祥就出身棋弈之家，留下过一部四十局的残局谱。九百年的棋史，存下来的几乎只有这类拟局：没有一份真人对局的记录。',
+  'What survives from the Ming onward is manuals: 橘中秘 of 1632, the most reprinted xiangqi text of the Ming and Qing, and 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score. The first era with contested titles ran through the 1920s and 1930s and had no federation: newspapers organised the matches, and the winners were given names rather than trophies. Zhou Deyu finished three points clear when East China played North China in February 1931 and was crowned 七省棋王, Chess King of Seven Provinces, the seven being how many provinces the four players came from. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.':
+    '明代以后留下来的是棋谱：1632年的《橘中秘》，明清两代翻刻最多的象棋著作；1801年的《百局象棋谱》，收有一百零七局以成语命名的排局。作者的名字你说得出来。谁最强你说不出来，因为没有人在记分。第一个争夺头衔的时代横跨二十世纪二三十年代，却没有任何协会：比赛由报纸组织，赢家得到的是名号而不是奖杯。1931年2月华东对华北，周德裕净胜三分，被加冕为七省棋王，这七省指的是四名参赛者来自几个省。随后黄松轩与他对弈二十局，多胜一局，广东便封他为九省棋王。靠名号加码决出的头衔算不上一套制度，但那已是当时最接近制度的东西。',
+  'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and spent two years playing for the war: simultaneous displays, blindfold games, boards laid out with people as the pieces. He raised more than fifty million in banknotes and silver, and sent three thousand young overseas Chinese home to fight. In 1939 he played Zhou Enlai in Chongqing, and the drawn game they published in the Ta Kung Pao was titled 共抒国难, relieving the national crisis together. He died in 1987, aged ninety-nine.':
+    '这些比赛的组织者是谢侠逊，他是那个时代最值得认识的人物。他的国际象棋也下得好，1936年在沙面举行的五国赛上以十八胜一负一和夺冠。1937年10月他以国家使节的身份前往东南亚，用两年时间为抗战下棋：车轮战、盲棋、以人作棋子摆开的棋局。他募得五千余万的钞票与银两，并送三千名华侨青年回国参战。1939年他在重庆与周恩来对弈，两人的和局发表于《大公报》，题为共抒国难。1987年他去世，享年九十九岁。',
+  "Then, in August 1956, the State Sports Commission made xiangqi an official sport and published the first competition rules. That December, in Beijing, the first national championship was played. Xiangqi was the only competitive event; go and Western chess were demonstrations. It has been played fifty-seven times since, missing 1961 and 1963 to the famine, 1967-1973 to the Cultural Revolution, 1976 to Mao's death, 2021-2022 to the pandemic, and 2024 to want of a sponsor.":
+    '1956年8月，国家体委将象棋列为正式体育项目，并颁布了第一部比赛规则。当年12月，第一届全国象棋锦标赛在北京举行。象棋是唯一的竞赛项目，围棋和国际象棋只作表演。此后共举办五十七届，其间1961和1963年因饥荒停办，1967至1973年因文革停办，1976年因毛泽东逝世停办，2021和2022年因疫情停办，2024年因无人赞助停办。',
+  'Every national champion, 1956 to 2025': '历届全国冠军，1956至2025',
+  'Fifty-seven editions, twenty-two winners. One row per player, in the order they first took the title, with a bar over the years they held it.':
+    '五十七届，二十二位冠军。每位棋手一行，按首次夺冠的先后排列，横条覆盖他保有头衔的年份。',
+  'Hatched columns are years with no championship. The number after each name is that player’s title count.':
+    '斜线填充的列是没有举办全国赛的年份。每个名字后面的数字是该棋手的夺冠次数。',
+  'Three things fall out of the shape. Hu Ronghua holds the middle of the chart for forty years, in two long runs either side of a gap that history took rather than a rival, then four scattered singles that land after the men who replaced him had themselves come and gone. The 1980s and 1990s are the only stretch where four or five names trade the title year to year. And from 2005 the bars turn red: thirteen men have won it since, and ten of them have a ruling against them.':
+    '从图形里能看出三件事。胡荣华占据图表中段长达四十年，分成两段长跑，中间的空档是历史造成的而不是对手造成的，此后又是四次零散夺冠，落在取代他的那批人自己也来了又走之后。八十年代和九十年代是唯一一段四五个名字逐年轮流拿冠军的时期。而从2005年起横条转红：此后共有十三人夺冠，其中十人身上有处罚决定。',
+  'Thirteen of these men have an annotated game further down the page, one each, in the same order. The nine without one are here because a list of champions that leaves people out is not a list of champions.':
+    '这十三人在本页下方各有一局讲解棋谱，顺序相同。另外九人没有棋谱，之所以列出，是因为漏掉人的冠军名单算不上冠军名单。',
+  Champion: '冠军',
+  Titles: '夺冠次数',
+  Years: '年份',
+  'Association ruling': '协会处罚',
+  'The same record as the figure, with the years written out. An asterisk marks the one shared title, in 1962. Every entry in the last column is a published ruling of the Chinese Xiangqi Association, not an allegation; the section below explains them.':
+    '与上图相同的纪录，年份写全。星号标出唯一一次并列冠军，在1962年。最后一列里的每一条都是中国象棋协会已公布的处罚决定，不是指控；下文一节会加以说明。',
+  'Yang Guanlin 杨官璘, 1956': '杨官璘，1956',
+  "Four national titles: 1956, 1957, 1959, and a fourth in 1962 shared with the boy who had just taken the game off him. He came out of Guangdong, played for money in Hong Kong between 1949 and 1951, and by the time the sport was organised he was good enough that it called him 第一国手, the nation's foremost player. Other players called him 魔叔, Magic Uncle. His reputation rested on endgames, which is a polite way of saying he beat people in positions everyone had agreed were drawn.":
+    '四次全国冠军：1956、1957、1959，第四次在1962年，与刚刚把冠军从他手里拿走的那个少年并列。他出自广东，1949到1951年间在香港以棋为生，等到这项运动被正式组织起来时，他已经强到被称作第一国手。棋界叫他魔叔。他的名声建立在残局上，说得客气些是这样，说白了就是他能在所有人都认定是和棋的局面里赢下对手。',
+  'He was the answer for most of a decade, and for longer than the record suggests. Five years after Hu Ronghua took the title off him, Yang was still beating him.':
+    '在近十年的时间里他就是那个答案，而且比纪录显示的还要久。胡荣华从他手里拿走冠军五年之后，杨官璘还在赢他。',
+  'Yang Guanlin vs Hu Ronghua, 12 November 1965. Ninety moves of endgame, and move 41 is the cannon swing that finally breaks it.':
+    '杨官璘对胡荣华，1965年11月12日。九十个回合的残局较量，第41回合的平炮终于撕开了局面。',
+  'Li Yiting 李义庭, 1958': '李义庭，1958',
+  'They called him 小神童, the little prodigy, and he had earned it by sixteen: a four-game match against Yang Guanlin in 1954 that finished two apiece. He beat Yang again at the first national championship, in the tournament Yang went on to win, and took the title himself in 1958 at twenty.':
+    '人称小神童，他十六岁就当得起这个名号：1954年与杨官璘四局对抗，二比二打平。在首届全国赛上他又赢了杨官璘一局，而那届冠军最终归杨官璘；1958年他二十岁，自己拿下了冠军。',
+  'Then he stopped. Poor health and the politics of the late 1960s ended his competitive career in 1966, at twenty-eight, which is the whole reason a player this good has one championship. He coached afterwards, and the player he pushed forward was Liu Dahua, two sections down.':
+    '然后他就停了。健康不佳加上六十年代后期的政治，让他的竞技生涯在1966年结束，那年他二十八岁，这就是一位这么强的棋手只有一次冠军的全部原因。此后他做教练，他推上来的棋手是柳大华，在下面第二节。',
+  'Li Yiting vs Yang Guanlin, 27 December 1956. Li was eighteen, and our engine grades him 99.0, the highest of any player here.':
+    '李义庭对杨官璘，1956年12月27日。李义庭当时十八岁，我们的引擎给他打出99.0分，是本页所有棋手中最高的。',
+  'Hu Ronghua 胡荣华, 1960': '胡荣华，1960',
+  'Fourteen national titles, the first at fifteen and the last at fifty-five, and every one of the ten championships held between 1960 and 1979, one of them shared. They called him 胡司令, Commander Hu. He played out of Shanghai, on his own, against the strongest player every other province could field, and he did it by rebuilding the openings underneath the game: the flying elephant, the anti-palace horse and the same-direction cannon are all mainstream today because Hu kept winning with them.':
+    '十四次全国冠军，第一次十五岁，最后一次五十五岁，1960到1979年间举办的十届冠军全部有他，其中一届并列。棋界叫他胡司令。他代表上海出战，孤身一人对抗其他各省能派出的最强棋手，而他做到这一点的办法，是把棋的开局体系整个重建了一遍：飞相局、反宫马、顺炮，今天都是主流，因为胡荣华一直用它们赢棋。',
+  'This is the game he arrived with. Round three of his first national tournament, Black against the reigning champion.':
+    '这是他登场的那一局。首次参加全国赛的第三轮，执黑对阵卫冕冠军。',
+  'Yang Guanlin vs Hu Ronghua, 28 October 1960. Move 24 is the one to watch: a cannon Yang cannot take, marked brilliant.':
+    '杨官璘对胡荣华，1960年10月28日。第24回合值得一看：一步杨官璘吃不得的炮，被标为妙手。',
+  'And this is thirty-four years later, in a tournament he did not win, against a man who had taken two national titles of his own in between.':
+    '这是三十四年之后，在一场他没有夺冠的比赛里，对手是这期间自己拿过两次全国冠军的人。',
+  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.':
+    '胡荣华对柳大华，1994年10月15日。胡荣华时年四十九，距离他第十四次夺冠还有六年。',
+  'Liu Dahua 柳大华, 1980': '柳大华，1980',
+  'Two titles, 1980 and 1981, and the man who ended the longest run in the game: Hu had won every championship held for twenty years when Liu took the 1980 tournament off him. He is from Huangpi, in Hubei, and the sport knows him as 东方电脑, the Eastern Computer, for a memory that let him play nineteen simultaneous games blindfold in 1995. That was a world record until one of the champions further down this page broke it with twenty.':
+    '两次冠军，1980和1981年，他也是终结了这项运动中最长连霸的人：柳大华拿下1980年那届时，此前二十年举办的全国赛冠军全是胡荣华的。他是湖北黄陂人，棋界称他东方电脑，因为他的记忆力让他在1995年下出十九盘同时进行的盲棋。那是当时的世界纪录，直到本页下面的一位冠军以二十盘打破它。',
+  'He beat Li Laiqun in the 1980 tournament, then Yang Guanlin five days later.':
+    '他在1980年那届比赛中赢了李来群，五天后又赢了杨官璘。',
+  'Li Laiqun vs Liu Dahua, 29 August 1980. Li would take four titles of his own starting two years later.':
+    '李来群对柳大华，1980年8月29日。两年后李来群将开始自己的四次夺冠。',
+  'Yang Guanlin vs Liu Dahua, 3 September 1980. The outgoing era losing to the incoming one in under thirty-five moves.':
+    '杨官璘对柳大华，1980年9月3日。将去的时代在三十五个回合之内输给了将来的时代。',
+  'Li Laiqun 李来群, 1982': '李来群，1982',
+  "Four titles between 1982 and 1991, and the first of them mattered past his own career. Li is from Handan in Hebei, and 1982 was the first time the men's championship crossed the Yellow River: until then it had belonged to the south, to Guangdong and Shanghai and Hubei. He went through that tournament unbeaten, and through Hu Ronghua directly rather than around him.":
+    '1982到1991年间四次夺冠，其中第一次的意义超出了他个人的生涯。李来群是河北邯郸人，1982年是男子全国冠军第一次跨过黄河：在此之前它一直属于南方，属于广东、上海和湖北。那届比赛他全程不败，而且是正面赢过胡荣华，不是绕开他。',
+  "Chinese writers reach for two images for his game: a needle wrapped in cotton, and a python's coils. Both mean the same thing, which is that the position has already closed before you notice it closing.":
+    '中文的棋评用两个比喻形容他的棋：绵里藏针，以及蟒蛇缠身。两者说的是同一件事，就是等你察觉局面在收紧时，它已经收紧完了。',
+  'Li Laiqun vs Hu Ronghua, 7 December 1982, from the championship Li won. Move 23 is the cannon push, and Hu has nothing after it.':
+    '李来群对胡荣华，1982年12月7日，出自李来群夺冠的那届比赛。第23回合是那步进炮，此后胡荣华无棋可下。',
+  'Lü Qin 吕钦, 1986': '吕钦，1986',
+  'Five national titles and five world titles, more of the latter than anyone before or since. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. In almost any other era that record is the headline of the sport. Here it reads as a long second place behind Hu Ronghua.':
+    '五次全国冠军，五次世界冠军，后者的数量前无古人后无来者。广东叫他羊城少帅，又把他与许银川并称岭南双雄。放在几乎任何别的年代，这份纪录都是这项运动的头条。在这里，它读起来是长期屈居胡荣华之后的第二名。',
+  "Lü Qin vs Yu Youhua, 23 November 1986. The only game where both players are marked brilliant: Lü Qin's cannon on 21, Yu Youhua's horse on 32.":
+    '吕钦对于幼华，1986年11月23日。本页唯一一局双方都被标出妙手的棋：吕钦第21回合的炮，于幼华第32回合的马。',
+  'Xu Tianhong 徐天红, 1989': '徐天红，1989',
+  'National champion in 1989, world champion in 1993 with six wins, three draws and no losses. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is the opposite of friendly: tight openings, very few holes, and a habit of grinding advantages too small to see into wins.':
+    '1989年全国冠军，1993年世界冠军，六胜三和不败。他是江苏泰州人，棋界叫他笑面佛，因为他整局棋都在笑。笑容背后的东西一点也不友善：开局严密，几乎没有破绽，习惯把小到看不见的优势磨成胜势。',
+  'The year after his national title he met a fifteen-year-old from Guangdong, at the same age and on the same stage where Hu Ronghua had beaten Yang Guanlin thirty years earlier. This time the champion won.':
+    '拿到全国冠军的第二年，他遇上一位十五岁的广东少年，年龄相同，舞台也相同，三十年前胡荣华就是在这里赢了杨官璘。这一次赢的是冠军。',
+  'Xu Tianhong vs Xu Yinchuan, 19 October 1990. No blunder from either side, which is the game Xu Tianhong wanted.':
+    '徐天红对许银川，1990年10月19日。双方都没有漏着，这正是徐天红要的那种棋。',
+  'Zhao Guorong 赵国荣, 1990': '赵国荣，1990',
+  'Four national titles spread across eighteen years, 1990 to 2008, plus the 1991 world championship. He learned in Harbin under Wang Jialiang, who was known as the Northeast Tiger, so the sport made Zhao the New Northeast Tiger. What people mean by it is that he plays bigger against stronger opponents, and that he fused the careful northern game with the sharper southern one.':
+    '四次全国冠军分布在十八年里，从1990到2008年，另加1991年的世界冠军。他在哈尔滨师从王嘉良，王嘉良人称东北虎，于是棋界把赵国荣叫作新东北虎。这个说法的意思是他越遇强手下得越大，也是说他把稳健的北派与锋利的南派融到了一起。',
+  'Zhao Guorong vs Hu Ronghua, 22 October 1989, the year before his first title. Move 30 is the chariot swing, and Hu does not recover.':
+    '赵国荣对胡荣华，1989年10月22日，夺得首个冠军的前一年。第30回合是那步平车，此后胡荣华没能挽回。',
+  'Xu Yinchuan 许银川, 1993': '许银川，1993',
+  "Six national titles and three world titles. He won the first at eighteen, second only to Hu's fifteen, and spent the 1990s and 2000s as the best player in the country not named Hu Ronghua. Like Yang Guanlin before him he built it on endgames, and like Yang he came out of Guangdong. He is one of the three men to have won a national title since 2005 with no ruling against him.":
+    '六次全国冠军，三次世界冠军。他十八岁拿下第一次，仅次于胡荣华的十五岁，整个九十年代和本世纪头十年，他都是国内除胡荣华之外最强的棋手。和他之前的杨官璘一样，他把棋建立在残局上；也和杨官璘一样，他出自广东。2005年以后夺得全国冠军而身上没有处罚决定的，只有三人，他是其中之一。',
+  "Here he is against the man who ended Hu's run.": '下面是他对阵终结了胡荣华连霸的那个人。',
+  'Xu Yinchuan vs Liu Dahua, 11 October 1995. The only game here in which our engine finds neither a blunder nor a mistake from either player.':
+    '许银川对柳大华，1995年10月11日。这是本页唯一一局，我们的引擎在双方身上都没有找到漏着或失着。',
+  'Tao Hanming 陶汉明, 1994': '陶汉明，1994',
+  'The only champion here who came up outside the system. Tao grew up on the street chess stalls of Haicheng in Liaoning, turned professional late, and in 1994 became the first amateur-trained player to win the national title, playing for Jilin and taking it from Lü Qin on tiebreak in the final round. The sport named him 绿林棋王, chess king of the greenwood, which is the Chinese phrase for outlaws in the forest, and it is a verdict on his game rather than his upbringing: unorthodox, and ferocious in the middlegame.':
+    '本页唯一一位从体制外走上来的冠军。陶汉明在辽宁海城的街头棋摊上长大，很晚才转为职业，1994年成为第一个以业余出身夺得全国冠军的棋手，他代表吉林出战，在最后一轮凭小分从吕钦手里拿走了冠军。棋界给他的名号是绿林棋王，这是评他的棋而不是评他的出身：不循常规，中局凶悍。',
+  'His game is wild by the standards of every other champion in this sequence, built on prepared surprises rather than accumulation. Here he is two years after the title, against a two-time champion.':
+    '以本篇其他任何一位冠军的标准衡量，他的棋都算野，靠的是准备好的意外而不是积累。下面是他夺冠两年之后，对阵一位两届冠军。',
+  'Tao Hanming vs Liu Dahua, 21 October 1996. More chances for both players than a positional grind offers, and Tao was better at taking them.':
+    '陶汉明对柳大华，1996年10月21日。双方的机会都比一盘阵地磨局多，而陶汉明更善于抓住它们。',
+  'Yu Youhua 于幼华, 2002': '于幼华，2002',
+  'One title, in 2002, at forty-one, taken in the middle of the years that belonged to Hu Ronghua, Lü Qin and Xu Yinchuan. A Guangzhou newspaper writer had named him 拼命三郎 two decades earlier, roughly the desperado, after the 1981 championship: he finished sixth and did not draw a single one of his thirteen games. He plays for complications and accepts what comes with them.':
+    '一次冠军，在2002年，时年四十一岁，夺自属于胡荣华、吕钦和许银川的那些年份中间。二十年前，一位广州的报纸作者在1981年全国赛之后给他起了拼命三郎这个名号：那届他名列第六，十三局棋一盘和棋也没有下过。他为复杂局面而战，并接受随之而来的一切。',
+  'Xu Tianhong vs Yu Youhua, 3 November 2002, from the championship Yu finally won. The Smiling Buddha against the desperado.':
+    '徐天红对于幼华，2002年11月3日，出自于幼华终于夺冠的那届比赛。笑面佛对拼命三郎。',
+  'Sun Yongzheng 孙勇征, 2011': '孙勇征，2011',
+  'One title, in 2011, won without losing a game: five wins and six draws. He is where the list stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.':
+    '一次冠军，在2011年，全程不败：五胜六和。到他这里，这份名单不再是直截了当的了。2025年1月12日，中国象棋协会禁赛他四年三个月，并撤销其特级大师称号，同一份公告处罚了四十一人。',
+  'Every man who won the national championship from 2010 to 2023 now has a ruling against him. What that means for the list is at the foot of the page.':
+    '2010年到2023年间夺得全国冠军的每一个人，如今身上都有处罚决定。这对这份名单意味着什么，写在本页末尾。',
+  'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.':
+    '徐天红对孙勇征，2010年10月18日，夺冠的前一年。六十着，是本页最短的一局。',
+  'Wang Yubo 王禹博, 2025': '王禹博，2025',
+  'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. His is the only game below in which the opponent appears nowhere else, and that is a consequence of the section above rather than an editorial choice.':
+    '第二十二位夺冠者，2025年12月在济南夺冠，是北京棋手第一次拿到这个头衔，他的教练是特级大师张强。下面这局是唯一一局对手在别处再未出现的棋，这是上一节所述情况的后果，不是编排上的选择。',
+  'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
+    '王禹博对苏奕霖，2025年12月6日，他夺冠那届的首轮。第32回合是引擎标出的那步跃马。',
+  'The decade that was struck': '被抹去的十年',
+  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.':
+    '图表里的红条就是这份名单需要加注的原因。2024到2026年间，中国象棋协会处理了一起中文媒体称为录音门的假棋案。2025年1月12日，它一次处罚四十一人，其中三人终身禁赛。同年9月，杭州一家法院判决六名特级大师有罪。2026年4月的第三批处罚又增加了三个终身禁赛。',
+  'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
+    '把这些对照上面的表格，损害看得见，反而说不清楚。2005年以来共有十三人夺得全国冠军，其中十人身上有处罚决定，包括2010到2023年间的每一位冠军。没有处罚的三人是许银川、赵国荣和王禹博。',
+  'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport’s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.':
+    '这些名字留在表格里。悄悄删掉他们，只会让这份纪录更差，何况这些是这项运动自身管理机构公布的认定结论，不是指控。处罚决定没有告诉你的是，哪些棋是假的，以及到了那个水平的棋手究竟应该怎样才能被查出来，那是一份冠军名单装不下的更长的故事。',
+  'The world title, and the same names': '世界冠军，还是这些名字',
+  'Where that leaves the list': '这份名单如今的样子',
+  'Sixty-nine years, fifty-seven championships, twenty-two winners. For the first fifty of those years the question had a clear answer and it was usually Hu Ronghua. For the fifteen after that it has an answer the sport has since taken back. Wang Yubo’s title in December 2025 is the first since Xu Yinchuan in 2009 that nobody has had to qualify.':
+    '六十九年，五十七届，二十二位冠军。头五十年里这个问题有明确的答案，而且答案通常是胡荣华。之后的十五年，答案存在，但这项运动后来自己收了回去。王禹博2025年12月的冠军，是2009年许银川之后第一个不需要任何人加以说明的冠军。',
+  'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.':
+    '本页的每一局棋都是一份研究里的一章，你可以在那里从头到尾走一遍：完整的着法树、引擎的变化作为可以走进去的分支、每位冠军一章且顺序相同，末尾还有2025年的世界赛决赛。',
+  'Learn how the pieces move': '学习各子的走法',
+  'Play through the whole study': '走一遍完整研究',
+  'Yang Guanlin 杨官璘': '杨官璘',
+  'Li Yiting 李义庭': '李义庭',
+  'Hu Ronghua 胡荣华': '胡荣华',
+  'Liu Dahua 柳大华': '柳大华',
+  'Li Laiqun 李来群': '李来群',
+  'Lü Qin 吕钦': '吕钦',
+  'Xu Tianhong 徐天红': '徐天红',
+  'Zhao Guorong 赵国荣': '赵国荣',
+  'Xu Yinchuan 许银川': '许银川',
+  'Tao Hanming 陶汉明': '陶汉明',
+  'Yu Youhua 于幼华': '于幼华',
+  'Hong Zhi 洪智': '洪智',
+  'Zhao Xinxin 赵鑫鑫': '赵鑫鑫',
+  'Jiang Chuan 蒋川': '蒋川',
+  'Sun Yongzheng 孙勇征': '孙勇征',
+  'Wang Tianyi 王天一': '王天一',
+  'Xie Jing 谢靖': '谢靖',
+  'Zheng Weitong 郑惟桐': '郑惟桐',
+  'Xu Chao 许超': '许超',
+  'Wang Yang 汪洋': '汪洋',
+  'Wang Kuo 王廓': '王廓',
+  'Wang Yubo 王禹博': '王禹博',
+  'Cultural Revolution': '文化大革命',
+  title: '冠军',
+  'shared title': '并列冠军',
+  'title, champion later banned': '冠军，其后被禁赛',
+  'no championship held': '未举办',
+  'banned for life, 2026': '终身禁赛，2026',
+  'banned for life, 2025': '终身禁赛，2025',
+  'five-year ban, 2026': '禁赛五年，2026',
+  'banned four years three months, 2025': '禁赛四年三个月，2025',
+  'convicted, banned': '判罪并禁赛',
+  'banned seven years six months, 2025': '禁赛七年六个月，2025',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2276,6 +2456,140 @@ const ZH_HANT: Record<string, string> = {
   'Misty (this article’s line)': 'Misty（本文推薦線）',
   Red: '紅方',
   Black: '黑方',
+
+  // -- Every Xiangqi Champion (xiangqi-champions) --
+  // Derived from the Simplified block by OpenCC s2tw (NOT s2twp: phrase
+  // conversion renders 体育项目 as 體育專案, the software sense of "project").
+  // Champion names were masked through the conversion, so 杨官璘 stays 杨官璘.
+  // Only values that actually fork appear here; the rest inherit via the spread.
+  'Every Xiangqi Champion': '歷屆全國象棋冠軍',
+  'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
+    '1956年以來中國象棋全國個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
+  'Ask who the greatest chess player was and you get an argument with a shape to it: Fischer or Kasparov or Carlsen, measured against a title that has passed hand to hand since 1886. Ask the same about xiangqi and most English answers stop at the question.':
+    '問國際象棋史上誰最強，你會得到一場有章法的爭論：菲舍爾、卡斯帕羅夫還是卡爾森，衡量的標尺是一個自1886年起代代相傳的頭銜。同樣的問題放到象棋上，多數英文的回答止步於提問本身。',
+  'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.':
+    '答案是有的，而且幾乎無人異議。胡荣华拿過十四次全國冠軍，十五歲奪得第一次，五十五歲奪得最後一次，1960年到1979年間舉辦的十屆全國賽，冠軍全部由他獨得或並列分享。更難解釋的是，他統治的這個頭銜為什麼只有六十九年曆史，而這門棋在南宋滅亡之時就已經是今天的模樣。下面列出每一位冠軍，並按他們首次奪冠的先後，為其中十三位各選一局棋。棋譜講解由我們自己的引擎完成，分析用的是 Pikafish，每個局面一百萬個節點。',
+  'Before there was a title': '頭銜出現之前',
+  'Xiangqi reached its modern form at the end of the Northern Song: sixteen pieces a side, nine files by ten ranks, the river, the palace, the general and advisors confined to it. By the Southern Song it was played widely enough that Wen Tianxiang, the statesman the Mongols executed in 1283, grew up in a family of players and left a book of forty endgame problems. Nine hundred years of the game, and composed positions like his are nearly all that survives: not one record of a game anyone actually played.':
+    '象棋在北宋末年定型為今天的樣子：每方十六子，縱九橫十，有河界，有九宮，將帥與士不出九宮。到南宋時它已流傳甚廣，被蒙古人於1283年處死的文天祥就出身棋弈之家，留下過一部四十局的殘局譜。九百年的棋史，存下來的幾乎只有這類擬局：沒有一份真人對局的記錄。',
+  'What survives from the Ming onward is manuals: 橘中秘 of 1632, the most reprinted xiangqi text of the Ming and Qing, and 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score. The first era with contested titles ran through the 1920s and 1930s and had no federation: newspapers organised the matches, and the winners were given names rather than trophies. Zhou Deyu finished three points clear when East China played North China in February 1931 and was crowned 七省棋王, Chess King of Seven Provinces, the seven being how many provinces the four players came from. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.':
+    '明代以後留下來的是棋譜：1632年的《橘中秘》，明清兩代翻刻最多的象棋著作；1801年的《百局象棋譜》，收有一百零七局以成語命名的排局。作者的名字你說得出來。誰最強你說不出來，因為沒有人在記分。第一個爭奪頭銜的時代橫跨二十世紀二三十年代，卻沒有任何協會：比賽由報紙組織，贏家得到的是名號而不是獎盃。1931年2月華東對華北，周德裕淨勝三分，被加冕為七省棋王，這七省指的是四名參賽者來自幾個省。隨後黃松軒與他對弈二十局，多勝一局，廣東便封他為九省棋王。靠名號加碼決出的頭銜算不上一套制度，但那已是當時最接近制度的東西。',
+  'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and spent two years playing for the war: simultaneous displays, blindfold games, boards laid out with people as the pieces. He raised more than fifty million in banknotes and silver, and sent three thousand young overseas Chinese home to fight. In 1939 he played Zhou Enlai in Chongqing, and the drawn game they published in the Ta Kung Pao was titled 共抒国难, relieving the national crisis together. He died in 1987, aged ninety-nine.':
+    '這些比賽的組織者是謝俠遜，他是那個時代最值得認識的人物。他的國際象棋也下得好，1936年在沙面舉行的五國賽上以十八勝一負一和奪冠。1937年10月他以國家使節的身份前往東南亞，用兩年時間為抗戰下棋：車輪戰、盲棋、以人作棋子擺開的棋局。他募得五千餘萬的鈔票與銀兩，並送三千名華僑青年回國參戰。1939年他在重慶與周恩來對弈，兩人的和局發表於《大公報》，題為共抒國難。1987年他去世，享年九十九歲。',
+  "Then, in August 1956, the State Sports Commission made xiangqi an official sport and published the first competition rules. That December, in Beijing, the first national championship was played. Xiangqi was the only competitive event; go and Western chess were demonstrations. It has been played fifty-seven times since, missing 1961 and 1963 to the famine, 1967-1973 to the Cultural Revolution, 1976 to Mao's death, 2021-2022 to the pandemic, and 2024 to want of a sponsor.":
+    '1956年8月，國家體委將象棋列為正式體育項目，並頒佈了第一部比賽規則。當年12月，第一屆全國象棋錦標賽在北京舉行。象棋是唯一的競賽項目，圍棋和國際象棋只作表演。此後共舉辦五十七屆，其間1961和1963年因饑荒停辦，1967至1973年因文革停辦，1976年因毛澤東逝世停辦，2021和2022年因疫情停辦，2024年因無人贊助停辦。',
+  'Every national champion, 1956 to 2025': '歷屆全國冠軍，1956至2025',
+  'Fifty-seven editions, twenty-two winners. One row per player, in the order they first took the title, with a bar over the years they held it.':
+    '五十七屆，二十二位冠軍。每位棋手一行，按首次奪冠的先後排列，橫條覆蓋他保有頭銜的年份。',
+  'Hatched columns are years with no championship. The number after each name is that player’s title count.':
+    '斜線填充的列是沒有舉辦全國賽的年份。每個名字後面的數字是該棋手的奪冠次數。',
+  'Three things fall out of the shape. Hu Ronghua holds the middle of the chart for forty years, in two long runs either side of a gap that history took rather than a rival, then four scattered singles that land after the men who replaced him had themselves come and gone. The 1980s and 1990s are the only stretch where four or five names trade the title year to year. And from 2005 the bars turn red: thirteen men have won it since, and ten of them have a ruling against them.':
+    '從圖形裡能看出三件事。胡荣华佔據圖表中段長達四十年，分成兩段長跑，中間的空檔是歷史造成的而不是對手造成的，此後又是四次零散奪冠，落在取代他的那批人自己也來了又走之後。八十年代和九十年代是唯一一段四五個名字逐年輪流拿冠軍的時期。而從2005年起橫條轉紅：此後共有十三人奪冠，其中十人身上有處罰決定。',
+  'Thirteen of these men have an annotated game further down the page, one each, in the same order. The nine without one are here because a list of champions that leaves people out is not a list of champions.':
+    '這十三人在本頁下方各有一局講解棋譜，順序相同。另外九人沒有棋譜，之所以列出，是因為漏掉人的冠軍名單算不上冠軍名單。',
+  Champion: '冠軍',
+  Titles: '奪冠次數',
+  'Association ruling': '協會處罰',
+  'The same record as the figure, with the years written out. An asterisk marks the one shared title, in 1962. Every entry in the last column is a published ruling of the Chinese Xiangqi Association, not an allegation; the section below explains them.':
+    '與上圖相同的紀錄，年份寫全。星號標出唯一一次並列冠軍，在1962年。最後一列裡的每一條都是中國象棋協會已公佈的處罰決定，不是指控；下文一節會加以說明。',
+  "Four national titles: 1956, 1957, 1959, and a fourth in 1962 shared with the boy who had just taken the game off him. He came out of Guangdong, played for money in Hong Kong between 1949 and 1951, and by the time the sport was organised he was good enough that it called him 第一国手, the nation's foremost player. Other players called him 魔叔, Magic Uncle. His reputation rested on endgames, which is a polite way of saying he beat people in positions everyone had agreed were drawn.":
+    '四次全國冠軍：1956、1957、1959，第四次在1962年，與剛剛把冠軍從他手裡拿走的那個少年並列。他出自廣東，1949到1951年間在香港以棋為生，等到這項運動被正式組織起來時，他已經強到被稱作第一國手。棋界叫他魔叔。他的名聲建立在殘局上，說得客氣些是這樣，說白了就是他能在所有人都認定是和棋的局面裡贏下對手。',
+  'He was the answer for most of a decade, and for longer than the record suggests. Five years after Hu Ronghua took the title off him, Yang was still beating him.':
+    '在近十年的時間裡他就是那個答案，而且比紀錄顯示的還要久。胡荣华從他手裡拿走冠軍五年之後，杨官璘還在贏他。',
+  'Yang Guanlin vs Hu Ronghua, 12 November 1965. Ninety moves of endgame, and move 41 is the cannon swing that finally breaks it.':
+    '杨官璘對胡荣华，1965年11月12日。九十個回合的殘局較量，第41回合的平炮終於撕開了局面。',
+  'They called him 小神童, the little prodigy, and he had earned it by sixteen: a four-game match against Yang Guanlin in 1954 that finished two apiece. He beat Yang again at the first national championship, in the tournament Yang went on to win, and took the title himself in 1958 at twenty.':
+    '人稱小神童，他十六歲就當得起這個名號：1954年與杨官璘四局對抗，二比二打平。在首屆全國賽上他又贏了杨官璘一局，而那屆冠軍最終歸杨官璘；1958年他二十歲，自己拿下了冠軍。',
+  'Then he stopped. Poor health and the politics of the late 1960s ended his competitive career in 1966, at twenty-eight, which is the whole reason a player this good has one championship. He coached afterwards, and the player he pushed forward was Liu Dahua, two sections down.':
+    '然後他就停了。健康不佳加上六十年代後期的政治，讓他的競技生涯在1966年結束，那年他二十八歲，這就是一位這麼強的棋手只有一次冠軍的全部原因。此後他做教練，他推上來的棋手是柳大华，在下面第二節。',
+  'Li Yiting vs Yang Guanlin, 27 December 1956. Li was eighteen, and our engine grades him 99.0, the highest of any player here.':
+    '李义庭對杨官璘，1956年12月27日。李义庭當時十八歲，我們的引擎給他打出99.0分，是本頁所有棋手中最高的。',
+  'Fourteen national titles, the first at fifteen and the last at fifty-five, and every one of the ten championships held between 1960 and 1979, one of them shared. They called him 胡司令, Commander Hu. He played out of Shanghai, on his own, against the strongest player every other province could field, and he did it by rebuilding the openings underneath the game: the flying elephant, the anti-palace horse and the same-direction cannon are all mainstream today because Hu kept winning with them.':
+    '十四次全國冠軍，第一次十五歲，最後一次五十五歲，1960到1979年間舉辦的十屆冠軍全部有他，其中一屆並列。棋界叫他胡司令。他代表上海出戰，孤身一人對抗其他各省能派出的最強棋手，而他做到這一點的辦法，是把棋的開局體系整個重建了一遍：飛相局、反宮馬、順炮，今天都是主流，因為胡荣华一直用它們贏棋。',
+  'This is the game he arrived with. Round three of his first national tournament, Black against the reigning champion.':
+    '這是他登場的那一局。首次參加全國賽的第三輪，執黑對陣衛冕冠軍。',
+  'Yang Guanlin vs Hu Ronghua, 28 October 1960. Move 24 is the one to watch: a cannon Yang cannot take, marked brilliant.':
+    '杨官璘對胡荣华，1960年10月28日。第24回合值得一看：一步杨官璘吃不得的炮，被標為妙手。',
+  'And this is thirty-four years later, in a tournament he did not win, against a man who had taken two national titles of his own in between.':
+    '這是三十四年之後，在一場他沒有奪冠的比賽裡，對手是這期間自己拿過兩次全國冠軍的人。',
+  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.':
+    '胡荣华對柳大华，1994年10月15日。胡荣华時年四十九，距離他第十四次奪冠還有六年。',
+  'Two titles, 1980 and 1981, and the man who ended the longest run in the game: Hu had won every championship held for twenty years when Liu took the 1980 tournament off him. He is from Huangpi, in Hubei, and the sport knows him as 东方电脑, the Eastern Computer, for a memory that let him play nineteen simultaneous games blindfold in 1995. That was a world record until one of the champions further down this page broke it with twenty.':
+    '兩次冠軍，1980和1981年，他也是終結了這項運動中最長連霸的人：柳大华拿下1980年那屆時，此前二十年舉辦的全國賽冠軍全是胡荣华的。他是湖北黃陂人，棋界稱他東方電腦，因為他的記憶力讓他在1995年下出十九盤同時進行的盲棋。那是當時的世界紀錄，直到本頁下面的一位冠軍以二十盤打破它。',
+  'He beat Li Laiqun in the 1980 tournament, then Yang Guanlin five days later.':
+    '他在1980年那屆比賽中贏了李来群，五天後又贏了杨官璘。',
+  'Li Laiqun vs Liu Dahua, 29 August 1980. Li would take four titles of his own starting two years later.':
+    '李来群對柳大华，1980年8月29日。兩年後李来群將開始自己的四次奪冠。',
+  'Yang Guanlin vs Liu Dahua, 3 September 1980. The outgoing era losing to the incoming one in under thirty-five moves.':
+    '杨官璘對柳大华，1980年9月3日。將去的時代在三十五個回合之內輸給了將來的時代。',
+  "Four titles between 1982 and 1991, and the first of them mattered past his own career. Li is from Handan in Hebei, and 1982 was the first time the men's championship crossed the Yellow River: until then it had belonged to the south, to Guangdong and Shanghai and Hubei. He went through that tournament unbeaten, and through Hu Ronghua directly rather than around him.":
+    '1982到1991年間四次奪冠，其中第一次的意義超出了他個人的生涯。李来群是河北邯鄲人，1982年是男子全國冠軍第一次跨過黃河：在此之前它一直屬於南方，屬於廣東、上海和湖北。那屆比賽他全程不敗，而且是正面贏過胡荣华，不是繞開他。',
+  "Chinese writers reach for two images for his game: a needle wrapped in cotton, and a python's coils. Both mean the same thing, which is that the position has already closed before you notice it closing.":
+    '中文的棋評用兩個比喻形容他的棋：綿裡藏針，以及蟒蛇纏身。兩者說的是同一件事，就是等你察覺局面在收緊時，它已經收緊完了。',
+  'Li Laiqun vs Hu Ronghua, 7 December 1982, from the championship Li won. Move 23 is the cannon push, and Hu has nothing after it.':
+    '李来群對胡荣华，1982年12月7日，出自李来群奪冠的那屆比賽。第23回合是那步進炮，此後胡荣华無棋可下。',
+  'Five national titles and five world titles, more of the latter than anyone before or since. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. In almost any other era that record is the headline of the sport. Here it reads as a long second place behind Hu Ronghua.':
+    '五次全國冠軍，五次世界冠軍，後者的數量前無古人後無來者。廣東叫他羊城少帥，又把他與许银川並稱嶺南雙雄。放在幾乎任何別的年代，這份紀錄都是這項運動的頭條。在這裡，它讀起來是長期屈居胡荣华之後的第二名。',
+  "Lü Qin vs Yu Youhua, 23 November 1986. The only game where both players are marked brilliant: Lü Qin's cannon on 21, Yu Youhua's horse on 32.":
+    '吕钦對于幼华，1986年11月23日。本頁唯一一局雙方都被標出妙手的棋：吕钦第21回合的炮，于幼华第32回合的馬。',
+  'National champion in 1989, world champion in 1993 with six wins, three draws and no losses. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is the opposite of friendly: tight openings, very few holes, and a habit of grinding advantages too small to see into wins.':
+    '1989年全國冠軍，1993年世界冠軍，六勝三和不敗。他是江蘇泰州人，棋界叫他笑面佛，因為他整局棋都在笑。笑容背後的東西一點也不友善：開局嚴密，幾乎沒有破綻，習慣把小到看不見的優勢磨成勝勢。',
+  'The year after his national title he met a fifteen-year-old from Guangdong, at the same age and on the same stage where Hu Ronghua had beaten Yang Guanlin thirty years earlier. This time the champion won.':
+    '拿到全國冠軍的第二年，他遇上一位十五歲的廣東少年，年齡相同，舞臺也相同，三十年前胡荣华就是在這裡贏了杨官璘。這一次贏的是冠軍。',
+  'Xu Tianhong vs Xu Yinchuan, 19 October 1990. No blunder from either side, which is the game Xu Tianhong wanted.':
+    '徐天红對许银川，1990年10月19日。雙方都沒有漏著，這正是徐天红要的那種棋。',
+  'Four national titles spread across eighteen years, 1990 to 2008, plus the 1991 world championship. He learned in Harbin under Wang Jialiang, who was known as the Northeast Tiger, so the sport made Zhao the New Northeast Tiger. What people mean by it is that he plays bigger against stronger opponents, and that he fused the careful northern game with the sharper southern one.':
+    '四次全國冠軍分佈在十八年裡，從1990到2008年，另加1991年的世界冠軍。他在哈爾濱師從王嘉良，王嘉良人稱東北虎，於是棋界把赵国荣叫作新東北虎。這個說法的意思是他越遇強手下得越大，也是說他把穩健的北派與鋒利的南派融到了一起。',
+  'Zhao Guorong vs Hu Ronghua, 22 October 1989, the year before his first title. Move 30 is the chariot swing, and Hu does not recover.':
+    '赵国荣對胡荣华，1989年10月22日，奪得首個冠軍的前一年。第30回合是那步平車，此後胡荣华沒能挽回。',
+  "Six national titles and three world titles. He won the first at eighteen, second only to Hu's fifteen, and spent the 1990s and 2000s as the best player in the country not named Hu Ronghua. Like Yang Guanlin before him he built it on endgames, and like Yang he came out of Guangdong. He is one of the three men to have won a national title since 2005 with no ruling against him.":
+    '六次全國冠軍，三次世界冠軍。他十八歲拿下第一次，僅次於胡荣华的十五歲，整個九十年代和本世紀頭十年，他都是國內除胡荣华之外最強的棋手。和他之前的杨官璘一樣，他把棋建立在殘局上；也和杨官璘一樣，他出自廣東。2005年以後奪得全國冠軍而身上沒有處罰決定的，只有三人，他是其中之一。',
+  "Here he is against the man who ended Hu's run.": '下面是他對陣終結了胡荣华連霸的那個人。',
+  'Xu Yinchuan vs Liu Dahua, 11 October 1995. The only game here in which our engine finds neither a blunder nor a mistake from either player.':
+    '许银川對柳大华，1995年10月11日。這是本頁唯一一局，我們的引擎在雙方身上都沒有找到漏著或失著。',
+  'The only champion here who came up outside the system. Tao grew up on the street chess stalls of Haicheng in Liaoning, turned professional late, and in 1994 became the first amateur-trained player to win the national title, playing for Jilin and taking it from Lü Qin on tiebreak in the final round. The sport named him 绿林棋王, chess king of the greenwood, which is the Chinese phrase for outlaws in the forest, and it is a verdict on his game rather than his upbringing: unorthodox, and ferocious in the middlegame.':
+    '本頁唯一一位從體制外走上來的冠軍。陶汉明在遼寧海城的街頭棋攤上長大，很晚才轉為職業，1994年成為第一個以業餘出身奪得全國冠軍的棋手，他代表吉林出戰，在最後一輪憑小分從吕钦手裡拿走了冠軍。棋界給他的名號是綠林棋王，這是評他的棋而不是評他的出身：不循常規，中局兇悍。',
+  'His game is wild by the standards of every other champion in this sequence, built on prepared surprises rather than accumulation. Here he is two years after the title, against a two-time champion.':
+    '以本篇其他任何一位冠軍的標準衡量，他的棋都算野，靠的是準備好的意外而不是積累。下面是他奪冠兩年之後，對陣一位兩屆冠軍。',
+  'Tao Hanming vs Liu Dahua, 21 October 1996. More chances for both players than a positional grind offers, and Tao was better at taking them.':
+    '陶汉明對柳大华，1996年10月21日。雙方的機會都比一盤陣地磨局多，而陶汉明更善於抓住它們。',
+  'One title, in 2002, at forty-one, taken in the middle of the years that belonged to Hu Ronghua, Lü Qin and Xu Yinchuan. A Guangzhou newspaper writer had named him 拼命三郎 two decades earlier, roughly the desperado, after the 1981 championship: he finished sixth and did not draw a single one of his thirteen games. He plays for complications and accepts what comes with them.':
+    '一次冠軍，在2002年，時年四十一歲，奪自屬於胡荣华、吕钦和许银川的那些年份中間。二十年前，一位廣州的報紙作者在1981年全國賽之後給他起了拼命三郎這個名號：那屆他名列第六，十三局棋一盤和棋也沒有下過。他為複雜局面而戰，並接受隨之而來的一切。',
+  'Xu Tianhong vs Yu Youhua, 3 November 2002, from the championship Yu finally won. The Smiling Buddha against the desperado.':
+    '徐天红對于幼华，2002年11月3日，出自于幼华終於奪冠的那屆比賽。笑面佛對拼命三郎。',
+  'One title, in 2011, won without losing a game: five wins and six draws. He is where the list stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.':
+    '一次冠軍，在2011年，全程不敗：五勝六和。到他這裡，這份名單不再是直截了當的了。2025年1月12日，中國象棋協會禁賽他四年三個月，並撤銷其特級大師稱號，同一份公告處罰了四十一人。',
+  'Every man who won the national championship from 2010 to 2023 now has a ruling against him. What that means for the list is at the foot of the page.':
+    '2010年到2023年間奪得全國冠軍的每一個人，如今身上都有處罰決定。這對這份名單意味著什麼，寫在本頁末尾。',
+  'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.':
+    '徐天红對孙勇征，2010年10月18日，奪冠的前一年。六十著，是本頁最短的一局。',
+  'The twenty-second man to win it, in Jinan in December 2025, a first title for a Beijing player coached by the grandmaster Zhang Qiang. His is the only game below in which the opponent appears nowhere else, and that is a consequence of the section above rather than an editorial choice.':
+    '第二十二位奪冠者，2025年12月在濟南奪冠，是北京棋手第一次拿到這個頭銜，他的教練是特級大師張強。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
+  'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
+    '王禹博對蘇奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
+  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.':
+    '圖表裡的紅條就是這份名單需要加註的原因。2024到2026年間，中國象棋協會處理了一起中文媒體稱為錄音門的假棋案。2025年1月12日，它一次處罰四十一人，其中三人終身禁賽。同年9月，杭州一家法院判決六名特級大師有罪。2026年4月的第三批處罰又增加了三個終身禁賽。',
+  'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
+    '把這些對照上面的表格，損害看得見，反而說不清楚。2005年以來共有十三人奪得全國冠軍，其中十人身上有處罰決定，包括2010到2023年間的每一位冠軍。沒有處罰的三人是许银川、赵国荣和王禹博。',
+  'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport’s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.':
+    '這些名字留在表格裡。悄悄刪掉他們，只會讓這份紀錄更差，何況這些是這項運動自身管理機構公佈的認定結論，不是指控。處罰決定沒有告訴你的是，哪些棋是假的，以及到了那個水平的棋手究竟應該怎樣才能被查出來，那是一份冠軍名單裝不下的更長的故事。',
+  'The world title, and the same names': '世界冠軍，還是這些名字',
+  'Where that leaves the list': '這份名單如今的樣子',
+  'Sixty-nine years, fifty-seven championships, twenty-two winners. For the first fifty of those years the question had a clear answer and it was usually Hu Ronghua. For the fifteen after that it has an answer the sport has since taken back. Wang Yubo’s title in December 2025 is the first since Xu Yinchuan in 2009 that nobody has had to qualify.':
+    '六十九年，五十七屆，二十二位冠軍。頭五十年裡這個問題有明確的答案，而且答案通常是胡荣华。之後的十五年，答案存在，但這項運動後來自己收了回去。王禹博2025年12月的冠軍，是2009年许银川之後第一個不需要任何人加以說明的冠軍。',
+  'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.':
+    '本頁的每一局棋都是一份研究裡的一章，你可以在那裡從頭到尾走一遍：完整的著法樹、引擎的變化作為可以走進去的分支、每位冠軍一章且順序相同，末尾還有2025年的世界賽決賽。',
+  'Learn how the pieces move': '學習各子的走法',
+  title: '冠軍',
+  'shared title': '並列冠軍',
+  'title, champion later banned': '冠軍，其後被禁賽',
+  'no championship held': '未舉辦',
+  'banned for life, 2026': '終身禁賽，2026',
+  'banned for life, 2025': '終身禁賽，2025',
+  'five-year ban, 2026': '禁賽五年，2026',
+  'banned four years three months, 2025': '禁賽四年三個月，2025',
+  'convicted, banned': '判罪並禁賽',
+  'banned seven years six months, 2025': '禁賽七年六個月，2025',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

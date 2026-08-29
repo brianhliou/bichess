@@ -38,15 +38,22 @@ describe('internal article links', () => {
     }
   });
 
-  it('a draft page renders nothing at all in a production build', () => {
-    // The guard cannot be observed from this page in a production build,
-    // because the page itself is a draft and its own URL 404s. That is the
-    // behaviour worth pinning here; the guard is covered by the sweep above.
+  it('drops only the link to the draft, keeping the rest of the page', () => {
+    // Until this article was published on 2026-08-29 the guard could not be
+    // observed from this page at all: the page was itself a draft, so its own
+    // URL 404d and there was nothing to render. Now it is live while the world
+    // title article it links to is still a draft, which is exactly the state
+    // the guard exists for, and the assertion that matters is asymmetric --
+    // the dead button goes, the two live ones stay.
     vi.stubEnv('DEV', false);
     try {
       const page = buildArticlePage('xiangqi-champions');
-      expect(page.querySelectorAll('.article-cta')).toHaveLength(0);
-      expect(page.textContent).not.toContain('Every Xiangqi Champion');
+      const hrefs = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')].map((a) =>
+        a.getAttribute('href'),
+      );
+      expect(page.textContent).toContain('Every Xiangqi Champion');
+      expect(hrefs).not.toContain('/blog/xiangqi-world-championship');
+      expect(hrefs.length).toBeGreaterThan(0);
     } finally {
       vi.unstubAllEnvs();
     }

@@ -79,13 +79,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Published 2026-08-29, a day after the cluster below, so it leads the
+      // index outright rather than tie-breaking into it.
+      '/blog/xiangqi-champions',
       // Both drafts. This assertion runs with DEV stubbed true, where the index
       // lists drafts so an author can preview them; in a production build they
-      // are absent from here and their routes 404 client-side.
+      // are absent from here and their routes 404 client-side. Same date, so
+      // ties break alphabetically by title: 'Chơi...' then 'Jieqi...'.
       '/blog/co-up',
-      // Same date as co-up and jieqi-platform; ties break alphabetically by
-      // title, so 'Chơi...' then 'Every...' then 'Jieqi...'. Draft, so dev-only.
-      '/blog/xiangqi-champions',
       '/blog/jieqi-platform',
       // 'The Xiangqi World Championship' sorts under T, after 'Jieqi'.
       '/blog/xiangqi-world-championship',
