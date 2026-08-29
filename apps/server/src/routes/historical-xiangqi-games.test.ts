@@ -71,3 +71,32 @@ test('an unreviewed tag from a future source is withheld by default', () => {
   // unrecognised must stay out rather than ride along.
   assert.deepEqual(publicTags({ somethingNewNobodyVetted: 'x' }), {});
 });
+
+// --- sort -------------------------------------------------------------------
+// The union fetches a page per lane, each ordered server-side, then merges. The
+// merge key must match what the lanes pushed down, so these pin both halves.
+
+test('sort defaults to recent and is omitted from the filters', () => {
+  const parsed = parse('');
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) return;
+  assert.equal(parsed.filters.sort, undefined);
+});
+
+test('sort accepts the four known keys', () => {
+  for (const sort of ['recent', 'oldest', 'longest', 'shortest']) {
+    const parsed = parse(`sort=${sort}`);
+    assert.equal(parsed.ok, true, sort);
+    if (!parsed.ok) continue;
+    assert.equal(parsed.filters.sort, sort);
+  }
+});
+
+test('an unknown sort is rejected rather than silently ignored', () => {
+  // Fail-closed: falling back to the default would answer 200 with a page
+  // ordered differently from what the caller asked for.
+  const parsed = parse('sort=rating');
+  assert.equal(parsed.ok, false);
+  if (parsed.ok) return;
+  assert.equal(parsed.error, 'invalid_sort');
+});

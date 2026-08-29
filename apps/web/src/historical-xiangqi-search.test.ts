@@ -20,6 +20,7 @@ describe('historical xiangqi search page', () => {
     expect(historicalXiangqiReviewUrl('hxq game')).toBe('/historical-xiangqi/game/hxq%20game');
     expect(
       historicalXiangqiSearchApiUrl({
+        sort: 'recent',
         player: 'Hu Ronghua',
         event: '',
         source: 'xqbase',
@@ -166,6 +167,48 @@ describe('historical xiangqi search page', () => {
 
     expect(window.location.pathname).toBe('/games');
     expect(window.location.search).toBe('?player=Hu+Ronghua');
+  });
+
+  it('round-trips a non-default sort through the URL and the API call', async () => {
+    window.history.replaceState(null, '', '/games?sort=longest');
+    const requested: string[] = [];
+    const fetchSpy = vi.fn(async (url: string) => {
+      requested.push(url);
+      return jsonResponse({ total: 0, offset: 0, limit: 50, games: [] });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+
+    expect(requested[0]).toContain('sort=longest');
+    expect(window.location.search).toContain('sort=longest');
+    // The default stays out of the URL so a plain /games link is still canonical.
+    const select = [...root.querySelectorAll<HTMLSelectElement>('select')].find((el) =>
+      [...el.options].some((option) => option.value === 'shortest'),
+    );
+    expect(select?.value).toBe('longest');
+  });
+
+  // Regression: every select was built by setting `selected` on a detached
+  // option before appending it, which the selectedness reset discards for
+  // anything past the second position. Every result past "Red wins" rendered as
+  // "Red wins" while the rows below were filtered correctly.
+  it('renders the saved filter in every select, not just the first two options', async () => {
+    window.history.replaceState(null, '', '/games?result=1%2F2-1%2F2&sort=shortest');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),
+    );
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+
+    const selects = [...root.querySelectorAll<HTMLSelectElement>('select')];
+    const byOption = (value: string): HTMLSelectElement | undefined =>
+      selects.find((el) => [...el.options].some((option) => option.value === value));
+    expect(byOption('1/2-1/2')?.value).toBe('1/2-1/2');
+    expect(byOption('shortest')?.value).toBe('shortest');
   });
 
   it('uses server-provided review URLs for non-archive rows', async () => {

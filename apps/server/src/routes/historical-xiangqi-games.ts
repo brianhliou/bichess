@@ -171,7 +171,7 @@ async function queryUnifiedXiangqiGames(filters: persistence.HistoricalXiangqiGa
 
   const games = chunks
     .flatMap((chunk) => chunk.games)
-    .sort((a, b) => compareSearchItems(a, b))
+    .sort((a, b) => compareSearchItems(a, b, filters.sort))
     .slice(offset, offset + limit);
   return { games, total: chunks.reduce((sum, chunk) => sum + chunk.total, 0) };
 }
@@ -234,6 +234,7 @@ async function queryMistboardXiangqiGames(
   // unfiltered slice.
   const page = await persistence.queryGames({
     variant: 'xiangqi',
+    ...(filters.sort ? { sort: filters.sort } : {}),
     modes: PUBLIC_GAME_MODES,
     visibility: 'public',
     ...(result ? { result } : {}),
@@ -302,6 +303,7 @@ async function queryBroadcastXiangqiGames(
 ): Promise<UnifiedXiangqiSearchChunk> {
   if (filters.result === '*') return { games: [], total: 0 };
   const page = await persistence.queryCompletedXiangqiBroadcastBoards({
+    ...(filters.sort ? { sort: filters.sort } : {}),
     player: filters.player,
     event: filters.event,
     result: filters.result,
@@ -338,11 +340,27 @@ async function queryBroadcastXiangqiGames(
   return { games, total: page.total };
 }
 
-function compareSearchItems(a: UnifiedXiangqiSearchItem, b: UnifiedXiangqiSearchItem): number {
+// MUST agree with the ORDER BY each lane pushes down (historicalOrderBy,
+// broadcastOrderBy, playedGamesOrderBy). Each lane returns its own top N and
+// this merges them; if the keys disagree the page is drawn from the wrong
+// candidate set and reads as plausible nonsense rather than an error.
+export function compareSearchItems(
+  a: UnifiedXiangqiSearchItem,
+  b: UnifiedXiangqiSearchItem,
+  sort: persistence.XiangqiGameSort | undefined,
+): number {
+  if (sort === 'longest' || sort === 'shortest') {
+    if (a.plyCount !== b.plyCount) {
+      return sort === 'longest' ? b.plyCount - a.plyCount : a.plyCount - b.plyCount;
+    }
+    return sort === 'longest' ? b.id.localeCompare(a.id) : a.id.localeCompare(b.id);
+  }
   const left = a.sortAt ?? '';
   const right = b.sortAt ?? '';
-  if (left !== right) return right.localeCompare(left);
-  return b.id.localeCompare(a.id);
+  if (left !== right) {
+    return sort === 'oldest' ? left.localeCompare(right) : right.localeCompare(left);
+  }
+  return sort === 'oldest' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
 }
 
 function mistboardResult(
@@ -395,6 +413,12 @@ export function parseHistoricalXiangqiGameQuery(search: URLSearchParams): ParseR
   const plyMax = parseBoundedInt(search.get('plyMax'), 0, 1000);
   if (!plyMax.ok) return { ok: false, error: 'invalid_ply_max' };
   if (plyMax.value !== null) filters.plyMax = plyMax.value;
+
+  const sort = search.get('sort');
+  if (sort) {
+    if (!persistence.isXiangqiGameSort(sort)) return { ok: false, error: 'invalid_sort' };
+    filters.sort = sort;
+  }
 
   const offset = parseBoundedInt(search.get('offset'), 0, 1_000_000);
   if (!offset.ok) return { ok: false, error: 'invalid_offset' };

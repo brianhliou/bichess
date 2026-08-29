@@ -1,4 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+// Static, not `await import()` inside each test. vi.mock is hoisted above the
+// imports, so the mock below still applies, and the module graph behind
+// articles.js (~850ms cold) is paid at load time instead of being charged to
+// the first test's 5s timeout. Under a loaded machine that cost blew the
+// budget and failed a release; the second and third tests passed on the warm
+// cache, which is what made it look like one flaky test rather than a pattern.
+import { buildArticlePage } from './articles.js';
 import type { Article } from './articles-data.js';
 
 // A guest article does not exist in the shipped catalog yet, so the byline path
@@ -51,8 +58,7 @@ vi.mock('./articles-data.js', async (importOriginal) => {
 });
 
 describe('guest article byline', () => {
-  it('renders the author with their verified title, linked to their profile', async () => {
-    const { buildArticlePage } = await import('./articles.js');
+  it('renders the author with their verified title, linked to their profile', () => {
     const page = buildArticlePage('guest-piece');
 
     const byline = page.querySelector('.article-meta-byline');
@@ -69,8 +75,7 @@ describe('guest article byline', () => {
     expect(page.querySelector('.article-meta-row')?.firstElementChild).toBe(byline);
   });
 
-  it('renders no byline for an article Mistboard wrote itself', async () => {
-    const { buildArticlePage } = await import('./articles.js');
+  it('renders no byline for an article Mistboard wrote itself', () => {
     const page = buildArticlePage('house-piece');
 
     expect(page.querySelector('.article-meta-byline')).toBeNull();
@@ -80,8 +85,7 @@ describe('guest article byline', () => {
 });
 
 describe('article table cells', () => {
-  it('renders inline markdown rather than printing its brackets', async () => {
-    const { buildArticlePage } = await import('./articles.js');
+  it('renders inline markdown rather than printing its brackets', () => {
     const page = buildArticlePage('tabled-piece');
 
     const cell = page.querySelector('.article-table tbody td:last-child');

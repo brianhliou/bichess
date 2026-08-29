@@ -19,6 +19,7 @@ import type {
   GameTermination,
   GameVisibility,
 } from './persistence-game-lifecycle.js';
+import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
 import { bucketForGame } from './rating-buckets.js';
 import {
   applyRatedGameResult,
@@ -1081,6 +1082,9 @@ export async function listFavoriteGames(
 // and its win-rate readout describe the exact same slice of completed games.
 
 export type GameQueryFilters = {
+  // Ordering. Only the /games union passes this; it must match the key that
+  // union merges on, or a page is drawn from the wrong candidate set.
+  sort?: XiangqiGameSort;
   variant?: string;
   mode?: GameMode;
   // Mode allowlist, for callers that want several modes but not all of them —
@@ -1181,6 +1185,21 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
   return { clause: conditions.join('\n       AND '), values };
 }
 
+/** ORDER BY per sort for games played here. ended_at is what this lane reports
+ *  as sortAt, so the union's comparator sees the same order it asked for. */
+export function playedGamesOrderBy(sort: XiangqiGameSort | undefined): string {
+  switch (sort) {
+    case 'oldest':
+      return 'games.ended_at ASC, games.room_id ASC';
+    case 'longest':
+      return 'games.ply_count DESC, games.room_id DESC';
+    case 'shortest':
+      return 'games.ply_count ASC, games.room_id ASC';
+    default:
+      return 'games.ended_at DESC, games.room_id DESC';
+  }
+}
+
 export async function queryGames(filters: GameQueryFilters): Promise<GameQueryPage> {
   const limit = Math.max(1, Math.min(filters.limit ?? 50, 200));
   const offset = Math.max(0, filters.offset ?? 0);
@@ -1199,7 +1218,7 @@ export async function queryGames(filters: GameQueryFilters): Promise<GameQueryPa
      FROM games
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE ${clause}
-     ORDER BY games.ended_at DESC, games.room_id DESC
+     ORDER BY ${playedGamesOrderBy(filters.sort)}
      LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}`,
     pageValues,
   );

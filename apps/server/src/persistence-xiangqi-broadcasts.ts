@@ -25,6 +25,7 @@ import {
 } from '@mistboard/game';
 import type pg from 'pg';
 import { getPool, withTransaction } from './persistence-db.js';
+import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
 import {
   translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastRound,
@@ -46,6 +47,8 @@ export type XiangqiBroadcastTourSchedule = {
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
+  /** Must match the /games union's merge key; see XiangqiGameSort. */
+  sort?: XiangqiGameSort;
   player?: string;
   event?: string;
   result?: XiangqiBroadcastResult;
@@ -807,6 +810,21 @@ function buildCompletedBoardSearchWhere(filters: XiangqiBroadcastBoardSearchFilt
   return { clause: conditions.join('\n       AND '), values };
 }
 
+/** ORDER BY per sort. The date key is the round start, which is what this
+ *  lane reports as sortAt, so the merge comparator sees the same ordering. */
+export function broadcastOrderBy(sort: XiangqiGameSort | undefined): string {
+  switch (sort) {
+    case 'oldest':
+      return 'rounds.starts_at ASC NULLS LAST, boards.updated_at ASC, boards.id ASC';
+    case 'longest':
+      return 'boards.ply_count DESC, boards.id DESC';
+    case 'shortest':
+      return 'boards.ply_count ASC, boards.id ASC';
+    default:
+      return 'rounds.starts_at DESC NULLS LAST, boards.updated_at DESC, boards.id DESC';
+  }
+}
+
 export async function queryCompletedXiangqiBroadcastBoards(
   filters: XiangqiBroadcastBoardSearchFilters,
 ): Promise<XiangqiBroadcastBoardSearchPage> {
@@ -848,7 +866,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
      JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE ${clause}
-     ORDER BY rounds.starts_at DESC NULLS LAST, boards.updated_at DESC, boards.id DESC
+     ORDER BY ${broadcastOrderBy(filters.sort)}
      LIMIT $${pageValues.length}`,
     pageValues,
   );

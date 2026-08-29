@@ -259,6 +259,29 @@
       color-mix(in srgb, var(--xq-live-board-bg, #f5dca8) 84%, var(--xq-live-ink, #5a3a14)) 50% 100%
     );
   }
+  /* Studies get the same board perimeter as analysis/game WHEN the eval bar is
+     beside them. They are excluded from the shared rule above because a study is a
+     document surface, but a rounded board edge against a sharp-cornered bar is a
+     gap rather than a style choice.
+     The jieqi and banqi boards paint their own rounded <rect> INSIDE the svg, so
+     squaring the container is not enough on its own: the container already reads
+     0px here while the corners still look round, because the curve belongs to the
+     rect. Drop the rect's radius and let the container supply left-only rounding,
+     which leaves the left corners as they were and squares the two the bar meets. */
+  .review-shell--study .review-shell__cluster--gauge .review-stage__slot--primary > :first-child {
+    border-radius: var(--review-board-left-radius, 10px) 0 0 var(--review-board-left-radius, 10px);
+    overflow: hidden;
+  }
+
+  .review-shell--study
+    .review-shell__cluster--gauge
+    .review-stage__slot--primary
+    > :first-child
+    > svg
+    :is(clipPath[id$="-clip"] > rect, .banqi-board-bg, .jieqi-board-bg) {
+    rx: 0;
+  }
+
   /* Mirror on the rail side: the analyse table butts flush against the
      (sharp-cornered) eval bar, so its LEFT corners are squared too — bar and
      box read as one continuous edge (lichess). Right corners keep the shared
