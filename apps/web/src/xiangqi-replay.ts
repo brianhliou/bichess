@@ -16,6 +16,7 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import './board-glyph-marker.css';
 import { boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
@@ -28,6 +29,18 @@ import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 const CELL = 31;
 const MARGIN = 18;
 const PIECE = tokenPieceSize(CELL);
+// The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
+// Same proportions here so the badge sits in the same place relative to the
+// piece; the markup and palette are the shared ones (board-glyph-marker.css).
+const GLYPH_RADIUS = (13 / 60) * CELL;
+const GLYPH_OFFSET = (21 / 60) * CELL;
+const GLYPH_CLASS: Record<string, string> = {
+  '??': 'xq-marker--blunder',
+  '?': 'xq-marker--mistake',
+  '?!': 'xq-marker--inaccuracy',
+  '!!': 'xq-marker--brilliant',
+  '!': 'xq-marker--great',
+};
 const PAD = 4;
 const BOARD_W = MARGIN * 2 + 8 * CELL;
 const BOARD_H = MARGIN * 2 + 9 * CELL;
@@ -172,6 +185,7 @@ function boardSvg(
   lastMove: XiangqiMove | undefined,
   perspective: XiangqiColor,
   _key: number,
+  glyph?: string,
 ): string {
   const pw = BOARD_W + PAD * 2;
   const ph = BOARD_H + PAD * 2;
@@ -184,6 +198,9 @@ function boardSvg(
     gridSvg(perspective),
     lastMove ? lastMoveSvg(lastMove, perspective) : '',
     piecesSvg(board, perspective),
+    // Over the pieces: the badge annotates the piece that just arrived, so it
+    // has to sit on top of it rather than under.
+    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
 }
@@ -200,6 +217,24 @@ function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
   );
 }
 
+/** The judgment badge, pinned to the destination of the move just played. */
+function glyphMarkerSvg(move: XiangqiMove, glyph: string, perspective: XiangqiColor): string {
+  const kind = GLYPH_CLASS[glyph];
+  if (!kind) return '';
+  const to = coord(move.to);
+  const at = pointXY(to.file, to.rank, perspective);
+  // Screen-space offset, so the badge keeps the same corner when the board flips.
+  const cx = at.x + GLYPH_OFFSET;
+  const cy = at.y - GLYPH_OFFSET;
+  return (
+    `<g class="xq-marker xq-marker--glyph ${kind}">` +
+    `<circle class="xq-marker__disc" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${GLYPH_RADIUS.toFixed(1)}"/>` +
+    `<text class="xq-marker__label" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" ` +
+    `dominant-baseline="central" font-size="${(GLYPH_RADIUS * 1.15).toFixed(1)}">${glyph}</text>` +
+    '</g>'
+  );
+}
+
 function iccsToMove(tok: string): XiangqiMove {
   const conv = (c: string) => `${c[0]}${Number(c[1]) + 1}` as XiangqiSquare;
   return { from: conv(tok.slice(0, 2)), to: conv(tok.slice(2, 4)) };
@@ -211,7 +246,7 @@ export function mountXiangqiReplay(
   options: { lang?: ArticleLang } = {},
 ): XiangqiReplayController {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
-  const perspective = spec.perspective ?? 'red';
+  let perspective: XiangqiColor = spec.perspective ?? 'red';
   const moves = spec.iccs
     .trim()
     .split(/\s+/)
@@ -262,12 +297,59 @@ export function mountXiangqiReplay(
   const first = mkButton('first', copy.firstMove);
   const prev = mkButton('prev', copy.previousMove);
   prev.classList.add('stepper-button-prev');
+
+  // A three-control bar: back, a menu, forward. Jump-to-start and jump-to-end
+  // are rare next to stepping, so they move into the menu rather than taking a
+  // quarter of the bar each; nothing is lost, and the two controls a reader
+  // actually uses get twice the target.
+  const menuButton = document.createElement('button');
+  menuButton.type = 'button';
+  menuButton.className = 'stepper-button stepper-button-menu';
+  menuButton.setAttribute('aria-haspopup', 'true');
+  menuButton.setAttribute('aria-expanded', 'false');
+  menuButton.setAttribute('aria-label', 'More');
+  menuButton.innerHTML =
+    '<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
+    'focusable="false" fill="currentColor"><circle cx="8" cy="3.2" r="1.5"/>' +
+    '<circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.8" r="1.5"/></svg>';
+
+  const menu = document.createElement('div');
+  menu.className = 'xq-replay-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+
+  const menuItem = (label: string, onSelect: () => void) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'xq-replay-menu-item';
+    item.setAttribute('role', 'menuitem');
+    item.textContent = label;
+    item.addEventListener('click', () => {
+      closeMenu();
+      onSelect();
+    });
+    menu.append(item);
+    return item;
+  };
+
+  function closeMenu(): void {
+    menu.hidden = true;
+    menuButton.setAttribute('aria-expanded', 'false');
+  }
+  function toggleMenu(): void {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    menuButton.setAttribute('aria-expanded', String(open));
+    if (open) menu.querySelector<HTMLElement>('.xq-replay-menu-item')?.focus();
+  }
+  menuButton.addEventListener('click', toggleMenu);
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
   const next = mkButton('next', copy.nextMove);
   next.classList.add('stepper-button-next');
   const last = mkButton('last', copy.lastMove);
-  controls.append(first, prev, counter, next, last);
+  if (spec.annotations) controls.append(prev, menuButton, next);
+  else controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
   slider.type = 'range';
@@ -325,12 +407,39 @@ export function mountXiangqiReplay(
     // No scrubber and no ply counter here: the move list is the position
     // indicator and it is clickable, so both were a second, worse copy of it.
     counter.remove();
-    boardCol.append(
-      seat(nameOf(topSide), topSide),
-      frame,
-      seat(nameOf(bottomSide), bottomSide),
-      controls,
-    );
+    controls.classList.add('stepper-controls-compact');
+    const controlWrap = document.createElement('div');
+    controlWrap.className = 'xq-replay-controls-wrap';
+    controlWrap.append(controls, menu);
+    const seatTop = seat(nameOf(topSide), topSide);
+    const seatBottom = seat(nameOf(bottomSide), bottomSide);
+    boardCol.append(seatTop, frame, seatBottom, controlWrap);
+
+    // Registered here, where the column's parts are in scope. The callbacks run
+    // later, and goto/render are hoisted function declarations, so referring to
+    // them before their definitions is fine.
+    let flipped = false;
+    menuItem('Flip the board', () => {
+      perspective = perspective === 'red' ? 'black' : 'red';
+      flipped = !flipped;
+      // An explicit re-order of the whole column. Shuffling two nodes around
+      // each other left the control bar above the board.
+      boardCol.replaceChildren(
+        flipped ? seatBottom : seatTop,
+        frame,
+        flipped ? seatTop : seatBottom,
+        controlWrap,
+      );
+      render();
+    });
+    menuItem('Back to the start', () => {
+      variation = null;
+      goto(0);
+    });
+    menuItem('Jump to the end', () => {
+      variation = null;
+      goto(total);
+    });
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
     // The move panel is taken out of flow (see the CSS) so a 180-ply list
@@ -601,7 +710,10 @@ export function mountXiangqiReplay(
 
   function render(): void {
     const view = viewState();
-    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key);
+    // Only the mainline carries a verdict; a position inside an engine line is
+    // not a move anyone played.
+    const playedGlyph = !variation && index > 0 ? annotationAt(index)?.glyph : undefined;
+    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key, playedGlyph);
     if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     // While a sideline is open the controls walk the LINE, so their enabled
     // state has to come from the line's cursor. Reading the mainline index here
@@ -720,6 +832,20 @@ export function mountXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
+  const onDocPointer = (event: MouseEvent) => {
+    if (menu.hidden) return;
+    const target = event.target as Node | null;
+    if (target && (menu.contains(target) || menuButton.contains(target))) return;
+    closeMenu();
+  };
+  const onDocKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && !menu.hidden) {
+      closeMenu();
+      menuButton.focus({ preventScroll: true });
+    }
+  };
+  document.addEventListener('click', onDocPointer);
+  document.addEventListener('keydown', onDocKey);
   // Piece set is inline glyphs, so re-render the current ply when the picker
   // changes (board + fog react through CSS, like the static diagrams).
   const onAppearance = () => render();
@@ -744,6 +870,8 @@ export function mountXiangqiReplay(
       host.removeEventListener('keydown', onKey);
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      document.removeEventListener('click', onDocPointer);
+      document.removeEventListener('keydown', onDocKey);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper');
     },

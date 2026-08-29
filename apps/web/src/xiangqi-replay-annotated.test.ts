@@ -212,8 +212,9 @@ test('the control bar gives its four buttons equal width and identical icons', (
   const controls = el.querySelector('.stepper-controls');
   const buttons = [...el.querySelectorAll('.stepper-button')];
 
-  expect(buttons).toHaveLength(4);
-  expect(controls?.children).toHaveLength(4);
+  // Three since jump-to-start and jump-to-end moved into the menu.
+  expect(buttons).toHaveLength(3);
+  expect(controls?.children).toHaveLength(3);
   for (const button of buttons) {
     expect(button.textContent?.trim()).toBe('');
     const icon = button.querySelector('svg.stepper-icon');
@@ -248,5 +249,66 @@ test('arrow keys keep working after clicking a move in the list', () => {
 
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   expect(label()).toBe(after);
+  c.destroy();
+});
+
+test('the study bar is back / menu / forward, and the menu keeps what it replaced', () => {
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const labels = [...el.querySelectorAll('.stepper-button')].map((b) =>
+    b.getAttribute('aria-label'),
+  );
+  expect(labels).toEqual(['Previous move', 'More', 'Next move']);
+
+  // Jump-to-start and jump-to-end left the bar, so they have to be in the menu.
+  const items = () => [...el.querySelectorAll('.xq-replay-menu-item')].map((i) => i.textContent);
+  expect(items()).toEqual(['Flip the board', 'Back to the start', 'Jump to the end']);
+  c.destroy();
+});
+
+test('flipping rebuilds the column in order instead of shuffling nodes past each other', () => {
+  // Swapping the two seat bars around each other left the control bar above the
+  // board, so the flip re-orders the whole column explicitly.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const order = () =>
+    [...(el.querySelector('.xq-replay-board-col')?.children ?? [])].map(
+      (child) => child.className.split(' ')[0],
+    );
+  const seats = () => [...el.querySelectorAll('.xq-replay-seat')].map((s) => s.textContent?.trim());
+
+  const startOrder = order();
+  const startSeats = seats();
+  const flip = () => {
+    (el.querySelector('.stepper-button-menu') as HTMLButtonElement).click();
+    const item = [...el.querySelectorAll('.xq-replay-menu-item')].find((i) =>
+      /Flip/.test(i.textContent ?? ''),
+    ) as HTMLButtonElement | undefined;
+    item?.click();
+  };
+
+  flip();
+  expect(order()).toEqual(startOrder);
+  expect(seats()).toEqual([...startSeats].reverse());
+
+  flip();
+  expect(order()).toEqual(startOrder);
+  expect(seats()).toEqual(startSeats);
+  c.destroy();
+});
+
+test('a judged move is badged on the board, and only on the mainline', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { glyph: '?!', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-marker--glyph')).toBeNull(); // ply 0, nothing played
+
+  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
+  const badge = el.querySelector('.xq-marker--glyph');
+  expect(badge?.getAttribute('class')).toContain('xq-marker--inaccuracy');
+  expect(badge?.querySelector('text')?.textContent).toBe('?!');
+
+  // A position inside an engine line is not a move anyone played.
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-marker--glyph')).toBeNull();
   c.destroy();
 });

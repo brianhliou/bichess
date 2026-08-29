@@ -1281,11 +1281,15 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'cta',
           buttons: [
             {
-              label: 'Play through all sixteen games',
-              href: '/study/ytSzepET',
+              label: 'Learn how the pieces move',
+              href: '/learn/xiangqi',
               emphasis: 'primary',
             },
-            { label: 'Learn how the pieces move', href: '/rules/xiangqi', emphasis: 'secondary' },
+            {
+              label: 'Play through all sixteen games',
+              href: '/study/ytSzepET',
+              emphasis: 'secondary',
+            },
           ],
         },
       ],
