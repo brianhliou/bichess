@@ -277,6 +277,19 @@ export type CodeBlock = {
  * comparison the reader came for. Cells are plain strings so a column can hold
  * "79.1%" or "17 of 17" without the block needing to know about units.
  */
+// A question-and-answer list. Rendered as a definition list AND lifted into
+// FAQPage JSON-LD by the prerender, which is the point: an FAQ block that only
+// looks like an FAQ is decoration, while one search engines can parse is a shot
+// at the answer box on exactly the informational queries a new player types.
+//
+// Answers are plain text, not rich text. Schema.org wants an answer that stands
+// alone, and a sentence whose meaning depends on a link the crawler will not
+// follow is a worse answer for having had one.
+export type FaqBlock = {
+  kind: 'faq';
+  items: { question: string; answer: string }[];
+};
+
 export type TableBlock = {
   kind: 'table';
   headers: string[];
@@ -300,6 +313,7 @@ export type ImageFigureBlock = {
 export type ArticleBlock =
   | ParagraphBlock
   | TableBlock
+  | FaqBlock
   | ImageFigureBlock
   | SubHeadingBlock
   | StaticBoardsBlock

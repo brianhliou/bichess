@@ -84,6 +84,9 @@ describe('article public listing gates', () => {
       // are absent from here and their routes 404 client-side.
       '/blog/co-up',
       '/blog/jieqi-platform',
+      // Same 2026-08-28 date as the two above; the tie breaks alphabetically by
+      // title, and 'Cờ úp...' then 'Jieqi...' then 'Luật...' is that order.
+      '/blog/luat-co-up',
       '/blog/titled-players',
       // Same date as titled-players; ties break alphabetically by title and
       // 'Titled...' sorts before 'Who Is...'. Draft, so dev-only.
