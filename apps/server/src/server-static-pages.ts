@@ -61,6 +61,57 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/videos',
   },
+  // The ten routes below were advertised in the sitemap while serving the
+  // homepage title and description, which the note above forbids. Each
+  // description is drawn from the page's own copy rather than written fresh,
+  // so a search result cannot promise something the page does not say.
+  '/about': {
+    title: 'About Mistboard | Chinese Chess (Xiangqi) in English',
+    description:
+      'A free, open-source place to play xiangqi (Chinese chess) in English, built for serious play. What the site is, and who it is for.',
+  },
+  '/faq': {
+    title: 'FAQ | Mistboard',
+    description:
+      'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
+  },
+  '/forum': {
+    title: 'Forum | Mistboard',
+    description:
+      'Community discussion: general games talk, game analysis, site feedback, and off-topic.',
+  },
+  '/coach': {
+    title: 'Xiangqi Coaches | Mistboard',
+    description:
+      'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
+  },
+  '/streamer': {
+    title: 'Xiangqi Streamers | Mistboard',
+    description: 'Chinese chess (xiangqi) and variant streamers to watch live and on demand.',
+  },
+  '/player': {
+    title: 'Xiangqi Leaderboard | Mistboard',
+    description: 'The highest rated players on Mistboard, by game and time control.',
+  },
+  '/player/rating-stats': {
+    title: 'Rating Distribution | Mistboard',
+    description:
+      'How Mistboard ratings are spread across each rated game, with player counts and averages.',
+  },
+  '/patron': {
+    title: 'Become a Patron | Mistboard',
+    description:
+      'Mistboard is independent and ad-free. Core play and learning stay free, and Patron support helps keep the servers running.',
+  },
+  '/source': {
+    title: 'Source Code | Mistboard',
+    description:
+      'Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license.',
+  },
+  '/contribute': {
+    title: 'Contribute | Mistboard',
+    description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
+  },
   '/learn/xiangqi': {
     title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:

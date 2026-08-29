@@ -33,6 +33,13 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-08-28 ── AWAITING A NATIVE READ. Vocabulary reused from strings the
+  // site already publishes rather than translated in isolation: 视频库 is
+  // videos.heading, 推荐 is the videos.sort.featured label.
+  'A bigger video library, and one that reads Chinese.': '视频库更大了，也有了中文版。',
+  'The library is up to 61 hand-picked videos, ordered best first instead of by the date they were added, and it now opens in Chinese at its own address. Every entry has been checked against YouTube, so nothing on the shelf is a dead link.':
+    '视频库现有 61 个精选视频，改为按推荐程度排序，不再按收录日期排列，并且有了自己的中文网址。每个条目都已对照 YouTube 核对，库里不会有失效链接。',
+  'Browse the library': '浏览视频库',
   // Copied verbatim from article-i18n.ts: the feed entry and the article
   // summary are the same sentence, and a reader who sees both should not get
   // two renderings of it.
@@ -212,6 +219,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-08-28 ── AWAITING A NATIVE READ. Same vocabulary rule: 影片庫 is
+  // videos.heading, 推薦 is the videos.sort.featured label.
+  'A bigger video library, and one that reads Chinese.': '影片庫更大了，也有了中文版。',
+  'The library is up to 61 hand-picked videos, ordered best first instead of by the date they were added, and it now opens in Chinese at its own address. Every entry has been checked against YouTube, so nothing on the shelf is a dead link.':
+    '影片庫現有 61 部精選影片，改為按推薦程度排序，不再按收錄日期排列，並且有了自己的中文網址。每個項目都已對照 YouTube 核對，庫裡不會有失效連結。',
+  'Browse the library': '瀏覽影片庫',
   // Copied verbatim from article-i18n.ts: the feed entry and the article
   // summary are the same sentence, and a reader who sees both should not get
   // two renderings of it.

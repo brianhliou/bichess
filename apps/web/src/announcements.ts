@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-08-28',
+    kind: 'update',
+    headline: 'A bigger video library, and one that reads Chinese.',
+    body: 'The library is up to 61 hand-picked videos, ordered best first instead of by the date they were added, and it now opens in Chinese at its own address. Every entry has been checked against YouTube, so nothing on the shelf is a dead link.',
+    href: '/videos',
+    cta: 'Browse the library',
+  },
+  {
     date: '2026-08-27',
     kind: 'release',
     headline: 'Set up any position, then share it.',

@@ -474,13 +474,10 @@ test('serveSpaShellWithRoutePreloads serves route meta even with no preload mani
   assert.match(response.body, /<title>Learn Chinese Chess \(Xiangqi\) \| Mistboard<\/title>/);
 });
 
-// Sitemap routes that do NOT get their meta from SPA_ROUTE_META. Two kinds:
-// served by a dedicated per-locale renderer (the article and rules indexes, and
-// '/' which is the static index itself), or genuinely still serving the default
-// homepage shell. The second group is real debt, listed rather than fixed
-// blind: each one needs a title and description written for it, which is an
-// editorial call and not this change's business. /videos was in that group
-// until #293; the test below is what stops anything else joining it quietly.
+// Sitemap routes whose meta comes from a dedicated per-locale renderer rather
+// than SPA_ROUTE_META: the article and rules indexes, and '/' which is the
+// static index itself. There is no third category any more. Every other
+// advertised route now carries its own title.
 const SITEMAP_ROUTES_WITH_OWN_RENDERER = new Set([
   '/',
   '/blog',
@@ -488,23 +485,11 @@ const SITEMAP_ROUTES_WITH_OWN_RENDERER = new Set([
   '/zh-hans/rules',
   '/zh-hant/rules',
 ]);
-const SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL = new Set([
-  '/about',
-  '/streamer',
-  '/player',
-  '/player/rating-stats',
-  '/coach',
-  '/forum',
-  '/source',
-  '/faq',
-  '/patron',
-  '/contribute',
-]);
 
-// The old version of this test hand-listed four routes while claiming "every".
-// That is how /videos came to sit in the sitemap with no meta at all, serving
-// the homepage title to a crawler. It iterates the real list now.
-test('every sitemap SPA route carries its own title, or is a known exception', async () => {
+// The old version of this test hand-listed four routes while claiming "every",
+// which is how /videos came to sit in the sitemap with no meta at all, serving
+// the homepage title to a crawler. Ten more were in the same state behind it.
+test('every sitemap SPA route carries its own distinct title', async () => {
   const staticDir = await staticDirWithPreloadManifest();
   const titles = new Map<string, string>();
   for (const route of SITEMAP_STATIC_ROUTES) {
@@ -518,16 +503,15 @@ test('every sitemap SPA route carries its own title, or is a known exception', a
       publicHost: 'https://mistboard.com',
     });
     const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? 'Mistboard';
-    if (SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL.has(route)) continue;
     assert.ok(
       title !== 'Mistboard',
-      `${route} still serves the default shell title. Give it an SPA_ROUTE_META entry, or add it to SITEMAP_ROUTES_STILL_ON_THE_DEFAULT_SHELL deliberately.`,
+      `${route} serves the default shell title. Give it an SPA_ROUTE_META entry before advertising it in the sitemap.`,
     );
     const clash = [...titles.entries()].find(([, other]) => other === title);
     assert.ok(!clash, `${route} shares a title with ${clash?.[0]}`);
     titles.set(route, title);
   }
-  assert.ok(titles.size >= 5);
+  assert.ok(titles.size >= 15, `only ${titles.size} routes checked`);
 });
 
 // The point of #293: a Chinese-language visitor arriving at a prefixed URL used
@@ -685,10 +669,14 @@ test('serveSpaShellWithRoutePreloads leaves the response untouched when nothing 
   const staticDir = await staticDirWithPreloadManifest();
   const response = captureResponse();
 
+  // A path with no meta, no preload manifest entry, and no robots tag. It is
+  // synthetic on purpose: this used to name /streamer, and broke the day
+  // /streamer got a title, because "a route with nothing" is a moving target
+  // while "a path that matches nothing" is not.
   const served = await serveSpaShellWithRoutePreloads({
     response,
     staticDir,
-    pathname: '/streamer',
+    pathname: '/not-a-route-with-hints',
   });
 
   assert.equal(served, false);
