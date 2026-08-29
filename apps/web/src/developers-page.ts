@@ -203,9 +203,11 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'frame-ancestors self.',
     ]),
     proseParagraph([
-      'Embeds are free and need no key. The frame does not run our analytics, does ' +
-        'not ask who the viewer is, and sets no cookie of its own: it loads a board ' +
-        'and the chapter. If you are planning something at unusual scale, ',
+      'Embeds are free and need no key. The frame does not run our analytics and ' +
+        'never asks who the viewer is, so it issues no credentialed request from ' +
+        'your page. It does keep board appearance (piece set, notation) in the ' +
+        "viewer's own browser storage, which is why their preferences follow them " +
+        'between embeds. If you are planning something at unusual scale, ',
       proseLink('get in touch', '/contact'),
       ' first.',
     ]),
