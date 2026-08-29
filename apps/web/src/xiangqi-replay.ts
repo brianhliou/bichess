@@ -447,6 +447,17 @@ export function mountXiangqiReplay(
     }
     return { board: state.board, lastMove: last, key: 1000 + variation.cursor };
   }
+  /**
+   * Set when a click on a move should leave the keyboard usable. renderMoveList
+   * replaces every button, so the one the reader clicked is detached mid-render
+   * and focus falls to <body>; the arrow handler is bound to `host` and stops
+   * receiving anything. This is an explicit intent flag rather than a read of
+   * document.activeElement because clicking a button focuses it in Chrome but
+   * not in Safari, so sniffing focus would have fixed the bug in one browser
+   * and left it in the other.
+   */
+  let takeFocusAfterRender = false;
+
   function moveButton(
     label: string,
     opts: { current: boolean; glyph?: string; onClick: () => void; title?: string },
@@ -467,7 +478,10 @@ export function mountXiangqiReplay(
       g.textContent = opts.glyph;
       b.appendChild(g);
     }
-    b.addEventListener('click', opts.onClick);
+    b.addEventListener('click', () => {
+      takeFocusAfterRender = true;
+      opts.onClick();
+    });
     return b;
   }
 
@@ -632,6 +646,14 @@ export function mountXiangqiReplay(
     resultFoot.textContent = spec.resultText;
     renderLineBox();
     renderMoveList();
+    if (takeFocusAfterRender) {
+      takeFocusAfterRender = false;
+      // Prefer the move now being shown, so the reader keeps a visible anchor;
+      // `host` is the fallback at ply zero, where no move is current. Either
+      // way the arrow handler, which is bound to `host`, is back in range.
+      const current = moveList.querySelector<HTMLElement>('.xq-replay-move-button.is-current');
+      (current ?? host).focus({ preventScroll: true });
+    }
     scrollCurrentIntoView();
   }
 

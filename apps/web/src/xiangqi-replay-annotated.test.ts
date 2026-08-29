@@ -217,3 +217,27 @@ test('the control bar gives its four buttons equal width and identical icons', (
   }
   c.destroy();
 });
+
+test('arrow keys keep working after clicking a move in the list', () => {
+  // The list is rebuilt on every render, so the clicked button is detached
+  // mid-render and focus falls to <body>. The arrow handler is on the widget,
+  // so the keyboard silently stopped working until the reader clicked one of
+  // the stepper controls, which are stable elements and keep focus.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const label = () =>
+    el.querySelector('.xq-replay-move-button.is-current')?.textContent?.trim() ?? '';
+
+  (mainButtons(el)[1] as HTMLButtonElement | undefined)?.click();
+  expect(label()).toBe(mainButtons(el)[1]?.textContent?.trim());
+
+  // Focus must still be inside the widget for the handler to receive the key.
+  expect(el.contains(document.activeElement)).toBe(true);
+
+  const after = label();
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(label()).not.toBe(after);
+
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  expect(label()).toBe(after);
+  c.destroy();
+});
