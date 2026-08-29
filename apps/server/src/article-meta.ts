@@ -42,10 +42,10 @@ const RETIRED_RULES_SLUGS = new Set([
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'xiangqi-champions',
-  // Written and reviewable at /blog/<slug> in dev, deliberately not published:
-  // the jieqi page wants Brian's read at full length, and the Vietnamese one
-  // wants a native reader before it reaches the audience it is written for.
-  'jieqi-platform',
+  // The two Vietnamese pages are written and wired but NOT published: neither has
+  // had a native read, and rules copy that is subtly wrong is worse than none.
+  // That is a reviewer, not a task, and it is the real blocker on the Vietnamese
+  // search play rather than anything in the code.
   'co-up',
   'luat-co-up',
   'fog-openings',
