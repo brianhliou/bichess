@@ -14,23 +14,55 @@ import {
   type XiangqiPiece,
   type XiangqiSquare,
 } from '@mistboard/game';
+import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import './board-glyph-marker.css';
+import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
 const CELL = 31;
-const MARGIN = 18;
 const PIECE = tokenPieceSize(CELL);
-const PAD = 4;
+// The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
+// Same proportions here so the badge sits in the same place relative to the
+// piece; the markup and palette are the shared ones (board-glyph-marker.css).
+const GLYPH_RADIUS = (13 / 60) * CELL;
+const GLYPH_OFFSET = (21 / 60) * CELL;
+
+/**
+ * The margin has to clear everything drawn around a piece on an EDGE
+ * intersection, not just the piece. Three things reach past its centre:
+ *
+ *   the piece itself         PIECE / 2                 14.0 at CELL 31
+ *   the last-move ring       outer radius              15.6
+ *   the judgment badge       offset + its own radius   17.6
+ *
+ * A previous version set this to 15 by reasoning only about the piece, which
+ * clipped the ring on every edge move and cut the top off a `?!` badge on any
+ * piece that reached the back rank. Derived rather than chosen, so adding a
+ * fourth decoration that reaches further cannot silently crop it.
+ */
+const MARGIN = Math.ceil(
+  Math.max(PIECE / 2, boardLastMoveOuterRadius(PIECE), GLYPH_OFFSET + GLYPH_RADIUS),
+);
+const GLYPH_CLASS: Record<string, string> = {
+  '??': 'xq-marker--blunder',
+  '?': 'xq-marker--mistake',
+  '?!': 'xq-marker--inaccuracy',
+  '!!': 'xq-marker--brilliant',
+  // The shared palette calls this one --good; --great has no fill defined and
+  // the badge renders as an empty disc.
+  '!': 'xq-marker--good',
+};
+const PAD = 0;
 const BOARD_W = MARGIN * 2 + 8 * CELL;
 const BOARD_H = MARGIN * 2 + 9 * CELL;
 const RADIUS = 8;
-const ARROW = '#15781B';
-const ARROW_END_INSET = 10;
 
 /**
  * Engine annotation for one mainline ply (1-based). Produced by the postgame
@@ -61,8 +93,6 @@ export type XiangqiReplayAnnotation = {
 export type XiangqiReplayAnnotations = {
   /** Keyed by 1-based mainline ply. */
   byPly: Record<number, XiangqiReplayAnnotation>;
-  /** Shown once under the board, e.g. "Pikafish, 1M nodes per position". */
-  engine?: string;
 };
 
 export type XiangqiReplaySpec = {
@@ -168,38 +198,59 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
     .join('');
 }
 
-function arrowSvg(move: XiangqiMove, perspective: XiangqiColor, id: string): string {
-  const from = coord(move.from);
-  const to = coord(move.to);
-  const a = pointXY(from.file, from.rank, perspective);
-  const rawEnd = pointXY(to.file, to.rank, perspective);
-  const dx = rawEnd.x - a.x;
-  const dy = rawEnd.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const b = {
-    x: rawEnd.x - (dx / length) * ARROW_END_INSET,
-    y: rawEnd.y - (dy / length) * ARROW_END_INSET,
-  };
-  return [
-    `<defs><marker id="${id}" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto" overflow="visible" markerUnits="strokeWidth"><path d="M0,0 V4 L3,2 Z" fill="${ARROW}"/></marker></defs>`,
-    `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${ARROW}" stroke-width="5.25" stroke-linecap="round" opacity="0.38" marker-end="url(#${id})"/>`,
-  ].join('');
-}
-
 function boardSvg(
   board: XiangqiBoard,
   lastMove: XiangqiMove | undefined,
   perspective: XiangqiColor,
-  key: number,
+  _key: number,
+  glyph?: string,
 ): string {
   const pw = BOARD_W + PAD * 2;
   const ph = BOARD_H + PAD * 2;
+  // The site marks a last move with an origin wash and a destination ring
+  // (board-lastmove.ts, shared by every live board). This widget used to draw
+  // its own green arrow, which made an article embed look like a different
+  // product from the game page. The markers sit under the pieces, so only the
+  // halo outside the piece radius shows.
   const body = [
     gridSvg(perspective),
+    lastMove ? lastMoveSvg(lastMove, perspective) : '',
     piecesSvg(board, perspective),
-    lastMove ? arrowSvg(lastMove, perspective, `xqr-arrow-${key}`) : '',
+    // Over the pieces: the badge annotates the piece that just arrived, so it
+    // has to sit on top of it rather than under.
+    lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
+}
+
+function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
+  const from = coord(move.from);
+  const to = coord(move.to);
+  return boardLastMoveMarkersSvg(
+    {
+      from: pointXY(from.file, from.rank, perspective),
+      to: pointXY(to.file, to.rank, perspective),
+    },
+    PIECE,
+  );
+}
+
+/** The judgment badge, pinned to the destination of the move just played. */
+function glyphMarkerSvg(move: XiangqiMove, glyph: string, perspective: XiangqiColor): string {
+  const kind = GLYPH_CLASS[glyph];
+  if (!kind) return '';
+  const to = coord(move.to);
+  const at = pointXY(to.file, to.rank, perspective);
+  // Screen-space offset, so the badge keeps the same corner when the board flips.
+  const cx = at.x + GLYPH_OFFSET;
+  const cy = at.y - GLYPH_OFFSET;
+  return (
+    `<g class="xq-marker xq-marker--glyph ${kind}">` +
+    `<circle class="xq-marker__disc" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${GLYPH_RADIUS.toFixed(1)}"/>` +
+    `<text class="xq-marker__label" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" ` +
+    `dominant-baseline="central" font-size="${(GLYPH_RADIUS * 1.15).toFixed(1)}">${glyph}</text>` +
+    '</g>'
+  );
 }
 
 function iccsToMove(tok: string): XiangqiMove {
@@ -213,7 +264,7 @@ export function mountXiangqiReplay(
   options: { lang?: ArticleLang } = {},
 ): XiangqiReplayController {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
-  const perspective = spec.perspective ?? 'red';
+  let perspective: XiangqiColor = spec.perspective ?? 'red';
   const moves = spec.iccs
     .trim()
     .split(/\s+/)
@@ -241,23 +292,82 @@ export function mountXiangqiReplay(
 
   const controls = document.createElement('div');
   controls.className = 'stepper-controls';
-  const mkButton = (label: string, aria: string) => {
+  // Drawn, not typed. The media glyphs (U+23EE/U+23ED) and the arrows
+  // (U+2190/U+2192) resolve from different fallback fonts, so as text they
+  // never match in weight or optical size, and on some platforms the media
+  // pair renders as a colour emoji.
+  const ICON: Record<'first' | 'prev' | 'next' | 'last', string> = {
+    first: '<rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/>',
+    prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
+    next: '<path d="M5 4.3v7.4L11.1 8z"/>',
+    last: '<rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/>',
+  };
+  const mkButton = (icon: keyof typeof ICON, aria: string) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'stepper-button';
     b.setAttribute('aria-label', aria);
-    b.textContent = label;
+    b.innerHTML =
+      `<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" ` +
+      `aria-hidden="true" focusable="false" fill="currentColor">${ICON[icon]}</svg>`;
     return b;
   };
-  const first = mkButton('⏮', copy.firstMove);
-  const prev = mkButton('←', copy.previousMove);
+  const first = mkButton('first', copy.firstMove);
+  const prev = mkButton('prev', copy.previousMove);
   prev.classList.add('stepper-button-prev');
+
+  // A three-control bar: back, a menu, forward. Jump-to-start and jump-to-end
+  // are rare next to stepping, so they move into the menu rather than taking a
+  // quarter of the bar each; nothing is lost, and the two controls a reader
+  // actually uses get twice the target.
+  const menuButton = document.createElement('button');
+  menuButton.type = 'button';
+  menuButton.className = 'stepper-button stepper-button-menu';
+  menuButton.setAttribute('aria-haspopup', 'true');
+  menuButton.setAttribute('aria-expanded', 'false');
+  menuButton.setAttribute('aria-label', 'More');
+  menuButton.innerHTML =
+    '<svg class="stepper-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
+    'focusable="false" fill="currentColor"><circle cx="8" cy="3.2" r="1.5"/>' +
+    '<circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.8" r="1.5"/></svg>';
+
+  const menu = document.createElement('div');
+  menu.className = 'xq-replay-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+
+  const menuItem = (label: string, onSelect: () => void) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'xq-replay-menu-item';
+    item.setAttribute('role', 'menuitem');
+    item.textContent = label;
+    item.addEventListener('click', () => {
+      closeMenu();
+      onSelect();
+    });
+    menu.append(item);
+    return item;
+  };
+
+  function closeMenu(): void {
+    menu.hidden = true;
+    menuButton.setAttribute('aria-expanded', 'false');
+  }
+  function toggleMenu(): void {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    menuButton.setAttribute('aria-expanded', String(open));
+    if (open) menu.querySelector<HTMLElement>('.xq-replay-menu-item')?.focus();
+  }
+  menuButton.addEventListener('click', toggleMenu);
   const counter = document.createElement('span');
   counter.className = 'stepper-counter';
-  const next = mkButton('→', copy.nextMove);
+  const next = mkButton('next', copy.nextMove);
   next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', copy.lastMove);
-  controls.append(first, prev, counter, next, last);
+  const last = mkButton('last', copy.lastMove);
+  if (spec.annotations) controls.append(prev, menuButton, next);
+  else controls.append(first, prev, counter, next, last);
 
   const slider = document.createElement('input');
   slider.type = 'range';
@@ -275,19 +385,89 @@ export function mountXiangqiReplay(
   const annotated = spec.annotations;
   const moveList = document.createElement('ol');
   moveList.className = 'xq-replay-moves';
-  const lineBox = document.createElement('div');
-  lineBox.className = 'xq-replay-line';
+
+  const resultFoot = document.createElement('div');
+  resultFoot.className = 'xq-replay-result';
 
   if (annotated) {
-    // Study layout: board and its controls in one column, the move tree beside
-    // it. The plain stepper keeps its single-column stack untouched.
+    // Study layout, built as ONE card rather than a board next to a bordered
+    // box: seat bars top and bottom of the board the way a game page shows
+    // them, the move tree flush against it behind a divider, and a single
+    // control bar across the bottom. The plain stepper keeps its untouched
+    // single-column stack.
     host.classList.add('xq-replay-annotated');
+
+    // The names live in the seat bars now, so the line above the card carries
+    // only the event; repeating the players there read as a caption on a card
+    // that already names them.
+    header.textContent = spec.title ? `${spec.title} · ${spec.event}` : spec.event;
+
+    const seat = (name: string, side: 'red' | 'black') => {
+      const el = document.createElement('div');
+      el.className = `xq-replay-seat xq-replay-seat--${side}`;
+      const dot = document.createElement('span');
+      dot.className = 'xq-replay-seat-dot';
+      const label = document.createElement('span');
+      label.className = 'xq-replay-seat-name';
+      label.textContent = name;
+      // No RED/BLACK text: the dot already says it, and so does the board two
+      // pixels below. The word was a third statement of the same fact.
+      el.append(dot, label);
+      return el;
+    };
+    // Bottom seat is whoever the board is oriented for; the other sits on top.
+    const bottomSide = perspective === 'black' ? 'black' : 'red';
+    const topSide = bottomSide === 'red' ? 'black' : 'red';
+    const nameOf = (side: 'red' | 'black') => (side === 'red' ? spec.red : spec.black);
+
     const boardCol = document.createElement('div');
     boardCol.className = 'xq-replay-board-col';
-    boardCol.append(frame, controls, slider, narrative);
+    // No scrubber and no ply counter here: the move list is the position
+    // indicator and it is clickable, so both were a second, worse copy of it.
+    counter.remove();
+    controls.classList.add('stepper-controls-compact');
+    const controlWrap = document.createElement('div');
+    controlWrap.className = 'xq-replay-controls-wrap';
+    controlWrap.append(controls, menu);
+    const seatTop = seat(nameOf(topSide), topSide);
+    const seatBottom = seat(nameOf(bottomSide), bottomSide);
+    boardCol.append(seatTop, frame, seatBottom, controlWrap);
+
+    // Registered here, where the column's parts are in scope. The callbacks run
+    // later, and goto/render are hoisted function declarations, so referring to
+    // them before their definitions is fine.
+    let flipped = false;
+    menuItem('Flip the board', () => {
+      perspective = perspective === 'red' ? 'black' : 'red';
+      flipped = !flipped;
+      // An explicit re-order of the whole column. Shuffling two nodes around
+      // each other left the control bar above the board.
+      boardCol.replaceChildren(
+        flipped ? seatBottom : seatTop,
+        frame,
+        flipped ? seatTop : seatBottom,
+        controlWrap,
+      );
+      render();
+    });
+    menuItem('Back to the start', () => {
+      variation = null;
+      goto(0);
+    });
+    menuItem('Jump to the end', () => {
+      variation = null;
+      goto(total);
+    });
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
-    moveCol.append(moveList, lineBox);
+    // The move panel is taken out of flow (see the CSS) so a 180-ply list
+    // cannot set the card's height; the board column does. This wrapper is what
+    // gets positioned, so the list, the engine line, and the result still stack
+    // normally inside it.
+    const moveInner = document.createElement('div');
+    moveInner.className = 'xq-replay-move-inner';
+    moveInner.append(moveList);
+    moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
     grid.append(boardCol, moveCol);
@@ -313,8 +493,17 @@ export function mountXiangqiReplay(
   // position, so a variation is formatted as prefix+line with the prefix sliced
   // back off — no mid-game state to thread, and an illegal line cannot be
   // notated into something that looks real.
-  const mainlineLabels = annotated ? formatXiangqiMoves(moves, 'wxf') : [];
-  const variationLabels = new Map<number, string[]>();
+  // Move labels follow the reader's notation setting, the same preference the
+  // review pages use. Recomputed (not cached across changes) because the
+  // variation labels are derived from the mainline prefix and would otherwise
+  // keep the old style after a switch.
+  let mainlineLabels: string[] = [];
+  let variationLabels = new Map<number, string[]>();
+
+  function relabel(): void {
+    mainlineLabels = annotated ? formatXiangqiMoves(moves, currentXiangqiNotationStyle()) : [];
+    variationLabels = new Map<number, string[]>();
+  }
 
   function parseLine(ply: number): XiangqiMove[] {
     const raw = annotationAt(ply)?.line;
@@ -340,7 +529,9 @@ export function mountXiangqiReplay(
     const cached = variationLabels.get(ply);
     if (cached) return cached;
     const prefix = moves.slice(0, ply - 1);
-    const all = formatXiangqiMoves([...prefix, ...line], 'wxf').slice(prefix.length);
+    const all = formatXiangqiMoves([...prefix, ...line], currentXiangqiNotationStyle()).slice(
+      prefix.length,
+    );
     variationLabels.set(ply, all);
     return all;
   }
@@ -381,6 +572,17 @@ export function mountXiangqiReplay(
     }
     return { board: state.board, lastMove: last, key: 1000 + variation.cursor };
   }
+  /**
+   * Set when a click on a move should leave the keyboard usable. renderMoveList
+   * replaces every button, so the one the reader clicked is detached mid-render
+   * and focus falls to <body>; the arrow handler is bound to `host` and stops
+   * receiving anything. This is an explicit intent flag rather than a read of
+   * document.activeElement because clicking a button focuses it in Chrome but
+   * not in Safari, so sniffing focus would have fixed the bug in one browser
+   * and left it in the other.
+   */
+  let takeFocusAfterRender = false;
+
   function moveButton(
     label: string,
     opts: { current: boolean; glyph?: string; onClick: () => void; title?: string },
@@ -401,7 +603,10 @@ export function mountXiangqiReplay(
       g.textContent = opts.glyph;
       b.appendChild(g);
     }
-    b.addEventListener('click', opts.onClick);
+    b.addEventListener('click', () => {
+      takeFocusAfterRender = true;
+      opts.onClick();
+    });
     return b;
   }
 
@@ -427,7 +632,10 @@ export function mountXiangqiReplay(
         // A line inserted after Red's move means Black's move needs a new row.
         if (!row?.classList.contains('xq-replay-row') || row.children.length > 2) {
           row = document.createElement('div');
-          row.className = 'xq-replay-row';
+          // A sideline between the pair splits the move number across two rows, so
+          // Black's move has to land in Black's column rather than sliding into the
+          // empty Red slot beside it.
+          row.className = 'xq-replay-row xq-replay-row-black';
           const n = document.createElement('span');
           n.className = 'xq-replay-move-n';
           n.textContent = `${Math.ceil(ply / 2)}\u2026`;
@@ -440,6 +648,7 @@ export function mountXiangqiReplay(
         moveButton(mainlineLabels[ply - 1] ?? '', {
           current: !variation && ply === index,
           glyph: a?.glyph,
+          title: judgmentTitle(a),
           onClick: () => {
             variation = null;
             goto(ply);
@@ -454,8 +663,20 @@ export function mountXiangqiReplay(
       branch.className = 'xq-replay-branch';
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
-      tag.textContent = 'engine';
+      // "engine" named the source; this names the thing, which is what a reader
+      // needs. Every branch belongs to a ?!/?/?? move, so it is always a line
+      // that was better than the one played.
+      tag.textContent = 'better was';
       branch.appendChild(tag);
+      // A line replacing a Black move starts mid-pair, so it opens the way a
+      // score sheet does: the move number, then an ellipsis standing in for
+      // Red's move, rather than a bare move with no number at all.
+      if (!isRed) {
+        const lead = document.createElement('span');
+        lead.className = 'xq-replay-move-n';
+        lead.textContent = `${Math.ceil(ply / 2)}\u2026`;
+        branch.appendChild(lead);
+      }
       line.forEach((_mv, i) => {
         // Number the line from the move it replaces so it reads like a score.
         const movesIn = isRed ? i : i + 1;
@@ -478,58 +699,69 @@ export function mountXiangqiReplay(
       });
       moveList.appendChild(branch);
     }
+    // Last item in the scroller, not a pinned footer: the result belongs at the
+    // end of the game, and reaching it should mean scrolling to the end.
+    moveList.appendChild(resultFoot);
   }
 
-  function renderLineBox(): void {
-    if (!annotated) return;
-    lineBox.replaceChildren();
-    const a = variation ? annotationAt(variation.atPly) : annotationAt(index);
-    if (!a) return;
-    const head = document.createElement('div');
-    head.className = 'xq-replay-line-head';
-    const label =
-      a.glyph === '??'
-        ? 'Blunder'
-        : a.glyph === '?'
-          ? 'Mistake'
-          : a.glyph === '?!'
-            ? 'Inaccuracy'
-            : '';
-    head.textContent = [label, evalText(a) ? `eval ${evalText(a)}` : '']
+  /**
+   * Our own analysis writes judged-move notes to a fixed template. This used to
+   * be rendered as a card under the move list, which restated the glyph already
+   * on the move, pointed at a line already drawn beside it, and appeared and
+   * disappeared as the reader stepped, shoving the list around. The one thing
+   * only it carried was the numbers, so those move onto the move itself.
+   */
+  const MACHINE_NOTE =
+    /^(blunder|mistake|inaccuracy):\s*([\d.]+)\s*win% given up, eval\s*(\S+?)\s*after\.\s*The engine wanted the line in the sibling branch\.?$/i;
+
+  const GLYPH_LABEL: Record<string, string> = {
+    '??': 'Blunder',
+    '?': 'Mistake',
+    '?!': 'Inaccuracy',
+    '!!': 'Brilliant',
+    '!': 'Great',
+  };
+
+  /** Hover text for a judged move: the judgment, the cost, and the eval. */
+  function judgmentTitle(a: XiangqiReplayAnnotation | undefined): string | undefined {
+    if (!a?.glyph) return undefined;
+    const label = GLYPH_LABEL[a.glyph] ?? '';
+    const machine = a.note?.match(MACHINE_NOTE);
+    if (!machine) {
+      // Prose we did not generate (the positive classifier writes its own).
+      const note = a.note?.replace(/^(great|brilliant):\s*/i, '');
+      return [label, note].filter(Boolean).join(': ');
+    }
+    const evaluation = evalText(a) || machine[3];
+    return [label, `${machine[2]}% win chance given up`, evaluation ? `eval ${evaluation}` : '']
       .filter(Boolean)
       .join(' \u00b7 ');
-    lineBox.appendChild(head);
-    if (a.note) {
-      const note = document.createElement('p');
-      note.className = 'xq-replay-line-note';
-      note.textContent = a.note;
-      lineBox.appendChild(note);
-    }
-    if (variation) {
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'xq-replay-line-exit';
-      back.textContent = 'Back to the game';
-      back.addEventListener('click', leaveVariation);
-      lineBox.appendChild(back);
-    }
-    if (annotated.engine) {
-      const eng = document.createElement('div');
-      eng.className = 'xq-replay-engine';
-      eng.textContent = annotated.engine;
-      lineBox.appendChild(eng);
-    }
   }
 
   function render(): void {
     const view = viewState();
-    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key);
-    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
-    first.disabled = index === 0;
-    prev.disabled = index === 0;
-    next.disabled = index === total;
-    last.disabled = index === total;
-    slider.value = String(index);
+    // Only the mainline carries a verdict; a position inside an engine line is
+    // not a move anyone played.
+    const playedGlyph = !variation && index > 0 ? annotationAt(index)?.glyph : undefined;
+    frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key, playedGlyph);
+    if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
+    // While a sideline is open the controls walk the LINE, so their enabled
+    // state has to come from the line's cursor. Reading the mainline index here
+    // meant entering a line from ply 0 left prev disabled, and stepping back
+    // out is one of only two ways to leave a line.
+    const line = variation;
+    if (line) {
+      first.disabled = false;
+      prev.disabled = false;
+      next.disabled = line.cursor >= line.moves.length;
+      last.disabled = line.cursor >= line.moves.length;
+    } else {
+      first.disabled = index === 0;
+      prev.disabled = index === 0;
+      next.disabled = index === total;
+      last.disabled = index === total;
+    }
+    if (slider.isConnected) slider.value = String(index);
     if (variation) {
       narrative.textContent = `Engine line, ${variation.cursor} of ${variation.moves.length}`;
     } else if (index === 0) {
@@ -541,11 +773,56 @@ export function mountXiangqiReplay(
       const mover = index % 2 === 1 ? copy.first : copy.second;
       narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
-    renderLineBox();
+    // The card always shows the result, the way a game page does; the running
+    // narrative line is the plain stepper's job.
+    resultFoot.textContent = spec.resultText;
     renderMoveList();
+    if (takeFocusAfterRender) {
+      takeFocusAfterRender = false;
+      // Prefer the move now being shown, so the reader keeps a visible anchor;
+      // `host` is the fallback at ply zero, where no move is current. Either
+      // way the arrow handler, which is bound to `host`, is back in range.
+      const current = moveList.querySelector<HTMLElement>('.xq-replay-move-button.is-current');
+      (current ?? host).focus({ preventScroll: true });
+    }
+    scrollCurrentIntoView();
+  }
+
+  /**
+   * Keep the played move visible in the move column. Long games scroll the list
+   * well past the viewport, and a highlight you have to hunt for is the same as
+   * no highlight. `block: 'nearest'` so an already-visible move does not jerk
+   * the list, and the scroll is confined to the list element rather than the
+   * page: scrollIntoView on a nested scroller will happily drag the whole
+   * article to it otherwise.
+   */
+  function scrollCurrentIntoView(): void {
+    const current = moveList.querySelector<HTMLElement>('.xq-replay-move-button.is-current');
+    if (!current) return;
+    const listBox = moveList.getBoundingClientRect();
+    const box = current.getBoundingClientRect();
+    if (box.top >= listBox.top && box.bottom <= listBox.bottom) return;
+    const delta =
+      box.top < listBox.top ? box.top - listBox.top - 8 : box.bottom - listBox.bottom + 8;
+    moveList.scrollTop += delta;
+  }
+
+  // Fires once per mounted board. Stepping a move is the signal that a reader
+  // actually engaged with an embed rather than scrolling past it; firing per
+  // step would be high volume and answer the same question no better.
+  let engagementReported = false;
+  function reportEngagement(): void {
+    if (engagementReported) return;
+    engagementReported = true;
+    track('article_replay_engaged', {
+      slug: document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ?? '',
+      event: spec.event,
+      annotated: Boolean(annotated),
+    });
   }
 
   function goto(target: number): void {
+    reportEngagement();
     // Stepping while a line is open walks the LINE, not the game; the mainline
     // cursor is preserved so leaving the line lands where it was entered.
     if (variation) {
@@ -585,11 +862,32 @@ export function mountXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
+  const onDocPointer = (event: MouseEvent) => {
+    if (menu.hidden) return;
+    const target = event.target as Node | null;
+    if (target && (menu.contains(target) || menuButton.contains(target))) return;
+    closeMenu();
+  };
+  const onDocKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && !menu.hidden) {
+      closeMenu();
+      menuButton.focus({ preventScroll: true });
+    }
+  };
+  document.addEventListener('click', onDocPointer);
+  document.addEventListener('keydown', onDocKey);
   // Piece set is inline glyphs, so re-render the current ply when the picker
   // changes (board + fog react through CSS, like the static diagrams).
   const onAppearance = () => render();
   window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
+  // Notation is a display preference like the piece set: relabel and repaint.
+  const onNotation = () => {
+    relabel();
+    render();
+  };
+  window.addEventListener(xiangqiNotationChangedEvent, onNotation);
 
+  relabel();
   render();
 
   return {
@@ -601,6 +899,9 @@ export function mountXiangqiReplay(
       slider.removeEventListener('input', onSlider);
       host.removeEventListener('keydown', onKey);
       window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
+      window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      document.removeEventListener('click', onDocPointer);
+      document.removeEventListener('keydown', onDocKey);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper');
     },

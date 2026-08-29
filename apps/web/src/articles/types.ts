@@ -230,6 +230,13 @@ export type RawSvgBlock = {
   // Extra class on the <figure>, for per-diagram sizing (e.g. the shogi rules
   // page caps its full board vs. its compact per-piece move diagrams).
   className?: string;
+  /**
+   * Click (or Enter) expands the figure to a full-screen overlay. For dense
+   * figures that are legible at column width but not readable there. The
+   * artwork is inline SVG, so the expanded copy is the same nodes larger, not
+   * an upscaled raster.
+   */
+  zoomable?: boolean;
 };
 
 // Two or three raw-SVG figures on one row (stacking on narrow screens). Rules
@@ -398,6 +405,16 @@ type ArticleBase = {
    * Set this to serve search without renaming the variant on the page.
    */
   seoTitle?: string;
+  /**
+   * Extra JSON-LD nodes emitted alongside the Article node, each in its own
+   * script tag. A thunk because the payload is usually derived from the same
+   * data the page renders, and a second hand-written copy would drift from it.
+   *
+   * Exists for pages whose subject IS a list: "every xiangqi champion" is a
+   * list query, and an ItemList is the difference between ranking for the
+   * question and being the answer to it.
+   */
+  structuredData?: () => Record<string, unknown>[];
   /**
    * BCP-47 language of the article's own prose, when it is not English. The
    * three interface locales are settled and closed (en / zh-Hans / zh-Hant),

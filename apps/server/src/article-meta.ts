@@ -41,7 +41,10 @@ const RETIRED_RULES_SLUGS = new Set([
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
-  'xiangqi-champions',
+  'xiangqi-world-championship',
+  // Published 2026-08-28 and pulled back the same evening. Reachable at
+  // /blog/<slug> for review, out of the sitemap and noindex until it goes back.
+  'jieqi-platform',
   // The two Vietnamese pages are written and wired but NOT published: neither has
   // had a native read, and rules copy that is subtly wrong is worse than none.
   // That is a reviewer, not a task, and it is the real blocker on the Vietnamese
@@ -107,10 +110,16 @@ export const ARTICLE_META: Record<
       'Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
   },
   'xiangqi-champions': {
-    title: 'Who Is the Greatest Xiangqi Player?',
+    title: 'Every Xiangqi Champion',
     kind: 'article',
     description:
-      'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.',
+      'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for each of the thirteen who built the game\u2019s first fifty years. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
+  },
+  'xiangqi-world-championship': {
+    title: 'The Xiangqi World Championship',
+    kind: 'article',
+    description:
+      'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

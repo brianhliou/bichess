@@ -49,6 +49,23 @@ export {
   LIGHT_SQUARE,
 } from './tokens.js';
 export type {
+  ChampionRecord,
+  ChampionTimelineOptions,
+  ChampionTimelinePalette,
+} from './xiangqi-champion-timeline.js';
+export {
+  CHAMPIONS,
+  CHART_LAYOUT,
+  championsWithNonDefaultScript,
+  championTableRows,
+  EDITION_GAPS,
+  EDITIONS,
+  editionGapSentence,
+  FIRST_YEAR,
+  LAST_YEAR,
+  xiangqiChampionTimelineSvg,
+} from './xiangqi-champion-timeline.js';
+export type {
   XiangqiOgBoardOptions,
   XiangqiOgPiece,
   XiangqiOgRole,

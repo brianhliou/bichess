@@ -40,7 +40,11 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Find a game',
   },
   {
-    date: '2026-08-27',
+    // Dated to the day the article actually became readable, not the day it was
+    // announced. This went out on 2026-08-27 while the article was still a
+    // draft, so its link 404d in production for two days. The guid carries the
+    // date, so moving it resurfaces the item for anyone who got the dead link.
+    date: '2026-08-29',
     kind: 'article',
     headline: 'Who Is the Greatest Xiangqi Player?',
     body: 'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.',
