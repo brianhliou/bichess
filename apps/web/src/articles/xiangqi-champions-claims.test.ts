@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAMPIONS } from './xiangqi-champion-timeline.js';
+import { CHAMPIONS } from '@mistboard/board-render';
 import { xiangqiChampionsArticle } from './content/xiangqi-champions.js';
 
 // Superlatives in this article have been wrong three separate times: a caption

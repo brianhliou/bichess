@@ -1,13 +1,14 @@
-import { assert, test } from 'vitest';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
   CHAMPIONS,
   CHART_LAYOUT,
-  EDITIONS,
+  championTableRows,
   EDITION_GAPS,
+  EDITIONS,
+  editionGapSentence,
   FIRST_YEAR,
   LAST_YEAR,
-  championTableRows,
-  editionGapSentence,
   xiangqiChampionTimelineSvg,
 } from './xiangqi-champion-timeline.js';
 
@@ -22,11 +23,7 @@ test('every edition has exactly one champion, or two when shared', () => {
   for (const year of EDITIONS) {
     const won = CHAMPIONS.filter((c) => c.years.includes(year));
     const shared = CHAMPIONS.filter((c) => (c.shared ?? []).includes(year));
-    assert.equal(
-      won.length + shared.length >= 1,
-      true,
-      `no champion recorded for ${year}`,
-    );
+    assert.equal(won.length + shared.length >= 1, true, `no champion recorded for ${year}`);
     assert.equal(won.length <= 1, true, `${year} has more than one outright champion`);
     if (shared.length) assert.equal(shared.length, 2, `${year} is shared by ${shared.length}`);
   }
@@ -74,7 +71,7 @@ test('the stated title counts hold', () => {
   assert.equal(count('Yang Guanlin'), 4);
 });
 
-test('the table renders one row per champion, in the figure\'s order', () => {
+test("the table renders one row per champion, in the figure's order", () => {
   const rows = championTableRows();
   assert.equal(rows.length, CHAMPIONS.length);
   rows.forEach((row, i) => {
@@ -96,7 +93,8 @@ test('the years column lists every edition won, and claims no year that was not 
     }
     const won = [...champ.years, ...(champ.shared ?? [])];
     assert.deepEqual([...listed].sort(), [...won].sort(), `${champ.name} year list drifted`);
-    for (const y of listed) assert.equal(held.has(y), true, `${champ.name} lists ${y}, not an edition`);
+    for (const y of listed)
+      assert.equal(held.has(y), true, `${champ.name} lists ${y}, not an edition`);
   });
   // The specific trap: Hu's 1976 was cancelled, so the list must break there
   // even though the figure's bar closes over it.
@@ -141,9 +139,9 @@ test('bars bridge a single cancelled year but not the Cultural Revolution', () =
   const svg = xiangqiChampionTimelineSvg();
   // Hu Ronghua won 1964-1966 and 1974-1979. 1976 was cancelled, so 1974-1979 is
   // one bar; the seven blank years from 1967 must stay a break, not a bar.
-  const widths = [...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)" height="12"/g)].map(
-    (m) => ({ x: Number(m[1]), w: Number(m[2]) }),
-  );
+  const widths = [
+    ...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)" height="12"/g),
+  ].map((m) => ({ x: Number(m[1]), w: Number(m[2]) }));
   const cell =
     (CHART_LAYOUT.width - CHART_LAYOUT.padLeft - CHART_LAYOUT.padRight) /
     (LAST_YEAR - FIRST_YEAR + 1);

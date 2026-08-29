@@ -30,10 +30,23 @@ export type ChampionRecord = {
 
 /** Every edition actually played. The gaps are the story; see EDITION_GAPS. */
 export const EDITIONS: readonly number[] = [
-  1956, 1957, 1958, 1959, 1960, 1962, 1964, 1965, 1966,
-  1974, 1975, 1977, 1978, 1979,
+  1956,
+  1957,
+  1958,
+  1959,
+  1960,
+  1962,
+  1964,
+  1965,
+  1966,
+  1974,
+  1975,
+  1977,
+  1978,
+  1979,
   ...Array.from({ length: 41 }, (_, i) => 1980 + i),
-  2023, 2025,
+  2023,
+  2025,
 ];
 
 /**
@@ -97,7 +110,12 @@ export const CHAMPIONS: readonly ChampionRecord[] = [
     years: [2011],
     sanction: 'banned four years three months, 2025',
   },
-  { name: 'Wang Tianyi', zh: '王天一', years: [2012, 2016, 2019, 2023], sanction: 'convicted, banned' },
+  {
+    name: 'Wang Tianyi',
+    zh: '王天一',
+    years: [2012, 2016, 2019, 2023],
+    sanction: 'convicted, banned',
+  },
   { name: 'Xie Jing', zh: '谢靖', years: [2013], sanction: 'banned for life, 2026' },
   { name: 'Zheng Weitong', zh: '郑惟桐', years: [2014, 2015], sanction: 'banned for life, 2025' },
   { name: 'Xu Chao', zh: '许超', years: [2017], sanction: 'banned for life, 2026' },
@@ -184,24 +202,62 @@ function runs(years: number[]): Array<{ from: number; to: number }> {
  *  restating it: a duplicated PAD_L broke two assertions when it moved. */
 export const CHART_LAYOUT = { width: 920, padLeft: 224, padRight: 14 } as const;
 
-const PAD_L = CHART_LAYOUT.padLeft;
+const PAD_L_FULL = CHART_LAYOUT.padLeft;
 const PAD_R = CHART_LAYOUT.padRight;
 const WIDTH = CHART_LAYOUT.width;
-const ROW_H = 21;
+const DEFAULT_ROW_H = 21;
 const BAR_H = 12;
 const AXIS_H = 40;
 const LEGEND_H = 34;
-const PLOT_W = WIDTH - PAD_L - PAD_R;
-const CELL = PLOT_W / (LAST_YEAR - FIRST_YEAR + 1);
-const PLOT_H = CHAMPIONS.length * ROW_H;
-const HEIGHT = AXIS_H + PLOT_H + LEGEND_H;
+// PLOT_W, CELL and PLOT_H all depend on the options, so they are computed per
+// render rather than at module scope.
 
 const HATCH_ID = 'xq-champ-nohold';
 
-const x = (year: number) => PAD_L + (year - FIRST_YEAR) * CELL;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-export function xiangqiChampionTimelineSvg(): string {
+/**
+ * Colours for a context with no stylesheet. The article omits this and styles by
+ * class, so the figure follows the reader's theme; the share card is rasterised
+ * on the server where no CSS exists, so it passes literals.
+ */
+export type ChampionTimelinePalette = {
+  bar: string;
+  barBanned: string;
+  text: string;
+  muted: string;
+  border: string;
+};
+
+export type ChampionTimelineOptions = {
+  palette?: ChampionTimelinePalette;
+  /** Row labels off for small renditions, where 22 names cannot be read. */
+  labels?: boolean;
+  /** Omitted on the share card, which carries the article title instead. */
+  legend?: boolean;
+  credit?: boolean;
+  /**
+   * Row pitch. Rows only need to clear their label text, so a rendition without
+   * labels packs tighter; at the default the share card was letterboxed by its
+   * own height and used two thirds of the width available to it.
+   */
+  rowHeight?: number;
+};
+
+export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}): string {
+  const { palette, labels = true, legend = true, credit = true } = options;
+  const ROW_H = options.rowHeight ?? (labels ? DEFAULT_ROW_H : 15);
+  const PLOT_H = CHAMPIONS.length * ROW_H;
+  // Without row labels the plot takes the column they occupied.
+  const PAD_L = labels ? PAD_L_FULL : 24;
+  const PLOT_W = WIDTH - PAD_L - PAD_R;
+  const CELL = PLOT_W / (LAST_YEAR - FIRST_YEAR + 1);
+  const HEIGHT = AXIS_H + PLOT_H + (legend ? LEGEND_H : 14);
+  const x = (year: number) => PAD_L + (year - FIRST_YEAR) * CELL;
+  // With a palette every mark carries its own fill; without one it carries a
+  // class and the stylesheet decides.
+  const paint = (cls: string, fill: string | undefined) =>
+    palette && fill ? `fill="${fill}"` : `class="${cls}"`;
   const parts: string[] = [];
 
   parts.push(
@@ -218,8 +274,8 @@ export function xiangqiChampionTimelineSvg(): string {
   parts.push(
     `<defs><pattern id="${HATCH_ID}" width="7" height="7" patternUnits="userSpaceOnUse" ` +
       `patternTransform="rotate(45)">` +
-      `<rect width="7" height="7" class="xq-champ-void-bg"/>` +
-      `<line x1="0" y1="0" x2="0" y2="7" class="xq-champ-void-line"/>` +
+      `<rect width="7" height="7" ${paint('xq-champ-void-bg', palette?.muted)} opacity="0.05"/>` +
+      `<line x1="0" y1="0" x2="0" y2="7" ${palette ? `stroke="${palette.muted}"` : 'class="xq-champ-void-line"'} stroke-width="1.7" opacity="0.3"/>` +
       `</pattern></defs>`,
   );
 
@@ -234,7 +290,7 @@ export function xiangqiChampionTimelineSvg(): string {
     if (gap.label) {
       parts.push(
         `<text x="${(gx + gw / 2).toFixed(1)}" y="${AXIS_H - 14}" text-anchor="middle" ` +
-          `font-size="10" letter-spacing="0.04em" class="xq-champ-gap-label">${esc(gap.label)}</text>`,
+          `font-size="10" letter-spacing="0.04em" ${paint('xq-champ-gap-label', palette?.muted)}>${esc(gap.label)}</text>`,
       );
     }
   }
@@ -245,28 +301,29 @@ export function xiangqiChampionTimelineSvg(): string {
   for (let year = 1965; year <= LAST_YEAR; year += 10) {
     parts.push(
       `<line x1="${x(year).toFixed(1)}" y1="${AXIS_H - 8}" x2="${x(year).toFixed(1)}" ` +
-        `y2="${AXIS_H + PLOT_H}" stroke="var(--site-border)" stroke-width="1" opacity="0.22"/>`,
+        `y2="${AXIS_H + PLOT_H}" ${palette ? `stroke="${palette.border}"` : 'stroke="var(--site-border)"'} stroke-width="1" opacity="0.22"/>`,
     );
   }
 
-  // Credit inside the artwork, not just on an exported file: the figure travels
-  // as a screenshot far more often than as a download, and a screenshot carries
-  // whatever is drawn in it and nothing else. Top right, clear of the legend
-  // row it used to crowd.
-  parts.push(
-    `<text x="${WIDTH - PAD_R}" y="16" text-anchor="end" font-size="11" ` +
-      `class="xq-champ-credit">mistboard.com</text>`,
-  );
+  if (credit)
+    // Credit inside the artwork, not just on an exported file: the figure travels
+    // as a screenshot far more often than as a download, and a screenshot carries
+    // whatever is drawn in it and nothing else. Top right, clear of the legend
+    // row it used to crowd.
+    parts.push(
+      `<text x="${WIDTH - PAD_R}" y="16" text-anchor="end" font-size="11" ` +
+        `${paint('xq-champ-credit', palette?.muted)} opacity="0.75">mistboard.com</text>`,
+    );
 
   // Decade rules + axis labels.
   for (let year = 1960; year <= 2020; year += 10) {
     parts.push(
       `<line x1="${x(year).toFixed(1)}" y1="${AXIS_H - 8}" x2="${x(year).toFixed(1)}" ` +
-        `y2="${AXIS_H + PLOT_H}" stroke="var(--site-border)" stroke-width="1" opacity="0.5"/>`,
+        `y2="${AXIS_H + PLOT_H}" ${palette ? `stroke="${palette.border}"` : 'stroke="var(--site-border)"'} stroke-width="1" opacity="0.5"/>`,
     );
     parts.push(
       `<text x="${x(year).toFixed(1)}" y="${AXIS_H + PLOT_H + 16}" text-anchor="middle" ` +
-        `font-size="11" fill="var(--site-muted)">${year}</text>`,
+        `font-size="11" ${palette ? `fill="${palette.muted}"` : 'fill="var(--site-muted)"'}>${year}</text>`,
     );
   }
   for (const [year, anchor] of [
@@ -276,7 +333,7 @@ export function xiangqiChampionTimelineSvg(): string {
     const px = year === FIRST_YEAR ? x(year) : x(year) + CELL;
     parts.push(
       `<text x="${px.toFixed(1)}" y="${AXIS_H + PLOT_H + 16}" text-anchor="${anchor}" ` +
-        `font-size="11" fill="var(--site-heading)">${year}</text>`,
+        `font-size="11" ${palette ? `fill="${palette.text}"` : 'fill="var(--site-heading)"'}>${year}</text>`,
     );
   }
 
@@ -289,40 +346,45 @@ export function xiangqiChampionTimelineSvg(): string {
     // one-title row still reads as a row.
     parts.push(
       `<line x1="${PAD_L}" y1="${midY.toFixed(1)}" x2="${(WIDTH - PAD_R).toFixed(1)}" ` +
-        `y2="${midY.toFixed(1)}" stroke="var(--site-border)" stroke-width="1" opacity="0.35"/>`,
+        `y2="${midY.toFixed(1)}" ${palette ? `stroke="${palette.border}"` : 'stroke="var(--site-border)"'} stroke-width="1" opacity="0.35"/>`,
     );
 
     // English then Chinese, right-aligned as one run so the count column stays
     // put. The Chinese sits in a quieter fill: it identifies the player for a
     // reader who wants it without competing with the name most of this page's
     // readers can actually parse.
-    parts.push(
-      `<text x="${PAD_L - 34}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="12.5" ` +
-        `class="xq-champ-name">${esc(champ.name)} ` +
-        `<tspan class="xq-champ-zh">${esc(champ.zh)}</tspan></text>`,
-    );
-    parts.push(
-      `<text x="${PAD_L - 12}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="11.5" ` +
-        `fill="var(--site-muted)" font-variant-numeric="tabular-nums">${total}</text>`,
-    );
+    if (labels)
+      parts.push(
+        `<text x="${PAD_L - 34}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="12.5" ` +
+          `${paint('xq-champ-name', palette?.text)}>${esc(champ.name)} ` +
+          `<tspan ${paint('xq-champ-zh', palette?.muted)}>${esc(champ.zh)}</tspan></text>`,
+      );
+    if (labels)
+      parts.push(
+        `<text x="${PAD_L - 12}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="11.5" ` +
+          `${palette ? `fill="${palette.muted}"` : 'fill="var(--site-muted)"'} font-variant-numeric="tabular-nums">${total}</text>`,
+      );
 
     // Banned is a different hue, not a paler version of the same one. Encoding
     // it as "the accent, but fainter" put it on the same axis as the hatched
     // no-championship background and neither could be read off the figure.
     const barClass = champ.sanction ? 'xq-champ-bar xq-champ-bar--banned' : 'xq-champ-bar';
+    const barPaint = palette
+      ? `fill="${champ.sanction ? palette.barBanned : palette.bar}"`
+      : `class="${barClass}"`;
     for (const run of runs(champ.years)) {
       const rx = x(run.from) + 0.75;
       const rw = Math.max(CELL - 1.5, 3.5) + (run.to - run.from) * CELL;
       parts.push(
         `<rect x="${rx.toFixed(1)}" y="${(midY - BAR_H / 2).toFixed(1)}" width="${rw.toFixed(1)}" ` +
-          `height="${BAR_H}" rx="2" class="${barClass}"/>`,
+          `height="${BAR_H}" rx="2" ${barPaint}/>`,
       );
     }
     for (const year of champ.shared ?? []) {
       parts.push(
         `<rect x="${(x(year) + 0.75).toFixed(1)}" y="${(midY - BAR_H / 2).toFixed(1)}" ` +
           `width="${Math.max(CELL - 1.5, 3.5).toFixed(1)}" height="${BAR_H}" rx="2" ` +
-          `class="xq-champ-bar-shared"/>`,
+          `${palette ? `fill="none" stroke="${palette.bar}" stroke-width="1.5"` : 'class="xq-champ-bar-shared"'}/>`,
       );
     }
   });
@@ -346,29 +408,29 @@ export function xiangqiChampionTimelineSvg(): string {
     items.reduce((sum, item) => sum + SWATCH_W + SWATCH_GAP + item.label.length * CHAR_W, 0) +
     ITEM_GAP * (items.length - 1);
   let lx = PAD_L + Math.max(0, (PLOT_W - legendWidth) / 2);
-  for (const item of items) {
-    const cls =
-      item.style === 'solid'
-        ? 'xq-champ-bar'
-        : item.style === 'banned'
-          ? 'xq-champ-bar xq-champ-bar--banned'
-          : item.style === 'outline'
-            ? 'xq-champ-bar-shared'
-            : '';
-    if (item.style === 'void') {
+  if (legend)
+    for (const item of items) {
+      const cls =
+        item.style === 'solid'
+          ? 'xq-champ-bar'
+          : item.style === 'banned'
+            ? 'xq-champ-bar xq-champ-bar--banned'
+            : item.style === 'outline'
+              ? 'xq-champ-bar-shared'
+              : '';
+      if (item.style === 'void') {
+        parts.push(
+          `<rect x="${lx}" y="${ly - 9}" width="16" height="12" fill="url(#${HATCH_ID})"/>`,
+        );
+      } else {
+        parts.push(`<rect x="${lx}" y="${ly - 8}" width="16" height="10" rx="2" class="${cls}"/>`);
+      }
       parts.push(
-        `<rect x="${lx}" y="${ly - 9}" width="16" height="12" fill="url(#${HATCH_ID})"/>`,
+        `<text x="${(lx + SWATCH_W + SWATCH_GAP).toFixed(1)}" y="${ly + 1}" font-size="11" ` +
+          `${paint('xq-champ-legend', palette?.muted)}>${esc(item.label)}</text>`,
       );
-    } else {
-      parts.push(`<rect x="${lx}" y="${ly - 8}" width="16" height="10" rx="2" class="${cls}"/>`);
+      lx += SWATCH_W + SWATCH_GAP + item.label.length * CHAR_W + ITEM_GAP;
     }
-    parts.push(
-      `<text x="${(lx + SWATCH_W + SWATCH_GAP).toFixed(1)}" y="${ly + 1}" font-size="11" ` +
-        `class="xq-champ-legend">${esc(item.label)}</text>`,
-    );
-    lx += SWATCH_W + SWATCH_GAP + item.label.length * CHAR_W + ITEM_GAP;
-  }
-
 
   parts.push('</svg>');
   return parts.join('');
