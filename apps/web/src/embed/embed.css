@@ -34,3 +34,66 @@
   font-size: 14px;
   text-align: center;
 }
+
+/* Fit the frame exactly, and never hand the reader a second scrollbar.
+   An embedder gives us a box of their choosing. In an article the page scrolls
+   and the board can take its natural height from the column width; in a frame
+   there is no page to scroll, so a board sized by width overflows a shorter box
+   and the iframe's own document starts scrolling behind the move list's. The
+   board is therefore sized by HEIGHT here, and the move list keeps the internal
+   scroll it already had. */
+html,
+body.embed-body {
+  height: 100%;
+}
+
+body.embed-body {
+  overflow: hidden;
+}
+
+.embed-root {
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.embed-frame {
+  height: 100%;
+  min-height: 0;
+}
+
+.embed-widget {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.embed-widget .xq-replay,
+.embed-widget .xq-replay-annotated {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.embed-widget .xq-replay-grid {
+  flex: 1;
+  min-height: 0;
+}
+
+.embed-widget .xq-replay-board-col {
+  min-height: 0;
+}
+
+/* The board takes what is left after the seat bars and the control row, and is
+   sized by that height rather than by the column width. */
+.embed-widget .raw-svg-stepper-frame-xq {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+}
+
+.embed-widget .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"] {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+}

@@ -172,9 +172,14 @@
   margin: 20px 0 4px;
 }
 
+/* The example is the contract's own default size, not a stretched one. Asking
+   for 100% width at a fixed 560 height gave the frame a ratio the snippet below
+   never suggests, which is a poor demonstration of a documented default. */
 .developers-example iframe {
   width: 100%;
-  max-width: 100%;
+  max-width: 760px;
+  aspect-ratio: 760 / 700;
+  height: auto;
   border: 1px solid var(--site-border);
   border-radius: 4px;
   background: var(--site-panel);

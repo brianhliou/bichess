@@ -11,13 +11,30 @@
 // versa, and this sits beside engine-protocol.ts, which is here for the same
 // reason: it is a contract between two things that cannot import each other.
 
-/** Width the provider returns when a consumer asks for no particular size. */
-export const EMBED_DEFAULT_WIDTH = 720;
+/**
+ * Width the provider returns when a consumer asks for no particular size.
+ *
+ * It must stay ABOVE the widget's stacking breakpoint. The replay drops its move
+ * list under the board at `max-width: 720px` (articles.css), and the default was
+ * literally 720: every consumer taking the default got the narrow layout, in a
+ * box proportioned for the wide one. embed-contract.test.ts reads the breakpoint
+ * out of the stylesheet and fails if this number falls back onto it.
+ */
+export const EMBED_DEFAULT_WIDTH = 760;
 
-/** Height at the default width. Every other height is derived from the ratio. */
-export const EMBED_DEFAULT_HEIGHT = 560;
+/**
+ * Height at the default width. The widget's natural height runs about 0.88x its
+ * width in the side-by-side layout, measured across 721-1000px, plus the credit
+ * line. 560 was never that number for any width, which is why the default frame
+ * scrolled.
+ */
+export const EMBED_DEFAULT_HEIGHT = 700;
 
-/** Below this the move list and the board stop coexisting. */
+/**
+ * Below this the move list and the board stop coexisting. Note that anything at
+ * or under the stacking breakpoint gets the narrow layout, which is correct on a
+ * phone and wants a TALLER box than the ratio above.
+ */
 export const EMBED_MIN_WIDTH = 320;
 
 /** Above this the board stops being the reason the page is on screen. */

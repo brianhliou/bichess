@@ -65,6 +65,9 @@ export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute)
   const frame = document.createElement('div');
   frame.className = 'embed-frame';
   const host = document.createElement('div');
+  // Named so the stylesheet can make it the flexible row of the frame. The
+  // widget must fill the height it is given rather than take its natural one.
+  host.className = 'embed-widget';
   frame.append(host);
 
   const credit = document.createElement('a');
