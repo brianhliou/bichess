@@ -71,8 +71,13 @@ export const jieqiPlatformArticle: Article = {
         perspective: 'black',
       },
       caption:
-        'A real game here, and a close one: the engine led most of the way and lost it at the end. Step through and watch the pieces turn over.',
+        'Plain discs are still face-down. Each one turns over the first time it moves and is stuck with whatever it turns out to be.',
     } as ArticleBlock,
+    {
+      kind: 'paragraph',
+      text:
+        'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.',
+    },
     {
       kind: 'paragraph',
       text:
@@ -105,7 +110,17 @@ export const jieqiPlatformArticle: Article = {
           src: '/article-thumbs/jieqi-reveal-candidates.png',
           alt: 'A jieqi review move list. Move 19 is a flip carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent.',
           caption:
-            'Every flip is priced, good or bad, next to the moves you could have played instead. The percentages are how often each move wins across all the pieces that tile might have been.',
+            'Move 19 played the 39% move when 52% was there, so it is marked. Move 21 played the best one and still got a +43% gift from the flip.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text:
+            'The percentage on each move is what it was worth before you flipped, averaged over every piece that tile could have been. The dice is what the flip actually gave you on top of that. So a move can be the best choice available and still come with a large plus or minus beside it: the first number is your decision, the second is the draw.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'When your move is the top one, you chose well. Moves are only marked as mistakes when a better one was on the list.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -160,21 +175,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "It is beatable, and the game at the top of this page is one it lost. What would fix that is a trained net: almost all of modern Pikafish's strength lives in one, and jieqi has none yet. If you train nets, or you know jieqi well enough to say where its judgement goes wrong, that is the help we would most like.",
-        },
-      ],
-    },
-    {
-      heading: 'Studies',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text:
-            'Save games and positions into a study, annotate the moves, share the link. There is little jieqi to study in English, so we made a start: [engine reference games](/study/wd6c7qvG) is PikaJieQi against itself, every game played to a finish. Step through them, branch off, and run the browser engine over your own line.',
-        },
-        {
-          kind: 'cta',
-          buttons: [{ label: 'Open the study', href: '/study/wd6c7qvG', emphasis: 'primary' }],
+            "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). What would fix it is a trained net: almost all of modern Pikafish's strength lives in one, and jieqi has none yet. If you train nets, or you know jieqi well enough to say where its judgement goes wrong, that is the help we would most like.",
         },
       ],
     },
@@ -203,6 +204,16 @@ export const jieqiPlatformArticle: Article = {
               question: 'Is jieqi just luck?',
               answer:
                 'Reveals are random, but what you do with them is not. Mistboard measures the two separately: each flip is priced for how lucky it was, and your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.',
+            },
+            {
+              question: 'Can the engine see my hidden pieces?',
+              answer:
+                'No. The engine is sent the same face-down board you are looking at, with every hidden piece written as a blank. It is never told the deal, and an automated test fails the build if that data ever appears in what gets sent to it. It is guessing from the same information you have.',
+            },
+            {
+              question: 'Is the shuffle fair?',
+              answer:
+                'The deal is made at random on the server when the game starts, and nobody is told it: not you, not your opponent, and not the engine. The same deal drives both sides, so neither player has an advantage from how the pieces were arranged.',
             },
             {
               question: 'Can a computer play jieqi well?',
