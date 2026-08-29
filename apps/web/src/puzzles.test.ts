@@ -13,7 +13,12 @@ import {
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountPuzzles, puzzleMoveRowNumber, sourceGameLines } from './puzzles.js';
+import {
+  mountPuzzles,
+  puzzleMoveRowNumber,
+  renderPuzzlesShellForPrerender,
+  sourceGameLines,
+} from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
 function publicSummary(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
@@ -1029,5 +1034,45 @@ describe('sourceGameLines', () => {
         (l) => l.textContent,
       ),
     ).toEqual(['From set Xiangqi']);
+  });
+});
+
+describe('puzzles prerender shell', () => {
+  const render = (): HTMLDivElement => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderPuzzlesShellForPrerender();
+    return wrap;
+  };
+
+  it('bakes real body text rather than a bare shell', () => {
+    // /puzzles sat in the sitemap serving 27 characters of body (a <title> and
+    // nothing else) because the trainer cannot render before the API answers.
+    // The exact length is not the contract; "substantially more than a title" is.
+    const text = (render().textContent ?? '').replace(/\s+/g, ' ').trim();
+    expect(text.length).toBeGreaterThan(600);
+  });
+
+  it('gives the baked page a heading and section structure', () => {
+    const wrap = render();
+    expect(wrap.querySelector('h1')?.textContent?.trim()).toBeTruthy();
+    expect(wrap.querySelectorAll('.puzzles-intro h2').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('links onward to the rules, the course, and the analysis board', () => {
+    const hrefs = [...render().querySelectorAll('.puzzles-intro a')].map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs).toContain('/rules/xiangqi');
+    expect(hrefs).toContain('/learn/xiangqi');
+    expect(hrefs).toContain('/analysis');
+  });
+
+  it('does not reuse the screen-reader-only header class', () => {
+    // puzzles.css clips .puzzles-header to 1px because the live trainer leads
+    // with the board. Reusing it here would hide the baked heading from the
+    // no-JS visitor this page exists for.
+    const wrap = render();
+    expect(wrap.querySelector('.puzzles-intro-header')).not.toBeNull();
+    expect(wrap.querySelector('.puzzles-header')).toBeNull();
   });
 });

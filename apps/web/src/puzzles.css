@@ -90,6 +90,41 @@
   margin: 0;
 }
 
+/* The build-time explainer (renderPuzzlesShellForPrerender). Only ever visible
+   to crawlers, no-JS visitors, and the moment before the client mount replaces
+   it, so this stays deliberately plain. */
+.puzzles-intro-header .site-section-heading {
+  margin: 0 0 12px;
+}
+
+.puzzles-intro {
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+.puzzles-intro-lead {
+  font-size: 15px;
+}
+
+.puzzles-intro h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 20px 0 6px;
+}
+
+.puzzles-intro ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.puzzles-intro li {
+  margin-bottom: 6px;
+}
+
+.puzzles-intro-footer {
+  margin-top: 20px;
+}
+
 .puzzles-layout {
   display: grid;
   grid-template-columns:

@@ -599,7 +599,13 @@ function gamePageParticipantName(game: persistence.GameRecord, color: Color): st
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
-  file: 'home.html' | 'leaderboard.html' | 'player.html' | 'learn-xiangqi.html' | 'feed.html';
+  file:
+    | 'home.html'
+    | 'leaderboard.html'
+    | 'player.html'
+    | 'learn-xiangqi.html'
+    | 'feed.html'
+    | 'puzzles.html';
 }): Promise<void> {
   const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
