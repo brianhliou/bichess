@@ -1232,7 +1232,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One title, in 2011, won without losing a game: five wins and six draws. He is also where the record stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.',
+            'One title, in 2011, won without losing a game: five wins and six draws. He is where the list stops being straightforward. On 12 January 2025 the Chinese Xiangqi Association banned him for four years and three months and revoked his grandmaster title, in the same announcement that sanctioned forty-one people.',
         },
         {
           kind: 'paragraph',
@@ -1304,7 +1304,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine\u2019s lines as branches you can walk, and one chapter per champion in the same order.',
+            'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine\u2019s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.',
         },
         {
           kind: 'cta',
@@ -1315,7 +1315,7 @@ export const xiangqiChampionsArticle: Article = {
               emphasis: 'primary',
             },
             {
-              label: 'Play through all sixteen games',
+              label: 'Play through the whole study',
               href: '/study/ytSzepET',
               emphasis: 'secondary',
             },

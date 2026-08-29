@@ -38,6 +38,7 @@ function prose(): string {
     parts.push(section.heading);
     for (const block of section.blocks ?? []) {
       if (block.kind === 'paragraph') parts.push(block.text);
+      if (block.kind === 'cta') for (const b of block.buttons) parts.push(b.label);
       if ('caption' in block && block.caption) parts.push(block.caption);
     }
   }
@@ -128,5 +129,58 @@ describe('structured data', () => {
       expect(entry.item.name).toBe(CHAMPIONS[index]?.name);
       expect(entry.item.alternateName).toBe(CHAMPIONS[index]?.zh);
     });
+  });
+});
+
+describe('counts the page states about itself', () => {
+  const NUMBER_WORDS: Record<string, number> = {
+    thirteen: 13,
+    fourteen: 14,
+    fifteen: 15,
+    sixteen: 16,
+    seventeen: 17,
+  };
+
+  function boards(): number {
+    let n = 0;
+    for (const section of xiangqiChampionsArticle.sections) {
+      for (const block of section.blocks ?? []) if (block.kind === 'xq-replay') n += 1;
+    }
+    return n;
+  }
+
+  it('never offers a number of games that disagrees with the boards it renders', () => {
+    // The world final moved to the companion article and took a board with it,
+    // leaving a CTA that still offered "all sixteen games" on a page of fifteen.
+    //
+    // Scoped to CTA labels on purpose. A first pass scanned all prose and
+    // failed on "did not draw a single one of his thirteen games", which is a
+    // player's 1981 season and not a claim about this page at all; a check that
+    // cries wolf on correct sentences gets deleted by the next person.
+    const labels: string[] = [];
+    for (const section of xiangqiChampionsArticle.sections) {
+      for (const block of section.blocks ?? []) {
+        if (block.kind === 'cta') for (const b of block.buttons) labels.push(b.label);
+      }
+    }
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      for (const [word, value] of Object.entries(NUMBER_WORDS)) {
+        if (!new RegExp(`\\b${word}\\b.*\\bgames?\\b`, 'i').test(label)) continue;
+        expect(value, `the button says "${label}" but the page renders ${boards()} boards`).toBe(
+          boards(),
+        );
+      }
+    }
+  });
+
+  it('promises one game per champion for as many champions as it profiles', () => {
+    const profiled = xiangqiChampionsArticle.sections.filter((s) =>
+      /, (?:19|20)\d\d$/.test(s.heading),
+    ).length;
+    expect(prose()).toContain('thirteen');
+    expect(profiled).toBe(13);
+    // Two champions carry a second game, so boards exceed champions by exactly that.
+    expect(boards()).toBe(profiled + 2);
   });
 });

@@ -20,6 +20,18 @@ export type ChampionRecord = {
    * mainland player's name in simplified, because it is his name.
    */
   zh: string;
+  /**
+   * The script this player's own name is written in. Set at the record rather
+   * than inferred from the page, because it is a fact about the person: a
+   * mainland player keeps simplified for a Traditional reader, and a Hong Kong,
+   * Taiwan or Macau player keeps traditional for a Simplified one.
+   *
+   * Defaults to 'simplified' because every champion so far is from the
+   * mainland. Whoever adds the first non-mainland winner has to say so here,
+   * which is the point: without the field there is nothing to say it with, and
+   * the translation would quietly render his name in the wrong script.
+   */
+  zhScript?: 'simplified' | 'traditional';
   /** Every edition this player won outright. */
   years: number[];
   /** Editions shared with another player (1962 is the only one). */
@@ -123,6 +135,11 @@ export const CHAMPIONS: readonly ChampionRecord[] = [
   { name: 'Wang Kuo', zh: '王廓', years: [2020], sanction: 'banned seven years six months, 2025' },
   { name: 'Wang Yubo', zh: '王禹博', years: [2025] },
 ];
+
+/** Champions whose own name is not written in the page's default script. */
+export function championsWithNonDefaultScript(): ChampionRecord[] {
+  return CHAMPIONS.filter((c) => (c.zhScript ?? 'simplified') !== 'simplified');
+}
 
 export const FIRST_YEAR = 1956;
 export const LAST_YEAR = 2025;
