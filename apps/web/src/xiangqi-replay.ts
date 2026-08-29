@@ -39,7 +39,9 @@ const GLYPH_CLASS: Record<string, string> = {
   '?': 'xq-marker--mistake',
   '?!': 'xq-marker--inaccuracy',
   '!!': 'xq-marker--brilliant',
-  '!': 'xq-marker--great',
+  // The shared palette calls this one --good; --great has no fill defined and
+  // the badge renders as an empty disc.
+  '!': 'xq-marker--good',
 };
 const PAD = 4;
 const BOARD_W = MARGIN * 2 + 8 * CELL;

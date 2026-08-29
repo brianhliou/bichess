@@ -37,3 +37,27 @@ describe('the current-move highlight', () => {
     expect(body).not.toContain('color: var(--site-accent)');
   });
 });
+
+describe('the board judgment badge', () => {
+  it('only emits marker classes the shared palette actually fills', () => {
+    // '!' was emitted as xq-marker--great, which the palette does not define, so
+    // eight badges in the champions article rendered as empty discs.
+    const replay = readFileSync(
+      ['src/xiangqi-replay.ts', 'apps/web/src/xiangqi-replay.ts']
+        .map((candidate) => resolve(process.cwd(), candidate))
+        .find((candidate) => existsSync(candidate)) as string,
+      'utf8',
+    );
+    const palette = readFileSync(
+      ['src/board-glyph-marker.css', 'apps/web/src/board-glyph-marker.css']
+        .map((candidate) => resolve(process.cwd(), candidate))
+        .find((candidate) => existsSync(candidate)) as string,
+      'utf8',
+    );
+    const emitted = [...replay.matchAll(/'(xq-marker--[a-z]+)'/g)].map((m) => m[1] as string);
+    expect(emitted.length).toBeGreaterThan(0);
+    for (const cls of new Set(emitted)) {
+      expect(palette, `${cls} has no fill in board-glyph-marker.css`).toContain(`.${cls} `);
+    }
+  });
+});
