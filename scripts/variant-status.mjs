@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PROD_STATUS_URL = 'https://mistboard.com/api/server-status';
+const PROD_BOTS_URL = 'https://mistboard.com/api/bots';
 
 const SPECS = 'packages/game/src/game-specs.ts';
 const GATE = 'apps/server/src/game-spec-request-gate.ts';
@@ -130,7 +131,7 @@ function kebab(s) {
   return s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-/** Spec ids that have a registered variant tenant, plus the bot ids present. */
+/** Spec ids that have a registered variant tenant, plus the engines defined. */
 function parseRegistry() {
   const text = read(REGISTRY);
   const importBlock = text.slice(text.indexOf('import {'), text.indexOf('} from'));
@@ -139,7 +140,20 @@ function parseRegistry() {
   );
   assert(tenants.size > 0, `no *_SPEC_ID imports parsed from ${REGISTRY}`);
 
-  const bots = [...text.matchAll(/\bid:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
+  // Read each engine as (id, gameSpecId). Two things an earlier version got
+  // wrong, both of which printed 'no bot' for a variant that has one:
+  //   - engine ids carry dots ('python-v2-v1.6'), so the charclass needs one;
+  //   - an engine id does NOT reliably embed the spec it serves. Misty DXQ is
+  //     'python-fdx-v1.1' and serves 'dark-xiangqi'. Only the explicit
+  //     gameSpecId field connects them.
+  // \bid: cannot match inside 'engineId'/'gameSpecId' (preceding word char, and
+  // those spell it 'Id'), so this stays limited to the entry's own id field.
+  const hits = [...text.matchAll(/\bid:\s*'([a-z0-9.-]+)'/g)];
+  const bots = hits.map((m, i) => {
+    const entry = text.slice(m.index, hits[i + 1]?.index ?? text.length);
+    const spec = /\bgameSpecId:\s*'([a-z0-9-]+)'/.exec(entry);
+    return { id: m[1], gameSpecId: spec?.[1] ?? null };
+  });
   return { tenants, bots };
 }
 
@@ -191,6 +205,31 @@ async function fetchProd() {
   }
 }
 
+// Which specs prod will actually seat a bot for. The registry cannot answer
+// this: an engine is offered either through PROD_PLAYABLE_ENGINE_IDS (the legacy
+// chess picker) or as a tenant route default, and the second is invisible to a
+// static read of the file. /api/bots is the only honest source.
+async function fetchProdBots() {
+  try {
+    const res = await fetch(PROD_BOTS_URL, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return { error: `HTTP ${res.status}` };
+    const body = await res.json();
+    const list = Array.isArray(body) ? body : (body.bots ?? []);
+    const playable = new Map();
+    for (const bot of list) {
+      for (const opt of bot.playOptions ?? []) {
+        if (!opt.playable || !opt.gameSpecId) continue;
+        const who = playable.get(opt.gameSpecId) ?? new Set();
+        who.add(bot.displayName ?? bot.id);
+        playable.set(opt.gameSpecId, who);
+      }
+    }
+    return { playable };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const wantProd = args.includes('--prod');
@@ -201,14 +240,17 @@ async function main() {
   const { tenants, bots } = parseRegistry();
   const flags = parseFlags();
   const prod = wantProd ? await fetchProd() : null;
+  const prodBots = wantProd ? await fetchProdBots() : null;
 
-  // Attribute each bot to the LONGEST spec id it contains: 'mini-xiangqi'
-  // must win over 'xiangqi' for `fairy-stockfish-mini-xiangqi-strong`, or
-  // xiangqi absorbs every other variant's bots.
+  // An explicit gameSpecId wins. Otherwise fall back to the LONGEST spec id the
+  // engine id contains: 'mini-xiangqi' must beat 'xiangqi' for
+  // `fairy-stockfish-mini-xiangqi-strong`, or xiangqi absorbs every other
+  // variant's engines.
   const specIds = [...specs.keys()].sort((a, b) => b.length - a.length);
   const botCount = new Map();
   for (const bot of bots) {
-    const owner = specIds.find((id) => `-${bot}-`.includes(`-${id}-`));
+    const declared = bot.gameSpecId && specs.has(bot.gameSpecId) ? bot.gameSpecId : null;
+    const owner = declared ?? specIds.find((id) => `-${bot.id}-`.includes(`-${id}-`));
     if (owner) botCount.set(owner, (botCount.get(owner) ?? 0) + 1);
   }
 
@@ -216,7 +258,14 @@ async function main() {
     .map((spec) => {
       const registered = tenants.has(spec.id);
       const status = classify({ ...spec, gate: gate.get(spec.id), registered });
-      return { ...spec, status, registered, bots: botCount.get(spec.id) ?? 0 };
+      const pve = prodBots?.playable?.get(spec.id);
+      return {
+        ...spec,
+        status,
+        registered,
+        bots: botCount.get(spec.id) ?? 0,
+        prodPve: pve ? [...pve] : [],
+      };
     })
     .sort((a, b) => a.status.localeCompare(b.status) || a.id.localeCompare(b.id));
 
@@ -232,15 +281,33 @@ async function main() {
       console.log(`\n${row.status.toUpperCase()} — ${LEGEND[row.status] ?? ''}`);
       last = row.status;
     }
-    const bots = row.bots > 0 ? `${row.bots} bot${row.bots === 1 ? '' : 's'}` : 'no bot';
+    // This counts entries in the WEB TENANT registry only. It structurally cannot
+    // see the chess-stack path (dark-chess, dark-draft960) or a server-side route
+    // default like Misty DXQ on dark-xiangqi, so a blank here is 'none in the
+    // tenant registry', never 'no bot'. --prod is the only honest answer.
+    const tenantBots = row.bots > 0 ? `${row.bots} tenant bot${row.bots === 1 ? '' : 's'}` : '';
+    const pve = wantProd
+      ? (row.prodPve.length === 0
+          ? '—'
+          : row.prodPve.length > 2
+            ? `pve: ${row.prodPve.length} bots`
+            : `pve: ${row.prodPve.join('/')}`
+        ).padEnd(14)
+      : '';
     const name = row.publicName ? ` — ${row.publicName}` : '';
     console.log(
-      `  ${row.id.padEnd(width)}  ${row.registered ? 'tenant' : '      '}  ${bots.padEnd(7)}${name}`,
+      `  ${row.id.padEnd(width)}  ${row.registered ? 'tenant' : '      '}  ${tenantBots.padEnd(14)}${pve}${name}`,
     );
   }
 
   console.log(`\n${rows.length} specs · ${flags.size} feature flags`);
   console.log('Flags default to OFF and are set per environment, so "flag-gated" is not "live".');
+  console.log(
+    'The tenant-bot count reads apps/web/src/variant-tenant/registry.ts only. It cannot\n' +
+      'see the chess-stack path or a server-side route default, so a blank column is not\n' +
+      '"no bot". Run with --prod for the pve column, which reads /api/bots and is the\n' +
+      'only source that knows what a player is actually offered.',
+  );
 
   if (prod) {
     console.log('\nPROD (mistboard.com/api/server-status)');
@@ -250,6 +317,11 @@ async function main() {
       console.log(`  build ${prod.revision}`);
       for (const [k, v] of Object.entries(prod.flags)) console.log(`  ${k}: ${v}`);
       console.log(`  engine pools: ${prod.pools.join(', ') || 'none'}`);
+      if (prodBots?.error) {
+        console.log(
+          `  /api/bots unreachable: ${prodBots.error} — the pve column is blank, not false`,
+        );
+      }
       console.log(
         '  NOTE: only flags this endpoint chooses to expose appear here. An absent\n' +
           '  flag is unknown, not false — check the lobby or the deploy env.',
