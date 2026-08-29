@@ -83,11 +83,11 @@ describe('article public listing gates', () => {
       // lists drafts so an author can preview them; in a production build they
       // are absent from here and their routes 404 client-side.
       '/blog/co-up',
+      // Same date as co-up and jieqi-platform; ties break alphabetically by
+      // title, so 'Chơi...' then 'Every...' then 'Jieqi...'. Draft, so dev-only.
+      '/blog/xiangqi-champions',
       '/blog/jieqi-platform',
       '/blog/titled-players',
-      // Same date as titled-players; ties break alphabetically by title and
-      // 'Titled...' sorts before 'Who Is...'. Draft, so dev-only.
-      '/blog/xiangqi-champions',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
       '/blog/riverbank-cannon',
@@ -1019,14 +1019,18 @@ describe('rules variant sidebar', () => {
     expect(BANQI_SETUP_BOARD()).not.toContain('aria-label="red horse"');
   });
 
-  it('stops sample-game arrows before the destination center', () => {
+  it("marks the sample game's last move the way every other board does", () => {
+    // The replay used to draw its own green arrow, which made an article embed
+    // look like a different product from the game page. It now emits the shared
+    // origin-wash + destination-ring markers from board-lastmove.ts.
     const page = buildArticlePage('xiangqi');
     document.body.append(page);
     const controllers = mountPendingWidgets(page);
     try {
       page.querySelector<HTMLButtonElement>('.xq-replay .stepper-button-next')?.click();
-      const arrow = page.querySelector<SVGLineElement>('.xq-replay line[marker-end]');
-      expect(arrow?.getAttribute('x2')).toBe('152');
+      expect(page.querySelector('.xq-replay line[marker-end]')).toBeNull();
+      expect(page.querySelector('.xq-replay .xq-live-lastmove-from')).not.toBeNull();
+      expect(page.querySelector('.xq-replay .xq-live-lastmove-ring')).not.toBeNull();
     } finally {
       for (const controller of controllers) controller.destroy();
       page.remove();

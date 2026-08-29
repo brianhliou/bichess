@@ -230,6 +230,13 @@ export type RawSvgBlock = {
   // Extra class on the <figure>, for per-diagram sizing (e.g. the shogi rules
   // page caps its full board vs. its compact per-piece move diagrams).
   className?: string;
+  /**
+   * Click (or Enter) expands the figure to a full-screen overlay. For dense
+   * figures that are legible at column width but not readable there. The
+   * artwork is inline SVG, so the expanded copy is the same nodes larger, not
+   * an upscaled raster.
+   */
+  zoomable?: boolean;
 };
 
 // Two or three raw-SVG figures on one row (stacking on narrow screens). Rules

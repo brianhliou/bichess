@@ -100,10 +100,10 @@ export const ARTICLE_META: Record<
       'Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.',
   },
   'xiangqi-champions': {
-    title: 'Who Is the Greatest Xiangqi Player?',
+    title: 'Every Xiangqi Champion',
     kind: 'article',
     description:
-      'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.',
+      'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for each of the thirteen who built the game\u2019s first fifty years. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

@@ -1114,6 +1114,260 @@
   cursor: pointer;
 }
 
+/* The champions table is four columns wide with a long year list and a ruling
+   sentence; at the shared nowrap it scrolled sideways. Wrapping is the right
+   trade here because every cell is prose or a list, not a figure that breaks
+   when it reflows. */
+[data-article-slug="xiangqi-champions"] .article-table {
+  white-space: normal;
+}
+
+/* A name never wraps. CJK breaks between any two characters, so at a narrow
+   column "Yang Guanlin 杨官璘" split across three lines and 杨官璘 itself came
+   apart. The name column takes the width it needs; the year list and the ruling
+   sentence are the cells that can afford to reflow. */
+[data-article-slug="xiangqi-champions"] .article-table td:nth-child(1),
+[data-article-slug="xiangqi-champions"] .article-table th:nth-child(1) {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 18px;
+}
+
+[data-article-slug="xiangqi-champions"] .article-table td:nth-child(2),
+[data-article-slug="xiangqi-champions"] .article-table th:nth-child(2) {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 18px;
+}
+
+[data-article-slug="xiangqi-champions"] .article-table td:nth-child(3) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Click-to-expand figures. The trigger is a button so the affordance is
+   keyboard-reachable; it is styled to disappear so the figure still reads as a
+   figure rather than as a control. */
+.figure-zoom-trigger {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.figure-zoom-trigger:hover {
+  border-color: var(--site-border);
+}
+
+.figure-zoom-trigger:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.figure-zoom-hint {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Text via CSS rather than a DOM node: as a text node it selected and copied
+   along with the figcaption, so the caption pasted as "ExpandHatched columns
+   are...". */
+.figure-zoom-hint::after {
+  content: "Expand";
+}
+
+.figure-zoom-trigger:hover .figure-zoom-hint,
+.figure-zoom-trigger:focus-visible .figure-zoom-hint {
+  opacity: 1;
+}
+
+/* Coarse pointers get no hover, so the hint is always on there. */
+@media (hover: none) {
+  .figure-zoom-hint {
+    opacity: 1;
+  }
+}
+
+.figure-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgb(0 0 0 / 88%);
+}
+
+.figure-lightbox-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1600px;
+}
+
+/* Letterbox, never scroll. The SVG is capped on BOTH axes and its own
+   preserveAspectRatio centres it, so a figure taller than the viewport shrinks
+   to fit instead of producing a scrollbar inside the overlay. */
+.figure-lightbox-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: 88vh;
+  padding: 20px 24px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--site-bg);
+}
+
+.figure-lightbox-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(88vh - 40px);
+}
+
+/* Controls float over whatever the backdrop is dimming, so they carry their own
+   ground rather than relying on contrast against the page behind them. */
+.figure-lightbox-bar {
+  position: absolute;
+  top: -42px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.figure-lightbox-download {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.figure-lightbox-download:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 55%);
+  background: rgb(0 0 0 / 80%);
+}
+
+.figure-lightbox-download:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.figure-lightbox-download:focus-visible,
+.figure-lightbox-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.figure-lightbox-close {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.figure-lightbox-close:hover {
+  border-color: rgb(255 255 255 / 55%);
+  background: rgb(0 0 0 / 80%);
+}
+
+@media (max-width: 720px) {
+  .figure-lightbox {
+    padding: 16px;
+  }
+
+  .figure-lightbox-bar {
+    top: -38px;
+  }
+
+  .figure-lightbox-art {
+    padding: 12px;
+  }
+}
+
+/* Champions timeline figure. Colours live here rather than inline on the SVG so
+   both themes get their own value; a banned champion's bar has to stay legible
+   on a light ground and on a dark one, and it must not read as a paler version
+   of the ordinary bar. */
+.xq-champ-bar {
+  fill: var(--site-accent);
+}
+
+.xq-champ-bar--banned {
+  fill: #a8564c;
+}
+
+.xq-champ-bar-shared {
+  fill: none;
+  stroke: var(--site-accent);
+  stroke-width: 1.5;
+}
+
+.xq-champ-void-bg {
+  fill: var(--site-muted);
+  opacity: 0.05;
+}
+
+.xq-champ-void-line {
+  stroke: var(--site-muted);
+  stroke-width: 1.7;
+  opacity: 0.3;
+}
+
+.xq-champ-gap-label,
+.xq-champ-legend {
+  fill: var(--site-muted);
+}
+
+.xq-champ-credit {
+  fill: var(--site-muted);
+  opacity: 0.75;
+  letter-spacing: 0.03em;
+}
+
+:root[data-effective-theme="dark"] .xq-champ-bar--banned {
+  fill: #c9796d;
+}
+
 /* Annotated replay: a miniature study. Board and its controls in the left
    column, the move tree beside it with engine lines drawn inline under the move
    they refute. All additive — a spec with no `annotations` never attaches these
@@ -1122,38 +1376,200 @@
    (feedback_css_chunk_order_cascade). */
 .xq-replay-annotated .xq-replay-grid {
   display: grid;
-  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  align-items: stretch;
   width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel);
 }
 
 .xq-replay-annotated .xq-replay-board-col {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
   min-width: 0;
 }
 
+/* Seat bars, top and bottom of the board, same idea as a game page: the card
+   names its own players so the line above it can just carry the event. */
+.xq-replay-annotated .xq-replay-seat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  background: var(--site-bg-soft);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.xq-replay-annotated .xq-replay-seat-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--site-border);
+}
+
+.xq-replay-annotated .xq-replay-seat--red .xq-replay-seat-dot {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.xq-replay-annotated .xq-replay-seat--black .xq-replay-seat-dot {
+  background: var(--site-heading);
+  border-color: var(--site-heading);
+}
+
+.xq-replay-annotated .xq-replay-seat-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xq-replay-annotated .xq-replay-seat-role {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+/* The board runs to the card's edges. The generic 292px cap is what made the
+   old layout read as a diagram sitting in a box rather than as one object. */
+.xq-replay-annotated .raw-svg-stepper-frame-xq {
+  width: 100%;
+}
+
+.xq-replay-annotated .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"] {
+  display: block;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.xq-replay-annotated .xq-replay-slider {
+  width: 100%;
+  height: 3px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: var(--site-border);
+  cursor: pointer;
+}
+
+.xq-replay-annotated .xq-replay-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  cursor: pointer;
+}
+
+.xq-replay-annotated .xq-replay-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--site-accent);
+  cursor: pointer;
+}
+
+/* One control bar across the bottom of the card, full-bleed, big targets. Four
+   equal columns: this was a five-column template left over from when a ply
+   counter sat in the middle, which dropped the next button into the `auto`
+   column and collapsed it to 13px against its 92px neighbours. */
+.xq-replay-annotated .stepper-controls {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--site-border);
+}
+
+.xq-replay-annotated .stepper-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--site-muted);
+  cursor: pointer;
+}
+
+.stepper-icon {
+  display: block;
+  flex: none;
+}
+
+.xq-replay-annotated .stepper-button:hover:not(:disabled) {
+  background: var(--site-hover);
+  color: var(--site-heading);
+}
+
+.xq-replay-annotated .stepper-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.xq-replay-annotated .stepper-counter {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+}
+
+/* Position: absolute on the inner panel is load-bearing, not decoration. With
+   the list in normal flow the grid row grows to the full move list (4400px on
+   a 183-ply game) because a stretched grid item still contributes its content
+   height. Out of flow, the row height comes from the board column alone and
+   the list scrolls inside it. */
 .xq-replay-annotated .xq-replay-move-col {
+  position: relative;
+  min-width: 0;
+  border-left: 1px solid var(--site-border);
+}
+
+.xq-replay-annotated .xq-replay-move-inner {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+  min-height: 0;
 }
 
 .xq-replay-annotated .xq-replay-moves {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1px;
-  max-height: 320px;
-  overflow-y: auto;
+  min-height: 0;
   margin: 0;
-  padding: 8px;
-  border: 1px solid var(--site-border);
-  border-radius: 6px;
+  padding: 6px;
+  overflow-y: auto;
+  border: none;
+  border-radius: 0;
   list-style: none;
+}
+
+.xq-replay-annotated .xq-replay-result {
+  flex: none;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--site-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--site-muted);
+  text-align: center;
 }
 
 .xq-replay-annotated .xq-replay-row {
@@ -1172,31 +1588,37 @@
 .xq-replay-annotated .xq-replay-move-button {
   display: inline-flex;
   align-items: baseline;
-  gap: 2px;
-  min-width: 62px;
-  padding: 2px 6px;
+  gap: 3px;
+  min-width: 66px;
+  padding: 3px 7px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
   color: var(--site-text);
   font: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   text-align: left;
   cursor: pointer;
 }
 
 .xq-replay-annotated .xq-replay-move-button:hover {
-  border-color: var(--site-border);
+  background: var(--site-hover);
 }
 
+/* Solid block, not a tinted outline. At a glance across a 180-ply list an
+   outlined current move is indistinguishable from a hovered one. */
 .xq-replay-annotated .xq-replay-move-button.is-current {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
+  border-color: transparent;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font-weight: 600;
 }
 
-/* The inline variation. Indented and rule-marked so it reads as a branch off
-   the move above rather than as more mainline. */
+.xq-replay-annotated .xq-replay-move-button.is-current .xq-replay-glyph {
+  color: var(--site-on-accent);
+}
+
 .xq-replay-annotated .xq-replay-branch {
   display: flex;
   flex-wrap: wrap;
@@ -1226,25 +1648,27 @@
 }
 
 .xq-replay-annotated .xq-replay-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
+  flex: none;
+  margin: 6px;
   padding: 8px 10px;
-  border: 1px solid var(--site-border);
   border-radius: 6px;
+  background: var(--site-bg-soft);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--site-muted);
 }
 
 .xq-replay-annotated .xq-replay-line:empty {
   display: none;
 }
 
+/* Sentence case, not uppercase: the head carries a whole summary line now
+   ("Mistake · 12.6% win chance given up · eval +0.10"), and uppercasing a
+   sentence that long shouts. */
 .xq-replay-annotated .xq-replay-line-head {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--site-muted);
+  color: var(--site-heading);
 }
 
 .xq-replay-annotated .xq-replay-line-note {
@@ -1252,12 +1676,6 @@
   margin: 0;
   font-size: 13px;
   color: var(--site-text);
-}
-
-.xq-replay-annotated .xq-replay-engine {
-  flex-basis: 100%;
-  color: var(--site-muted);
-  font-size: 11px;
 }
 
 .xq-replay-annotated .xq-replay-line-exit {
@@ -1309,6 +1727,19 @@
 @media (max-width: 720px) {
   .xq-replay-annotated .xq-replay-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked, the move panel has no sibling to take its height from, so it goes
+     back into normal flow and caps itself. Leaving it absolute here collapses
+     it to nothing. */
+  .xq-replay-annotated .xq-replay-move-col {
+    position: static;
+    border-top: 1px solid var(--site-border);
+    border-left: none;
+  }
+
+  .xq-replay-annotated .xq-replay-move-inner {
+    position: static;
   }
 
   .xq-replay-annotated .xq-replay-moves {

@@ -15,6 +15,8 @@ import {
   gameSpecForId,
   type Square,
 } from '@mistboard/game';
+import { track } from './analytics.js';
+import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
 import { localizeAnnouncementString } from './announcement-i18n.js';
@@ -1639,6 +1641,9 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
       markXqDiagramsNoTranslate(figure);
     }
   }
+  if (block.zoomable) {
+    makeFigureZoomable(figure, block.caption ?? 'Figure');
+  }
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
@@ -1890,6 +1895,11 @@ function renderCodeBlock(block: CodeBlock): HTMLElement {
   return figure;
 }
 
+/** The slug of the article being read, for event attribution. */
+function currentArticleSlug(): string {
+  return document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ?? '';
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
@@ -1903,6 +1913,17 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
     }
+    // Article CTAs were the one conversion step on these pages with no signal
+    // at all: navigation to another route fires its own pageview, but nothing
+    // said which article sent the reader or which button they took.
+    a.addEventListener('click', () => {
+      track('article_cta_clicked', {
+        slug: currentArticleSlug(),
+        label: btn.label,
+        href: btn.href,
+        emphasis: btn.emphasis ?? 'primary',
+      });
+    });
     row.append(a);
   }
   return row;
