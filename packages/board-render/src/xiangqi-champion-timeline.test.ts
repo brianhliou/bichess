@@ -11,6 +11,7 @@ import {
   LAST_YEAR,
   xiangqiChampionTimelineSvg,
 } from './xiangqi-champion-timeline.js';
+import { xiangqiWorldTitleTimelineSvg } from './xiangqi-world-title.js';
 
 // The article states these counts in prose. They are only true because the data
 // below says so, so assert them here rather than trusting a sentence.
@@ -190,4 +191,56 @@ test('the figure distinguishes a banned champion from a year with no championshi
   assert.equal(/height="12" rx="2" fill="/.test(svg), false, 'a bar still has an inline fill');
   const banned = CHAMPIONS.filter((c) => c.sanction).length;
   assert.equal(banned > 0 && banned < CHAMPIONS.length, true);
+});
+
+// The renderer draws two grids: faint half-decade rules and labelled decade
+// rules. Both were written against the national championship's 1956-2025 span,
+// and only one was parameterised when the world title chart started sharing the
+// renderer. The world chart then printed 1990 twice, exactly on top of itself,
+// and three more decades off its own left edge, because the labelled loop still
+// counted from 1960. Neither is visible in a byte count or a node count, which
+// is what an earlier "unchanged" check compared.
+function yearLabels(svg: string): Array<{ year: string; x: number }> {
+  return [...svg.matchAll(/<text[^>]*x="([\d.]+)"[^>]*>(\d{4})<\/text>/g)].map((m) => ({
+    year: m[2] as string,
+    x: Number(m[1]),
+  }));
+}
+
+test('a chart labels each year once, and only years it covers', () => {
+  for (const [label, svg, first, last] of [
+    ['national', xiangqiChampionTimelineSvg(), 1956, 2025],
+    ['world', xiangqiWorldTitleTimelineSvg(), 1990, 2025],
+  ] as const) {
+    const labels = yearLabels(svg);
+    const years = labels.map((l) => l.year);
+    assert.equal(
+      new Set(years).size,
+      years.length,
+      `${label}: a year is labelled twice (${years.join(' ')})`,
+    );
+    for (const { year } of labels) {
+      assert.ok(
+        Number(year) >= first && Number(year) <= last,
+        `${label}: ${year} is outside the ${first}-${last} span it draws`,
+      );
+    }
+    // Both endpoints carry a label; without them the axis has no anchor.
+    assert.ok(years.includes(String(first)), `${label}: no label on ${first}`);
+    assert.ok(years.includes(String(last)), `${label}: no label on ${last}`);
+  }
+});
+
+test('the legend only claims marks the data actually contains', () => {
+  // A shared title exists once in the national record (1962) and never in the
+  // world one, so a fixed legend sends a world-chart reader hunting for a
+  // hollow bar that is not there.
+  assert.ok(
+    xiangqiChampionTimelineSvg().includes('shared title'),
+    'the national chart has a shared title and must key it',
+  );
+  assert.ok(
+    !xiangqiWorldTitleTimelineSvg().includes('shared title'),
+    'no world title was ever shared, so the key must not appear',
+  );
 });

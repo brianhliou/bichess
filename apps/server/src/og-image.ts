@@ -24,6 +24,7 @@ import {
   XIANGQI_GLYPH_PATHS,
   type XiangqiOgPiece,
   xiangqiChampionTimelineSvg,
+  xiangqiWorldTitleTimelineSvg,
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
@@ -255,6 +256,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'dark-mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', true),
   'crossroads-chess': renderCrossroadsChessOgSvg,
   'xiangqi-champions': renderChampionsOgSvg,
+  'xiangqi-world-championship': renderWorldTitleOgSvg,
 };
 
 export async function serveArticleOgImage(params: {
@@ -763,19 +765,13 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
  * figure uses, called with an explicit palette because there is no stylesheet
  * out here.
  */
-function renderChampionsOgSvg(title: string): string {
-  const chart = xiangqiChampionTimelineSvg({
-    labels: false,
-    legend: false,
-    credit: false,
-    palette: {
-      bar: '#5da271',
-      barBanned: '#c96f62',
-      text: '#f4f6ef',
-      muted: '#9ba39a',
-      border: '#3a4048',
-    },
-  });
+/**
+ * The champions card and the world title card are the same card with a
+ * different chart and a different eyebrow. Sharing the body is the same
+ * decision as sharing the chart renderer: they are a pair, and two copies is
+ * how a pair stops matching.
+ */
+function renderTimelineOgSvg(title: string, eyebrow: string, chart: string): string {
   // The generator emits a full <svg>; strip its wrapper and place the content
   // on the card canvas rather than nesting one root inside another.
   const inner = chart.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
@@ -791,11 +787,45 @@ function renderChampionsOgSvg(title: string): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    `<text x="${margin}" y="58" font-family="${FONT}" font-size="26" fill="#9ba39a" font-weight="700">57 CHAMPIONSHIPS \u00b7 22 WINNERS \u00b7 1956-2025</text>`,
+    `<text x="${margin}" y="58" font-family="${FONT}" font-size="26" fill="#9ba39a" font-weight="700">${eyebrow}</text>`,
     `<g transform="translate(${dx.toFixed(1)} ${dy}) scale(${scale.toFixed(4)})">${inner}</g>`,
     ogFooterLine(title, dy + ch * scale + 62),
     `</svg>`,
   ].join('');
+}
+
+const OG_TIMELINE_PALETTE = {
+  bar: '#5da271',
+  barBanned: '#c96f62',
+  text: '#f4f6ef',
+  muted: '#9ba39a',
+  border: '#3a4048',
+};
+
+function renderChampionsOgSvg(title: string): string {
+  return renderTimelineOgSvg(
+    title,
+    '57 CHAMPIONSHIPS \u00b7 22 WINNERS \u00b7 1956-2025',
+    xiangqiChampionTimelineSvg({
+      labels: false,
+      legend: false,
+      credit: false,
+      palette: OG_TIMELINE_PALETTE,
+    }),
+  );
+}
+
+function renderWorldTitleOgSvg(title: string): string {
+  return renderTimelineOgSvg(
+    title,
+    '19 CHAMPIONSHIPS \u00b7 11 WINNERS \u00b7 1990-2025',
+    xiangqiWorldTitleTimelineSvg({
+      labels: false,
+      legend: false,
+      credit: false,
+      palette: OG_TIMELINE_PALETTE,
+    }),
+  );
 }
 
 function renderSkillVsLuckOgSvg(title: string): string {

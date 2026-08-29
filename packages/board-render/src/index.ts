@@ -71,3 +71,12 @@ export type {
   XiangqiOgRole,
 } from './xiangqi-og-board.js';
 export { renderXiangqiOgBoardSvg } from './xiangqi-og-board.js';
+export {
+  sanctionedWorldChampions,
+  WORLD_CHAMPIONS,
+  WORLD_EDITION_GAPS,
+  WORLD_EDITIONS,
+  worldChampionTableRows,
+  worldTitleCount,
+  xiangqiWorldTitleTimelineSvg,
+} from './xiangqi-world-title.js';

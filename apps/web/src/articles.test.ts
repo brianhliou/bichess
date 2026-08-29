@@ -82,16 +82,17 @@ describe('article public listing gates', () => {
       // Published 2026-08-29, a day after the cluster below, so it leads the
       // index outright rather than tie-breaking into it.
       '/blog/xiangqi-champions',
+      // Same 2026-08-29 date as the champions article, which is deliberate: the
+      // two are a pair. The tie breaks alphabetically by title, and 'Every...'
+      // sorts before 'The Xiangqi...'. Draft, so dev-only.
+      '/blog/xiangqi-world-championship',
       // Both drafts. This assertion runs with DEV stubbed true, where the index
       // lists drafts so an author can preview them; in a production build they
-      // are absent from here and their routes 404 client-side. Same date, so
-      // ties break alphabetically by title: 'Chơi...' then 'Jieqi...'.
+      // are absent from here and their routes 404 client-side. Same 2026-08-28
+      // date, so ties break by title: 'Cờ úp...', 'Jieqi...', 'Luật...'.
       '/blog/co-up',
       '/blog/jieqi-platform',
-      // Same 2026-08-28 date, so ties break alphabetically by title:
-      // 'Cờ úp...', 'Jieqi...', 'Luật...', then 'The Xiangqi...'.
       '/blog/luat-co-up',
-      '/blog/xiangqi-world-championship',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.

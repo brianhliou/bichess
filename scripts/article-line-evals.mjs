@@ -187,7 +187,10 @@ function bake(slug, boards, evals) {
   const boardOf = new Map(boards.map((b, i) => [b.spec.iccs, i]));
 
   // Drop any previous run's symbols so re-running cannot stack them.
-  src = src.replace(/\n\s*lineEval: "[^"]*",/g, '');
+  // Both key styles: hand-authored specs are TS object literals with unquoted
+  // keys, generated ones are JSON. A regex that knew only one silently skipped a
+  // whole board, which the coverage test then reported as a missing assessment.
+  src = src.replace(/\n\s*"?lineEval"?: "[^"]*",?/g, '');
 
   const blocks = [...src.matchAll(/^const (\w+): XiangqiReplaySpec = \{/gm)];
   const inserts = [];
@@ -195,26 +198,30 @@ function bake(slug, boards, evals) {
     const start = m.index + m[0].length;
     const end = bi + 1 < blocks.length ? blocks[bi + 1].index : src.length;
     const body = src.slice(start, end);
-    const iccs = /iccs: "([^"]+)"/.exec(body);
+    const iccs = /"?iccs"?: "([^"]+)"/.exec(body);
     const board = iccs ? boardOf.get(iccs[1]) : undefined;
     if (board === undefined) return;
     let ply = null;
-    for (const t of body.matchAll(/("(\d+)":\s*\{)|(\n(\s*)line: ")/g)) {
+    for (const t of body.matchAll(/("(\d+)":\s*\{)|(\n(\s*)"?line"?: ")/g)) {
       if (t[2]) {
         ply = Number(t[2]);
         continue;
       }
       const hit = evals[`${slug}:${board}:${ply}`];
       if (!hit?.symbol) continue;
-      inserts.push([start + body.indexOf('",', t.index + t[0].length) + 2, t[4], hit.symbol]);
+      const valueEnd = body.indexOf('"', t.index + t[0].length);
+      const afterComma = body[valueEnd + 1] === ',' ? valueEnd + 2 : valueEnd + 1;
+      inserts.push([start + afterComma, t[4], hit.symbol, body[valueEnd + 1] !== ',']);
     }
   });
 
   inserts.sort((a, b) => a[0] - b[0]);
   let out = '';
   let prev = 0;
-  for (const [pos, indent, symbol] of inserts) {
-    out += src.slice(prev, pos) + `\n${indent}lineEval: "${symbol}",`;
+  for (const [pos, indent, symbol, needsComma] of inserts) {
+    // A JSON-formatted spec has no trailing comma after `line`, so one is added
+    // before the new key rather than after it.
+    out += `${src.slice(prev, pos)}${needsComma ? ',' : ''}\n${indent}"lineEval": "${symbol}"`;
     prev = pos;
   }
   writeFileSync(path, out + src.slice(prev));
@@ -277,7 +284,12 @@ async function main() {
     // Pikafish reports from the side to move; the articles speak Red POV.
     const redToMove = job.moves.length % 2 === 0;
     const redCp = cp == null ? null : redToMove ? cp : -cp;
-    const redMate = mate == null ? null : redToMove ? mate : -mate;
+    // `mate 0` means the side to move is ALREADY mated, and it is the one mate
+    // value that carries no sign of its own: negating zero loses which side lost.
+    // Resolve it from whose turn it is instead, or the line that ends in
+    // checkmate is the one line with no assessment on it.
+    const redMate =
+      mate == null ? null : mate === 0 ? (redToMove ? -1 : 1) : redToMove ? mate : -mate;
     out[job.key] = { cp: redCp, mate: redMate, symbol: symbolFor({ cp: redCp, mate: redMate }) };
     done += 1;
     if (done % 20 === 0 || done === jobs.length) console.log(`  ${done}/${jobs.length}`);

@@ -1,0 +1,86 @@
+{
+  "_": "Regeneration recipe for the world-title boards. Each entry is everything annotated-game-to-spec.mjs needs that the annotation file does not carry: the English event name, and the English rendering of each player. Sides and result are never listed here, because they come from the source and passing them in is how a board once shipped with red and black swapped.",
+  "games": [
+    {
+      "slug": "lu-qin-1997",
+      "const": "C_LQ1997",
+      "event": "1997 5th World Xiangqi Championship",
+      "names": {
+        "吕钦": "Lü Qin",
+        "吴贵临": "Wu Guilin"
+      }
+    },
+    {
+      "slug": "zhao-guorong-1991",
+      "const": "C_ZGR1991",
+      "event": "1991 2nd World Xiangqi Championship",
+      "names": {
+        "赵国荣": "Zhao Guorong",
+        "吴贵临": "Wu Guilin"
+      }
+    },
+    {
+      "slug": "xu-yinchuan-2007",
+      "const": "C_XYC2007",
+      "event": "2007 10th World Xiangqi Championship",
+      "names": {
+        "许银川": "Xu Yinchuan",
+        "阮武军": "Nguyễn Vũ Quân"
+      }
+    },
+    {
+      "slug": "zhao-xinxin-2009",
+      "const": "C_ZXX2009",
+      "event": "2009 11th World Xiangqi Championship",
+      "names": {
+        "赵鑫鑫": "Zhao Xinxin",
+        "阮成保": "Nguyễn Thành Bảo"
+      }
+    },
+    {
+      "slug": "jiang-chuan-2011",
+      "const": "C_JC2011",
+      "event": "2011 12th World Xiangqi Championship",
+      "names": {
+        "蒋川": "Jiang Chuan",
+        "李锦欢": "Lei Kam Fun"
+      }
+    },
+    {
+      "slug": "zheng-weitong-2015",
+      "const": "C_ZWT2015",
+      "event": "2015 14th World Xiangqi Championship",
+      "names": {
+        "赖理兄": "Lại Lý Huynh",
+        "郑惟桐": "Zheng Weitong"
+      }
+    },
+    {
+      "slug": "xu-chao-2019",
+      "const": "C_XC2019",
+      "event": "2019 16th World Xiangqi Championship",
+      "names": {
+        "Wu Zonghan": "Wu Zonghan",
+        "Xu Chao": "Xu Chao"
+      }
+    },
+    {
+      "slug": "wang-tianyi-2022",
+      "const": "C_WTY2022",
+      "event": "2022 17th World Xiangqi Championship",
+      "names": {
+        "王天一": "Wang Tianyi",
+        "王廓": "Wang Kuo"
+      }
+    },
+    {
+      "slug": "meng-chen-2023",
+      "const": "C_MC2023",
+      "event": "2023 18th World Xiangqi Championship",
+      "names": {
+        "孟辰": "Meng Chen",
+        "赖理兄": "Lại Lý Huynh"
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 // Xiangqi Rules article to show a full historical game.
 
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
@@ -280,9 +281,26 @@ export function mountXiangqiReplay(
     .map(iccsToMove);
 
   // Replay once; cache every position so stepping is instant.
+  //
+  // Resuming past an arbiter-adjudicated draw is what makes a tournament record
+  // replayable at all. Xiangqi's repetition and progress-clock draws are claimed
+  // by a player or called by an arbiter, not automatic, so records run straight
+  // past them: a 2015 world championship game shuffled a horse and a cannon for
+  // eight plies, our kernel called the threefold at ply 200, and every position
+  // after that froze. The notation under the board stayed right, because
+  // formatXiangqiMoves already resumes; the board did not, so half the engine
+  // lines pointed at a position that no longer moved.
+  //
+  // Only the two reasons a human decides, from the kernel's own set. Checkmate
+  // and stalemate stay terminal, because no ruleset plays on through those.
   const states: XiangqiGameState[] = [createInitialXiangqiState('xq-replay')];
-  for (const move of moves) {
-    states.push(applyXiangqiMove(states[states.length - 1]!, move));
+  for (const [index, move] of moves.entries()) {
+    let state = states[states.length - 1]!;
+    if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
+      // Red moves first, so an even index is Red's turn.
+      state = { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+    }
+    states.push(applyXiangqiMove(state, move));
   }
   const total = moves.length;
 
@@ -522,9 +540,20 @@ export function mountXiangqiReplay(
       .filter((t) => /^[a-i]\d[a-i]\d$/.test(t))
       .map(iccsToMove);
     // Truncate at the first move the rules reject rather than carrying it.
+    //
+    // The same adjudicated-draw resume the mainline needs, for the same reason:
+    // an engine line out of a repetition-heavy endgame repeats too, and without
+    // this it is cut to its first move. In the 2015 world final every ply from
+    // 248 on re-triggers the threefold, so two twenty-move lines rendered as
+    // one move each.
     let state = states[ply - 1]!;
     const legal: XiangqiMove[] = [];
-    for (const mv of parsed) {
+    for (const [step, mv] of parsed.entries()) {
+      if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
+        // Moves made so far is (ply - 1 + step); an even count means Red to move.
+        const turn = (ply - 1 + step) % 2 === 0 ? 'red' : 'black';
+        state = { ...state, status: { type: 'playing', turn } };
+      }
       const next = applyXiangqiMove(state, mv);
       if (next === state) break;
       legal.push(mv);

@@ -151,7 +151,7 @@ export const LAST_YEAR = 2025;
  * the point, but "1974-1979" written out would claim a 1976 title that was
  * never played for.
  */
-function yearList(champ: ChampionRecord): string {
+function yearList(champ: ChampionRecord, editions: readonly number[] = EDITIONS): string {
   const all = [...champ.years, ...(champ.shared ?? [])].sort((a, b) => a - b);
   const shared = new Set(champ.shared ?? []);
   const spans: Array<{ from: number; to: number }> = [];
@@ -177,11 +177,14 @@ function yearList(champ: ChampionRecord): string {
  * ran longer than the rest of the section put together, and the figure above
  * already answers "who held it when" faster than a list can.
  */
-export function championTableRows(): string[][] {
-  return CHAMPIONS.map((c) => [
+export function championTableRows(
+  records: readonly ChampionRecord[] = CHAMPIONS,
+  editions: readonly number[] = EDITIONS,
+): string[][] {
+  return records.map((c) => [
     `${c.name} ${c.zh}`,
     String(c.years.length + (c.shared?.length ?? 0)),
-    yearList(c),
+    yearList(c, editions),
     c.sanction ?? '',
   ]);
 }
@@ -195,15 +198,18 @@ export function championTableRows(): string[][] {
  */
 const MAX_BRIDGED_GAP = 1;
 
-function runs(years: number[]): Array<{ from: number; to: number }> {
-  const held = EDITIONS.filter((y) => years.includes(y));
+function runs(
+  years: number[],
+  editions: readonly number[] = EDITIONS,
+): Array<{ from: number; to: number }> {
+  const held = editions.filter((y) => years.includes(y));
   const out: Array<{ from: number; to: number }> = [];
   for (const y of held) {
     const last = out.at(-1);
-    const index = EDITIONS.indexOf(y);
+    const index = editions.indexOf(y);
     // `prevEdition` is undefined for the first edition; compare only when there
     // is a bar to extend, or `undefined === undefined` reads as a match.
-    const prevEdition = index > 0 ? EDITIONS[index - 1] : undefined;
+    const prevEdition = index > 0 ? editions[index - 1] : undefined;
     const bridges =
       last !== undefined &&
       prevEdition !== undefined &&
@@ -248,6 +254,16 @@ export type ChampionTimelinePalette = {
 
 export type ChampionTimelineOptions = {
   palette?: ChampionTimelinePalette;
+  /**
+   * The record to draw. Defaults to the national championship, which is what
+   * this module was written for; the world title passes its own so the two
+   * charts are one implementation rather than a copy that drifts.
+   */
+  records?: readonly ChampionRecord[];
+  /** Editions actually held, which is what makes the gaps hatched. */
+  editions?: readonly number[];
+  /** Gap bands to shade and label, e.g. the Cultural Revolution. */
+  gaps?: ReadonlyArray<{ from: number; to: number; label?: string }>;
   /** Row labels off for small renditions, where 22 names cannot be read. */
   labels?: boolean;
   /** Omitted on the share card, which carries the article title instead. */
@@ -263,14 +279,22 @@ export type ChampionTimelineOptions = {
 
 export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}): string {
   const { palette, labels = true, legend = true, credit = true } = options;
+  const records = options.records ?? CHAMPIONS;
+  const editions = options.editions ?? EDITIONS;
+  const gaps = options.gaps ?? EDITION_GAPS;
+  // The span comes from the data, not from a constant: a second record with a
+  // different first and last edition would otherwise be drawn on the national
+  // championship's axis and silently misplace every bar.
+  const first = editions[0] ?? FIRST_YEAR;
+  const last = editions[editions.length - 1] ?? LAST_YEAR;
   const ROW_H = options.rowHeight ?? (labels ? DEFAULT_ROW_H : 15);
-  const PLOT_H = CHAMPIONS.length * ROW_H;
+  const PLOT_H = records.length * ROW_H;
   // Without row labels the plot takes the column they occupied.
   const PAD_L = labels ? PAD_L_FULL : 24;
   const PLOT_W = WIDTH - PAD_L - PAD_R;
-  const CELL = PLOT_W / (LAST_YEAR - FIRST_YEAR + 1);
+  const CELL = PLOT_W / (last - first + 1);
   const HEIGHT = AXIS_H + PLOT_H + (legend ? LEGEND_H : 14);
-  const x = (year: number) => PAD_L + (year - FIRST_YEAR) * CELL;
+  const x = (year: number) => PAD_L + (year - first) * CELL;
   // With a palette every mark carries its own fill; without one it carries a
   // class and the stylesheet decides.
   const paint = (cls: string, fill: string | undefined) =>
@@ -297,7 +321,7 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
   );
 
   // Years with no championship, drawn first so bars and rules sit over them.
-  for (const gap of EDITION_GAPS) {
+  for (const gap of gaps) {
     const gx = x(gap.from);
     const gw = (gap.to - gap.from + 1) * CELL;
     parts.push(
@@ -315,7 +339,10 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
   // Half-decade rules, a tier fainter than the decades. With 22 rows and a
   // seventy-year span, reading a bar back to a year across a ten-year gap is
   // guesswork; a five-year grid halves the distance without adding a label.
-  for (let year = 1965; year <= LAST_YEAR; year += 10) {
+  // First mid-decade inside the span: 1965 for a 1956 start, 1995 for 1990.
+  // Parameterising this as a decade boundary instead put it exactly on the
+  // decade rules below, which is the one place it must not be.
+  for (let year = Math.ceil((first - 5) / 10) * 10 + 5; year <= last; year += 10) {
     parts.push(
       `<line x1="${x(year).toFixed(1)}" y1="${AXIS_H - 8}" x2="${x(year).toFixed(1)}" ` +
         `y2="${AXIS_H + PLOT_H}" ${palette ? `stroke="${palette.border}"` : 'stroke="var(--site-border)"'} stroke-width="1" opacity="0.22"/>`,
@@ -332,29 +359,33 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
         `${paint('xq-champ-credit', palette?.muted)} opacity="0.75">mistboard.com</text>`,
     );
 
-  // Decade rules + axis labels.
-  for (let year = 1960; year <= 2020; year += 10) {
+  // Decade rules + axis labels, bounded by the span rather than by the national
+  // championship's dates. A label is skipped when it lands on an endpoint, which
+  // already carries one: a chart starting in 1990 printed 1990 twice, on top of
+  // itself, and three more decades off its own left edge.
+  for (let year = Math.ceil(first / 10) * 10; year <= last; year += 10) {
     parts.push(
       `<line x1="${x(year).toFixed(1)}" y1="${AXIS_H - 8}" x2="${x(year).toFixed(1)}" ` +
         `y2="${AXIS_H + PLOT_H}" ${palette ? `stroke="${palette.border}"` : 'stroke="var(--site-border)"'} stroke-width="1" opacity="0.5"/>`,
     );
+    if (year === first || year === last) continue;
     parts.push(
       `<text x="${x(year).toFixed(1)}" y="${AXIS_H + PLOT_H + 16}" text-anchor="middle" ` +
         `font-size="11" ${palette ? `fill="${palette.muted}"` : 'fill="var(--site-muted)"'}>${year}</text>`,
     );
   }
   for (const [year, anchor] of [
-    [FIRST_YEAR, 'start'],
-    [LAST_YEAR, 'end'],
+    [first, 'start'],
+    [last, 'end'],
   ] as const) {
-    const px = year === FIRST_YEAR ? x(year) : x(year) + CELL;
+    const px = year === first ? x(year) : x(year) + CELL;
     parts.push(
       `<text x="${px.toFixed(1)}" y="${AXIS_H + PLOT_H + 16}" text-anchor="${anchor}" ` +
         `font-size="11" ${palette ? `fill="${palette.text}"` : 'fill="var(--site-heading)"'}>${year}</text>`,
     );
   }
 
-  CHAMPIONS.forEach((champ, i) => {
+  records.forEach((champ, i) => {
     const rowY = AXIS_H + i * ROW_H;
     const midY = rowY + ROW_H / 2;
     const total = champ.years.length + (champ.shared?.length ?? 0);
@@ -389,7 +420,7 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
     const barPaint = palette
       ? `fill="${champ.sanction ? palette.barBanned : palette.bar}"`
       : `class="${barClass}"`;
-    for (const run of runs(champ.years)) {
+    for (const run of runs(champ.years, editions)) {
       const rx = x(run.from) + 0.75;
       const rw = Math.max(CELL - 1.5, 3.5) + (run.to - run.from) * CELL;
       parts.push(
@@ -411,7 +442,9 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
   const ly = AXIS_H + PLOT_H + 30;
   const items: Array<{ style: 'solid' | 'banned' | 'outline' | 'void'; label: string }> = [
     { style: 'solid', label: 'title' },
-    { style: 'outline', label: 'shared title' },
+    ...(records.some((r) => (r.shared?.length ?? 0) > 0)
+      ? [{ style: 'outline' as const, label: 'shared title' }]
+      : []),
     { style: 'banned', label: 'title, champion later banned' },
     { style: 'void', label: 'no championship held' },
   ];
