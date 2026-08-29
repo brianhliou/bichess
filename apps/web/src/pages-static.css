@@ -11,9 +11,11 @@
   margin-bottom: 0;
 }
 
+/* The /about and /faq subheading. Same role and same numbers as
+   `.static-prose h2` in static-page-shell.css; change them together. */
 .about-subheading {
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 700;
   margin: 28px 0 10px;
   color: var(--site-heading);
   letter-spacing: 0;
