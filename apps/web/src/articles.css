@@ -2172,3 +2172,74 @@ a.article-meta-author:hover .article-meta-author-name {
 .article-faq-answer {
   margin: 0.35rem 0 0;
 }
+
+/* Figure zoom trigger. A button wrapping the image, styled back down to looking
+   like the image it wraps: the affordance is the cursor and the focus ring, not
+   a chrome button sitting in the middle of the article. */
+.article-figure-zoom {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.article-figure-zoom img,
+.article-figure-zoom svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.article-lightbox {
+  /* `margin: auto` is what centres a top-layer dialog; without it the element
+     sits wherever the default block layout puts it. */
+  margin: auto;
+  max-width: min(96vw, 1600px);
+  max-height: 94vh;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: auto;
+}
+
+/* showModal() focuses the dialog, and the UA focus ring around a full-bleed
+   image reads as a rendering fault rather than as focus. The dialog is not a
+   control; the things inside it keep their own rings. */
+.article-lightbox:focus,
+.article-lightbox:focus-visible {
+  outline: none;
+}
+
+.article-lightbox::backdrop {
+  background: rgb(0 0 0 / 78%);
+}
+
+.article-lightbox-frame {
+  /* Breathing room so the caption is not welded to the bottom edge, and so a
+     click just outside the image still lands on the backdrop and closes. */
+  padding: 0 0 0.25rem;
+  cursor: zoom-out;
+}
+
+/* Fit the viewport in BOTH orientations. Sizing on width alone blows a portrait
+   screenshot (the reveal table is taller than it is wide) past the bottom of the
+   screen and makes the reader scroll inside a lightbox, which defeats it. */
+.article-lightbox-frame img,
+.article-lightbox-frame svg {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 86vh;
+  height: auto;
+  margin-inline: auto;
+  border-radius: 6px;
+}
+
+.article-lightbox-caption {
+  margin: 0.6rem 0 0;
+  color: #eee;
+  font-size: 0.9rem;
+  text-align: center;
+}
