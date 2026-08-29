@@ -13,9 +13,9 @@
    it so the two halves of one verdict cannot drift apart. Same values as the
    inline glyph hooks in move-list.css and the board badge. */
 .move-tree {
-  --judgment-inaccuracy: #b7950b;
-  --judgment-mistake: #d68910;
-  --judgment-blunder: #c0392b;
+  --judgment-inaccuracy: #c29100;
+  --judgment-mistake: #eb7500;
+  --judgment-blunder: #e5222c;
 }
 
 /* A judged move's advice row ("Blunder. h3-e3 was best."). lichess renders the

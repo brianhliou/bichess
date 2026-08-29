@@ -17,6 +17,8 @@ export type ReplayStepperCopy = {
   start: string;
   intro: string;
   movePrefix: (moveNumber: number) => string;
+  /** Labels the engine's preferred line under a move it faulted. */
+  betterWas: string;
   first: string;
   second: string;
   /** Suffix for the hand/reserve strip label ("Red reserve", "Sente hand"). */
@@ -39,6 +41,7 @@ const COMMON: Record<
     start: 'Start',
     movePrefix: (moveNumber) => `Move ${moveNumber}`,
     noPieces: 'No pieces',
+    betterWas: 'better was',
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -49,6 +52,7 @@ const COMMON: Record<
     start: '开始',
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '无持子',
+    betterWas: '更好的走法',
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -59,6 +63,7 @@ const COMMON: Record<
     start: '開始',
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '無持子',
+    betterWas: '更好的走法',
   },
 };
 

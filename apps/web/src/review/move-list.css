@@ -124,7 +124,7 @@
   color: #1e8449;
 }
 .review-move-list__luck--unlucky {
-  color: #c0392b;
+  color: #e5222c;
 }
 .review-move-list__luck--even {
   color: var(--site-muted);
@@ -136,22 +136,22 @@
 }
 /* Engine-judgment colour hooks (filled by the analysis phases). */
 .review-move--blunder {
-  color: #c0392b;
+  color: #e5222c;
   font-weight: 700;
 }
 .review-move--mistake {
-  color: #d68910;
+  color: #eb7500;
   font-weight: 700;
 }
 .review-move--inaccuracy {
-  color: #b7950b;
+  color: #c29100;
 }
 /* Positive verdicts (game-analysis.praiseGlyph): brilliant teal, great green. */
 .review-move--brilliant {
-  color: #0f8b8d;
+  color: #00a5a8;
   font-weight: 700;
 }
 .review-move--great {
-  color: #2e7d32;
+  color: #00ad40;
   font-weight: 700;
 }

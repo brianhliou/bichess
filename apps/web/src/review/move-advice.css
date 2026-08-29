@@ -15,13 +15,13 @@
   font-weight: 700;
 }
 .review-advice--inaccuracy .review-advice__label {
-  color: #b7950b;
+  color: #c29100;
 }
 .review-advice--mistake .review-advice__label {
-  color: #d68910;
+  color: #eb7500;
 }
 .review-advice--blunder .review-advice__label {
-  color: #c0392b;
+  color: #e5222c;
 }
 
 /* Chance-variant (jieqi) accuracy-slot captions. Accuracy now grades every move luck-free (reveals

@@ -1395,6 +1395,40 @@ const ZH_HANS: Record<string, string> = {
   'banned four years three months, 2025': '禁赛四年三个月，2025',
   'convicted, banned': '判罪并禁赛',
   'banned seven years six months, 2025': '禁赛七年六个月，2025',
+
+  // -- Champions embeds: spec strings (player, event) and the sideline label.
+  // These live INSIDE the replay spec, which articleProse deliberately skips as a
+  // known gap, so the coverage gate never asked for them and the zh pages showed
+  // English names over Chinese prose. deepTranslate walks them like any string.
+  // Names are people: same in both scripts (champion-name-script.test.ts).
+  'Hu Ronghua': '胡荣华',
+  'Li Laiqun': '李来群',
+  'Li Yiting': '李义庭',
+  'Liu Dahua': '柳大华',
+  'Lü Qin': '吕钦',
+  'Su Yilin': '苏奕霖',
+  'Sun Yongzheng': '孙勇征',
+  'Tao Hanming': '陶汉明',
+  'Wang Yubo': '王禹博',
+  'Xu Tianhong': '徐天红',
+  'Xu Yinchuan': '许银川',
+  'Yang Guanlin': '杨官璘',
+  'Yu Youhua': '于幼华',
+  'Zhao Guorong': '赵国荣',
+  '1956 National Individual Championship': '1956年全国象棋个人锦标赛',
+  '1960 National Individual Championship': '1960年全国象棋个人锦标赛',
+  '1965 National Individual Championship': '1965年全国象棋个人锦标赛',
+  '1980 National Individual Championship': '1980年全国象棋个人锦标赛',
+  '1982 National Individual Championship': '1982年全国象棋个人锦标赛',
+  '1986 National Individual Championship': '1986年全国象棋个人锦标赛',
+  '1989 National Individual Championship': '1989年全国象棋个人锦标赛',
+  '1990 National Individual Championship': '1990年全国象棋个人锦标赛',
+  '1994 National Individual Championship': '1994年全国象棋个人锦标赛',
+  '1995 National Individual Championship': '1995年全国象棋个人锦标赛',
+  '1996 National Individual Championship': '1996年全国象棋个人锦标赛',
+  '2002 National Individual Championship': '2002年全国象棋个人锦标赛',
+  '2010 National Individual Championship': '2010年全国象棋个人锦标赛',
+  '2025 National Individual Championship': '2025年全国象棋个人锦标赛',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2611,6 +2645,22 @@ const ZH_HANT: Record<string, string> = {
   'banned four years three months, 2025': '禁賽四年三個月，2025',
   'convicted, banned': '判罪並禁賽',
   'banned seven years six months, 2025': '禁賽七年六個月，2025',
+
+  // -- Champions embeds: only the values that actually fork. --
+  '1956 National Individual Championship': '1956年全國象棋個人錦標賽',
+  '1960 National Individual Championship': '1960年全國象棋個人錦標賽',
+  '1965 National Individual Championship': '1965年全國象棋個人錦標賽',
+  '1980 National Individual Championship': '1980年全國象棋個人錦標賽',
+  '1982 National Individual Championship': '1982年全國象棋個人錦標賽',
+  '1986 National Individual Championship': '1986年全國象棋個人錦標賽',
+  '1989 National Individual Championship': '1989年全國象棋個人錦標賽',
+  '1990 National Individual Championship': '1990年全國象棋個人錦標賽',
+  '1994 National Individual Championship': '1994年全國象棋個人錦標賽',
+  '1995 National Individual Championship': '1995年全國象棋個人錦標賽',
+  '1996 National Individual Championship': '1996年全國象棋個人錦標賽',
+  '2002 National Individual Championship': '2002年全國象棋個人錦標賽',
+  '2010 National Individual Championship': '2010年全國象棋個人錦標賽',
+  '2025 National Individual Championship': '2025年全國象棋個人錦標賽',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

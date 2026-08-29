@@ -23,27 +23,27 @@
 }
 
 .xq-marker--blunder .xq-marker__disc {
-  fill: #c0392b;
+  fill: #e5222c;
 }
 
 .xq-marker--mistake .xq-marker__disc {
-  fill: #d68910;
+  fill: #eb7500;
 }
 
 .xq-marker--inaccuracy .xq-marker__disc {
-  fill: #b7950b;
+  fill: #c29100;
 }
 
 /* Positive glyphs, engine-computed (!! brilliant, ! great) or user-authored.
    Brilliant reads teal, good green, the speculative ones purple. */
 .xq-marker--brilliant .xq-marker__disc {
-  fill: #0f8b8d;
+  fill: #00a5a8;
 }
 
 .xq-marker--good .xq-marker__disc {
-  fill: #2e7d32;
+  fill: #00ad40;
 }
 
 .xq-marker--speculative .xq-marker__disc {
-  fill: #7b5ea7;
+  fill: #7c3aed;
 }

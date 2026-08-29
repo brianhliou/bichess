@@ -80,17 +80,17 @@
 /* Non-zero judgment counts pick up the move-glyph palette (move-list.css). */
 .analysis-summary__stat--inaccuracy .analysis-summary__stat-value,
 .analysis-summary__stat--inaccuracy .analysis-summary__stat-label {
-  color: #b7950b;
+  color: #c29100;
   font-weight: 700;
 }
 .analysis-summary__stat--mistake .analysis-summary__stat-value,
 .analysis-summary__stat--mistake .analysis-summary__stat-label {
-  color: #d68910;
+  color: #eb7500;
   font-weight: 700;
 }
 .analysis-summary__stat--blunder .analysis-summary__stat-value,
 .analysis-summary__stat--blunder .analysis-summary__stat-label {
-  color: #c0392b;
+  color: #e5222c;
   font-weight: 700;
 }
 /* Right column: headline accuracy, then per-phase rows toned by value. */
@@ -135,9 +135,9 @@
 }
 .analysis-summary__phase--low .analysis-summary__phase-value,
 .analysis-summary__phase--low .analysis-summary__phase-label {
-  color: #d68910;
+  color: #eb7500;
 }
 .analysis-summary__phase--poor .analysis-summary__phase-value,
 .analysis-summary__phase--poor .analysis-summary__phase-label {
-  color: #c0392b;
+  color: #e5222c;
 }

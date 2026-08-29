@@ -666,7 +666,7 @@ export function mountXiangqiReplay(
       // "engine" named the source; this names the thing, which is what a reader
       // needs. Every branch belongs to a ?!/?/?? move, so it is always a line
       // that was better than the one played.
-      tag.textContent = 'better was';
+      tag.textContent = copy.betterWas;
       branch.appendChild(tag);
       // A line replacing a Black move starts mid-pair, so it opens the way a
       // score sheet does: the move number, then an ellipsis standing in for
