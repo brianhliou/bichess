@@ -1,4 +1,3 @@
-import { ARTICLE_OG_POSITIONS } from '../diagrams.js';
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import {
@@ -891,7 +890,10 @@ export const xiangqiChampionsArticle: Article = {
   publishedAt: '2026-08-28',
   audience:
     'English-speaking chess players who know the world chess champions by heart and cannot name a single xiangqi player.',
-  thumbnail: ARTICLE_OG_POSITIONS.xiangqi,
+  // The chart, not a board: it is what the article is actually about, it is the
+  // only image on the page a reader would recognise later, and a start position
+  // says nothing that distinguishes this piece from any other xiangqi article.
+  thumbnail: { kind: 'svg', svg: xiangqiChampionTimelineSvg },
   intro: [
     {
       kind: 'paragraph',
