@@ -74,6 +74,45 @@ const SHOW_ANALYSIS_BEST_ARROW = true;
 /** NAG code → move-list suffix for user-authored glyphs (annotations-editor set). */
 const GLYPH_LABEL: Record<number, string> = { 1: '!', 2: '?', 3: '!!', 4: '??', 5: '!?', 6: '?!' };
 
+/**
+ * NAG code → the judgment class that colours the glyph.
+ *
+ * A stored glyph used to render in the muted default ink while the SAME
+ * judgment on an analysed game rendered in the palette, so a study of annotated
+ * games showed six grades of move in one grey. The colours are the shared
+ * palette (move-list.css, policed by review/glyph-palette.test.ts): a verdict
+ * must not change colour depending on which surface drew it.
+ */
+const GLYPH_JUDGMENT: Record<number, string> = {
+  1: 'great',
+  2: 'mistake',
+  3: 'brilliant',
+  4: 'blunder',
+  5: 'speculative',
+  6: 'inaccuracy',
+};
+
+/**
+ * NAG code → positional assessment, the verdict that CLOSES a line rather than
+ * grading a move.
+ *
+ * These are the standard PGN assessment NAGs, and they are deliberately kept
+ * apart from GLYPH_LABEL: `??` says the move was a blunder, `-+` says the
+ * position after it is lost, and they render in different slots because they
+ * answer different questions. An engine line in a study ends with one of these
+ * the way an opening book ends a line with its verdict.
+ */
+const GLYPH_ASSESSMENT: Record<number, string> = {
+  10: '=',
+  13: '\u221e',
+  14: '+=',
+  15: '=+',
+  16: '+/-',
+  17: '-/+',
+  18: '+-',
+  19: '-+',
+};
+
 /** The board handle the controller drives: render a view for a perspective, and
  *  swap the arrow / marker overlays. Arrow/Marker are OPAQUE to the controller —
  *  it only carries them from the presentation's engine/shape builders into the
@@ -1657,11 +1696,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
 
   function applyUserAnnotations(node: Node, map: Map<string, MoveTreeAnnotation>): void {
-    const code = node.annotations?.glyphs?.[0];
-    if (code !== undefined && node.parent) {
+    // A node may carry both kinds at once: a move graded `?` whose resulting
+    // position is `-+`. They are read from the whole array rather than slot
+    // zero so the second one is not silently dropped.
+    const codes = node.annotations?.glyphs ?? [];
+    const judged = codes.find((code) => GLYPH_LABEL[code] !== undefined);
+    const assessed = codes.find((code) => GLYPH_ASSESSMENT[code] !== undefined);
+    if ((judged !== undefined || assessed !== undefined) && node.parent) {
       const key = pathKey(tree.pathTo(node));
       const prev = map.get(key);
-      map.set(key, { ...prev, suffix: GLYPH_LABEL[code] ?? prev?.suffix, suffixClass: undefined });
+      map.set(key, {
+        ...prev,
+        ...(judged !== undefined
+          ? { suffix: GLYPH_LABEL[judged], suffixClass: GLYPH_JUDGMENT[judged] }
+          : {}),
+        // A server-analysis assessment already on this key wins: it was measured
+        // this session against the live position, where a stored one is whatever
+        // the author last wrote down.
+        ...(assessed !== undefined && !prev?.assessment
+          ? { assessment: GLYPH_ASSESSMENT[assessed] }
+          : {}),
+      });
     }
     // Authored comments show a small bubble marker on the move cell; the text
     // itself renders in the under-board comment panel when the cursor reaches

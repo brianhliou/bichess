@@ -155,3 +155,9 @@
   color: #00ad40;
   font-weight: 700;
 }
+/* Speculative (`!?`). Authored-only: nothing computes it, so it reached the move
+   list for the first time when stored study glyphs started carrying their colour. */
+.review-move--speculative {
+  color: #7c3aed;
+  font-weight: 700;
+}

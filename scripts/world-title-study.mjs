@@ -17,8 +17,35 @@
 // being compiled from the other. The article must not depend on the study still
 // existing, which is why it does not fetch it at render time.
 import { readFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
+
+// The article module imports stylesheets and reads `window` at module scope.
+// Same stubs the line-eval script uses, and for the same reason: the article is
+// the published source of truth for these boards, so reading it is worth a few
+// lines of shim.
+registerHooks({ resolve: stubCss });
+globalThis.window ??= {
+  matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+  localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+  addEventListener() {},
+  removeEventListener() {},
+  dispatchEvent: () => true,
+  location: { pathname: '/', search: '', origin: 'https://mistboard.com' },
+};
+globalThis.localStorage ??= globalThis.window.localStorage;
+globalThis.document ??= {
+  documentElement: { classList: { add() {}, remove() {}, contains: () => false }, style: {} },
+  createElement: () => ({
+    style: {},
+    classList: { add() {}, remove() {} },
+    setAttribute() {},
+    append() {},
+  }),
+  addEventListener() {},
+};
 
 const DATA = 'scripts/data/world-title-annotations';
 const args = process.argv.slice(2);
@@ -35,6 +62,27 @@ const toStudyUci = (iccs) => `${iccs[0]}${Number(iccs[1]) + 1}${iccs[2]}${Number
 
 /** The widget's glyphs, back to the NAG codes a study node stores. */
 const NAG = { '!': 1, '?': 2, '!!': 3, '??': 4, '!?': 5, '?!': 6 };
+
+/**
+ * The article's `lineEval` symbols, back to the standard PGN assessment NAGs.
+ *
+ * The article closes each engine sideline with a verdict (`+-`, `-+`, `+/-`,
+ * `+=`, `=`) measured by Pikafish at a million nodes. Those symbols were baked
+ * into the article and stopped there, so the study rendered the same lines with
+ * no verdict at the end of any of them. The study now carries them as real NAGs
+ * on the line's LAST node, which is where an opening book puts its verdict and
+ * where the move tree's assessment slot already looks.
+ */
+const ASSESS_NAG = {
+  '=': 10,
+  '\u221e': 13,
+  '+=': 14,
+  '=+': 15,
+  '+/-': 16,
+  '-/+': 17,
+  '+-': 18,
+  '-+': 19,
+};
 
 /**
  * A chapter tree: the mainline as first children, and each engine line hung as a
@@ -69,6 +117,13 @@ function buildTree(spec) {
       const node = { uci: toStudyUci(token), children: [] };
       cursor.children.push(node);
       cursor = node;
+    }
+    // The verdict closes the line, so it belongs to the last node of it and
+    // nowhere else. A line whose eval was never measured simply ends without
+    // one rather than being given a neutral `=` it did not earn.
+    const assess = ASSESS_NAG[annotation.lineEval];
+    if (assess !== undefined && cursor !== parent) {
+      cursor.annotations = { ...cursor.annotations, glyphs: [assess] };
     }
   }
   return { version: 1, root };
@@ -203,15 +258,46 @@ async function post(path, body, cookie) {
   return JSON.parse(text);
 }
 
+/**
+ * Every xq-replay spec on the world-title page, keyed by its mainline.
+ *
+ * Keyed by event rather than by position in the file: the specs are top-level
+ * consts whose order in the source is not the order the sections use them in,
+ * and keying by order put four dozen symbols on the wrong games once already.
+ * One game per championship edition makes the event unique, and it is the one
+ * field the manifest and the article both state in the same words. The players
+ * are not usable as a key here: the manifest records them as the source wrote
+ * them ("广东 吕钦"), the article as the page renders them ("Lü Qin").
+ */
+async function loadArticleSpecs() {
+  const mod = await import('../apps/web/src/articles/content/xiangqi-world-championship.ts');
+  const article = Object.values(mod).find((v) => v && typeof v === 'object' && 'sections' in v);
+  const specs = new Map();
+  for (const section of article.sections ?? []) {
+    for (const block of section.blocks ?? []) {
+      if (block?.kind !== 'xq-replay' || !block.spec?.iccs) continue;
+      specs.set(String(block.spec.event ?? '').trim(), block.spec);
+    }
+  }
+  return specs;
+}
+
 async function main() {
   const manifest = JSON.parse(readFileSync(join(DATA, 'manifest.json'), 'utf8'));
-  const specDir = argOf('specs', '/tmp/world-specs');
+  // Specs come from the ARTICLE, not from a scratch directory. The generated
+  // specs in /tmp are the raw conversion; the article's copies are those plus
+  // every later edit, including the measured `lineEval` verdicts. Reading /tmp
+  // meant the study was built from a file that had to still exist and that had
+  // already diverged from the page, so the two could disagree silently and the
+  // study could not be rebuilt at all once /tmp was cleared.
+  const article = await loadArticleSpecs();
   const games = manifest.games.map((game) => {
-    const spec = JSON.parse(readFileSync(join(specDir, `${game.slug}.json`), 'utf8'));
+    const source = JSON.parse(readFileSync(join(DATA, `${game.slug}.json`), 'utf8')).game;
+    const spec = article.get(game.event);
+    if (!spec) throw new Error(`no board in the article for ${game.slug} (${game.event})`);
     const year = /^(\d{4})/.exec(spec.event)?.[1] ?? '';
     // The champion is whichever side is not the opponent, read off the result.
     const champion = spec.resultText === '1-0' ? spec.red : spec.black;
-    const source = JSON.parse(readFileSync(join(DATA, `${game.slug}.json`), 'utf8')).game;
     return {
       slug: game.slug,
       year,
