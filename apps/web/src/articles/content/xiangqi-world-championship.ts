@@ -142,7 +142,7 @@ const C_ZWT2015: XiangqiReplaySpec = {
         "glyph": "??",
         "note": "blunder: 46.2 win% given up, eval #-1 after. The engine wanted the line in the sibling branch.",
         "line": "e0f0 i2i0 f0f1 d9e9 d1d2 i0i8 d2f2 f7e8 f2e2 e7c5 f1f0 i8i6 e5d3 c5e7 e2e6 i6i5 e6g6 g0h2 g6i6 i5i0 i6d6 i0i8 d3c5 h2f3 c5e4",
-        "lineEval": "=+"
+        "lineEval": "="
       },
       "200": {
         "glyph": "??",
@@ -262,7 +262,7 @@ const C_ZGR1991: XiangqiReplaySpec = {
         "glyph": "?",
         "note": "mistake: 14.3 win% given up, eval +0.71 after. The engine wanted the line in the sibling branch.",
         "line": "h0h5 g6g5 h5h6 e6d4 d7e7 c3c2 b2b0 b3d3 d5e5 d4b3 b0d0 d3a3 e7d7 f9e8 d6f7 e9f9 e5g5 a3a0 d0d1 c2c0 e1d0 c0c5 d0e1 c5g5 f7g5 a8b8 h6h9 f9e9 h9g9 e8f9 g5f7 b8f8",
-        "lineEval": "+-"
+        "lineEval": "+/-"
       },
       "42": {
         "glyph": "?!",
@@ -316,7 +316,7 @@ const C_ZGR1991: XiangqiReplaySpec = {
         "glyph": "??",
         "note": "blunder: 28.8 win% given up, eval +4.25 after. The engine wanted the line in the sibling branch.",
         "line": "f4d5 d2d5 d8d7 d5d6 c9e7 f2e1 i6i5 c3e3 b0b5 e3e4 b5c5 d6f6 c5f5 f6b6 d4c2 b6e6 e9f9 e6e8 e7c5 e4e5 c2d4 e5f5 d4f5 c4e5",
-        "lineEval": "="
+        "lineEval": "+="
       }
     }
   }
@@ -370,7 +370,7 @@ const C_ZXX2009: XiangqiReplaySpec = {
         "glyph": "?!",
         "note": "inaccuracy: 8.3 win% given up, eval +2.24 after. The engine wanted the line in the sibling branch.",
         "line": "b3e3 a0b0 g9e7 g3g4 g5g4 f6g4 c5c3 c0a2 g7f5 h0h2 h8g8 g4e3 c3e3 b0b5 e3f3 e2f2 f5h4 b5b9",
-        "lineEval": "+="
+        "lineEval": "+/-"
       },
       "40": {
         "glyph": "?",
@@ -431,114 +431,66 @@ const C_JC2011: XiangqiReplaySpec = {
 };
 
 const C_XC2019: XiangqiReplaySpec = {
-  "iccs": "h2e2 h9g7 h0g2 i9h9 i0h0 g6g5 c3c4 b9c7 b0c2 b7b3 g3g4 g5g4 h0h6 g4g3 c2d4 g3g2 b2g2 b3i3 g2g6 a9b9 d4f5 c7e8 a0a1 b9b5 a1f1 i3i5 f5d4 g9e7 f1f8 b5g5 d4e6 g7e6 e2e6 g5g0 g6c6 g0g1 f0e1 g1g0 e1f0 g0g1 f0e1 g1g0 e1f0 g0g1 f8f6 i5i0 f0e1 g1g0 e1f0 g0g7 e0e1 g7g1 e1e2 i0d0 c6d6 g1g3 e2e1 g3e3 c0e2 d0b0 d6b6 h9g9 f6g6 g9g6 h6g6 e3b3 b6c6 h7h0 e2c0 b3e3 e1f1 b0b6 e6b6 e8c7 g6f6 d9e8 c6i6 c7d5 b6b9 c9a7 f6f8 e3i3 i6h6 i3h3 h6g6 h3g3 g6h6 g3h3 h6g6 h3g3 g6h6 e9d9 h6h9 d9d8 h9h8 d8d9 h8h9 d9d8 h9h8 d5e3 c0e2 g3g1 f1f2 e3g2 f8f3 d8d9",
-  "red": "Wu Zonghan",
-  "black": "Xu Chao",
+  "iccs": "h2e2 h9g7 h0g2 i9h9 i0h0 c6c5 b0a2 b9c7 b2c2 c7b5 h0h6 c9e7 a0a1 d9e8 a1d1 g6g5 e3e4 a9b9 e2e6 g7e6 h6e6 b5a3 c2e2 h7g7 e6a6 g7g3 g2e3 b7b3 c3c4 b3b2 c4c5 h9h3 e4e5 g3g4 a6a3 h3g3 d1d3 g4g0 f0e1 g0i0 a3b3 g3g0 e1f0 g0g1 f0e1 g1g0 e1f0 g0g1 f0e1 g1g0 e1f0 b9c9 b3b2 g0g1 f0e1 g1g0 e1f0 g0g1 f0e1 g1g0 e1f0 g5g4 e2c2 g0g1 f0e1 g1g0 e1f0 g0g1 f0e1 g1g0 e1f0 c9a9 e0e1 g0g1 e1e2 g4g3 e3f5 g3g2 f5h4 i0h0 h4g2 h0h2 g2f4 g1g2 e2e1 g2g4 c2c1 g4f4 b2h2 f4f0 c5d5 a9a4 h2b2 a4e4 c0e2 e4h4 b2b0 e8d9 e1d1 f9e8 d0e1 f0f6 d5d6 h4e4 e5e6 f6f5 d3d2 e4e3 d6d7 e3e6 d7d8 e9f9 b0b9 f9f8 b9b8",
+  "red": "Xu Chao",
+  "black": "Huang Xueqian",
   "event": "2019 16th World Xiangqi Championship",
-  "resultText": "0-1",
+  "resultText": "1-0",
   "annotations": {
     "byPly": {
-      "18": {
+      "30": {
         "glyph": "?!",
-        "note": "inaccuracy: 5.5 win% given up, eval +0.28 after. The engine wanted the line in the sibling branch.",
-        "line": "a9a8 a0b0 b3i3 b0b7 a8c8 g2g9 h9g9 h6h7 i3i0 h7h0 i0i4 h0h4 i6i5 b7b5 c8d8 e2d2 d8f8 b5i5",
-        "lineEval": "=+"
+        "note": "inaccuracy: 7.2 win% given up, eval +1.42 after. The engine wanted the line in the sibling branch.",
+        "line": "a3b5 e2b2 h9h4 e3f1 h4e4 d1e1 e4e1 d0e1 g5g4 a6a5 c5c4 b2b5 b3i3 b5e5 g3d3 e5e2 i3i5 a5d5 b9d9 d5f5 c4d4 f1e3",
+        "lineEval": "="
       },
-      "36": {
+      "32": {
+        "glyph": "?!",
+        "note": "inaccuracy: 8.7 win% given up, eval +2.33 after. The engine wanted the line in the sibling branch.",
+        "line": "h9h2 d1b1 h2f2 e4e5 f2f3 e3d5 a3c4 b1d1 c4e5 d1d4 b9d9 d4e4 e5g4 d5f6 b2b8 a2b4 g3h3",
+        "lineEval": "+/-"
+      },
+      "50": {
+        "glyph": "??",
+        "note": "blunder: 32.9 win% given up, eval #1 after. The engine wanted the line in the sibling branch.",
+        "line": "b9b3 d3b3 g1g0 e1f0 b2d2 e5d5 d2d1 e2e7 e8d9 e7g7 g0g1 f0e1 g1h1 g7f7 d1d4 b3b4 h1h0 e1f0 d4d1 b4e4 d9e8 e0e1 h0h1 f7f1 d1f1 e3f1 i0i1 e4b4 g9e7 b4b9 e8d9 b9b7",
+        "lineEval": "+/-"
+      },
+      "51": {
+        "glyph": "??",
+        "note": "blunder: 32.9 win% given up, eval +1.93 after. The engine wanted the line in the sibling branch.",
+        "line": "e1f0",
+        "lineEval": "+/-"
+      },
+      "52": {
         "glyph": "?",
-        "note": "mistake: 11.1 win% given up, eval +1.23 after. The engine wanted the line in the sibling branch.",
-        "line": "i5i0 f8f6 g0g1 f0e1 g1g0 e1f0 g0g3",
-        "lineEval": "="
-      },
-      "37": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.7 win% given up, eval +0.48 after. The engine wanted the line in the sibling branch.",
-        "line": "c0e2 i5i0 f0e1 h9g9 e0f0 i6i5 f8f7 g1g0 f0f1 g0g1 f1f0",
+        "note": "mistake: 11.3 win% given up, eval +3.50 after. The engine wanted the line in the sibling branch.",
+        "line": "b9b3 d3b3 b2d2 e5d5 g0g2 f0e1 g2g0 e1f0 d2d1 e2e7 g9e7 b3b9 e8d9 e3d1 g0g1 f0e1 e7c5 d5e5 g1g0 e1f0 g0g2 f0e1 g5g4 b9b2 g2g0 e1f0 g0g3 f0e1 i0i1 d1b0 i1i0 b2i2",
         "lineEval": "+/-"
       },
-      "39": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.9 win% given up, eval +0.15 after. The engine wanted the line in the sibling branch.",
-        "line": "f8f0 g0g3 e3e4 g3g4 e4e5 g4g5 e5f5 i5f5 c4c5 f5e5 e1d2 e5e3 f0f3 e3e4 e0f0 g5g0 f0f1 e4b4 h6h7 h9g9 f1e1 g0g1 e1e0",
-        "lineEval": "+/-"
-      },
-      "40": {
-        "glyph": "?!",
-        "note": "inaccuracy: 8.3 win% given up, eval +1.06 after. The engine wanted the line in the sibling branch.",
-        "line": "i5i0 f8f6 h9g9 c0e2 g0g6 h6h0 g6f6 c6f6 h7i7 c4c5 i6i5 f6h6 i7h7 h0i0",
-        "lineEval": "="
-      },
-      "43": {
-        "glyph": "?!",
-        "note": "inaccuracy: 7.3 win% given up, eval +0.00 after. The engine wanted the line in the sibling branch.",
-        "line": "f8f0 h9g9 c0e2 g0g3 e3e4 i5b5 c4c5 b5b0 e2c0 h7h9 e4e5 i6i5 f0f6 b0b3 e5d5 g3g0 f6f0 g0g3 c5b5",
-        "lineEval": "+="
-      },
-      "44": {
-        "glyph": "?!",
-        "note": "inaccuracy: 7.5 win% given up, eval +0.82 after. The engine wanted the line in the sibling branch.",
-        "line": "g0g3 f0e1 g3g0",
-        "lineEval": "+="
-      },
-      "45": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.8 win% given up, eval +0.18 after. The engine wanted the line in the sibling branch.",
-        "line": "c0e2 g1g2 f8f4 i5e5 f4d4 e5e2 d4d6 h9g9 h6h7 g9g3 e3e4 g3g4 e4e5 g4c4 h7h1 e2a2 h1a1 c4c5 c6b6 g2b2 a1d1 c5e5 d0e1 b2b0 d1d0 a2e2 e6e2 b0d0 e0d0 e8c7",
-        "lineEval": "+="
-      },
-      "59": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.7 win% given up, eval -0.87 after. The engine wanted the line in the sibling branch.",
-        "line": "e1f1 d0e0 e6e0 e3e0 d6e6 e0e6 f6e6 e8g9 e6g6 g9f7 g6g7 f7g5 f1e1 f9e8 g7g6 g5f3 e1d1 i6i5",
-        "lineEval": "="
-      },
-      "61": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.5 win% given up, eval -1.54 after. The engine wanted the line in the sibling branch.",
-        "line": "c4c5 b0b7 c5c6 e3a3 c6b6 b7d7 b6c6 a3a1 e1e0 a1a2 e0e1 a2c2 f6f8 h9g9 h6g6",
-        "lineEval": "=+"
-      },
-      "72": {
+      "60": {
         "glyph": "??",
-        "note": "blunder: 68.0 win% given up, eval #4 after. The engine wanted the line in the sibling branch.",
-        "line": "e3f3 f1e1 f3a3 e1f1 a3f3 f1e1 f3e3 e1f1 e3h3 c0a2 h3f3 f1e1 b0b6 e6b6 f3e3 e1f1 e8c7 g6f6 d9e8 c6a6 c9a7 b6i6 c7d5 i6i9 e7g9 a6e6 e9d9 f6f5 e3d3 e6e2 d5c3 f0e1",
-        "lineEval": "-+"
-      },
-      "73": {
-        "glyph": "??",
-        "note": "blunder: 65.0 win% given up, eval -1.71 after. The engine wanted the line in the sibling branch.",
-        "line": "g6f6 e3e1 f0e1 b6b1 e1f0 b1c1 f6f9",
+        "note": "blunder: 16.5 win% given up, eval #1 after. The engine wanted the line in the sibling branch.",
+        "line": "i0h0 e0f0 g1g0 f0f1 g0g3 a2b4 g3g1 f1f0 g1g0 f0f1 h0h2 e1f2 h2e2 c0e2 c9c5 e3d5 g5g4 b4c2 e8d9 f1e1",
         "lineEval": "+-"
       },
-      "81": {
-        "glyph": "?!",
-        "note": "inaccuracy: 8.1 win% given up, eval -3.61 after. The engine wanted the line in the sibling branch.",
-        "line": "f6f5 e3d3 c0e2 h0h7 i6c6 e9d9 f5e5 h7f7 f1e1 d5c7 e5e7 c7b9 c6i6 d3i3 i6g6 i3g3 e2g4 g3g4 g6i6 b9d8 i6i9 g4g9 e7e8 d8c6 e8e6 g9i9 e6c6 i9i1 e1e0",
-        "lineEval": "-+"
+      "61": {
+        "glyph": "??",
+        "note": "blunder: 19.7 win% given up, eval +3.80 after. The engine wanted the line in the sibling branch.",
+        "line": "e1f0",
+        "lineEval": "+-"
       },
-      "84": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.7 win% given up, eval -2.84 after. The engine wanted the line in the sibling branch.",
-        "line": "d5e3 c0e2 i3i1 f1f2 i1i2 f2f1 e9d9 h6h9 d9d8 h9h8 i2i1 f1f2 e3g2 f8f3 e8d7 h8h2",
-        "lineEval": "-+"
+      "70": {
+        "glyph": "??",
+        "note": "blunder: 18.4 win% given up, eval #1 after. The engine wanted the line in the sibling branch.",
+        "line": "c9a9 e1d2 g1g0 e0e1 g0g1 e1e0 e7c9 e3f5 g1g0 e0e1 g0g1 e1e0 g4f4 b2b4 g1g5 c2c1 g5g1 e5e6",
+        "lineEval": "+-"
       },
-      "85": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.7 win% given up, eval -3.88 after. The engine wanted the line in the sibling branch.",
-        "line": "h6h0 h3h1 f1f2 h1h0 f2e2 h0h4 f8f3 h4c4 e2f2 c4c0 f2f1 d5b4 f0e1 c0c4 f3e3 a7c5 f1f0 e7g9 f0e0 c4c0 e1d0",
-        "lineEval": "-+"
-      },
-      "88": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.1 win% given up, eval -2.88 after. The engine wanted the line in the sibling branch.",
-        "line": "g3g1 f1f2 g1g2 f2f1 d5e3 c0e2 e9d9 h6h9 g2g9 b9b8 g9h9 f8h8 h9g9 h8g8 h0h6 g8g9 e7g9 b8a8 h6h0",
-        "lineEval": "-+"
-      },
-      "89": {
-        "glyph": "?!",
-        "note": "inaccuracy: 7.6 win% given up, eval -4.10 after. The engine wanted the line in the sibling branch.",
-        "line": "h6h0 h3h1 f1f2 h1h0 f2e2 h0h4 f8f3 h4c4 e2f2 c4c0 f2f1 d5b4 f0e1 c0c4 f3e3 b4c2 e3e7 c4f4 e1f2 c2d0 e7e0 d0c2 e0e2",
-        "lineEval": "-+"
+      "71": {
+        "glyph": "??",
+        "note": "blunder: 17.2 win% given up, eval +4.25 after. The engine wanted the line in the sibling branch.",
+        "line": "e1f0",
+        "lineEval": "+-"
       }
     }
   }
@@ -850,7 +802,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_XC2019 },
           caption:
-            'Wu Zonghan vs Xu Chao, 2019, round seven on board one. Xu Chao is Black, and it is the least accurate game on this page from either side.',
+            'Xu Chao vs Huang Xueqian, 2019, the final round. This is the game that won it: nine judged moves between them, and six of those are blunders.',
         },
       ],
     },

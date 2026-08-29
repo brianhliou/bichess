@@ -3,6 +3,7 @@
 //
 //   node scripts/world-title-study.mjs --cookie ~/.mistboard-cookie --dry-run
 //   node scripts/world-title-study.mjs --cookie ~/.mistboard-cookie --create
+//   node scripts/world-title-study.mjs --cookie ~/.mistboard-cookie --update 1pfJeXA1
 //
 // Dry run is the default and prints what it would post. --create writes to the
 // account the cookie belongs to: one study, then a chapter per game.
@@ -27,6 +28,7 @@ const argOf = (k, d = '') => {
 };
 const BASE = argOf('base', 'https://mistboard.com');
 const CREATE = args.includes('--create');
+const UPDATE = argOf('update');
 
 /** Study trees use ranks 1-10; everything upstream of here is ICCS 0-9. */
 const toStudyUci = (iccs) => `${iccs[0]}${Number(iccs[1]) + 1}${iccs[2]}${Number(iccs[3]) + 1}`;
@@ -87,6 +89,55 @@ function chapterFor(game, spec) {
   };
 }
 
+async function send(method, path, body, cookie) {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { 'content-type': 'application/json', cookie },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${text.slice(0, 160)}`);
+  return JSON.parse(text);
+}
+
+/**
+ * Bring an existing study's chapters in line with the annotations.
+ *
+ * Matched by chapter NAME, which is `year · champion` and unique per study. The
+ * tree save is version-guarded, so a chapter edited in the study UI since the
+ * last run makes this 409 rather than overwrite the edit.
+ */
+async function update(studyId, games, cookie) {
+  const current = await (await fetch(`${BASE}/api/studies/${studyId}`)).json();
+  const byName = new Map(current.chapters.map((c) => [c.name, c]));
+  let changed = 0;
+  for (const game of games) {
+    const name = `${game.year} · ${game.champion}`;
+    const chapter = byName.get(name);
+    if (!chapter) {
+      console.log(`  ? no chapter named "${name}"`);
+      continue;
+    }
+    const root = buildTree(game.spec);
+    if (JSON.stringify(chapter.root) === JSON.stringify(root)) {
+      console.log(`  = ${name}`);
+      continue;
+    }
+    await send(
+      'PATCH',
+      `/api/studies/${studyId}/chapters/${chapter.id}`,
+      {
+        root,
+        baseVersion: chapter.version,
+      },
+      cookie,
+    );
+    console.log(`  ~ ${name}`);
+    changed += 1;
+  }
+  console.log(`\n${changed} chapter(s) updated`);
+}
+
 async function post(path, body, cookie) {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
@@ -121,13 +172,21 @@ async function main() {
     );
   }
 
-  if (!CREATE) {
-    console.log(`\ndry run: ${games.length} chapters. Pass --create to write them.`);
+  if (!CREATE && !UPDATE) {
+    console.log(
+      `\ndry run: ${games.length} chapters. --create writes a new study, --update <id> syncs one.`,
+    );
     return;
   }
 
   const cookiePath = argOf('cookie', join(homedir(), '.mistboard-cookie'));
   const cookie = readFileSync(cookiePath, 'utf8').trim();
+
+  if (UPDATE) {
+    await update(UPDATE, games, cookie);
+    console.log(`${BASE}/study/${UPDATE}`);
+    return;
+  }
   const [first, ...rest] = games;
   const study = await post(
     '/api/studies',

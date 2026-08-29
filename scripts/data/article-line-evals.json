@@ -5,12 +5,12 @@
     "symbol": "="
   },
   "xiangqi-champions:0:26": {
-    "cp": -110,
+    "cp": -112,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-champions:0:33": {
-    "cp": 450,
+    "cp": 449,
     "mate": null,
     "symbol": "+-"
   },
@@ -20,34 +20,34 @@
     "symbol": "+="
   },
   "xiangqi-champions:0:83": {
-    "cp": 175,
+    "cp": 182,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:0:122": {
     "cp": null,
-    "mate": 17,
+    "mate": 15,
     "symbol": "+-"
   },
   "xiangqi-champions:0:129": {
-    "cp": 437,
+    "cp": 433,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:0:130": {
-    "cp": 120,
+    "cp": 124,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:0:146": {
-    "cp": 486,
+    "cp": 508,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:1:98": {
-    "cp": 32,
+    "cp": 25,
     "mate": null,
-    "symbol": "+="
+    "symbol": "="
   },
   "xiangqi-champions:2:17": {
     "cp": 0,
@@ -55,47 +55,47 @@
     "symbol": "="
   },
   "xiangqi-champions:2:28": {
-    "cp": -38,
+    "cp": -46,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-champions:2:29": {
-    "cp": 43,
+    "cp": 34,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:2:37": {
-    "cp": 1,
+    "cp": 0,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:2:45": {
-    "cp": -13,
+    "cp": -10,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:2:66": {
-    "cp": -355,
+    "cp": -351,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:2:67": {
-    "cp": -148,
+    "cp": -146,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-champions:2:93": {
-    "cp": -122,
+    "cp": -116,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-champions:2:96": {
-    "cp": -227,
+    "cp": -213,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-champions:2:103": {
-    "cp": -80,
+    "cp": -68,
     "mate": null,
     "symbol": "=+"
   },
@@ -105,7 +105,7 @@
     "symbol": "="
   },
   "xiangqi-champions:2:130": {
-    "cp": -460,
+    "cp": -452,
     "mate": null,
     "symbol": "-+"
   },
@@ -125,7 +125,7 @@
     "symbol": "+="
   },
   "xiangqi-champions:3:34": {
-    "cp": -185,
+    "cp": -187,
     "mate": null,
     "symbol": "-/+"
   },
@@ -140,97 +140,97 @@
     "symbol": "-+"
   },
   "xiangqi-champions:3:44": {
-    "cp": 4,
+    "cp": 2,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:3:48": {
-    "cp": -93,
+    "cp": -80,
     "mate": null,
-    "symbol": "-/+"
+    "symbol": "=+"
   },
   "xiangqi-champions:3:49": {
-    "cp": 213,
+    "cp": 202,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:3:50": {
-    "cp": -323,
+    "cp": -322,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:3:63": {
-    "cp": 166,
+    "cp": 160,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:3:67": {
-    "cp": 128,
+    "cp": 130,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:3:68": {
-    "cp": -341,
+    "cp": -323,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:3:70": {
-    "cp": 57,
+    "cp": 61,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:3:93": {
-    "cp": 299,
+    "cp": 290,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:3:113": {
-    "cp": 291,
+    "cp": 294,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:3:118": {
-    "cp": 29,
+    "cp": 18,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:3:121": {
-    "cp": 597,
-    "mate": null,
+    "cp": null,
+    "mate": 9,
     "symbol": "+-"
   },
   "xiangqi-champions:3:124": {
-    "cp": -296,
+    "cp": -276,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:47": {
-    "cp": -67,
+    "cp": -64,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-champions:4:53": {
-    "cp": -373,
+    "cp": -370,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:54": {
-    "cp": -396,
+    "cp": -389,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:57": {
-    "cp": -263,
+    "cp": -266,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:58": {
-    "cp": -325,
+    "cp": -331,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:64": {
-    "cp": -254,
+    "cp": -278,
     "mate": null,
     "symbol": "-+"
   },
@@ -245,17 +245,17 @@
     "symbol": "="
   },
   "xiangqi-champions:4:73": {
-    "cp": -11,
+    "cp": -10,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:4:81": {
-    "cp": -329,
+    "cp": -342,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:4:88": {
-    "cp": -293,
+    "cp": -292,
     "mate": null,
     "symbol": "-+"
   },
@@ -265,122 +265,122 @@
     "symbol": "-+"
   },
   "xiangqi-champions:4:103": {
-    "cp": -45,
+    "cp": -44,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-champions:4:115": {
-    "cp": -25,
+    "cp": -18,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:5:13": {
-    "cp": 7,
+    "cp": 20,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:5:18": {
-    "cp": -446,
+    "cp": -433,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:5:22": {
-    "cp": -17,
+    "cp": -15,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:5:25": {
-    "cp": 247,
+    "cp": 229,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:5:26": {
-    "cp": 68,
+    "cp": 53,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:5:27": {
-    "cp": -5,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-champions:5:32": {
-    "cp": -220,
-    "mate": null,
-    "symbol": "-/+"
-  },
-  "xiangqi-champions:5:33": {
-    "cp": 100,
-    "mate": null,
-    "symbol": "+/-"
-  },
-  "xiangqi-champions:5:41": {
-    "cp": -139,
-    "mate": null,
-    "symbol": "-/+"
-  },
-  "xiangqi-champions:6:44": {
-    "cp": -11,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-champions:6:85": {
-    "cp": 419,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:7:36": {
     "cp": 0,
     "mate": null,
     "symbol": "="
   },
+  "xiangqi-champions:5:32": {
+    "cp": -225,
+    "mate": null,
+    "symbol": "-/+"
+  },
+  "xiangqi-champions:5:33": {
+    "cp": 99,
+    "mate": null,
+    "symbol": "+/-"
+  },
+  "xiangqi-champions:5:41": {
+    "cp": -153,
+    "mate": null,
+    "symbol": "-/+"
+  },
+  "xiangqi-champions:6:44": {
+    "cp": -12,
+    "mate": null,
+    "symbol": "="
+  },
+  "xiangqi-champions:6:85": {
+    "cp": 420,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:7:36": {
+    "cp": -4,
+    "mate": null,
+    "symbol": "="
+  },
   "xiangqi-champions:7:37": {
-    "cp": 64,
+    "cp": 62,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:7:49": {
-    "cp": -34,
+    "cp": -23,
     "mate": null,
-    "symbol": "=+"
+    "symbol": "="
   },
   "xiangqi-champions:7:53": {
-    "cp": -55,
+    "cp": -57,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-champions:7:60": {
-    "cp": -358,
+    "cp": -352,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:7:94": {
-    "cp": 97,
+    "cp": 93,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:7:104": {
-    "cp": 112,
+    "cp": 103,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:7:107": {
-    "cp": 286,
+    "cp": 289,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:7:111": {
-    "cp": 171,
+    "cp": 156,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:7:130": {
-    "cp": 96,
+    "cp": 99,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:8:28": {
-    "cp": 47,
+    "cp": 44,
     "mate": null,
     "symbol": "+="
   },
@@ -390,32 +390,32 @@
     "symbol": "+-"
   },
   "xiangqi-champions:8:34": {
-    "cp": 53,
+    "cp": 40,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:8:56": {
-    "cp": 110,
+    "cp": 106,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:8:68": {
-    "cp": 180,
+    "cp": 183,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:9:20": {
-    "cp": 275,
+    "cp": 261,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:9:58": {
-    "cp": 224,
+    "cp": 217,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:10:31": {
-    "cp": 18,
+    "cp": 16,
     "mate": null,
     "symbol": "="
   },
@@ -430,82 +430,82 @@
     "symbol": "=+"
   },
   "xiangqi-champions:10:104": {
-    "cp": 64,
+    "cp": 74,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:10:108": {
-    "cp": 139,
+    "cp": 143,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:10:112": {
-    "cp": 223,
+    "cp": 241,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-champions:11:54": {
-    "cp": 52,
+    "cp": 50,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:11:96": {
-    "cp": 349,
+    "cp": 350,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:11:97": {
-    "cp": 306,
+    "cp": 278,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-champions:12:49": {
-    "cp": 47,
+    "cp": 48,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-champions:12:50": {
-    "cp": -393,
+    "cp": -387,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:12:53": {
-    "cp": -61,
+    "cp": -52,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-champions:12:66": {
-    "cp": -540,
+    "cp": -562,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:12:68": {
-    "cp": -326,
+    "cp": -332,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:12:69": {
-    "cp": -197,
+    "cp": -190,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-champions:12:82": {
-    "cp": -254,
+    "cp": -255,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:12:83": {
-    "cp": -10,
+    "cp": -9,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-champions:12:96": {
-    "cp": null,
-    "mate": -6,
+    "cp": -572,
+    "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:12:101": {
-    "cp": -341,
+    "cp": -330,
     "mate": null,
     "symbol": "-+"
   },
@@ -515,9 +515,9 @@
     "symbol": "-+"
   },
   "xiangqi-champions:13:34": {
-    "cp": -101,
+    "cp": -76,
     "mate": null,
-    "symbol": "-/+"
+    "symbol": "=+"
   },
   "xiangqi-champions:13:35": {
     "cp": 0,
@@ -525,102 +525,102 @@
     "symbol": "="
   },
   "xiangqi-champions:13:55": {
-    "cp": -311,
+    "cp": -309,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:13:59": {
-    "cp": -338,
+    "cp": -353,
     "mate": null,
     "symbol": "-+"
   },
   "xiangqi-champions:14:23": {
-    "cp": 7,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-champions:14:24": {
-    "cp": -17,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-champions:14:62": {
-    "cp": 16,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-champions:14:69": {
-    "cp": 424,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:14:76": {
-    "cp": 153,
-    "mate": null,
-    "symbol": "+/-"
-  },
-  "xiangqi-champions:14:79": {
-    "cp": 323,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:14:85": {
-    "cp": 238,
-    "mate": null,
-    "symbol": "+/-"
-  },
-  "xiangqi-champions:14:93": {
-    "cp": 55,
-    "mate": null,
-    "symbol": "+="
-  },
-  "xiangqi-champions:14:99": {
-    "cp": 296,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:14:119": {
-    "cp": 215,
-    "mate": null,
-    "symbol": "+/-"
-  },
-  "xiangqi-champions:14:126": {
-    "cp": 50,
-    "mate": null,
-    "symbol": "+="
-  },
-  "xiangqi-champions:14:139": {
-    "cp": 724,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:14:141": {
-    "cp": 407,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-champions:14:156": {
     "cp": 6,
     "mate": null,
     "symbol": "="
   },
+  "xiangqi-champions:14:24": {
+    "cp": -19,
+    "mate": null,
+    "symbol": "="
+  },
+  "xiangqi-champions:14:62": {
+    "cp": 15,
+    "mate": null,
+    "symbol": "="
+  },
+  "xiangqi-champions:14:69": {
+    "cp": 415,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:14:76": {
+    "cp": 151,
+    "mate": null,
+    "symbol": "+/-"
+  },
+  "xiangqi-champions:14:79": {
+    "cp": 325,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:14:85": {
+    "cp": 235,
+    "mate": null,
+    "symbol": "+/-"
+  },
+  "xiangqi-champions:14:93": {
+    "cp": 53,
+    "mate": null,
+    "symbol": "+="
+  },
+  "xiangqi-champions:14:99": {
+    "cp": 304,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:14:119": {
+    "cp": 203,
+    "mate": null,
+    "symbol": "+/-"
+  },
+  "xiangqi-champions:14:126": {
+    "cp": 59,
+    "mate": null,
+    "symbol": "+="
+  },
+  "xiangqi-champions:14:139": {
+    "cp": 692,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:14:141": {
+    "cp": 403,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-champions:14:156": {
+    "cp": 7,
+    "mate": null,
+    "symbol": "="
+  },
   "xiangqi-world-championship:0:52": {
-    "cp": -20,
+    "cp": -2,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-world-championship:0:66": {
-    "cp": 0,
+    "cp": 4,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-world-championship:0:68": {
-    "cp": 192,
+    "cp": 204,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:0:86": {
-    "cp": -566,
+    "cp": -570,
     "mate": null,
     "symbol": "-+"
   },
@@ -630,12 +630,12 @@
     "symbol": "+-"
   },
   "xiangqi-world-championship:0:91": {
-    "cp": 344,
+    "cp": 340,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-world-championship:1:20": {
-    "cp": -16,
+    "cp": -15,
     "mate": null,
     "symbol": "="
   },
@@ -645,92 +645,92 @@
     "symbol": "="
   },
   "xiangqi-world-championship:1:38": {
-    "cp": 129,
+    "cp": 143,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:1:39": {
-    "cp": 250,
+    "cp": 238,
     "mate": null,
-    "symbol": "+-"
+    "symbol": "+/-"
   },
   "xiangqi-world-championship:1:42": {
-    "cp": 133,
+    "cp": 118,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:1:46": {
-    "cp": -33,
+    "cp": -38,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-world-championship:1:49": {
-    "cp": 445,
+    "cp": 444,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-world-championship:1:50": {
-    "cp": 46,
+    "cp": 58,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-world-championship:1:52": {
-    "cp": 179,
+    "cp": 173,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:1:59": {
-    "cp": 260,
+    "cp": 259,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-world-championship:1:60": {
-    "cp": 125,
+    "cp": 133,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:1:61": {
-    "cp": 332,
+    "cp": 327,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-world-championship:1:76": {
-    "cp": 28,
+    "cp": 33,
     "mate": null,
-    "symbol": "="
+    "symbol": "+="
   },
   "xiangqi-world-championship:2:56": {
-    "cp": 18,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-world-championship:2:116": {
-    "cp": 322,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-world-championship:2:124": {
-    "cp": 326,
-    "mate": null,
-    "symbol": "+-"
-  },
-  "xiangqi-world-championship:3:32": {
     "cp": 16,
     "mate": null,
     "symbol": "="
   },
-  "xiangqi-world-championship:3:34": {
-    "cp": 86,
+  "xiangqi-world-championship:2:116": {
+    "cp": 327,
     "mate": null,
-    "symbol": "+="
+    "symbol": "+-"
+  },
+  "xiangqi-world-championship:2:124": {
+    "cp": 340,
+    "mate": null,
+    "symbol": "+-"
+  },
+  "xiangqi-world-championship:3:32": {
+    "cp": 0,
+    "mate": null,
+    "symbol": "="
+  },
+  "xiangqi-world-championship:3:34": {
+    "cp": 90,
+    "mate": null,
+    "symbol": "+/-"
   },
   "xiangqi-world-championship:3:40": {
-    "cp": 176,
+    "cp": 157,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:3:52": {
-    "cp": 439,
+    "cp": 431,
     "mate": null,
     "symbol": "+-"
   },
@@ -740,47 +740,47 @@
     "symbol": "="
   },
   "xiangqi-world-championship:4:26": {
-    "cp": 158,
+    "cp": 160,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:4:27": {
-    "cp": 195,
+    "cp": 192,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:4:31": {
-    "cp": 165,
+    "cp": 164,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:4:42": {
-    "cp": 35,
+    "cp": 43,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-world-championship:5:46": {
-    "cp": 81,
+    "cp": 77,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-world-championship:5:64": {
-    "cp": 372,
+    "cp": 379,
     "mate": null,
     "symbol": "+-"
   },
   "xiangqi-world-championship:6:199": {
-    "cp": -31,
-    "mate": null,
-    "symbol": "=+"
-  },
-  "xiangqi-world-championship:6:200": {
     "cp": -27,
     "mate": null,
     "symbol": "="
   },
+  "xiangqi-world-championship:6:200": {
+    "cp": -26,
+    "mate": null,
+    "symbol": "="
+  },
   "xiangqi-world-championship:6:203": {
-    "cp": -23,
+    "cp": -22,
     "mate": null,
     "symbol": "="
   },
@@ -790,122 +790,82 @@
     "symbol": "="
   },
   "xiangqi-world-championship:6:259": {
-    "cp": -52,
+    "cp": -57,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-world-championship:6:265": {
-    "cp": -646,
+    "cp": -692,
     "mate": null,
     "symbol": "-+"
   },
-  "xiangqi-world-championship:7:18": {
-    "cp": -69,
-    "mate": null,
-    "symbol": "=+"
-  },
-  "xiangqi-world-championship:7:36": {
-    "cp": 27,
+  "xiangqi-world-championship:7:30": {
+    "cp": 14,
     "mate": null,
     "symbol": "="
   },
-  "xiangqi-world-championship:7:37": {
-    "cp": 106,
+  "xiangqi-world-championship:7:32": {
+    "cp": 100,
     "mate": null,
     "symbol": "+/-"
   },
-  "xiangqi-world-championship:7:39": {
-    "cp": 155,
+  "xiangqi-world-championship:7:50": {
+    "cp": 187,
     "mate": null,
     "symbol": "+/-"
   },
-  "xiangqi-world-championship:7:40": {
-    "cp": -16,
+  "xiangqi-world-championship:7:51": {
+    "cp": 145,
     "mate": null,
-    "symbol": "="
+    "symbol": "+/-"
   },
-  "xiangqi-world-championship:7:43": {
-    "cp": 59,
+  "xiangqi-world-championship:7:52": {
+    "cp": 212,
     "mate": null,
-    "symbol": "+="
+    "symbol": "+/-"
   },
-  "xiangqi-world-championship:7:44": {
-    "cp": 82,
+  "xiangqi-world-championship:7:60": {
+    "cp": 412,
     "mate": null,
-    "symbol": "+="
-  },
-  "xiangqi-world-championship:7:45": {
-    "cp": 52,
-    "mate": null,
-    "symbol": "+="
-  },
-  "xiangqi-world-championship:7:59": {
-    "cp": 17,
-    "mate": null,
-    "symbol": "="
-  },
-  "xiangqi-world-championship:7:61": {
-    "cp": -74,
-    "mate": null,
-    "symbol": "=+"
-  },
-  "xiangqi-world-championship:7:72": {
-    "cp": -312,
-    "mate": null,
-    "symbol": "-+"
-  },
-  "xiangqi-world-championship:7:73": {
-    "cp": null,
-    "mate": 1,
     "symbol": "+-"
   },
-  "xiangqi-world-championship:7:81": {
-    "cp": -376,
+  "xiangqi-world-championship:7:61": {
+    "cp": 349,
     "mate": null,
-    "symbol": "-+"
+    "symbol": "+-"
   },
-  "xiangqi-world-championship:7:84": {
-    "cp": -349,
+  "xiangqi-world-championship:7:70": {
+    "cp": 515,
     "mate": null,
-    "symbol": "-+"
+    "symbol": "+-"
   },
-  "xiangqi-world-championship:7:85": {
-    "cp": -411,
+  "xiangqi-world-championship:7:71": {
+    "cp": 399,
     "mate": null,
-    "symbol": "-+"
-  },
-  "xiangqi-world-championship:7:88": {
-    "cp": -372,
-    "mate": null,
-    "symbol": "-+"
-  },
-  "xiangqi-world-championship:7:89": {
-    "cp": -491,
-    "mate": null,
-    "symbol": "-+"
+    "symbol": "+-"
   },
   "xiangqi-world-championship:8:15": {
-    "cp": -77,
+    "cp": -75,
     "mate": null,
     "symbol": "=+"
   },
   "xiangqi-world-championship:8:28": {
-    "cp": -236,
+    "cp": -217,
     "mate": null,
     "symbol": "-/+"
   },
   "xiangqi-world-championship:8:42": {
-    "cp": 25,
+    "cp": 23,
     "mate": null,
     "symbol": "="
   },
   "xiangqi-world-championship:8:64": {
-    "cp": 208,
+    "cp": 212,
     "mate": null,
     "symbol": "+/-"
   },
   "xiangqi-world-championship:9:31": {
-    "cp": 17,
+    "cp": 18,
     "mate": null,
     "symbol": "="
   },
@@ -915,12 +875,12 @@
     "symbol": "+="
   },
   "xiangqi-world-championship:9:62": {
-    "cp": 68,
+    "cp": 69,
     "mate": null,
     "symbol": "+="
   },
   "xiangqi-world-championship:9:125": {
-    "cp": 394,
+    "cp": 445,
     "mate": null,
     "symbol": "+-"
   },
@@ -930,7 +890,7 @@
     "symbol": "+/-"
   },
   "xiangqi-world-championship:9:139": {
-    "cp": 355,
+    "cp": 263,
     "mate": null,
     "symbol": "+-"
   },
@@ -941,11 +901,11 @@
   },
   "xiangqi-world-championship:9:145": {
     "cp": null,
-    "mate": 14,
+    "mate": 12,
     "symbol": "+-"
   },
   "xiangqi-world-championship:9:182": {
-    "cp": 55,
+    "cp": 58,
     "mate": null,
     "symbol": "+="
   },
