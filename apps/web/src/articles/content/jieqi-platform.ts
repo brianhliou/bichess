@@ -187,37 +187,37 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'What is jieqi?',
               answer:
-                'Jieqi is a xiangqi variant played on the same board with the same pieces, except every piece except the general starts face-down. A face-down piece moves as whatever normally starts on its square, then turns over and keeps that identity for the rest of the game. It is also called cờ úp in Vietnamese and 揭棋 in Chinese.',
+                'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is called cờ úp in Vietnamese and 揭棋 in Chinese.',
             },
             {
               question: 'How is jieqi different from xiangqi?',
               answer:
-                'The board, the pieces and the moves are identical to xiangqi. The difference is that you do not know which piece is which at the start, including your own, so about half your moves turn a piece over and find out. The goal is still checkmate.',
+                'Same board, same pieces, same moves, same goal. You just do not know which piece is which, so about half your moves flip one over and find out.',
             },
             {
               question: 'Where can I play jieqi online for free?',
               answer:
-                'You can play jieqi on Mistboard against the engine or against a friend. It is free, needs no account and nothing to install, and you can review any finished game with engine analysis afterwards.',
+                'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.',
             },
             {
               question: 'Is jieqi just luck?',
               answer:
-                'Reveals are random, but what you do with them is not. Mistboard measures the two separately: each flip is priced for how lucky it was, and your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.',
+                'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.',
             },
             {
               question: 'Can the engine see my hidden pieces?',
               answer:
-                'No. The engine is sent the same face-down board you are looking at, with every hidden piece written as a blank. It is never told the deal, and an automated test fails the build if that data ever appears in what gets sent to it. It is guessing from the same information you have.',
+                'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.',
             },
             {
               question: 'Is the shuffle fair?',
               answer:
-                'The deal is made at random on the server when the game starts, and nobody is told it: not you, not your opponent, and not the engine. The same deal drives both sides, so neither player has an advantage from how the pieces were arranged.',
+                'The deal is random, made on the server, and told to nobody: not you, not your opponent, not the engine.',
             },
             {
               question: 'Can a computer play jieqi well?',
               answer:
-                'Reasonably, not brilliantly. Mistboard runs PikaJieQi, a fork of the open-source Pikafish xiangqi engine. It is beatable by a strong human, mainly because no neural network has been trained for jieqi and it evaluates positions by hand.',
+                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.',
             },
           ],
         },
