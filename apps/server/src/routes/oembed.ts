@@ -14,24 +14,14 @@
 // applies, so this endpoint can never widen access to a private study.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { clampEmbedWidth, embedHeightForWidth, OEMBED_ENDPOINT } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import { requirePersistence, writeJson } from './lib.js';
 
-const OEMBED_PATH = '/api/oembed';
+const OEMBED_PATH = OEMBED_ENDPOINT;
 
 /** Both the permalink a reader copies and the embed path itself. */
 const STUDY_URL = /\/(?:embed\/)?study\/([A-Za-z0-9_-]{1,64})\/([A-Za-z0-9_-]{1,64})\/?$/;
-
-const DEFAULT_WIDTH = 720;
-const DEFAULT_HEIGHT = 560;
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 1200;
-
-function clampWidth(raw: string | null): number {
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_WIDTH;
-  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(value)));
-}
 
 export async function tryHandle(
   _ctx: unknown,
@@ -85,8 +75,8 @@ export async function tryHandle(
   }
 
   const origin = `https://${request.headers.host ?? 'mistboard.com'}`;
-  const width = clampWidth(parsedUrl.searchParams.get('maxwidth'));
-  const height = Math.round(width * (DEFAULT_HEIGHT / DEFAULT_WIDTH));
+  const width = clampEmbedWidth(parsedUrl.searchParams.get('maxwidth'));
+  const height = embedHeightForWidth(width);
   const src = `${origin}/embed/study/${encodeURIComponent(studyId)}/${encodeURIComponent(chapterId)}`;
   const title = `${chapter.name ?? 'Study'} · ${study.name ?? 'Mistboard'}`;
 

@@ -227,6 +227,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/terms' ||
     normalized === '/privacy' ||
     normalized === '/contribute' ||
+    normalized === '/developers' ||
     normalized === '/thanks' ||
     normalized === '/lag' ||
     normalized === '/account' ||

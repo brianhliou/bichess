@@ -61,39 +61,52 @@ registerNotificationSource(forumNotificationSource);
 // Directed challenges are correspondence seeks, so this source has nothing to
 // report unless correspondence is on.
 if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
+// An embed runs inside SOMEONE ELSE'S page, so the site bootstrap below is not
+// just wasted work there, it is work we have no business doing in their document:
+// the account nav fetches /api/auth/me with credentials, and analytics reports a
+// pageview for a visit to a third party's site. embed-route.ts is deliberately
+// import-free so this question can be answered before any of that runs.
+const isEmbedDocument =
+  embedStudyRouteFromPath(window.location.pathname.replace(/\/+$/, '') || '/') !== null;
+
 // The account nav renders localized labels, so it waits for the locale chunk
 // like the route mounts do (mountOrReport). The restart banner is English-only.
-void localeReady.then(() => initializeAccountNav());
-mountRestartBanner();
-void fetch('/api/server-status')
-  .then((r) => (r.ok ? r.json() : null))
-  .then(
-    (
-      data: {
-        restartAt: number | null;
-        restartPhase?: 'pending' | 'restarting' | null;
-        ratedEnabled?: boolean;
-      } | null,
-    ) => {
-      if (data) {
-        const phase =
-          data.restartPhase === 'pending' || data.restartPhase === 'restarting'
-            ? data.restartPhase
-            : typeof data.restartAt === 'number'
-              ? 'pending'
-              : null;
-        setRestartBanner(phase);
-      }
-      if (data) setRatedModeEnabled(data.ratedEnabled === true);
-    },
-  )
-  .catch(() => {
-    /* banner stays hidden; WS broadcast still covers in-game users */
-  });
+if (!isEmbedDocument) {
+  void localeReady.then(() => initializeAccountNav());
+  mountRestartBanner();
+}
+// Its only consumers are the restart banner and the rated-mode flag, both of
+// which an embed has no use for.
+if (!isEmbedDocument)
+  void fetch('/api/server-status')
+    .then((r) => (r.ok ? r.json() : null))
+    .then(
+      (
+        data: {
+          restartAt: number | null;
+          restartPhase?: 'pending' | 'restarting' | null;
+          ratedEnabled?: boolean;
+        } | null,
+      ) => {
+        if (data) {
+          const phase =
+            data.restartPhase === 'pending' || data.restartPhase === 'restarting'
+              ? data.restartPhase
+              : typeof data.restartAt === 'number'
+                ? 'pending'
+                : null;
+          setRestartBanner(phase);
+        }
+        if (data) setRatedModeEnabled(data.ratedEnabled === true);
+      },
+    )
+    .catch(() => {
+      /* banner stays hidden; WS broadcast still covers in-game users */
+    });
 
 const phKey = import.meta.env.VITE_POSTHOG_KEY;
 const phHost = import.meta.env.VITE_POSTHOG_HOST;
-if (phKey && phHost && import.meta.env.PROD) {
+if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
   void import('posthog-js').then(({ default: posthog }) => {
     posthog.init(phKey, {
       api_host: phHost,
@@ -153,6 +166,7 @@ const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
+const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
 const wantsAccount = path === '/account' || page === 'account';
@@ -777,6 +791,11 @@ if (replaySample) {
   setTitleKey('contribute.heading');
   void mountOrReport(() =>
     import('./contribute-page.js').then(({ mountContribute }) => mountContribute(appRoot)),
+  );
+} else if (wantsDevelopers) {
+  setTitleKey('developers.heading');
+  void mountOrReport(() =>
+    import('./developers-page.js').then(({ mountDevelopers }) => mountDevelopers(appRoot)),
   );
 } else if (wantsThanks) {
   setTitleKey('thanks.heading');

@@ -75,6 +75,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
   },
+  '/developers': {
+    title: 'Developers | Mistboard',
+    description:
+      'Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider.',
+  },
   '/forum': {
     title: 'Forum | Mistboard',
     description:
@@ -659,6 +664,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/faq',
   '/patron',
   '/contribute',
+  '/developers',
 ];
 
 // Sitemap of public, indexable surfaces: static content routes plus every

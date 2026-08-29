@@ -164,3 +164,81 @@
     white-space: nowrap;
   }
 }
+
+/* /developers: a live embed, copyable snippets, and a small sizing table. The
+   code blocks scroll on their own rather than widening the panel, because an
+   iframe snippet with a full origin in it is wider than a phone. */
+.developers-example {
+  margin: 20px 0 4px;
+}
+
+.developers-example iframe {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  background: var(--site-panel);
+}
+
+.developers-example figcaption {
+  margin-top: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.developers-code {
+  position: relative;
+  margin: 12px 0 16px;
+}
+
+.developers-code pre {
+  margin: 0;
+  padding: 12px 76px 12px 14px;
+  overflow-x: auto;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  background: var(--site-panel-soft);
+}
+
+.developers-code code {
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.developers-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 3px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.developers-copy:hover {
+  border-color: var(--site-accent);
+  color: var(--site-heading);
+}
+
+.developers-table {
+  margin: 4px 0 16px;
+  border-collapse: collapse;
+}
+
+.developers-table th,
+.developers-table td {
+  padding: 5px 18px 5px 0;
+  text-align: left;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.developers-table th {
+  font-weight: 600;
+  color: var(--site-muted);
+}

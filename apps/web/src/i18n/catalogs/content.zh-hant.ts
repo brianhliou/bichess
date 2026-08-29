@@ -289,6 +289,7 @@ export const ZH_HANT_CONTENT = {
   'patron.termsLink': '使用條款',
   'patron.termsSuffix': '。',
   'contribute.heading': '參與貢獻',
+  'developers.heading': '開發者',
   'contribute.intro':
     'Mistboard 是免費開源的，由一個人公開開發。要做的事還有很多，無論你寫不寫程式，都有很多種幫忙的方式。',
   'contribute.playHeading': '下棋並給出回饋',

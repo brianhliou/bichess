@@ -60,6 +60,7 @@ export const EN_SHELL = {
   'footer.faq': 'FAQ',
   'footer.contact': 'Contact',
   'footer.source': 'Source',
+  'footer.developers': 'Developers',
   'footer.discord': 'Discord',
   'footer.github': 'GitHub',
   'footer.terms': 'Terms',

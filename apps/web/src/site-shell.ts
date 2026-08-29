@@ -463,6 +463,7 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
     blockedIn: DISCORD_BLOCKED_IN,
   },
   { href: '/source', labelKey: 'footer.source' },
+  { href: '/developers', labelKey: 'footer.developers' },
   { href: '/terms', labelKey: 'footer.terms' },
   { href: '/privacy', labelKey: 'footer.privacy' },
 ];

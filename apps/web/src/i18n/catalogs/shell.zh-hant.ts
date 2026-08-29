@@ -61,6 +61,7 @@ export const ZH_HANT_SHELL = {
   'footer.faq': '常見問題',
   'footer.contact': '聯絡',
   'footer.source': '原始碼',
+  'footer.developers': '開發者',
   'footer.discord': 'Discord',
   'footer.github': 'GitHub',
   'footer.terms': '條款',
