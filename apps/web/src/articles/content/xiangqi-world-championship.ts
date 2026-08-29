@@ -565,7 +565,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
   seoTitle: 'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title',
   summary:
     'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.',
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-08-29',
   audience:
     'Readers who have met the national champions and want to know what the international title is worth.',

@@ -33,6 +33,13 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-08-29 ── AWAITING A NATIVE READ. Terms match the article's own
+  // dictionary: 世界象棋锦标赛, 全国个人赛, 头衔.
+  'The Xiangqi World Championship, and why it is not the senior title.':
+    '世界象棋锦标赛，以及它为何不是最高头衔。',
+  'Nineteen editions since 1990, eleven winners, and a title that stayed in China until last September. Every champion, an annotated game for ten of them, and the reason the Chinese national championship is the harder one to win.':
+    '1990年以来十九届，十一位冠军，而这个头衔直到去年九月都留在中国。每一位冠军，其中十位各配一局讲解棋谱，以及中国全国个人赛为什么更难拿。',
+
   'Find a game': '找一局棋',
   // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Vocabulary taken from
   // strings this site already publishes, per the rule above: 复盘 is
@@ -234,6 +241,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-08-29 ── AWAITING A NATIVE READ. Same terms as the article's
+  // Traditional dictionary.
+  'The Xiangqi World Championship, and why it is not the senior title.':
+    '世界象棋錦標賽，以及它為何不是最高頭銜。',
+  'Nineteen editions since 1990, eleven winners, and a title that stayed in China until last September. Every champion, an annotated game for ten of them, and the reason the Chinese national championship is the harder one to win.':
+    '1990年以來十九屆，十一位冠軍，而這個頭銜直到去年九月都留在中國。每一位冠軍，其中十位各配一局講解棋譜，以及中國全國個人賽為什麼更難拿。',
+
   // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Same vocabulary rule:
   // 復盤 is watch.review, 妙手 is annotate.brilliantMove, 匯入棋譜 is
   // nav.import, 棋譜 is nav.games, 論壇 is nav.forum.

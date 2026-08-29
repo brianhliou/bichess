@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-08-29',
+    kind: 'article',
+    headline: 'The Xiangqi World Championship, and why it is not the senior title.',
+    body: 'Nineteen editions since 1990, eleven winners, and a title that stayed in China until last September. Every champion, an annotated game for ten of them, and the reason the Chinese national championship is the harder one to win.',
+    href: '/blog/xiangqi-world-championship',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-08-28',
     kind: 'release',
     headline: 'Paste a game, get a board.',

@@ -24,36 +24,46 @@ describe('internal article links', () => {
     }
   });
 
-  it('renders the same link once its target is published', () => {
-    // Dev shows drafts, which is how the link gets reviewed before it ships.
-    vi.stubEnv('DEV', true);
-    try {
-      const page = buildArticlePage('xiangqi-champions');
-      const hrefs = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')].map((a) =>
-        a.getAttribute('href'),
-      );
-      expect(hrefs).toContain('/blog/xiangqi-world-championship');
-    } finally {
-      vi.unstubAllEnvs();
+  it('renders the cross-link now that both champion pages are published', () => {
+    // The two champion pages point at each other. This is the live half of the
+    // guard above: with both published the button must actually render, in
+    // production as well as dev, or the guard could be satisfied by dropping
+    // every link.
+    for (const dev of [true, false]) {
+      vi.stubEnv('DEV', dev);
+      try {
+        const pairs: Array<[string, string]> = [
+          ['xiangqi-champions', '/blog/xiangqi-world-championship'],
+          ['xiangqi-world-championship', '/blog/xiangqi-champions'],
+        ];
+        for (const [slug, href] of pairs) {
+          const page = buildArticlePage(slug);
+          const hrefs = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')].map((a) =>
+            a.getAttribute('href'),
+          );
+          expect(hrefs, `${slug} (DEV=${dev}) should link to ${href}`).toContain(href);
+        }
+      } finally {
+        vi.unstubAllEnvs();
+      }
     }
   });
 
-  it('drops only the link to the draft, keeping the rest of the page', () => {
-    // Until this article was published on 2026-08-29 the guard could not be
-    // observed from this page at all: the page was itself a draft, so its own
-    // URL 404d and there was nothing to render. Now it is live while the world
-    // title article it links to is still a draft, which is exactly the state
-    // the guard exists for, and the assertion that matters is asymmetric --
-    // the dead button goes, the two live ones stay.
+  it('has drafts and rendered buttons, so the guard is not vacuous', () => {
+    // The guard at the top of this file passes for free in two ways: if nothing
+    // is a draft, or if no page renders a CTA at all. Until 2026-08-29 a second
+    // test covered this by naming the world-title article as the draft to drop,
+    // which stopped meaning anything the moment that article shipped. Assert the
+    // two preconditions instead of naming an article whose status will change.
+    const drafts = articles.filter((a) => a.status !== 'published');
+    expect(drafts.length, 'no draft exists, so the drop guard checks nothing').toBeGreaterThan(0);
+
     vi.stubEnv('DEV', false);
     try {
-      const page = buildArticlePage('xiangqi-champions');
-      const hrefs = [...page.querySelectorAll<HTMLAnchorElement>('.article-cta')].map((a) =>
-        a.getAttribute('href'),
-      );
-      expect(page.textContent).toContain('Every Xiangqi Champion');
-      expect(hrefs).not.toContain('/blog/xiangqi-world-championship');
-      expect(hrefs.length).toBeGreaterThan(0);
+      const rendered = articles
+        .filter((a) => a.status === 'published')
+        .flatMap((a) => [...buildArticlePage(a.slug).querySelectorAll('.article-cta')]);
+      expect(rendered.length, 'no article renders a CTA, so nothing is checked').toBeGreaterThan(0);
     } finally {
       vi.unstubAllEnvs();
     }

@@ -41,7 +41,6 @@ const RETIRED_RULES_SLUGS = new Set([
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
-  'xiangqi-world-championship',
   // Published 2026-08-28 and pulled back the same evening. Reachable at
   // /blog/<slug> for review, out of the sitemap and noindex until it goes back.
   'jieqi-platform',

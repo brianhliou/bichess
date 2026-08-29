@@ -40,6 +40,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // person's name is written in the script that person uses and all twenty-two
   // are mainland players; champion-name-script.test.ts enforces that.
   'xiangqi-champions',
+  // Machine-drafted, not native-reviewed (2026-08-29). Same standing as the
+  // page above, and the same name rule, except that this page's champions are
+  // not all mainland: see the zh-Hant block's note.
+  'xiangqi-world-championship',
   'riverbank-cannon',
   'skill-vs-luck',
   'fog-chess',
@@ -1429,6 +1433,159 @@ const ZH_HANS: Record<string, string> = {
   '2002 National Individual Championship': '2002年全国象棋个人锦标赛',
   '2010 National Individual Championship': '2010年全国象棋个人锦标赛',
   '2025 National Individual Championship': '2025年全国象棋个人锦标赛',
+
+  // -- World championship (xiangqi-world-championship) --
+  // MACHINE-DRAFTED 2026-08-29, NOT NATIVE-REVIEWED, same standing as the
+  // national champions page above. Player names, event names, the chart's gap
+  // label and the ruling column are keys too, so the figure and the table
+  // localize with the prose instead of sitting in English under Chinese.
+  // seoTitle is here as well: it sits outside articleProse, so the coverage
+  // contract cannot see it missing.
+
+  'The Xiangqi World Championship': '世界象棋锦标赛',
+  'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title':
+    '世界象棋锦标赛：历届冠军，以及它为何不是最高头衔',
+  'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.':
+    '1990年以来世界象棋锦标赛的每一位冠军，为什么中国全国个人赛才是更难拿的头衔，以及2025年一位越南棋手如何第一次把它带出中国。',
+  'Readers who have met the national champions and want to know what the international title is worth.':
+    '已经认识全国冠军、想知道这个国际头衔分量如何的读者。',
+  'The World Xiangqi Championship has been held roughly every two years since 1990, organised by the World Xiangqi Federation. English readers tend to assume it is the senior title, the way the world chess championship is. It is not, and the reason is worth understanding before the list makes sense.':
+    '世界象棋锦标赛由世界象棋联合会主办，1990年以来大致每两年举办一届。英文读者往往默认它是象棋界的最高头衔，就像国际象棋世界冠军赛那样。事实并非如此，而弄清楚原因，下面这份名单才读得懂。',
+  'The Chinese national championship is the harder one to win. Almost everyone capable of winning either is Chinese, and only a handful of them qualify for the world event. For its first thirty-five years the world title was, in practice, a smaller Chinese championship with guests, and then in 2025 it left China for the first time.':
+    '更难拿的是中国全国个人赛。有能力拿下这两个头衔中任何一个的棋手几乎都是中国人，而其中只有少数几位能获得世锦赛的参赛资格。在最初的三十五年里，世界冠军实际上是一场规模更小、外加几位客人的中国锦标赛，直到2025年，它第一次离开了中国。',
+  'Every world champion, 1990 to 2025': '历届世界冠军，1990至2025',
+  'Nineteen editions, eleven winners. One row per player, in the order they first took the title, with a bar over the years they held it.':
+    '十九届，十一位冠军。每位棋手一行，按首次夺冠的先后排列，横条覆盖他持有头衔的年份。',
+  'Two things fall out of the shape. The left half belongs to three men, and the right half turns red at 2009 and stays red until the last row.':
+    '从这个形状里能看出两件事。左半边属于三个人；右半边从2009年起变红，一直红到最后一行。',
+  'The same record as the figure, with the years written out. Every entry in the last column is a published ruling of the Chinese Xiangqi Association, not an allegation; the section below explains them.':
+    '与上图相同的纪录，把年份逐一写出。最后一列的每一条都是中国象棋协会已公布的处罚决定，不是指控；下面有一节专门说明。',
+  'The national title, and every champion since 1956': '全国冠军，以及1956年以来的每一位',
+  'Lü Qin 吕钦, 1990': '吕钦，1990',
+  'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.':
+    '十五年间五夺世界冠军，另有五个全国个人赛冠军，从1986年到2004年。广东称他为羊城少帅，后来又把他与许银川并称岭南双雄。他是本页荣誉最多的棋手，却从来没有在任何一个年份里成为中国最强的棋手。',
+  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
+    '这句话就是整篇文章的缩影。胡荣华在国内大部分时间都压着他，却从未参加过这项赛事；吕钦却拿了五次。中华台北的吴贵临二十年间是大陆之外最强的棋手，也是"究竟谁能赢这些人"这个问题反复出现的答案，而吕钦在1990、1995和1997年都赢了他。',
+  'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.':
+    '吕钦对吴贵临，1997年，第五届世锦赛，也是他五个冠军中的第三个。',
+  'Zhao Guorong 赵国荣, 1991': '赵国荣，1991',
+  'World champion in 1991 and four times Chinese national champion, spread across eighteen years from 1990 to 2008, which is a longer span at the top than anyone here except Hu Ronghua managed. He learned in Harbin under Wang Jialiang, known as the Northeast Tiger, and the sport made him the New Northeast Tiger in turn.':
+    '1991年的世界冠军，四次全国个人赛冠军，跨越1990年到2008年共十八年，这个在顶端停留的跨度，除胡荣华外本页无人能及。他在哈尔滨师从王嘉良，人称东北虎，棋坛后来又把他叫作新东北虎。',
+  'He is one of three men on this list with no ruling against him.':
+    '他是这份名单上三位没有受到任何处罚的棋手之一。',
+  'Zhao Guorong vs Wu Guilin, 1991, from the championship he won.':
+    '赵国荣对吴贵临，1991年，出自他夺冠的那届比赛。',
+  'Xu Tianhong 徐天红, 1993': '徐天红，1993',
+  'World champion in 1993 in Beijing with seven and a half points from nine, the year after taking the Chinese national title. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is tight openings and a habit of grinding advantages too small to see into wins.':
+    '1993年在北京夺得世界冠军，九轮拿下七点五分，这是他获得全国个人赛冠军的第二年。他是江苏泰州人，棋坛称他笑面佛，因为他从头到尾都在笑。笑容背后是滴水不漏的布局，以及把小到看不见的优势一点点磨成胜势的功夫。',
+  'He is the one champion here without a game, and that is a fact about the archives rather than about him. Four games survive from the 1993 edition in the databases this article draws on, and none of them are his. Showing a game from another event would be a different claim than the one this page makes.':
+    '他是本页唯一没有配棋谱的冠军，这说的是棋谱库的问题，不是他的问题。本文所用的数据库里，1993年那届只留下四局棋，没有一局是他的。拿另一项赛事的棋来充数，说的就不是这一页要说的事了。',
+  'Xu Yinchuan 许银川, 1999': '许银川，1999',
+  'Three world titles, 1999, 2003 and 2007, alongside six Chinese national championships. He won his first national title at eighteen, second only to Hu Ronghua’s fifteen, and spent two decades as the best player in the country not named Hu Ronghua.':
+    '三个世界冠军，1999、2003和2007年，另有六个全国个人赛冠军。他十八岁首夺全国冠军，仅次于胡荣华的十五岁，并且有二十年时间是这个国家里除胡荣华之外最强的棋手。',
+  'Like Lü Qin he came out of Guangdong, like Lü Qin he built his game on endgames, and like Lü Qin he is one of the three men here with a clean record.':
+    '他和吕钦一样出自广东，一样把棋建立在残局功夫上，也一样是本页三位纪录清白的棋手之一。',
+  'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
+    '许银川对阮武君，2007年，出自他三个冠军中的最后一个。我们的引擎给他打出98.5分，是本页最干净的一局。',
+  'Zhao Xinxin 赵鑫鑫, 2009': '赵鑫鑫，2009',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。他至今仍是拿下这个头衔最年轻的棋手，而这一冠也让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
+  'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
+    '2025年1月12日，他在一次处罚四十一人的决定中被终身禁赛。',
+  'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
+    '赵鑫鑫对阮成保，2009年，出自他夺冠的那届比赛。',
+  'Jiang Chuan 蒋川, 2011': '蒋川，2011',
+  'Born in Yongjia, Zhejiang, in 1984. He took the Chinese national title in 2010 and the world title in Jakarta the year after, and he was the first player to pass 2700 on the rating list.':
+    '1984年生于浙江永嘉。2010年夺得全国个人赛冠军，次年在雅加达夺得世界冠军，他也是等级分榜上第一个突破2700分的棋手。',
+  'He is better known outside the tournament hall for blindfold play. On 3 January 2011 he took nineteen boards at once against Liu Dahua’s record and beat it with twenty, ending a mark that had stood since February 1995; he went to twenty-two in 2013 and to twenty-six after that, which is where the Guinness entry sits. He drew a five-year ban in April 2026.':
+    '在赛场之外，他更为人知的是盲棋。2011年1月3日，他为冲击柳大华的纪录一次盲战十九台，最终以二十台破纪录，终结了自1995年2月起保持的那个数字；2013年他打到二十二台，此后又打到二十六台，吉尼斯纪录就停在这里。2026年4月，他被处以五年禁赛。',
+  'Jiang Chuan vs Lei Kam Fun, 2011, from the championship he won.':
+    '蒋川对李锦欢，2011年，出自他夺冠的那届比赛。',
+  'Wang Tianyi 王天一, 2013': '王天一，2013',
+  'Three world titles and four Chinese national ones, and ten consecutive years at the top of the world rating list. In May 2023 he became the first player to hold a live rating above 2800. Beijing called him 外星人, the alien, for arriving from outside the provincial team system and beating everyone anyway.':
+    '三个世界冠军，四个全国个人赛冠军，连续十年位居世界等级分榜首。2023年5月，他成为第一个实时等级分突破2800的棋手。北京称他外星人，因为他不是从省队体系里出来的，却照样把所有人都赢了。',
+  'The Chinese Xiangqi Association banned him for life in September 2024 and revoked his grandmaster title. A court in Hangzhou convicted him a year later.':
+    '2024年9月，中国象棋协会对他终身禁赛并撤销其特级大师称号。一年后，杭州一家法院对他作出有罪判决。',
+  'The opponent below is the reason to show this particular game: Wang Kuo is himself a Chinese national champion, and the strongest man Wang Tianyi faced across his three world finals.':
+    '选这一局的理由在于对手：王廓本人也是全国个人赛冠军，是王天一三次世锦赛决赛中遇到过的最强对手。',
+  'Wang Tianyi vs Wang Kuo, 2022, from the third of his three titles.':
+    '王天一对王廓，2022年，出自他三个冠军中的第三个。',
+  'Zheng Weitong 郑惟桐, 2015': '郑惟桐，2015',
+  'Born in Chengdu in 1994. He took the Chinese national title in 2014 and again in 2015, then the world title in the same year, which is the harder order to do it in. He went to Tsinghua by recommendation in 2020 and won the individual gold at the 2023 Asian Games, China’s two hundredth medal of those Games.':
+    '1994年生于成都。2014年和2015年连夺全国个人赛冠军，同年再夺世界冠军，这个先后顺序是更难的那一种。2020年他被保送清华大学，并在2023年亚运会上夺得个人金牌，那是中国队在那届亚运会上的第两百枚奖牌。',
+  'He was banned for life on 12 January 2025. His title year also produced the longest game in either of these articles, and the opponent is the reason to show it.':
+    '2025年1月12日，他被终身禁赛。他夺冠的那一年也留下了这两篇文章里最长的一局棋，而选它的理由在于对手。',
+  'Lại Lý Huynh vs Zheng Weitong, 2015. Two hundred and seventy-four plies, and the man who loses it here takes the world title himself ten years later.':
+    '赖理兄对郑惟桐，2015年。两百七十四个回合，而在这里落败的人，十年后自己拿下了世界冠军。',
+  'Xu Chao 徐超, 2019': '徐超，2019',
+  'From Wujiang in Suzhou, born 1981, playing from the age of seven and national youth champion at sixteen. He waited a long time for the senior title and took it in 2017 by beating the defending champion Wang Tianyi, becoming the nineteenth man to win the Chinese championship. The world title followed in Vancouver in 2019.':
+    '苏州吴江人，1981年生，七岁学棋，十六岁获得全国少年冠军。成年组的头衔他等了很久，2017年他战胜卫冕冠军王天一夺得全国个人赛冠军，成为第十九位全国冠军。世界冠军随之而来，2019年在温哥华。',
+  'He was banned for life in April 2026.': '2026年4月，他被终身禁赛。',
+  'Xu Chao vs Huang Xueqian, 2019, the final round. This is the game that won it: nine judged moves between them, and six of those are blunders.':
+    '徐超对黄学谦，2019年，最后一轮。这就是夺冠的那一局：两人合计有九步棋被引擎判定为失误，其中六步是漏着。',
+  'Meng Chen 孟辰, 2023': '孟辰，2023',
+  'Born in Anshan, Liaoning, in 1988, and one of only two men on this list who never won the Chinese national championship. He took the 2023 world title in Houston by beating Lại Lý Huynh in a tiebreak, which is the second time on this page that the future champion loses to a champion before becoming one.':
+    '1988年生于辽宁鞍山，是这份名单上仅有的两位从未夺得全国个人赛冠军的棋手之一。2023年他在休斯敦的加赛中战胜赖理兄，夺得世界冠军，这也是本页第二次出现未来的冠军先输给一位冠军、然后自己成为冠军。',
+  'He drew a six-month ban in January 2025, the lightest ruling here.':
+    '2025年1月，他被处以六个月禁赛，是本页最轻的一项处罚。',
+  'Meng Chen vs Lại Lý Huynh, 2023. The second time the future champion loses to a champion before becoming one.':
+    '孟辰对赖理兄，2023年。未来的冠军先输给一位冠军、然后自己成为冠军，这是第二次。',
+  'Why the national title is the harder one': '为什么全国冠军更难拿',
+  'Lü Qin has five of the nineteen titles, Xu Yinchuan three and Wang Tianyi three, so eleven of the nineteen editions belong to three men. Nine of the eleven world champions also won the Chinese national championship. The two who did not are Meng Chen, who took the 2023 world title, and Lại Lý Huynh, who is Vietnamese and could never have entered the Chinese event.':
+    '十九个冠军里，吕钦占五个，许银川三个，王天一三个，也就是说十九届中有十一届属于三个人。十一位世界冠军中有九位同时也拿过全国个人赛冠军。没拿过的两位，一位是2023年夺冠的孟辰，另一位是赖理兄，他是越南人，本来就不可能参加中国的比赛。',
+  'That is the whole argument in one line. The world field is drawn from the same pool as the national field, minus most of it. China sends a small delegation, the rest of the entry is the strongest players from everywhere else, and for thirty-five years everywhere else was not close. A player who can win in Beijing can usually win in Singapore or Vancouver; the reverse has almost never been true.':
+    '一句话就能说完整个论证。世锦赛的参赛者与全国赛出自同一个池子，只是被砍掉了绝大部分。中国只派出一支小型代表队，其余名额来自世界其他地方最强的棋手，而三十五年来，世界其他地方差得很远。能在北京夺冠的棋手，通常也能在新加坡或温哥华夺冠；反过来则几乎从未发生。',
+  'The comparison English readers reach for is the wrong way round. The world title here is closer to a strong invitational than to a world championship, and the national championship is the thing with the deep field, the long history and the names everyone knows. Lü Qin has five world titles and never finished a year as the best player in China; Hu Ronghua, who was that player for two decades, never won this event at all.':
+    '英文读者习惯拿来类比的那组关系，方向正好反了。这里的世界冠军更接近一项高水平邀请赛，而不是世界锦标赛；全国个人赛才是那个参赛面深、历史长、名字人人都认得的比赛。吕钦有五个世界冠军，却从未在哪一年成为中国最强的棋手；而二十年里一直是那个人的胡荣华，根本没有拿过这项赛事的冠军。',
+  'The decade with a ruling on it': '被处罚覆盖的那十年',
+  'Every edition from 2009 to 2023 was won by a man who now has a published ruling against him. That is eight championships and six men: three banned for life, one convicted in court, one given five years, and one given six months.':
+    '从2009年到2023年，每一届的冠军如今都背着一份已公布的处罚决定。这是八届比赛、六个人：三人终身禁赛，一人被法院判罪，一人五年禁赛，一人六个月禁赛。',
+  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. They are findings by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
+    '这些处罚出自中国媒体称为录音门的假棋案，中国象棋协会在2024年到2026年间陆续处理完毕。它们是这项运动自己的管理机构作出的认定，不是指控；针对的是这些棋手的职业生涯，而不是某一局具体的世锦赛对局。',
+  'The names stay in the table and the sections stay on the page. A list that quietly dropped them would be a worse record of what happened, and what the rulings do not tell you is which games were fixed. The [national championship list](/blog/xiangqi-champions) tells the same decade from the other side, where ten of the thirteen men who have won since 2005 carry a ruling.':
+    '名字留在表里，章节留在页面上。悄悄把他们删掉的名单，是一份更差的历史记录；而这些处罚并没有告诉你哪些棋是假的。[全国冠军名单](/blog/xiangqi-champions)从另一侧讲述同样的十年，那里2005年以来夺冠的十三人中有十人背着处罚。',
+  'Shanghai, September 2025': '上海，2025年9月',
+  'The 2025 championship was played in Shanghai in September, and won by Lại Lý Huynh of Vietnam, who beat Yin Sheng of China in the final on the twenty-seventh. He is the first man from outside China to take the standard title in the thirty-five years the event has existed.':
+    '2025年的世锦赛9月在上海举行，越南的赖理兄夺冠，他在27日的决赛中战胜了中国的殷升。在这项赛事存在的三十五年里，他是第一个把慢棋冠军拿走的非中国棋手。',
+  'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
+    '赖理兄对冯家俊，2025年9月23日，决赛前四天。两百一十七个回合，引擎认为直到第九十回合双方仍然均势。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把这两件事连起来读很有诱惑力，好像是禁赛替他打开了门。这个读法太齐整了。他1990年生于永隆，2022年拿下世界快棋冠军，2023年就打进过这项决赛，在加赛中输给孟辰。他在本页还出现过两次，2015年输给郑惟桐，2023年输给孟辰，也就是说他在拿到任何东西之前已经来了十年。越南做了一代人的世界第二象棋强国，英文世界却几乎没有注意到。',
+  'Where that leaves the title': '这个头衔的分量',
+  'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
+    '十九届，十一位冠军，还有一个三十五年来答案不变的问题。世界冠军从未离开过中国。现在它离开了，而这十年正是这项运动忙着推翻自己成绩的十年，这两件事值得分开来看。',
+  'What the title is worth is a separate question again, and the honest answer is that it has always been worth less than the championship held in Beijing. That is not a slight on the men who won it. It is what happens when one country is this far ahead of the rest, and it is the thing 2025 has started to change.':
+    '这个头衔究竟值多少，又是另一个问题，老实的回答是：它一直不如在北京举行的那个比赛。这不是贬低夺得它的棋手。当一个国家领先其他国家这么多时，事情本来就会是这样，而2025年开始改变的正是这一点。',
+  'Nine of the ten games on this page are chapters in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the order they appear here.':
+    '本页十局棋中有九局收进了一份可以逐步研读的研习：完整的着法树，引擎给出的变化作为可以走进去的分支，每位冠军一章，顺序与本页相同。',
+  pandemic: '疫情',
+  'six-month ban, 2025': '禁赛六个月，2025',
+  'Meng Chen 孟辰': '孟辰',
+  'Lại Lý Huynh 赖理兄': '赖理兄',
+  'Zhao Xinxin': '赵鑫鑫',
+  'Jiang Chuan': '蒋川',
+  'Wang Tianyi': '王天一',
+  'Zheng Weitong': '郑惟桐',
+  'Xu Chao': '徐超',
+  'Meng Chen': '孟辰',
+  'Lại Lý Huynh': '赖理兄',
+  'Wu Guilin': '吴贵临',
+  'Nguyễn Vũ Quân': '阮武君',
+  'Nguyễn Thành Bảo': '阮成保',
+  'Lei Kam Fun': '李锦欢',
+  'Wang Kuo': '王廓',
+  'Huang Xueqian': '黄学谦',
+  'Fung Ka-chun': '冯家俊',
+  '1991 2nd World Xiangqi Championship': '1991年第二届世界象棋锦标赛',
+  '1997 5th World Xiangqi Championship': '1997年第五届世界象棋锦标赛',
+  '2007 10th World Xiangqi Championship': '2007年第十届世界象棋锦标赛',
+  '2009 11th World Xiangqi Championship': '2009年第十一届世界象棋锦标赛',
+  '2011 12th World Xiangqi Championship': '2011年第十二届世界象棋锦标赛',
+  '2015 14th World Xiangqi Championship': '2015年第十四届世界象棋锦标赛',
+  '2019 16th World Xiangqi Championship': '2019年第十六届世界象棋锦标赛',
+  '2022 17th World Xiangqi Championship': '2022年第十七届世界象棋锦标赛',
+  '2023 18th World Xiangqi Championship': '2023年第十八届世界象棋锦标赛',
+  '2025 19th World Xiangqi Championship': '2025年第十九届世界象棋锦标赛',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2661,6 +2818,143 @@ const ZH_HANT: Record<string, string> = {
   '2002 National Individual Championship': '2002年全國象棋個人錦標賽',
   '2010 National Individual Championship': '2010年全國象棋個人錦標賽',
   '2025 National Individual Championship': '2025年全國象棋個人錦標賽',
+
+  // -- World championship (xiangqi-world-championship) --
+  // Traditional is s2tw over the Simplified above (character conversion, NOT
+  // s2twp: phrase conversion corrupts terms), plus the Taiwan lexical forks
+  // 資料庫 and 高水準, plus one rewrite where 默認 does not carry "assume" in
+  // Taiwan usage.
+  //
+  // Mainland players' names are held out of the conversion: a person's name is
+  // written in the script that person uses. The champions page could apply that
+  // rule to every name at once because all twenty-two of its champions are
+  // mainland. This page's are not, so the split is real here: 吳貴臨 of Chinese
+  // Taipei, 李錦歡 of Macau, 黃學謙 and 馮家俊 of Hong Kong, and 賴理兄 of
+  // Vietnam DO convert, because traditional characters are how those names are
+  // written. world-champion-name-script.test.ts enforces both halves.
+
+  'The Xiangqi World Championship': '世界象棋錦標賽',
+  'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title':
+    '世界象棋錦標賽：歷屆冠軍，以及它為何不是最高頭銜',
+  'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.':
+    '1990年以來世界象棋錦標賽的每一位冠軍，為什麼中國全國個人賽才是更難拿的頭銜，以及2025年一位越南棋手如何第一次把它帶出中國。',
+  'Readers who have met the national champions and want to know what the international title is worth.':
+    '已經認識全國冠軍、想知道這個國際頭銜分量如何的讀者。',
+  'The World Xiangqi Championship has been held roughly every two years since 1990, organised by the World Xiangqi Federation. English readers tend to assume it is the senior title, the way the world chess championship is. It is not, and the reason is worth understanding before the list makes sense.':
+    '世界象棋錦標賽由世界象棋聯合會主辦，1990年以來大致每兩年舉辦一屆。英文讀者往往想當然地認為它是象棋界的最高頭銜，就像國際象棋世界冠軍賽那樣。事實並非如此，而弄清楚原因，下面這份名單才讀得懂。',
+  'The Chinese national championship is the harder one to win. Almost everyone capable of winning either is Chinese, and only a handful of them qualify for the world event. For its first thirty-five years the world title was, in practice, a smaller Chinese championship with guests, and then in 2025 it left China for the first time.':
+    '更難拿的是中國全國個人賽。有能力拿下這兩個頭銜中任何一個的棋手幾乎都是中國人，而其中只有少數幾位能獲得世錦賽的參賽資格。在最初的三十五年裡，世界冠軍實際上是一場規模更小、外加幾位客人的中國錦標賽，直到2025年，它第一次離開了中國。',
+  'Every world champion, 1990 to 2025': '歷屆世界冠軍，1990至2025',
+  'Nineteen editions, eleven winners. One row per player, in the order they first took the title, with a bar over the years they held it.':
+    '十九屆，十一位冠軍。每位棋手一行，按首次奪冠的先後排列，橫條覆蓋他持有頭銜的年份。',
+  'Two things fall out of the shape. The left half belongs to three men, and the right half turns red at 2009 and stays red until the last row.':
+    '從這個形狀裡能看出兩件事。左半邊屬於三個人；右半邊從2009年起變紅，一直紅到最後一行。',
+  'The same record as the figure, with the years written out. Every entry in the last column is a published ruling of the Chinese Xiangqi Association, not an allegation; the section below explains them.':
+    '與上圖相同的紀錄，把年份逐一寫出。最後一列的每一條都是中國象棋協會已公佈的處罰決定，不是指控；下面有一節專門說明。',
+  'The national title, and every champion since 1956': '全國冠軍，以及1956年以來的每一位',
+  'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.':
+    '十五年間五奪世界冠軍，另有五個全國個人賽冠軍，從1986年到2004年。廣東稱他為羊城少帥，後來又把他與许银川並稱嶺南雙雄。他是本頁榮譽最多的棋手，卻從來沒有在任何一個年份裡成為中國最強的棋手。',
+  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
+    '這句話就是整篇文章的縮影。胡荣华在國內大部分時間都壓著他，卻從未參加過這項賽事；吕钦卻拿了五次。中華臺北的吳貴臨二十年間是大陸之外最強的棋手，也是"究竟誰能贏這些人"這個問題反覆出現的答案，而吕钦在1990、1995和1997年都贏了他。',
+  'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.':
+    '吕钦對吳貴臨，1997年，第五屆世錦賽，也是他五個冠軍中的第三個。',
+  'World champion in 1991 and four times Chinese national champion, spread across eighteen years from 1990 to 2008, which is a longer span at the top than anyone here except Hu Ronghua managed. He learned in Harbin under Wang Jialiang, known as the Northeast Tiger, and the sport made him the New Northeast Tiger in turn.':
+    '1991年的世界冠軍，四次全國個人賽冠軍，跨越1990年到2008年共十八年，這個在頂端停留的跨度，除胡荣华外本頁無人能及。他在哈爾濱師從王嘉良，人稱東北虎，棋壇後來又把他叫作新東北虎。',
+  'He is one of three men on this list with no ruling against him.':
+    '他是這份名單上三位沒有受到任何處罰的棋手之一。',
+  'Zhao Guorong vs Wu Guilin, 1991, from the championship he won.':
+    '赵国荣對吳貴臨，1991年，出自他奪冠的那屆比賽。',
+  'World champion in 1993 in Beijing with seven and a half points from nine, the year after taking the Chinese national title. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is tight openings and a habit of grinding advantages too small to see into wins.':
+    '1993年在北京奪得世界冠軍，九輪拿下七點五分，這是他獲得全國個人賽冠軍的第二年。他是江蘇泰州人，棋壇稱他笑面佛，因為他從頭到尾都在笑。笑容背後是滴水不漏的佈局，以及把小到看不見的優勢一點點磨成勝勢的功夫。',
+  'He is the one champion here without a game, and that is a fact about the archives rather than about him. Four games survive from the 1993 edition in the databases this article draws on, and none of them are his. Showing a game from another event would be a different claim than the one this page makes.':
+    '他是本頁唯一沒有配棋譜的冠軍，這說的是棋譜庫的問題，不是他的問題。本文所用的資料庫裡，1993年那屆只留下四局棋，沒有一局是他的。拿另一項賽事的棋來充數，說的就不是這一頁要說的事了。',
+  'Three world titles, 1999, 2003 and 2007, alongside six Chinese national championships. He won his first national title at eighteen, second only to Hu Ronghua’s fifteen, and spent two decades as the best player in the country not named Hu Ronghua.':
+    '三個世界冠軍，1999、2003和2007年，另有六個全國個人賽冠軍。他十八歲首奪全國冠軍，僅次於胡荣华的十五歲，並且有二十年時間是這個國家裡除胡荣华之外最強的棋手。',
+  'Like Lü Qin he came out of Guangdong, like Lü Qin he built his game on endgames, and like Lü Qin he is one of the three men here with a clean record.':
+    '他和吕钦一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
+  'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
+    '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，中國象棋界稱之為大滿貫。',
+  'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
+    '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
+  'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
+    '赵鑫鑫對阮成保，2009年，出自他奪冠的那屆比賽。',
+  'Born in Yongjia, Zhejiang, in 1984. He took the Chinese national title in 2010 and the world title in Jakarta the year after, and he was the first player to pass 2700 on the rating list.':
+    '1984年生於浙江永嘉。2010年奪得全國個人賽冠軍，次年在雅加達奪得世界冠軍，他也是等級分榜上第一個突破2700分的棋手。',
+  'He is better known outside the tournament hall for blindfold play. On 3 January 2011 he took nineteen boards at once against Liu Dahua’s record and beat it with twenty, ending a mark that had stood since February 1995; he went to twenty-two in 2013 and to twenty-six after that, which is where the Guinness entry sits. He drew a five-year ban in April 2026.':
+    '在賽場之外，他更為人知的是盲棋。2011年1月3日，他為衝擊柳大華的紀錄一次盲戰十九臺，最終以二十臺破紀錄，終結了自1995年2月起保持的那個數字；2013年他打到二十二臺，此後又打到二十六臺，吉尼斯紀錄就停在這裡。2026年4月，他被處以五年禁賽。',
+  'Jiang Chuan vs Lei Kam Fun, 2011, from the championship he won.':
+    '蒋川對李錦歡，2011年，出自他奪冠的那屆比賽。',
+  'Three world titles and four Chinese national ones, and ten consecutive years at the top of the world rating list. In May 2023 he became the first player to hold a live rating above 2800. Beijing called him 外星人, the alien, for arriving from outside the provincial team system and beating everyone anyway.':
+    '三個世界冠軍，四個全國個人賽冠軍，連續十年位居世界等級分榜首。2023年5月，他成為第一個實時等級分突破2800的棋手。北京稱他外星人，因為他不是從省隊體系裡出來的，卻照樣把所有人都贏了。',
+  'The Chinese Xiangqi Association banned him for life in September 2024 and revoked his grandmaster title. A court in Hangzhou convicted him a year later.':
+    '2024年9月，中國象棋協會對他終身禁賽並撤銷其特級大師稱號。一年後，杭州一家法院對他作出有罪判決。',
+  'The opponent below is the reason to show this particular game: Wang Kuo is himself a Chinese national champion, and the strongest man Wang Tianyi faced across his three world finals.':
+    '選這一局的理由在於對手：王廓本人也是全國個人賽冠軍，是王天一三次世錦賽決賽中遇到過的最強對手。',
+  'Wang Tianyi vs Wang Kuo, 2022, from the third of his three titles.':
+    '王天一對王廓，2022年，出自他三個冠軍中的第三個。',
+  'Born in Chengdu in 1994. He took the Chinese national title in 2014 and again in 2015, then the world title in the same year, which is the harder order to do it in. He went to Tsinghua by recommendation in 2020 and won the individual gold at the 2023 Asian Games, China’s two hundredth medal of those Games.':
+    '1994年生於成都。2014年和2015年連奪全國個人賽冠軍，同年再奪世界冠軍，這個先後順序是更難的那一種。2020年他被保送清華大學，並在2023年亞運會上奪得個人金牌，那是中國隊在那屆亞運會上的第兩百枚獎牌。',
+  'He was banned for life on 12 January 2025. His title year also produced the longest game in either of these articles, and the opponent is the reason to show it.':
+    '2025年1月12日，他被終身禁賽。他奪冠的那一年也留下了這兩篇文章裡最長的一局棋，而選它的理由在於對手。',
+  'Lại Lý Huynh vs Zheng Weitong, 2015. Two hundred and seventy-four plies, and the man who loses it here takes the world title himself ten years later.':
+    '賴理兄對郑惟桐，2015年。兩百七十四個回合，而在這裡落敗的人，十年後自己拿下了世界冠軍。',
+  'From Wujiang in Suzhou, born 1981, playing from the age of seven and national youth champion at sixteen. He waited a long time for the senior title and took it in 2017 by beating the defending champion Wang Tianyi, becoming the nineteenth man to win the Chinese championship. The world title followed in Vancouver in 2019.':
+    '蘇州吳江人，1981年生，七歲學棋，十六歲獲得全國少年冠軍。成年組的頭銜他等了很久，2017年他戰勝衛冕冠軍王天一奪得全國個人賽冠軍，成為第十九位全國冠軍。世界冠軍隨之而來，2019年在溫哥華。',
+  'He was banned for life in April 2026.': '2026年4月，他被終身禁賽。',
+  'Xu Chao vs Huang Xueqian, 2019, the final round. This is the game that won it: nine judged moves between them, and six of those are blunders.':
+    '徐超對黃學謙，2019年，最後一輪。這就是奪冠的那一局：兩人合計有九步棋被引擎判定為失誤，其中六步是漏著。',
+  'Born in Anshan, Liaoning, in 1988, and one of only two men on this list who never won the Chinese national championship. He took the 2023 world title in Houston by beating Lại Lý Huynh in a tiebreak, which is the second time on this page that the future champion loses to a champion before becoming one.':
+    '1988年生於遼寧鞍山，是這份名單上僅有的兩位從未奪得全國個人賽冠軍的棋手之一。2023年他在休斯敦的加賽中戰勝賴理兄，奪得世界冠軍，這也是本頁第二次出現未來的冠軍先輸給一位冠軍、然後自己成為冠軍。',
+  'He drew a six-month ban in January 2025, the lightest ruling here.':
+    '2025年1月，他被處以六個月禁賽，是本頁最輕的一項處罰。',
+  'Meng Chen vs Lại Lý Huynh, 2023. The second time the future champion loses to a champion before becoming one.':
+    '孟辰對賴理兄，2023年。未來的冠軍先輸給一位冠軍、然後自己成為冠軍，這是第二次。',
+  'Why the national title is the harder one': '為什麼全國冠軍更難拿',
+  'Lü Qin has five of the nineteen titles, Xu Yinchuan three and Wang Tianyi three, so eleven of the nineteen editions belong to three men. Nine of the eleven world champions also won the Chinese national championship. The two who did not are Meng Chen, who took the 2023 world title, and Lại Lý Huynh, who is Vietnamese and could never have entered the Chinese event.':
+    '十九個冠軍裡，吕钦佔五個，许银川三個，王天一三個，也就是說十九屆中有十一屆屬於三個人。十一位世界冠軍中有九位同時也拿過全國個人賽冠軍。沒拿過的兩位，一位是2023年奪冠的孟辰，另一位是賴理兄，他是越南人，本來就不可能參加中國的比賽。',
+  'That is the whole argument in one line. The world field is drawn from the same pool as the national field, minus most of it. China sends a small delegation, the rest of the entry is the strongest players from everywhere else, and for thirty-five years everywhere else was not close. A player who can win in Beijing can usually win in Singapore or Vancouver; the reverse has almost never been true.':
+    '一句話就能說完整個論證。世錦賽的參賽者與全國賽出自同一個池子，只是被砍掉了絕大部分。中國只派出一支小型代表隊，其餘名額來自世界其他地方最強的棋手，而三十五年來，世界其他地方差得很遠。能在北京奪冠的棋手，通常也能在新加坡或溫哥華奪冠；反過來則幾乎從未發生。',
+  'The comparison English readers reach for is the wrong way round. The world title here is closer to a strong invitational than to a world championship, and the national championship is the thing with the deep field, the long history and the names everyone knows. Lü Qin has five world titles and never finished a year as the best player in China; Hu Ronghua, who was that player for two decades, never won this event at all.':
+    '英文讀者習慣拿來類比的那組關係，方向正好反了。這裡的世界冠軍更接近一項高水準邀請賽，而不是世界錦標賽；全國個人賽才是那個參賽面深、歷史長、名字人人都認得的比賽。吕钦有五個世界冠軍，卻從未在哪一年成為中國最強的棋手；而二十年裡一直是那個人的胡荣华，根本沒有拿過這項賽事的冠軍。',
+  'The decade with a ruling on it': '被處罰覆蓋的那十年',
+  'Every edition from 2009 to 2023 was won by a man who now has a published ruling against him. That is eight championships and six men: three banned for life, one convicted in court, one given five years, and one given six months.':
+    '從2009年到2023年，每一屆的冠軍如今都揹著一份已公佈的處罰決定。這是八屆比賽、六個人：三人終身禁賽，一人被法院判罪，一人五年禁賽，一人六個月禁賽。',
+  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. They are findings by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
+    '這些處罰出自中國媒體稱為錄音門的假棋案，中國象棋協會在2024年到2026年間陸續處理完畢。它們是這項運動自己的管理機構作出的認定，不是指控；針對的是這些棋手的職業生涯，而不是某一局具體的世錦賽對局。',
+  'The names stay in the table and the sections stay on the page. A list that quietly dropped them would be a worse record of what happened, and what the rulings do not tell you is which games were fixed. The [national championship list](/blog/xiangqi-champions) tells the same decade from the other side, where ten of the thirteen men who have won since 2005 carry a ruling.':
+    '名字留在表裡，章節留在頁面上。悄悄把他們刪掉的名單，是一份更差的歷史記錄；而這些處罰並沒有告訴你哪些棋是假的。[全國冠軍名單](/blog/xiangqi-champions)從另一側講述同樣的十年，那裡2005年以來奪冠的十三人中有十人揹著處罰。',
+  'The 2025 championship was played in Shanghai in September, and won by Lại Lý Huynh of Vietnam, who beat Yin Sheng of China in the final on the twenty-seventh. He is the first man from outside China to take the standard title in the thirty-five years the event has existed.':
+    '2025年的世錦賽9月在上海舉行，越南的賴理兄奪冠，他在27日的決賽中戰勝了中國的殷升。在這項賽事存在的三十五年裡，他是第一個把慢棋冠軍拿走的非中國棋手。',
+  'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.':
+    '賴理兄對馮家俊，2025年9月23日，決賽前四天。兩百一十七個回合，引擎認為直到第九十回合雙方仍然均勢。',
+  'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.':
+    '把這兩件事連起來讀很有誘惑力，好像是禁賽替他打開了門。這個讀法太齊整了。他1990年生於永隆，2022年拿下世界快棋冠軍，2023年就打進過這項決賽，在加賽中輸給孟辰。他在本頁還出現過兩次，2015年輸給郑惟桐，2023年輸給孟辰，也就是說他在拿到任何東西之前已經來了十年。越南做了一代人的世界第二象棋強國，英文世界卻幾乎沒有注意到。',
+  'Where that leaves the title': '這個頭銜的分量',
+  'Nineteen editions, eleven winners, and a question that had the same answer for thirty-five years. The world title had never left China. Now it has, in the same decade the sport spent voiding its own results, and those two things are worth keeping separate.':
+    '十九屆，十一位冠軍，還有一個三十五年來答案不變的問題。世界冠軍從未離開過中國。現在它離開了，而這十年正是這項運動忙著推翻自己成績的十年，這兩件事值得分開來看。',
+  'What the title is worth is a separate question again, and the honest answer is that it has always been worth less than the championship held in Beijing. That is not a slight on the men who won it. It is what happens when one country is this far ahead of the rest, and it is the thing 2025 has started to change.':
+    '這個頭銜究竟值多少，又是另一個問題，老實的回答是：它一直不如在北京舉行的那個比賽。這不是貶低奪得它的棋手。當一個國家領先其他國家這麼多時，事情本來就會是這樣，而2025年開始改變的正是這一點。',
+  'Nine of the ten games on this page are chapters in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the order they appear here.':
+    '本頁十局棋中有九局收進了一份可以逐步研讀的研習：完整的著法樹，引擎給出的變化作為可以走進去的分支，每位冠軍一章，順序與本頁相同。',
+  'six-month ban, 2025': '禁賽六個月，2025',
+  'Lại Lý Huynh 赖理兄': '賴理兄',
+  'Lại Lý Huynh': '賴理兄',
+  'Wu Guilin': '吳貴臨',
+  'Lei Kam Fun': '李錦歡',
+  'Huang Xueqian': '黃學謙',
+  'Fung Ka-chun': '馮家俊',
+  '1991 2nd World Xiangqi Championship': '1991年第二屆世界象棋錦標賽',
+  '1997 5th World Xiangqi Championship': '1997年第五屆世界象棋錦標賽',
+  '2007 10th World Xiangqi Championship': '2007年第十屆世界象棋錦標賽',
+  '2009 11th World Xiangqi Championship': '2009年第十一屆世界象棋錦標賽',
+  '2011 12th World Xiangqi Championship': '2011年第十二屆世界象棋錦標賽',
+  '2015 14th World Xiangqi Championship': '2015年第十四屆世界象棋錦標賽',
+  '2019 16th World Xiangqi Championship': '2019年第十六屆世界象棋錦標賽',
+  '2022 17th World Xiangqi Championship': '2022年第十七屆世界象棋錦標賽',
+  '2023 18th World Xiangqi Championship': '2023年第十八屆世界象棋錦標賽',
+  '2025 19th World Xiangqi Championship': '2025年第十九屆世界象棋錦標賽',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
