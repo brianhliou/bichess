@@ -2437,11 +2437,17 @@
   border-color: var(--player-gold, var(--site-accent));
 }
 
+/* lichess's leaderboard rows are 14px 400 throughout: the player name and the
+   rating are ordinary text, and w700 is reserved for the title badge. Measured
+   on lichess.org/player 2026-08-28, where a.online/a.offline (the name) and
+   span.text (the rating) are both 14px 400 and only span.utitle is bold. Ours
+   ran 13px with the name at 600 and the rating at 700, which read as a much
+   louder table than the one it is modelled on. */
 .leaderboard-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Lichess-style zebra rows: striping carries the row rhythm, no per-row borders. */
@@ -2480,7 +2486,7 @@
   align-items: center;
   gap: 7px;
   color: color-mix(in srgb, var(--player-gold) 82%, var(--site-heading));
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.25;
   text-decoration: none;
 }
@@ -2498,7 +2504,7 @@
 .leaderboard-rating {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--site-heading);
   width: 58px;
 }
