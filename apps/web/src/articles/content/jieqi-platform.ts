@@ -108,6 +108,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-reveal-candidates.png',
+          className: 'article-figure--tall',
           alt: 'A jieqi review move list. Move 19 is a flip carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent.',
           caption:
             'Move 19 played the 39% move when 52% was there, so it is marked. Move 21 played the best one and still got a +43% gift from the flip.',
@@ -181,7 +182,7 @@ export const jieqiPlatformArticle: Article = {
             ['Engine in your browser', 'No queue, no account'],
             ['Studies with your own deals', 'Yes'],
             ['Open-source engine', 'Yes'],
-            ['Rated ladder', 'Not yet'],
+            ['Rated ladder', 'Open, signed in'],
           ],
         },
       ],

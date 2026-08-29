@@ -98,7 +98,11 @@ registerVariantTenant({
       handleJieqiCreate({ ...ctx, createJieqiRoom }, response, body),
   },
   lobby: {
-    supportsRated: false,
+    // Rated opened 2026-08-28, in step with the web tenant's capability flag.
+    // Both sides have to agree: the client decides whether to OFFER a rated seek
+    // and this decides whether one is honoured, so flipping either alone gives a
+    // rated toggle the lobby rejects, or a rated pool nothing can reach.
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
     createRoom: async (timeControl) => {
       const created = await createJieqiRoom(timeControl, 'random');

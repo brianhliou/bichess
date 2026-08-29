@@ -2261,3 +2261,22 @@ a.article-meta-author:hover .article-meta-author-name {
 [data-article-slug="jieqi-platform"] .raw-svg-stepper-frame.raw-svg-stepper-frame-jieqi > svg {
   width: min(460px, 100%);
 }
+
+/* A portrait figure sized to the column's WIDTH becomes taller than the viewport
+   and dominates the page; the landscape ones next to it do not. Cap the tall ones
+   on width so they read as one figure among several. */
+[data-article-slug="jieqi-platform"] .article-figure--tall img {
+  max-width: min(100%, 420px);
+}
+
+/* Centre the comparison table in its figure rather than letting a narrow table
+   sit against the left edge of a wide column. */
+.article-figure-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.article-figure-table .article-table {
+  margin-inline: auto;
+}
