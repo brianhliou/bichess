@@ -2759,3 +2759,17 @@ a.article-meta-author:hover .article-meta-author-name {
 .article-figure-table .article-table {
   margin-inline: auto;
 }
+
+/* The line's assessment, sitting at its end the way it does in a printed game
+   collection. Muted rather than coloured: the judgment glyph on the move that
+   earned the line already carries the colour, and a second coloured token in the
+   same row would compete with it for the same job. */
+.xq-replay-annotated .xq-replay-branch-eval {
+  margin-left: 5px;
+  align-self: center;
+  color: var(--site-heading);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

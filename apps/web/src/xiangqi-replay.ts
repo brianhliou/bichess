@@ -88,6 +88,14 @@ export type XiangqiReplayAnnotation = {
   line?: string;
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
+  /**
+   * Assessment at the END of `line`, in the chess-literature symbols (+-, +/-,
+   * +=, =, =+, -/+, -+). Deliberately not derived from `cp`: that eval is the
+   * position after the move actually PLAYED, one ply deep, while this is the
+   * line's destination with best play from both sides. They answer different
+   * questions and routinely disagree. Measured by scripts/champions-line-evals.mjs.
+   */
+  lineEval?: string;
 };
 
 export type XiangqiReplayAnnotations = {
@@ -697,6 +705,13 @@ export function mountXiangqiReplay(
           }),
         );
       });
+      // The line's verdict, where a reader's eye already is: at its end.
+      if (a?.lineEval) {
+        const verdict = document.createElement('span');
+        verdict.className = 'xq-replay-branch-eval';
+        verdict.textContent = a.lineEval;
+        branch.appendChild(verdict);
+      }
       moveList.appendChild(branch);
     }
     // Last item in the scroller, not a pinned footer: the result belongs at the
