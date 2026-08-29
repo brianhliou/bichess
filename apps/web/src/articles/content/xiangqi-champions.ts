@@ -920,7 +920,26 @@ export const xiangqiChampionsArticle: Article = {
   // The chart, not a board: it is what the article is actually about, it is the
   // only image on the page a reader would recognise later, and a start position
   // says nothing that distinguishes this piece from any other xiangqi article.
-  thumbnail: { kind: 'svg', svg: xiangqiChampionTimelineSvg },
+  //
+  // The COMPACT rendition, for the same reason the share card uses one. A card
+  // is 482px wide on /blog and 158px in the homepage row, which puts the 22 row
+  // labels at 5.2px and 1.7px: not small, unreadable, and they take the left
+  // quarter of the frame to be unreadable in. Dropping them gives the bars the
+  // whole width, and the shape (green thinning out, then red) is what carries
+  // at thumbnail size anyway.
+  thumbnail: {
+    kind: 'svg',
+    // rowHeight 24 puts the compact chart at 920x582, a 1.58 ratio against the
+    // 1.60 both card frames use. At the generator's label-less default of 15 it
+    // comes out 2.40 and letterboxes away a third of the card.
+    svg: () =>
+      xiangqiChampionTimelineSvg({
+        labels: false,
+        legend: false,
+        credit: false,
+        rowHeight: 24,
+      }),
+  },
   intro: [
     {
       kind: 'paragraph',

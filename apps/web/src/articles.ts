@@ -371,6 +371,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 const HOME_ARTICLE_SLUGS = [
+  'xiangqi-champions',
   'titled-players',
   'riverbank-cannon',
   'skill-vs-luck',
