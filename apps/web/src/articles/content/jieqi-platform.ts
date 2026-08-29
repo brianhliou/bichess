@@ -153,22 +153,36 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. It only ever sees the face-down board, with every hidden piece written as a blank. It does not know the deal, and a test fails the build if that ever leaks.',
+            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent.',
         },
         {
           kind: 'paragraph',
           text:
-            'The search is classical alpha-beta with iterative deepening and a transposition table, and a hand-written evaluation rather than a neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node: instead of one line it scores a move as the probability-weighted average over each piece that tile could still be. That is also why the transposition table matters so much here, and why a table too small to hold the search does not just slow it down but changes the numbers it reports.',
+            'It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish\'s strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like.',
         },
+      ],
+    },
+    {
+      // A summary belongs after the substance and before the objections: the
+      // reader has seen the claims made and is about to ask what is missing.
+      // Under 'Start playing' it sat between the reader and the buttons.
+      heading: 'What you get',
+      blocks: [
         {
-          kind: 'paragraph',
-          text:
-            'The review layer on top is ours. It asks the engine for several candidate moves at once, then re-scores each one itself as an explicit average over the mover\'s remaining hidden pieces, which is what separates the move you chose from the piece you drew.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and jieqi has no good one. We trained a net and it never came out stronger than the hand-written evaluation it was meant to replace, so this is an open problem rather than a chore nobody has got round to. If you train nets, or you know jieqi well enough to say where the engine's judgement goes wrong, that is the help we would most like.",
+          // Deliberately no competitor named. The claims are about what this site
+          // does; a table asserting what someone else lacks would need checking
+          // every time they ship, and would be wrong before anyone noticed.
+          kind: 'table',
+          headers: ['', 'On Mistboard'],
+          rows: [
+            ['Play the engine or a friend', 'Free, no account'],
+            ['Full-game analysis', 'Every finished game'],
+            ['Luck measured separately', 'Every flip priced'],
+            ['Engine in your browser', 'No queue, no account'],
+            ['Studies with your own deals', 'Yes'],
+            ['Open-source engine', 'Yes'],
+            ['Rated ladder', 'Not yet'],
+          ],
         },
       ],
     },
@@ -220,22 +234,6 @@ export const jieqiPlatformArticle: Article = {
     {
       heading: 'Start playing',
       blocks: [
-        {
-          // Deliberately no competitor named. The claims are about what this site
-          // does; a table asserting what someone else lacks would need checking
-          // every time they ship, and would be wrong before anyone noticed.
-          kind: 'table',
-          headers: ['', 'On Mistboard'],
-          rows: [
-            ['Play the engine or a friend', 'Free, no account'],
-            ['Full-game analysis', 'Every finished game'],
-            ['Luck measured separately', 'Every flip priced'],
-            ['Engine in your browser', 'No queue, no account'],
-            ['Studies with your own deals', 'Yes'],
-            ['Open-source engine', 'Yes'],
-            ['Rated ladder', 'Not yet'],
-          ],
-        },
 
         {
           kind: 'cta',

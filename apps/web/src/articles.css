@@ -828,6 +828,10 @@
 }
 
 .article-figure-image img {
+  /* Centred, because an image narrower than its column left-aligned inside it
+     reads as a layout fault rather than a choice. */
+  display: block;
+  margin-inline: auto;
   max-width: min(100%, 560px);
   height: auto;
   border: 1px solid var(--site-border);
@@ -2242,4 +2246,18 @@ a.article-meta-author:hover .article-meta-author-name {
   color: #eee;
   font-size: 0.9rem;
   text-align: center;
+}
+
+/* The jieqi platform page's figures are dense product screenshots: a review panel
+   of move names and percentages, and an engine readout. At the shared 560px cap
+   they were unreadable in place, which made the lightbox the only way to see the
+   page's own evidence. Here they fill the column instead. The replay grows with
+   them: at 360px it was correctly sized against 560px figures and looks starved
+   beside full-width ones. */
+[data-article-slug="jieqi-platform"] .article-figure-image img {
+  max-width: 100%;
+}
+
+[data-article-slug="jieqi-platform"] .raw-svg-stepper-frame.raw-svg-stepper-frame-jieqi > svg {
+  width: min(460px, 100%);
 }
