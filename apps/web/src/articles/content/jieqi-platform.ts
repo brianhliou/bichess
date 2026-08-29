@@ -160,7 +160,6 @@ export const jieqiPlatformArticle: Article = {
             ['Open-source engine', 'Yes'],
             ['Rated ladder', 'Not yet'],
           ],
-          caption: 'What you get, including what you do not.',
         },
       ],
     },
