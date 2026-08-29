@@ -816,7 +816,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
       ],
     },
     {
-      heading: 'Xu Chao 许超, 2019',
+      heading: 'Xu Chao 徐超, 2019',
       blocks: [
         {
           kind: 'paragraph',

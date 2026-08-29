@@ -48,7 +48,7 @@ export const WORLD_CHAMPIONS: readonly ChampionRecord[] = [
   { name: 'Jiang Chuan', zh: '蒋川', years: [2011], sanction: 'five-year ban, 2026' },
   { name: 'Wang Tianyi', zh: '王天一', years: [2013, 2017, 2022], sanction: 'convicted, banned' },
   { name: 'Zheng Weitong', zh: '郑惟桐', years: [2015], sanction: 'banned for life, 2025' },
-  { name: 'Xu Chao', zh: '许超', years: [2019], sanction: 'banned for life, 2026' },
+  { name: 'Xu Chao', zh: '徐超', years: [2019], sanction: 'banned for life, 2026' },
   { name: 'Meng Chen', zh: '孟辰', years: [2023], sanction: 'six-month ban, 2025' },
   {
     name: 'Lại Lý Huynh',

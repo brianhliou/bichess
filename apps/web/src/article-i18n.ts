@@ -1380,7 +1380,7 @@ const ZH_HANS: Record<string, string> = {
   'Wang Tianyi 王天一': '王天一',
   'Xie Jing 谢靖': '谢靖',
   'Zheng Weitong 郑惟桐': '郑惟桐',
-  'Xu Chao 许超': '许超',
+  'Xu Chao 徐超': '徐超',
   'Wang Yang 汪洋': '汪洋',
   'Wang Kuo 王廓': '王廓',
   'Wang Yubo 王禹博': '王禹博',
