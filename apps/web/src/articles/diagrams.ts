@@ -2597,7 +2597,7 @@ export const JIEQI_START_VIEW_BOARD = Object.fromEntries(
   ]),
 ) as XiangqiPlayerView['board'];
 export const JIEQI_START_VIEW = xqStaticView('jieqi-start-view', JIEQI_START_VIEW_BOARD);
-export const JIEQI_START_BOARD = () => xqSvg(
+export const JIEQI_START_BOARD = (labels?: { start?: string }) => xqSvg(
   XQ_BOARD_W,
   XQ_BOARD_H + 52,
   xqBoardSvg({
@@ -2605,7 +2605,7 @@ export const JIEQI_START_BOARD = () => xqSvg(
     view: JIEQI_START_VIEW,
     x: 0,
     y: 0,
-    label: 'SHUFFLED START',
+    label: labels?.start ?? 'SHUFFLED START',
     perspective: 'red',
     shroudedStyle: 'back',
   }),
@@ -2634,7 +2634,7 @@ export const JIEQI_REVEAL_BEFORE_VIEW = xqStaticView(
   'jieqi-reveal-before-view',
   JIEQI_REVEAL_BEFORE_BOARD,
 );
-export const JIEQI_REVEAL_PAIR = () => xqSvg(
+export const JIEQI_REVEAL_PAIR = (labels?: { before?: string; after?: string }) => xqSvg(
   JIEQI_PAIR_W,
   XQ_BOARD_H + 52,
   [
@@ -2643,7 +2643,7 @@ export const JIEQI_REVEAL_PAIR = () => xqSvg(
       view: JIEQI_REVEAL_BEFORE_VIEW,
       x: 0,
       y: 0,
-      label: 'BEFORE: HORSE POINT',
+      label: labels?.before ?? 'BEFORE: HORSE POINT',
       perspective: 'red',
       dots: [{ square: 'c3' as XiangqiSquare }],
       shroudedStyle: 'back',
@@ -2652,7 +2652,7 @@ export const JIEQI_REVEAL_PAIR = () => xqSvg(
       state: JIEQI_REVEAL_AFTER_STATE,
       x: XQ_BOARD_W + 28,
       y: 0,
-      label: 'AFTER: REVEALED CANNON',
+      label: labels?.after ?? 'AFTER: REVEALED CANNON',
       perspective: 'red',
       arrows: [{ from: 'b1' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
     }),
@@ -2666,7 +2666,7 @@ export const JIEQI_REVEALED_ELEPHANT_STATE = xqVisionDemoState('jieqi-revealed-e
   g7: { color: 'red', role: 'elephant' },
   f8: { color: 'black', role: 'soldier' },
 });
-export const JIEQI_REVEALED_FREEDOMS = () => xqSvg(
+export const JIEQI_REVEALED_FREEDOMS = (labels?: { advisor?: string; elephant?: string }) => xqSvg(
   JIEQI_PAIR_W,
   XQ_BOARD_H + 52,
   [
@@ -2674,7 +2674,7 @@ export const JIEQI_REVEALED_FREEDOMS = () => xqSvg(
       state: JIEQI_REVEALED_ADVISOR_STATE,
       x: 0,
       y: 0,
-      label: 'ADVISOR AFTER REVEAL',
+      label: labels?.advisor ?? 'ADVISOR AFTER REVEAL',
       perspective: 'red',
       dots: xqDots(['b5', 'd5', 'b7', 'd7']),
     }),
@@ -2682,7 +2682,7 @@ export const JIEQI_REVEALED_FREEDOMS = () => xqSvg(
       state: JIEQI_REVEALED_ELEPHANT_STATE,
       x: XQ_BOARD_W + 28,
       y: 0,
-      label: 'ELEPHANT AFTER REVEAL',
+      label: labels?.elephant ?? 'ELEPHANT AFTER REVEAL',
       perspective: 'red',
       dots: [
         ...xqDots(['e5', 'i5', 'i9']),
@@ -2718,7 +2718,7 @@ export const JIEQI_CAPTURE_BEFORE_VIEW = xqStaticView('jieqi-capture-before-view
   a4: { piece: { color: 'red', role: 'chariot' }, shrouded: false },
   a7: { piece: { color: 'black', role: 'horse' }, shrouded: true },
 });
-export const JIEQI_CAPTURE_PRIVACY = () => xqSvg(
+export const JIEQI_CAPTURE_PRIVACY = (labels?: { capture?: string; title?: string; redKnows?: string; blackKnows?: string }) => xqSvg(
   JIEQI_PAIR_W,
   XQ_BOARD_H + 214,
   [
@@ -2727,23 +2727,23 @@ export const JIEQI_CAPTURE_PRIVACY = () => xqSvg(
       view: JIEQI_CAPTURE_BEFORE_VIEW,
       x: JIEQI_PAIR_CENTER_X,
       y: 0,
-      label: 'CAPTURE',
+      label: labels?.capture ?? 'CAPTURE',
       perspective: 'red',
       arrows: [{ from: 'a4' as XiangqiSquare, to: 'a7' as XiangqiSquare }],
       shroudedStyle: 'back',
     }),
-    `<text x="${JIEQI_PAIR_W / 2}" y="${XQ_BOARD_H + 82}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">CAPTURED PIECE KNOWLEDGE</text>`,
+    `<text x="${JIEQI_PAIR_W / 2}" y="${XQ_BOARD_H + 82}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">${labels?.title ?? 'CAPTURED PIECE KNOWLEDGE'}</text>`,
     jieqiCaptureTray(
       0,
       XQ_BOARD_H + 104,
-      'RED KNOWS',
+      labels?.redKnows ?? 'RED KNOWS',
       'the captured piece was a horse',
       false,
     ),
     jieqiCaptureTray(
       (JIEQI_PAIR_W + 28) / 2,
       XQ_BOARD_H + 104,
-      'BLACK KNOWS',
+      labels?.blackKnows ?? 'BLACK KNOWS',
       'one dark piece disappeared',
       true,
     ),

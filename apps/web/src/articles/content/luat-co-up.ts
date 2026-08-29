@@ -21,7 +21,14 @@
 // native read. Treat a native review as a prerequisite for publishing, not a
 // nice-to-have: rules copy that is subtly wrong is worse than no rules copy.
 
-import type { Article } from '../types.js';
+import {
+  JIEQI_CAPTURE_PRIVACY,
+  JIEQI_REVEAL_PAIR,
+  JIEQI_REVEALED_FREEDOMS,
+  JIEQI_START_BOARD,
+} from '../diagrams.js';
+import { JIEQI_SAMPLE_GAME } from '../../jieqi-sample-game.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 export const luatCoUpArticle: Article = {
   slug: 'luat-co-up',
@@ -58,6 +65,11 @@ export const luatCoUpArticle: Article = {
           text:
             'Đặt tướng ngửa lên ở vị trí bình thường trong cung. Mười lăm quân còn lại của mỗi bên được xáo trộn rồi úp xuống các vị trí xuất phát còn lại. Không ai biết thân phận của quân nào, kể cả quân của chính mình.',
         },
+        {
+          kind: 'raw-svg',
+          svg: () => JIEQI_START_BOARD({ start: 'THẾ BAN ĐẦU ĐÃ XÁO' }),
+          caption: 'Chỉ hai tướng ngửa mặt. Mười lăm quân còn lại của mỗi bên đều úp.',
+        } as ArticleBlock,
       ],
     },
     {
@@ -73,6 +85,13 @@ export const luatCoUpArticle: Article = {
           text:
             'Mọi hạn chế thông thường vẫn được áp dụng cho nước đi đó: cản mã, cản tượng (mắt tượng), pháo phải có ngòi, sĩ không ra khỏi cung, tượng không qua sông. Nước đi vừa xong là quân lật ngửa cho cả hai bên cùng thấy.',
         },
+        {
+          kind: 'raw-svg',
+          svg: () =>
+            JIEQI_REVEAL_PAIR({ before: 'TRƯỚC: VỊ TRÍ MÃ', after: 'SAU: LẬT RA PHÁO' }),
+          caption:
+            'Quân úp đứng ở vị trí mã nên đi như mã. Đi xong nó lật lên, và hoá ra là pháo: ô cờ chỉ quyết định nước đi đầu tiên, không quyết định thân phận.',
+        } as ArticleBlock,
       ],
     },
     {
@@ -88,6 +107,12 @@ export const luatCoUpArticle: Article = {
           text:
             'Mã, xe và pháo đi bình thường. Tốt theo luật sông bình thường tính từ chỗ nó lật lên: chưa qua sông thì chỉ đi thẳng, qua sông rồi thì đi thẳng hoặc ngang, không bao giờ đi lùi.',
         },
+        {
+          kind: 'raw-svg',
+          svg: () =>
+            JIEQI_REVEALED_FREEDOMS({ advisor: 'SĨ SAU KHI LẬT', elephant: 'TƯỢNG SAU KHI LẬT' }),
+          caption: 'Sau khi lật, sĩ được ra khỏi cung và tượng được qua sông.',
+        } as ArticleBlock,
       ],
     },
     {
@@ -98,6 +123,17 @@ export const luatCoUpArticle: Article = {
           text:
             'Nếu một quân úp bị ăn khi chưa lật, chỉ bên ăn được biết đó là quân gì. Bên mất quân chỉ thấy một quân úp rời bàn cờ mà không biết thân phận. Nhờ vậy bên ăn có thêm thông tin để loại trừ khả năng ở những quân úp còn lại.',
         },
+        {
+          kind: 'raw-svg',
+          svg: () =>
+            JIEQI_CAPTURE_PRIVACY({
+              capture: 'ĂN QUÂN',
+              title: 'AI BIẾT QUÂN VỪA BỊ ĂN',
+              redKnows: 'ĐỎ BIẾT',
+              blackKnows: 'ĐEN BIẾT',
+            }),
+          caption: 'Bên ăn biết mình vừa ăn quân gì. Bên mất quân thì không.',
+        } as ArticleBlock,
       ],
     },
     {
@@ -118,6 +154,28 @@ export const luatCoUpArticle: Article = {
           text:
             'Trên Mistboard, ván cờ tự động hòa sau 120 lượt đi, tức 60 nước mỗi bên, mà không có nước ăn quân nào. Lặp lại thế cờ không tạo ra một luật hòa tự động riêng.',
         },
+      ],
+    },
+    {
+      heading: 'Một ván mẫu',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'Đi thử từng nước một ván engine tự đánh với chính mình. Quân úp hiện ra như những đĩa màu và lật lên đúng lần đầu chúng di chuyển.',
+        },
+        {
+          kind: 'jieqi-replay',
+          spec: {
+            red: JIEQI_SAMPLE_GAME.red,
+            black: JIEQI_SAMPLE_GAME.black,
+            event: JIEQI_SAMPLE_GAME.event,
+            outcome: 'Đỏ thắng bằng chiếu bí · 36 nước',
+            resultText: JIEQI_SAMPLE_GAME.result,
+            deal: JIEQI_SAMPLE_GAME.deal,
+            moves: JIEQI_SAMPLE_GAME.moves,
+          },
+        } as ArticleBlock,
       ],
     },
     {
