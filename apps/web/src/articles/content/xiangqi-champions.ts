@@ -995,22 +995,22 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Xiangqi reached its modern form at the end of the Northern Song: sixteen pieces a side, nine files by ten ranks, the river, the palace, the general and advisors confined to it. By the Southern Song it was played everywhere, by Li Qingzhao and Wen Tianxiang among others. No game records survive from any of it. Nine hundred years of the game, and not one result.',
+            'Xiangqi reached its modern form at the end of the Northern Song: sixteen pieces a side, nine files by ten ranks, the river, the palace, the general and advisors confined to it. By the Southern Song it was played widely enough that Wen Tianxiang, the statesman the Mongols executed in 1283, grew up in a family of players and left a book of forty endgame problems. Nine hundred years of the game, and composed positions like his are nearly all that survives: not one record of a game anyone actually played.',
         },
         {
           kind: 'paragraph',
           text:
-            'What survives from the Ming onward is manuals. 橘中秘 (Secrets Inside the Tangerine) was printed in 1632 and became the most reprinted xiangqi text of the Ming and Qing. 梅花谱 followed under Kangxi, and four great Qing endgame collections after it, including 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score.',
+            'What survives from the Ming onward is manuals. 橘中秘 (Secrets Inside the Tangerine) was printed in 1632 and became the most reprinted xiangqi text of the Ming and Qing. 梅花谱 followed in the Qing, and four great endgame collections after it, including 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score.',
         },
         {
           kind: 'paragraph',
           text:
-            'The first era with contested titles ran through the 1920s and 1930s and had no federation. Regional matches were organised by newspapers, and the winners were given names rather than trophies. Zhou Deyu scored highest when East China played North China in 1931 and became 七省棋王, Chess King of Seven Provinces. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.',
+            'The first era with contested titles ran through the 1920s and 1930s and had no federation. Regional matches were organised by newspapers, and the winners were given names rather than trophies. When East China played North China in Shanghai in February 1931, Zhou Deyu finished three points clear and was crowned 七省棋王, Chess King of Seven Provinces, the seven being simply how many provinces the four players came from. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.',
         },
         {
           kind: 'paragraph',
           text:
-            'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and raised war funds through simultaneous displays, blindfold play and games with human pieces. In 1939 he played Zhou Enlai in Chongqing, and the drawn game they published in the Ta Kung Pao was titled 共抒国难, relieving the national crisis together. He died in 1987, aged ninety-nine.',
+            'Xie Xiaxun organised those matches and is the figure worth knowing. He played Western chess well enough to win a five-nation tournament at Shamian in 1936 with eighteen wins, one loss and one draw. In October 1937 he went to Southeast Asia as a national envoy and spent two years playing for the war: simultaneous displays, blindfold games, boards laid out with people as the pieces. He raised more than fifty million in banknotes and silver, and sent three thousand young overseas Chinese home to fight. In 1939 he played Zhou Enlai in Chongqing, and the drawn game they published in the Ta Kung Pao was titled 共抒国难, relieving the national crisis together. He died in 1987, aged ninety-nine.',
         },
         {
           kind: 'paragraph',
@@ -1392,7 +1392,9 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'cta',
-          layout: 'single-row',
+          // Not 'single-row': that layout is a horizontal scroller for articles
+          // with many buttons, and with two it just pushed the fallback one off
+          // a phone screen. The default row wraps and centres.
           buttons: [
             {
               label: 'Play through all sixteen games',
