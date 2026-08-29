@@ -41,6 +41,7 @@ import {
   evaluateJieqiFen,
   evaluateJieqiMultiPv,
   JIEQI_ANALYSIS_ENGINE_VERSION,
+  type JieqiEvalBudget,
   PIKAFISH_JIEQI_ENGINE_REF,
   withJieqiAnalysisSession,
 } from './jieqi-engine.js';
@@ -52,36 +53,67 @@ import {
 import * as persistence from './persistence.js';
 import type { UciMultiPvLine } from './uci-engine-harness.js';
 
-// Search budget. A fixed DEPTH is reproducible in RESULT on a given architecture (see the ARCH
-// note in jieqi-engine.ts), so the cached analysis stays stable; the movetime cap only bounds
-// per-ply latency on a slow box. Depth 16, up from the old 12 but down from the 20 first shipped
-// on 2026-08-28.
+// Search budget: fixed NODES, not fixed depth (see JieqiEvalBudget in jieqi-engine.ts for the
+// full argument and the measurements). The short version: a fixed depth buys wildly different
+// amounts of search per position, because extensions spend the budget for you. Measured over
+// one 64-ply game at the old depth 16, per-ply cost ran 94k -> 7.8M nodes (median 173k, mean
+// 845k). That made neighbouring plies incomparable and produced a visible false cliff: the
+// position one ply BEFORE a discovered check got 94k nodes and missed it (+160 for the side
+// about to be checked), while the position AFTER it was already in check, so check extensions
+// pushed the same nominal depth 16 past the tactic (-104). The eval graph then blamed a quiet
+// soldier step for a 264cp swing the mover could not have caused, and let the real blunder —
+// the move before it — through ungraded.
 //
-// 12 was unspent budget: measured single-threaded with the analysis Hash, a midgame ply costs
-// 10ms at depth 12 against a 4000ms cap, and the eval was still moving (a sampled midgame:
-// 1023 cp at 12, 1024 at 20, 1050 at 24), so 12 was not convergence.
-//
-// 20 overshot in the other direction, which only showed up in prod. A 146-ply game took ~10min
-// of sweep plus ~7min of decisions, peaking at 1.57 CPU cores and 690MB on the `web` container,
-// on a job queue whose execution chain is concurrency 1 across EVERY variant. A post-game review
-// is a user-facing wait, so that is the binding constraint, not the CPU. Depth 16 costs ~2.3x
-// less per eval than 20 (131ms vs 298ms on a midgame ply) and keeps nearly all of the quality:
-// most of the 2026-08-28 gain came from the Hash fix (16MB thrashed and CORRUPTED the eval),
-// which is free, rather than from the depth. Going deeper again needs the compute off the
-// request path first, not just a bigger number here (see #316).
-const JIEQI_ANALYSIS_DEPTH_SEARCH = 16;
+// 500k nodes was picked by measurement, not feel. It is enough to resolve that position
+// (it finds the tactic at effective depth 23, -504), and it is CHEAPER than depth 16 was:
+// 29.3M nodes / 10.2s for the whole game against 54.1M / 18.6s, because it caps the tail
+// instead of the median. Capping the tail is what the 2026-08-28 depth 20 -> 16 cut was
+// actually trying to buy (a 146-ply game costing ~10min of sweep); a node budget buys it
+// directly, without paying for it in the positions that needed the search.
+const JIEQI_ANALYSIS_NODES = 500_000;
+
+// Backstop only, on both arms of the budget. At 500k nodes and the 2-3M nps this binary runs
+// at, a ply is ~200ms, so this cap must never bind; if it does, that ply stopped being
+// reproducible.
 const JIEQI_ANALYSIS_MOVETIME_CAP_MS = 6_000;
 
+// ── Parent/child consistency (see reconcileJieqiSeries) ──────────────────────
+//
+// A DETERMINISTIC move cannot improve the mover's own position beyond what the parent search
+// says was available: the mover could always have played it, so value(parent) >= value(child)
+// in the mover's POV. A violation is proof the parent was under-searched.
+//
+// The threshold is not zero, because the invariant only holds for EXACT minimax and these are
+// two fixed-budget estimates of a chance-node value. Measured over 92 deterministic plies in
+// two real games at 500k nodes, 36% violate it by SOME amount (p90 +62cp, p95 +122cp) — that
+// is ordinary search noise. Only the tail is a real defect: 3 pairs over 200cp. So 200 is set
+// where the distribution stops being noise, not at a round number that felt safe.
+const JIEQI_CONSISTENCY_THRESHOLD_CP = 200;
+
+// One escalation, then stop. 4x clears the horizon cases (the discovered check above resolves
+// well inside it) and costs ~600ms on the handful of plies that trip it. It deliberately does
+// NOT clamp the ones it cannot clear: Pikafish's chance-node value is risk-averse by design
+// (see the Layer-2 note below), so with dark pieces on the board a persistent violation is not
+// proof the parent is wrong, and overwriting it would publish a number no search produced.
+// Those plies are flagged `unstable` instead and left ungraded, the same treatment a reveal
+// (chance) ply already gets.
+const JIEQI_CONSISTENCY_RESEARCH_NODES = JIEQI_ANALYSIS_NODES * 4;
+
 // Nominal cache dimension: `depth` only has to be STABLE for the (room, engine, depth) cache
-// key. Tracks JIEQI_ANALYSIS_DEPTH_SEARCH so a depth change self-invalidates the cache; it no
-// longer matches the banqi/jungle family default of 12, which is fine (the key is per-variant).
+// key, and since the 2026-08-29 move to a node budget it no longer describes the search at all
+// — the real dial is JIEQI_ANALYSIS_NODES, carried in the engine id. Left at its historical
+// value on purpose: changing it would churn the key for no reason, and the id already
+// self-invalidates. Do not read this as "the sweep searched to depth 16".
 export const JIEQI_ANALYSIS_DEPTH = 16;
 
 // Red-SEAT-POV cp for a decisive finished position (no engine query is made there).
 const TERMINAL_CP = 30_000;
 
-// The history suffix invalidates earlier FEN-only cached sweeps.
-export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1`;
+// Suffixes invalidate earlier cached sweeps computed under a different contract: `history1`
+// the FEN-only sweeps, `nodes…` the fixed-depth ones, `consistent1` the ones with no
+// reconciliation pass. The stored `depth` column below is now just the other half of the cache
+// key — the search dial is JIEQI_ANALYSIS_NODES and it lives here, in the id.
+export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1+nodes${JIEQI_ANALYSIS_NODES}+consistent1`;
 
 export type JieqiRepetitionWindow = {
   fen: string;
@@ -104,23 +136,25 @@ export type JieqiPositionEval = {
  * exactly as banqi/jungle do. Throws (via pikaJieqiPath) when the binary is absent; callers
  * pre-check availability and fail closed. `evaluateFen` is the engine backend: the default
  * spawns one process per call; the sweep binds it to a persistent session
- * (withJieqiAnalysisSession) with the same depth/movetime, so the POV math lives here once.
+ * (withJieqiAnalysisSession) with the same budget, so the POV math lives here once. `nodes`
+ * is the search budget; the reconciliation pass re-searches a suspect ply at a larger one.
  */
 export async function evaluateJieqiPosition(
   state: JieqiGameState,
   evaluateFen: (
     fen: string,
-    opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
+    opts: JieqiEvalBudget & { moves?: readonly string[] },
   ) => Promise<{ cp: number | null; mate: number | null; best: string | null }> = evaluateJieqiFen,
   repetitionWindow: JieqiRepetitionWindow = {
     fen: jieqiStateToPikafishFen(state),
     moves: [],
   },
+  nodes: number = JIEQI_ANALYSIS_NODES,
 ): Promise<JieqiPositionEval> {
   const mover: JieqiColor = state.status.type === 'playing' ? state.status.turn : 'red';
   const sign = mover === 'red' ? 1 : -1;
   const evaluation = await evaluateFen(repetitionWindow.fen, {
-    depth: JIEQI_ANALYSIS_DEPTH_SEARCH,
+    nodes,
     movetimeMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
     moves: repetitionWindow.moves,
   });
@@ -186,7 +220,11 @@ export function jieqiAnalysisRepetitionWindows(
 export async function analyzeJieqiPostgame(
   moves: readonly JieqiMove[],
   deal: JieqiDeal,
-  evaluate?: (state: JieqiGameState) => Promise<JieqiPositionEval>,
+  evaluate?: (
+    state: JieqiGameState,
+    repetitionWindow: JieqiRepetitionWindow,
+    nodes?: number,
+  ) => Promise<JieqiPositionEval>,
   progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<JieqiGameAnalysis> {
   let state = createInitialJieqiState('analysis', deal);
@@ -196,12 +234,14 @@ export async function analyzeJieqiPostgame(
     states.push(state);
   }
   const repetitionWindows = jieqiAnalysisRepetitionWindows(moves, deal);
+  const deterministic = new Set(jieqiDeterministicPlies(moves, deal));
   // With a progress store the sweep checkpoints after every evaluated ply and
   // resumes from the last checkpoint (persist expensive output incrementally).
   const sweep = async (
     evaluatePosition: (
       state: JieqiGameState,
       repetitionWindow: JieqiRepetitionWindow,
+      nodes?: number,
     ) => Promise<JieqiPositionEval>,
   ): Promise<SweepPlyEval[]> => {
     const resumed = progress ? await progress.load() : null;
@@ -218,12 +258,95 @@ export async function analyzeJieqiPostgame(
     }
     return plies;
   };
+  const withEvaluator = async (
+    evaluatePosition: (
+      state: JieqiGameState,
+      repetitionWindow: JieqiRepetitionWindow,
+      nodes?: number,
+    ) => Promise<JieqiPositionEval>,
+  ): Promise<SweepPlyEval[]> => {
+    const swept = await sweep(evaluatePosition);
+    return reconcileJieqiSeries(swept, states, repetitionWindows, deterministic, evaluatePosition);
+  };
   const plies = evaluate
-    ? await sweep(evaluate)
+    ? await withEvaluator(evaluate)
     : await withJieqiAnalysisSession((evaluateFen) =>
-        sweep((s, repetitionWindow) => evaluateJieqiPosition(s, evaluateFen, repetitionWindow)),
+        withEvaluator((s, repetitionWindow, nodes) =>
+          evaluateJieqiPosition(s, evaluateFen, repetitionWindow, nodes),
+        ),
       );
   return { engineId: JIEQI_ANALYSIS_ENGINE_ID, depth: JIEQI_ANALYSIS_DEPTH, plies };
+}
+
+/** Red-seat-POV scalar that orders cp and mate scores together, so a ply that found a mate is
+ *  comparable with one that did not. Null when the ply carries no score at all. */
+function comparableCp(evaluation: { cp: number | null; mate: number | null }): number | null {
+  if (evaluation.mate != null) {
+    return evaluation.mate > 0 ? TERMINAL_CP - evaluation.mate : -TERMINAL_CP - evaluation.mate;
+  }
+  return evaluation.cp;
+}
+
+/**
+ * Enforce the one thing a fixed-budget eval series can be checked against without a second
+ * opinion: on a DETERMINISTIC ply, the mover cannot come out ahead of what the position before
+ * it said was available, because playing that move was one of the parent's own options. When
+ * `value(child) - value(parent)` favours the mover by more than the noise floor, the PARENT is
+ * the under-searched one — the child is a ply closer to the truth and, when the move gives
+ * check, got extensions the parent did not.
+ *
+ * Walks BACKWARDS so a parent that improves is re-checked against its own parent in the same
+ * pass (the ply-51 fix in the motivating game moves the blunder onto ply 50, where it belongs).
+ * Re-searches the parent once at JIEQI_CONSISTENCY_RESEARCH_NODES; if that clears the violation
+ * the better numbers stand, and if it does not the ply is marked `unstable` rather than clamped
+ * — see the constant's note on why overwriting would be dishonest here.
+ *
+ * Chance plies are skipped entirely: a reveal legitimately hands the mover value the parent
+ * could only average over, so the invariant does not apply and a "violation" there is the
+ * variance the Layer-2 decomposition exists to measure.
+ */
+export async function reconcileJieqiSeries(
+  plies: SweepPlyEval[],
+  states: readonly JieqiGameState[],
+  repetitionWindows: readonly JieqiRepetitionWindow[],
+  deterministic: ReadonlySet<number>,
+  evaluatePosition: (
+    state: JieqiGameState,
+    repetitionWindow: JieqiRepetitionWindow,
+    nodes?: number,
+  ) => Promise<JieqiPositionEval>,
+): Promise<SweepPlyEval[]> {
+  const out = plies.map((ply) => ({ ...ply }));
+  // Move k is Red's when k is odd (Red moves first), so a gain for the mover of move k is a
+  // rise in the red-seat POV series for Red and a fall for Black.
+  const moverSign = (k: number): number => (k % 2 === 1 ? 1 : -1);
+  const moverGain = (k: number): number | null => {
+    const child = comparableCp(out[k]!);
+    const parent = comparableCp(out[k - 1]!);
+    if (child == null || parent == null) return null;
+    return (child - parent) * moverSign(k);
+  };
+  for (let k = out.length - 1; k >= 1; k -= 1) {
+    if (!deterministic.has(k)) continue;
+    const parentState = states[k - 1]!;
+    if (parentState.status.type !== 'playing') continue;
+    const gain = moverGain(k);
+    if (gain == null || gain <= JIEQI_CONSISTENCY_THRESHOLD_CP) continue;
+    const rescored = await evaluatePosition(
+      parentState,
+      repetitionWindows[k - 1]!,
+      JIEQI_CONSISTENCY_RESEARCH_NODES,
+    );
+    // Only a re-search that actually scored replaces the swept numbers. A scoreless answer
+    // (a stalled or stale binary) would otherwise punch a null into a series that had a
+    // perfectly good value, and enough of those drift the whole sweep toward vacuous.
+    if (rescored.cp != null || rescored.mate != null) {
+      out[k - 1] = { ...out[k - 1]!, cp: rescored.cp, mate: rescored.mate, best: rescored.best };
+    }
+    const after = moverGain(k);
+    if (after != null && after > JIEQI_CONSISTENCY_THRESHOLD_CP) out[k - 1]!.unstable = true;
+  }
+  return out;
 }
 
 /**
@@ -246,6 +369,31 @@ export function jieqiChancePlies(moves: readonly JieqiMove[], deal: JieqiDeal): 
     state = applyJieqiMove(state, move);
   });
   return chance;
+}
+
+/**
+ * The 1-based plies whose move carried NO hidden information at all — the mover's piece was
+ * already face-up AND it did not capture a face-down piece. Only these plies can be checked
+ * for parent/child consistency (reconcileJieqiSeries), because only these have a value the
+ * parent search could see in full.
+ *
+ * Note this is STRICTLY narrower than "not a chance ply". jieqiChancePlies deliberately counts
+ * only the mover revealing its OWN piece, because that is the decision-vs-luck boundary the
+ * client grades on. Capturing an opponent's dark piece is graded as a normal move there, but
+ * it still resolves a hidden identity and still moves the flip pool, so the parent could only
+ * average over it — which is exactly the assumption the consistency invariant needs and does
+ * not get. Using the chance-ply set here instead would have let those plies through.
+ */
+export function jieqiDeterministicPlies(moves: readonly JieqiMove[], deal: JieqiDeal): number[] {
+  let state = createInitialJieqiState('analysis', deal);
+  const plies: number[] = [];
+  moves.forEach((move, i) => {
+    const source = state.board[move.from];
+    const target = state.board[move.to];
+    if (!source?.faceDown && !target?.faceDown) plies.push(i + 1);
+    state = applyJieqiMove(state, move);
+  });
+  return plies;
 }
 
 // ── Cache-first, coalesced resolution (mirrors resolveBanqiAnalysis) ──────────────

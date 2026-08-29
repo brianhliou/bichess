@@ -21,6 +21,11 @@ export type SweepPlyEval = {
    *  (xiangqi does; the other variants report one line and omit this). Scores are
    *  in the evaluator's own POV, i.e. the same POV as `cp`/`mate` on this row. */
   second?: { move: string; cp: number | null; mate: number | null };
+  /** Set when this ply's eval survived a consistency re-search still contradicting the ply
+   *  after it — the number is the best the engine offered but it is not trustworthy enough to
+   *  grade a move against, so the client leaves the adjacent moves unjudged. Written only by
+   *  the jieqi sweep today (see reconcileJieqiSeries); absent everywhere else. */
+  unstable?: boolean;
 };
 
 /**

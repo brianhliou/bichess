@@ -49,6 +49,7 @@ function analysisFor(pv: string[]): GameAnalysis {
     ],
     moves: [{ ply: 1, mover: 'red', judgment: 'blunder', accuracy: 15 }],
     chancePlies: [],
+    unstablePlies: [],
     bestPlayedPlies: [],
     red: { accuracy: 15, inaccuracies: 0, mistakes: 0, blunders: 1, acpl: 290 },
     black: { accuracy: 100, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },

@@ -120,6 +120,24 @@ test('analysis evals stay single-threaded on a fixed table', () => {
   assert.equal(commands.at(-1), 'go depth 20 movetime 6000');
 });
 
+// The Layer-1 sweep budgets NODES, not depth, because a fixed depth is not a fixed amount of
+// search: extensions make a checking position cost multiples of a quiet one, so two adjacent
+// plies come back incomparable and the eval graph shows a cliff nobody played. Anything that
+// silently turns this back into a `go depth` command reintroduces that, so pin the shape.
+test('a node budget emits go nodes, never go depth', () => {
+  const commands = buildJieqiAnalysisCommands(FEN, { nodes: 500_000, movetimeMs: 6_000 });
+  assert.equal(commands.at(-1), 'go nodes 500000 movetime 6000');
+  assert.ok(!commands.some((c) => c.startsWith('go depth')));
+});
+
+// The movetime on the nodes arm is a backstop against a pathologically slow box, not a second
+// dial: if it ever binds, that ply's result stops being reproducible and the cache promise
+// breaks. It must survive as a cap, so assert it is still carried.
+test('the node budget keeps its movetime backstop', () => {
+  const commands = buildJieqiAnalysisCommands(FEN, { nodes: 1, movetimeMs: 6_000 });
+  assert.match(commands.at(-1) ?? '', / movetime 6000$/);
+});
+
 // The analysis options must be literals, not a read of the live env knobs: if
 // MISTBOARD_PIKAFISH_JIEQI_HASH_MB/_THREADS leaked in here, two boxes would cache
 // different evals under the same (room, engine, depth) key.
