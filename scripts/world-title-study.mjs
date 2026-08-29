@@ -217,7 +217,10 @@ async function main() {
       year,
       champion,
       spec,
-      date: (source.date ?? '').slice(0, 10),
+      // dpxq records a month with no day as `1997-11-00`, which is not a date
+      // and reads as one. Trim the zero day rather than inventing a first of
+      // the month: the study should say what the source knows.
+      date: (source.date ?? '').slice(0, 10).replace(/-00$/, ''),
       sourceUrl: source.sourceUrl ?? '',
     };
   });
