@@ -704,3 +704,23 @@
     justify-content: flex-start;
   }
 }
+
+/* Chapter game details (event, date, result, source) in the About tab. */
+.study-about__game {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.study-about__game:empty {
+  display: none;
+}
+.study-about__game dt {
+  color: var(--site-muted);
+}
+.study-about__game dd {
+  margin: 0;
+  color: var(--site-text);
+}

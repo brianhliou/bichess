@@ -236,6 +236,10 @@ export const EN_REVIEW = {
   // sources, where a misread glyph is a real possibility; saying so plainly and
   // giving readers a route to report it is part of being trustworthy about it.
   'study.aboutTab': 'About',
+  'study.gameEvent': 'Event',
+  'study.gameDate': 'Date',
+  'study.gameResult': 'Result',
+  'study.gameSource': 'Source',
   'study.errataTitle': 'Spotted a mistake?',
   'study.errataBody':
     'Some studies are transcribed from historical sources, so a move, a name, or a comment can be wrong. If something looks off, tell us and we will check it against the original.',

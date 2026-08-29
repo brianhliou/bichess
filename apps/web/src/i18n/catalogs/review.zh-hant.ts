@@ -46,6 +46,10 @@ export const ZH_HANT_REVIEW = {
   'study.chatSignIn': '登入後可聊天',
   'study.chatPlaceholder': '聊天請保持友善！',
   'study.aboutTab': '簡介',
+  'study.gameEvent': '賽事',
+  'study.gameDate': '日期',
+  'study.gameResult': '結果',
+  'study.gameSource': '來源',
   'study.errataTitle': '發現錯誤？',
   'study.errataBody':
     '部分棋譜抄錄自歷史文獻，著法、名稱或註釋都可能有誤。若發現問題，請告訴我們，我們會對照原本核查。',

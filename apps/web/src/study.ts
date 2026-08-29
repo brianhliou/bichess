@@ -80,7 +80,15 @@ type ChapterDto = {
   gamebook: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
-  tags?: { red?: string; black?: string; result?: string; event?: string; date?: string };
+  tags?: {
+    red?: string;
+    black?: string;
+    result?: string;
+    event?: string;
+    date?: string;
+    round?: string;
+    site?: string;
+  };
 };
 
 type LoadResult =
@@ -843,6 +851,8 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   }
   panel.append(description);
 
+  panel.append(gameDetails(chapter));
+
   const row = document.createElement('div');
   row.className = 'study-about__row';
   if (study.isOwner) {
@@ -858,6 +868,60 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   // the owner is the one who would fix it).
   if (study.visibility === 'public' && !study.isOwner) panel.append(errataNote());
   return panel;
+}
+
+/**
+ * The chapter's game details: event, date, result, and where the record came
+ * from.
+ *
+ * A chapter of a real game carries these as PGN-style tags, and until now the
+ * only one the study page rendered was the pair of player names beside the
+ * board. Everything else was stored and shown nowhere, so a study of ten
+ * world-championship games could not tell you which championship, which year,
+ * or who won without reading it off the moves.
+ *
+ * Rendered as a definition list rather than a sentence: these are four
+ * independent facts of which any subset may be absent, and a sentence would
+ * have to be rebuilt for each combination.
+ */
+export function gameDetails(chapter: ChapterDto): HTMLElement {
+  const list = document.createElement('dl');
+  list.className = 'study-about__game';
+  const tags = chapter.tags ?? {};
+  const rows: Array<[string, string]> = [
+    [t('study.gameEvent'), tags.event ?? ''],
+    [t('study.gameDate'), tags.date ?? ''],
+    [t('study.gameResult'), tags.result ?? ''],
+  ];
+  for (const [label, value] of rows) {
+    if (!value) continue;
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const detail = document.createElement('dd');
+    detail.textContent = value;
+    list.append(term, detail);
+  }
+  // The source is a URL the author recorded, so it renders as a link to it
+  // rather than as the raw address, which is rarely readable.
+  if (tags.site && /^https?:\/\//i.test(tags.site)) {
+    const term = document.createElement('dt');
+    term.textContent = t('study.gameSource');
+    const detail = document.createElement('dd');
+    const link = document.createElement('a');
+    link.href = tags.site;
+    link.rel = 'nofollow noopener noreferrer';
+    link.target = '_blank';
+    try {
+      link.textContent = new URL(tags.site).hostname.replace(/^www\./, '');
+    } catch {
+      link.textContent = tags.site;
+    }
+    detail.append(link);
+    list.append(term, detail);
+  }
+  // An empty list is hidden by CSS rather than skipped here, so the caller does
+  // not have to know whether a chapter has tags.
+  return list;
 }
 
 /** Invite corrections. Several studies here are transcriptions of woodblock
