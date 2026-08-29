@@ -33,9 +33,9 @@ function mapLiteral(source: string, name: string): Record<string, string> {
   // Both halves are matched either way rather than writing the parser twice.
   const cell = "'((?:[^'\\\\]|\\\\.)*)'|(\\d+)";
   const pattern = new RegExp(`(?:${cell})\\s*:\\s*(?:${cell})\\s*,`, 'g');
-  const unescape = (value: string) => value.replace(/\\u221e/g, '∞');
+  const decode = (value: string) => value.replace(/\\u221e/g, '∞');
   for (const m of body.matchAll(pattern)) {
-    out[unescape(m[1] ?? m[2])] = unescape(m[3] ?? m[4]);
+    out[decode(m[1] ?? m[2])] = decode(m[3] ?? m[4]);
   }
   return out;
 }
