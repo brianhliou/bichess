@@ -56,6 +56,7 @@ function analysis(over: { second?: PlyEval['second']; twoAgoCp?: number }): Game
       { ply: 3, mover: 'red', judgment: null, accuracy: 99 },
     ],
     chancePlies: [],
+    unstablePlies: [],
     bestPlayedPlies: [],
     red: { accuracy: 99, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 5 },
     black: { accuracy: 99, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 5 },

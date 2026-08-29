@@ -24,6 +24,7 @@ import {
   type JieqiGameAnalysis,
   jieqiAnalysisRepetitionWindows,
   jieqiChancePlies,
+  jieqiDeterministicPlies,
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from './jieqi-analysis.js';
@@ -502,4 +503,184 @@ test('resolveJieqiDecisions caches an empty result (a game with no reveal plies)
   assert.ok(result);
   assert.deepEqual(result!.decisions, []);
   assert.equal(cache.saves, 1); // empty is a valid, cacheable result — not vacuous
+});
+
+// ── Parent/child consistency (reconcileJieqiSeries) ──────────────────────────────
+//
+// The defect these guard is real and shipped: in jq_2dd49c51 the depth-16 sweep scored the
+// position before Black's 26th move at +104 for RED, then scored the position after it at
+// -414 — a 518cp swing produced by a quiet-looking soldier step. The move was a discovered
+// check the parent search never found, so the graph blamed the wrong side and let Red's actual
+// blunder (the move before) through ungraded. A mover cannot conjure value the parent position
+// did not have; when the series says otherwise, the parent is under-searched.
+
+/** Drive analyzeJieqiPostgame with a scripted series, keyed by ply, so a specific
+ *  parent/child violation can be planted. `cpAt(ply, nodes)` returns the red-seat POV cp the
+ *  fake engine reports for that ply at that budget. */
+async function analyzeWithSeries(
+  moves: JieqiMove[],
+  deal: JieqiDeal,
+  cpAt: (ply: number, nodes: number | undefined) => number,
+): Promise<{ analysis: JieqiGameAnalysis; researched: number[] }> {
+  const windows = jieqiAnalysisRepetitionWindows(moves, deal);
+  const plyOf = new Map(windows.map((w, ply) => [`${w.fen}|${w.moves.join(',')}`, ply]));
+  const researched: number[] = [];
+  const analysis = await analyzeJieqiPostgame(moves, deal, async (_state, window, nodes) => {
+    const ply = plyOf.get(`${window.fen}|${window.moves.join(',')}`);
+    assert.notEqual(ply, undefined, 'every eval must be identifiable by its repetition window');
+    if (nodes !== undefined) researched.push(ply!);
+    return { cp: cpAt(ply!, nodes), mate: null, best: `best${ply}` };
+  });
+  return { analysis, researched };
+}
+
+/** A step series that violates the invariant exactly once, at `ply`: everything before it is
+ *  level, everything from it on is `magnitude` better for the mover of that ply. A step (not a
+ *  spike) so the ply AFTER it stays level and only one pair is in violation. */
+function stepSeries(ply: number, magnitude: number): (p: number) => number {
+  const moverSign = ply % 2 === 1 ? 1 : -1;
+  return (p) => (p >= ply ? magnitude * moverSign : 0);
+}
+
+test('a mover who gains on a deterministic ply forces the parent to be re-searched', async () => {
+  const { moves } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const target = jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL)[0]!;
+  const moverSign = target % 2 === 1 ? 1 : -1;
+  const step = stepSeries(target, 500);
+  // At the base budget the parent misses it (0). At the escalated budget it sees further than
+  // the child does (600), which is what a real horizon fix looks like.
+  const { analysis, researched } = await analyzeWithSeries(
+    moves,
+    STANDARD_JIEQI_DEAL,
+    (ply, nodes) => (nodes !== undefined && ply === target - 1 ? 600 * moverSign : step(ply)),
+  );
+
+  assert.deepEqual(researched, [target - 1], 'only the suspect parent is re-searched');
+  assert.equal(analysis.plies[target - 1]!.cp, 600 * moverSign, 'the deeper number is kept');
+  assert.equal(analysis.plies[target - 1]!.best, `best${target - 1}`);
+  assert.ok(!analysis.plies[target - 1]!.unstable, 'a cleared violation is not flagged');
+});
+
+test('a violation the re-search cannot clear is flagged, never clamped', async () => {
+  const { moves } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const target = jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL)[0]!;
+  const step = stepSeries(target, 500);
+  // The engine will not budge: same number at 4x the budget. Pikafish's chance-node value is
+  // risk-averse, so with dark pieces on the board this is not proof the parent is wrong —
+  // overwriting it would publish a number no search produced.
+  const { analysis, researched } = await analyzeWithSeries(moves, STANDARD_JIEQI_DEAL, step);
+
+  assert.deepEqual(researched, [target - 1]);
+  assert.equal(analysis.plies[target - 1]!.unstable, true, 'the ply is flagged for the client');
+  assert.equal(analysis.plies[target - 1]!.cp, step(target - 1), 'and its cp is left alone');
+});
+
+test('a level series is never re-searched and never flagged', async () => {
+  const { moves } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const { analysis, researched } = await analyzeWithSeries(moves, STANDARD_JIEQI_DEAL, () => 25);
+
+  assert.deepEqual(researched, [], 'no violation, no extra engine work');
+  assert.ok(analysis.plies.every((ply) => !ply.unstable));
+});
+
+// The threshold is a noise floor, not a formality: 36% of deterministic plies in real games
+// violate the invariant by SOME amount (p90 +62cp). Re-searching all of those would triple the
+// sweep to chase search noise.
+test('a violation inside the noise floor is left alone', async () => {
+  const { moves } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const target = jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL)[0]!;
+  const { analysis, researched } = await analyzeWithSeries(
+    moves,
+    STANDARD_JIEQI_DEAL,
+    stepSeries(target, 150),
+  );
+
+  assert.deepEqual(researched, []);
+  assert.ok(analysis.plies.every((ply) => !ply.unstable));
+});
+
+// A reveal hands the mover value the parent could only average over, so "the mover gained" is
+// the variance the Layer-2 decomposition measures, not a search defect. Re-searching there
+// would burn budget forever and flagging it would grey out every interesting move in the game.
+test('a chance ply is exempt from the consistency check', async () => {
+  const { moves, chance } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const target = chance[0]!;
+  assert.ok(target >= 1, 'the fixture game must contain a reveal');
+  const { analysis, researched } = await analyzeWithSeries(
+    moves,
+    STANDARD_JIEQI_DEAL,
+    stepSeries(target, 2_000),
+  );
+
+  assert.deepEqual(researched, [], 'a reveal never triggers a re-search');
+  assert.ok(analysis.plies.every((ply) => !ply.unstable));
+});
+
+// Deterministic is STRICTLY narrower than "not a chance ply": capturing an opponent's dark
+// piece is graded as a normal move (jieqiChancePlies deliberately ignores it) but it still
+// resolves a hidden identity and moves the flip pool, so the parent could only average over
+// it. Reusing the chance-ply set here would have let those plies into the check.
+test('deterministic plies exclude captures of a face-down piece', async () => {
+  // playGame's "keep moving the same piece" heuristic never captures a dark piece, so drive a
+  // game that prefers exactly that: a revealed piece taking a face-down one.
+  const moves: JieqiMove[] = [];
+  {
+    let state = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+    for (let i = 0; i < 80; i += 1) {
+      const legal = getJieqiLegalMoves(state);
+      if (legal.length === 0) break;
+      const move =
+        legal.find((m) => !state.board[m.from]?.faceDown && state.board[m.to]?.faceDown) ??
+        legal.find((m) => state.board[m.to] != null) ??
+        legal.find((m) => state.board[m.from]?.faceDown) ??
+        legal[0]!;
+      moves.push(move);
+      state = applyJieqiMove(state, move);
+      if (state.status.type !== 'playing') break;
+    }
+  }
+  const deterministic = new Set(jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL));
+  const chance = new Set(jieqiChancePlies(moves, STANDARD_JIEQI_DEAL));
+
+  let state = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+  let darkCaptures = 0;
+  moves.forEach((move, i) => {
+    const ply = i + 1;
+    const source = state.board[move.from];
+    const target = state.board[move.to];
+    if (!source?.faceDown && target?.faceDown) {
+      darkCaptures += 1;
+      assert.ok(!chance.has(ply), 'a dark capture is not a chance ply (it is graded)');
+      assert.ok(!deterministic.has(ply), 'but it is not deterministic either');
+    }
+    if (deterministic.has(ply)) {
+      assert.ok(!source?.faceDown && !target?.faceDown, 'no hidden identity resolved');
+    }
+    state = applyJieqiMove(state, move);
+  });
+  assert.ok(darkCaptures > 0, 'the fixture game must contain at least one dark capture');
+});
+
+// A re-search that comes back with no score at all (stalled or stale binary) must not be
+// written over a ply that had a perfectly good number: enough of those and isVacuousAnalysis
+// starts firing on a sweep that was fine.
+test('a scoreless re-search leaves the swept eval intact', async () => {
+  const { moves } = playGame(STANDARD_JIEQI_DEAL, 12);
+  const target = jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL)[0]!;
+  const step = stepSeries(target, 500);
+  const windows = jieqiAnalysisRepetitionWindows(moves, STANDARD_JIEQI_DEAL);
+  const plyOf = new Map(windows.map((w, ply) => [`${w.fen}|${w.moves.join(',')}`, ply]));
+  const analysis = await analyzeJieqiPostgame(
+    moves,
+    STANDARD_JIEQI_DEAL,
+    async (_state, window, nodes) => {
+      const ply = plyOf.get(`${window.fen}|${window.moves.join(',')}`)!;
+      if (nodes !== undefined) return { cp: null, mate: null, best: null };
+      return { cp: step(ply), mate: null, best: `best${ply}` };
+    },
+  );
+
+  assert.equal(analysis.plies[target - 1]!.cp, step(target - 1), 'the swept cp survives');
+  assert.equal(analysis.plies[target - 1]!.best, `best${target - 1}`, 'and so does its best move');
+  assert.equal(analysis.plies[target - 1]!.unstable, true, 'still flagged: nothing cleared it');
 });

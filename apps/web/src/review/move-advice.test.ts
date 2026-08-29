@@ -15,6 +15,7 @@ const analysis: GameAnalysis = {
     { ply: 2, mover: 'black', judgment: null, accuracy: 99 },
   ],
   chancePlies: [],
+  unstablePlies: [],
   bestPlayedPlies: [],
   red: { accuracy: 10, inaccuracies: 0, mistakes: 0, blunders: 1, acpl: 200 },
   black: { accuracy: 99, inaccuracies: 0, mistakes: 0, blunders: 0, acpl: 0 },

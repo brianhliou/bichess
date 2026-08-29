@@ -30,6 +30,12 @@ export type PlyEval = {
    *  accepts a piece it offered, when the main line declines it. `pv` starts AFTER
    *  the capture. Present on the handful of plies that offer a declined piece. */
   offerLine?: { capture: string; pv: string[] };
+  /** The server could not reconcile this eval with the ply after it: the move played from
+   *  here came out BETTER for its mover than this position claimed was available, and a
+   *  re-search at a larger budget did not close the gap (see reconcileJieqiSeries). The number
+   *  still renders on the chart — it is the best the engine offered — but the two moves that
+   *  touch it are graded against a value the engine itself contradicts, so neither is judged. */
+  unstable?: boolean;
 };
 
 export type XiangqiGameAnalysisResponse = {
@@ -77,6 +83,9 @@ export type GameAnalysis = {
   /** 1-based plies whose move was a chance (reveal) move — left unjudged here; graded luck-free by
    *  the decision decomposition (see mergeDecisionAnalysis). Empty for deterministic variants. */
   chancePlies: number[];
+  /** 1-based plies whose move is graded against an eval the server flagged `unstable` —
+   *  ungraded here, and excluded from accuracy/ACPL. Empty for every variant but jieqi. */
+  unstablePlies: number[];
   /** 1-based plies where the move played WAS the engine's own best move for the position before
    *  it (see computeGameAnalysis opts.bestPlayedPlies). Ungraded and scored 100. */
   bestPlayedPlies: number[];
@@ -166,6 +175,18 @@ export function computeGameAnalysis(
   // the random reveal, so grading them on outcome would blame the player for variance. Until
   // the engine reports per-move expected values, we neither glyph nor count them.
   const chancePlies = new Set(response.chancePlies ?? []);
+  // An eval the server flagged as irreconcilable with its neighbour taints BOTH moves that
+  // touch it: the move that landed on it (graded on it as the "after") and the move played
+  // from it (graded on it as the "before"). Neither swing is the player's doing, so both go
+  // unjudged — the same treatment, for the same reason, that a chance ply already gets. This
+  // is the residual the server could not fix by searching harder; the common case (a horizon
+  // that a bigger budget resolves) never reaches here.
+  const unstablePlies = new Set<number>();
+  evals.forEach((evaluation, index) => {
+    if (!evaluation.unstable) return;
+    if (index >= 1) unstablePlies.add(index);
+    if (index + 1 < evals.length) unstablePlies.add(index + 1);
+  });
   // A chance ply stays chance-graded even if the reveal it chose was the engine's pick — its
   // decomposition (mergeDecisionAnalysis) owns that grade, and a flat 100 would overwrite it.
   const bestPlayed = new Set(
@@ -187,14 +208,16 @@ export function computeGameAnalysis(
     const winBefore = mover === 'red' ? redBefore : 100 - redBefore;
     const winAfter = mover === 'red' ? redAfter : 100 - redAfter;
     const isChance = chancePlies.has(ply);
+    const isUnstable = unstablePlies.has(ply);
     const isBestPlayed = bestPlayed.has(ply);
-    const judgment = isChance || isBestPlayed ? null : moveJudgment(winBefore, winAfter);
+    const judgment =
+      isChance || isUnstable || isBestPlayed ? null : moveJudgment(winBefore, winAfter);
     const accuracy = isBestPlayed ? 100 : accuracyPercent(winBefore, winAfter);
     moves.push({ ply, mover, judgment, accuracy });
 
     // A chance move doesn't contribute to a player's mistake counts or ACPL — we can't say the
     // swing was their fault (or credit).
-    if (isChance) continue;
+    if (isChance || isUnstable) continue;
     const bucket = acc[mover];
     bucket.losses.push(
       isBestPlayed
@@ -218,6 +241,7 @@ export function computeGameAnalysis(
   // engine's own choice is 100% accurate by definition, whatever the two-search drift says).
   const accuracyOverride = new Map<number, number | null>([
     ...[...chancePlies].map((ply): [number, number | null] => [ply, null]),
+    ...[...unstablePlies].map((ply): [number, number | null] => [ply, null]),
     ...[...bestPlayed].map((ply): [number, number | null] => [ply, 100]),
   ]);
   const accuracies = gameAccuracy(
@@ -242,6 +266,7 @@ export function computeGameAnalysis(
     evals,
     moves,
     chancePlies: [...chancePlies].sort((a, b) => a - b),
+    unstablePlies: [...unstablePlies].sort((a, b) => a - b),
     bestPlayedPlies: [...bestPlayed].sort((a, b) => a - b),
     red: summarize('red'),
     black: summarize('black'),

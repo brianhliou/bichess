@@ -224,13 +224,42 @@ export function jieqiAnalysisResourceOptions(): string[] {
   return ['setoption name Hash value 256', 'setoption name Threads value 1'];
 }
 
-/** The exact UCI block a fixed-depth analysis eval sends. Exported so the analysis
+/**
+ * The search budget for ONE analysis eval, as a union so a call site must pick exactly one
+ * dial and cannot silently set both.
+ *
+ * NODES is the Layer-1 (whole-game sweep) dial; DEPTH is the Layer-2 (decisions) dial. The
+ * difference matters and is not cosmetic: a fixed DEPTH is not a fixed amount of search.
+ * Measured over one 64-ply jieqi game at depth 16, per-ply cost ranged from 94k to 7.8M nodes
+ * (median 173k, mean 845k) because check extensions and singular extensions spend the budget
+ * for you. That makes NEIGHBOURING plies incomparable: a position one ply before a discovered
+ * check got 94k nodes and missed the tactic, while the position after it — already in check,
+ * so extended — got 214k at the same nominal depth and found it. The eval series then shows a
+ * cliff on a quiet-looking move, which is a search artifact, not a game event. Nodes spend the
+ * same everywhere, so the series is internally comparable. (This is also what lichess/fishnet
+ * budget on, for the same reason.)
+ *
+ * The movetime cap on the nodes arm is a BACKSTOP that must never bind: 500k nodes is ~200ms
+ * at the 2-3M nps this binary runs at, against a 6s cap, so binding it would take a box under
+ * ~84k nps. If it ever binds, the result stops being reproducible for that ply.
+ */
+export type JieqiEvalBudget =
+  | { nodes: number; movetimeMs: number; depth?: undefined }
+  | { depth: number; movetimeMs: number; nodes?: undefined };
+
+function jieqiGoCommand(opts: JieqiEvalBudget): string {
+  return opts.nodes != null
+    ? `go nodes ${Math.max(1, Math.floor(opts.nodes))} movetime ${opts.movetimeMs}`
+    : `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`;
+}
+
+/** The exact UCI block a fixed-budget analysis eval sends. Exported so the analysis
  *  resource options (fixed Hash, single thread) are testable: a cached sweep is keyed
  *  by (room, engine, depth) and promises a CPU-independent result, which a second
  *  search thread would not preserve. */
 export function buildJieqiAnalysisCommands(
   fen: string,
-  opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
+  opts: JieqiEvalBudget & { moves?: readonly string[] },
 ): string[] {
   return [
     'uci',
@@ -239,7 +268,7 @@ export function buildJieqiAnalysisCommands(
     'ucinewgame',
     'isready',
     buildJieqiPositionCommand(fen, opts.moves),
-    `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
+    jieqiGoCommand(opts),
   ];
 }
 
@@ -253,7 +282,7 @@ export function buildJieqiAnalysisCommands(
 // never sees a hidden id.
 export async function evaluateJieqiFen(
   fen: string,
-  opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
+  opts: JieqiEvalBudget & { moves?: readonly string[] },
 ): Promise<UciEval> {
   const commands = buildJieqiAnalysisCommands(fen, opts);
   const release = await analysisPool.acquire();
@@ -273,8 +302,8 @@ export async function evaluateJieqiFen(
  * Run `fn` with a FEN evaluator backed by ONE persistent PikaJieQi process (the
  * xiangqi #168 pattern): binary spawn + option setup (including the optional
  * MISTBOARD_PIKAFISH_NET EvalFile — exactly what the per-spawn path loads) happen
- * once for the whole sweep, then each position is a `position fen …` + `go depth
- * N movetime T` round-trip — the EXACT go command evaluateJieqiFen sends, so the
+ * once for the whole sweep, then each position is a `position fen …` + a `go`
+ * round-trip built by the SAME jieqiGoCommand evaluateJieqiFen uses, so the
  * eval semantics (and the versioned analysis engine id) are unchanged. Scores are
  * side-to-move POV; the caller owns normalization, and the redacted FEN is sent
  * as-is (the engine never sees a hidden id). Holds one analysis-pool slot for the
@@ -285,7 +314,7 @@ export async function withJieqiAnalysisSession<T>(
   fn: (
     evaluateFen: (
       fen: string,
-      opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
+      opts: JieqiEvalBudget & { moves?: readonly string[] },
     ) => Promise<UciEval>,
   ) => Promise<T>,
 ): Promise<T> {
@@ -306,7 +335,7 @@ export async function withJieqiAnalysisSession<T>(
     return await fn((fen, opts) =>
       session.evalPosition({
         positionCommand: buildJieqiPositionCommand(fen, opts.moves),
-        goCommand: `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
+        goCommand: jieqiGoCommand(opts),
         timeoutMs: opts.movetimeMs + 4_000,
         timeoutMessage: 'pikafish-jieqi analysis eval timed out',
       }),

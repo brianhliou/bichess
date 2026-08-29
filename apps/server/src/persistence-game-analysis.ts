@@ -24,6 +24,9 @@ export type StoredPlyEval = {
    *  an offered piece the main line declined. Absent on rows cached before @5 and
    *  on the overwhelming majority of plies. */
   offerLine?: { capture: string; pv: string[] };
+  /** Parent/child consistency could not be reconciled at this ply — see SweepPlyEval.unstable.
+   *  Absent on rows cached before the jieqi reconciliation pass. */
+  unstable?: boolean;
 };
 
 export async function getGameAnalysis(
