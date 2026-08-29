@@ -97,26 +97,25 @@ describe('site shell nav', () => {
     expect(
       watchPanel?.querySelector<HTMLAnchorElement>('a[href="/broadcast/xiangqi"]')?.textContent,
     ).toBe('Broadcasts');
-    // The games database was reachable only by typing its URL until it landed
-    // here; losing this entry makes the whole surface invisible again.
-    expect(watchPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
-      'Games',
-    );
     expect(
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Broadcasts', 'Games', 'Video library']);
+    ).toEqual(['Mistboard TV', 'Broadcasts', 'Video library']);
 
-    // Tools dropdown surfaces the analysis board.
+    // Tools dropdown surfaces the analysis board, and the games database, which
+    // moved here out of Watch. It is reachable only by typing its URL if this
+    // entry goes missing, so assert the rendered link, not just the item list.
     const toolsMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Tools',
     );
+    const toolsPanel = toolsMenu?.querySelector<HTMLElement>('.site-nav-menu-panel');
     expect(
-      toolsMenu
-        ?.querySelector<HTMLElement>('.site-nav-menu-panel')
-        ?.querySelector<HTMLAnchorElement>('a[href="/analysis/xiangqi"]')?.textContent,
+      toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/analysis/xiangqi"]')?.textContent,
     ).toBe('Analysis board');
+    expect(toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
+      'Games',
+    );
 
     const learnMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Learn',

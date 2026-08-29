@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { basename, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { importXiangqiGame, type XiangqiMove, type XiangqiMoveFormat } from '@mistboard/game';
+import { importXiangqiPaste, type XiangqiMove, type XiangqiMoveFormat } from '@mistboard/game';
 import pg from 'pg';
 import { runMigrations } from './migrate.js';
 import {
@@ -184,7 +184,9 @@ function supportedGameFile(file: string): boolean {
 }
 
 function parseHistoricalGame(file: string, raw: string): ImportPlan {
-  const imported = importXiangqiGame(raw);
+  // Paste-aware on purpose: `.pgn` is an accepted extension here, and a real
+  // PGN carries a tag block that the bare notation sniffer cannot read past.
+  const imported = importXiangqiPaste(raw);
   if (imported.error || !imported.format || imported.moves.length === 0) {
     return { ok: false, file, reason: imported.error ?? 'no moves imported' };
   }

@@ -76,6 +76,10 @@ const RESULT_TOKENS = new Set(['1-0', '0-1', '1/2-1/2', '1/2', '*']);
 // A move-number ordinal: "12." / "12..." / bare "12". A WXF token like "C2.5"
 // starts with a letter and a Chinese one with a CJK char, so neither collides.
 const MOVE_NUMBER = /^\d+\.{0,3}$/;
+// A PGN tag-pair line: `[Event "…"]`. Used both to split multi-game files and
+// to decide whether a failed paste should be reported as a broken PGN or as
+// unreadable movetext, so it lives in one place.
+const TAG_PAIR_LINE = /^\s*\[\s*[A-Za-z][A-Za-z0-9_]*\s+"/;
 
 interface RawNode {
   token: string;
@@ -101,7 +105,7 @@ function splitGames(input: string): string[] {
   let current: string[] = [];
   let sawMovetext = false;
   for (const line of lines) {
-    const isTag = /^\s*\[\s*[A-Za-z][A-Za-z0-9_]*\s+"/.test(line);
+    const isTag = TAG_PAIR_LINE.test(line);
     if (isTag && sawMovetext) {
       games.push(current.join('\n'));
       current = [];
@@ -512,6 +516,85 @@ function wrap(text: string, width = 80): string {
   }
   if (line.length > 0) lines.push(line);
   return lines.join('\n');
+}
+
+/** What a paste box actually received: the moves, plus whatever wrapper
+ *  metadata came with them. `tags` is empty for bare movetext. */
+export interface XiangqiPasteResult {
+  moves: XiangqiMove[];
+  /** The notation the moves turned out to be written in. */
+  format: XiangqiMoveFormat | null;
+  /** Set when nothing readable came back; the most useful reason. */
+  error?: string;
+  /** Which reader handled it. */
+  source: 'movetext' | 'pgn';
+  /** PGN tag pairs, empty when the input was bare movetext. Metadata has
+   *  nowhere to live on the analysis board today, but a caller that mints a
+   *  game from a paste needs it, and re-parsing to get it would be silly. */
+  tags: Record<string, string>;
+  result?: XiangqiPgnResult;
+  /** The [FEN] start, when the game does not begin from the standard opening.
+   *  A caller that ignores this replays the moves from the wrong position. */
+  startFen?: string;
+}
+
+/** Read anything a human might paste: bare movetext in any of the five
+ *  notations, or a full PGN with a tag block, comments and variations.
+ *
+ *  Order is load-bearing. The bare sniffer runs FIRST and the PGN reader is the
+ *  fallback, not the other way round, because a DhtmlXQ record is a run of
+ *  digits and PGN's move-number pattern (`^\d+\.{0,3}$`) matches one whole —
+ *  PGN-first would read a valid dpxq paste as a single move number and return
+ *  an empty game. Sniffer-first also means every input that worked before this
+ *  function existed still takes exactly the path it used to. */
+export function importXiangqiPaste(input: string): XiangqiPasteResult {
+  const bare = importXiangqiGame(input);
+  if (!bare.error && bare.moves.length > 0) {
+    return { moves: bare.moves, format: bare.format, source: 'movetext', tags: {} };
+  }
+
+  const [game] = parseXiangqiPgn(input);
+  if (game && game.plyCount > 0) {
+    const startFen = game.tags.FEN?.trim();
+    return {
+      moves: mainline(game.children),
+      format: game.format,
+      error: game.error,
+      source: 'pgn',
+      tags: game.tags,
+      result: game.result,
+      ...(startFen ? { startFen } : {}),
+    };
+  }
+
+  // Both readers failed. Report as whichever the input actually looked like, so
+  // a malformed PGN says what is wrong with the PGN instead of the generic
+  // "unrecognized notation" that a bare-movetext failure deserves.
+  if (looksLikePgn(input)) {
+    return {
+      moves: [],
+      format: null,
+      error: game?.error ?? 'No moves found in this PGN.',
+      source: 'pgn',
+      tags: game?.tags ?? {},
+    };
+  }
+  return { moves: [], format: bare.format, error: bare.error, source: 'movetext', tags: {} };
+}
+
+/** children[0] is the mainline continuation; variations are the rest. */
+function mainline(children: readonly XiangqiPgnNode[]): XiangqiMove[] {
+  const moves: XiangqiMove[] = [];
+  let node = children[0];
+  while (node) {
+    moves.push(node.move);
+    node = node.children[0];
+  }
+  return moves;
+}
+
+function looksLikePgn(input: string): boolean {
+  return input.split(/\r?\n/).some((line) => TAG_PAIR_LINE.test(line));
 }
 
 /** Red/Black player names from a tag block, tolerating the White spelling that

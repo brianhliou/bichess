@@ -15,7 +15,6 @@ describe('watch nav', () => {
     expect(watchNavItems().map((item) => item.label)).toEqual([
       'Mistboard TV',
       'Broadcasts',
-      'Games',
       'Video library',
     ]);
   });
@@ -40,7 +39,6 @@ describe('watch nav', () => {
     expect(items.map((item) => item.label)).toEqual([
       'Mistboard TV',
       'Broadcasts',
-      'Games',
       'Streamers',
       'Video library',
     ]);
@@ -56,5 +54,15 @@ describe('tools nav', () => {
     expect(items[0]?.href).toBe('/analysis/xiangqi');
     expect(items[1]?.href).toBe('/editor/xiangqi');
     expect(items[1]?.labelKey).toBe('nav.editor');
+  });
+
+  // The games database is the one nav entry that has moved menus, so assert it
+  // is HERE and not in Watch. A one-sided check would pass with it in both.
+  it('carries the games database, and Watch no longer does', async () => {
+    const { toolsNavItems, watchNavItems } = await import('./nav-items.js');
+    const games = toolsNavItems().find((item) => item.href === '/games');
+    expect(games?.label).toBe('Games');
+    expect(games?.labelKey).toBe('nav.games');
+    expect(watchNavItems().some((item) => item.href === '/games')).toBe(false);
   });
 });

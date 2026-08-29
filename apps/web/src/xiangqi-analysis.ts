@@ -23,7 +23,7 @@ import { t } from './i18n/catalog.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { editorHref } from './review/position-links.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
-import { importXiangqiGame } from './review/xiangqi-import.js';
+import { importXiangqiPaste } from './review/xiangqi-import.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import {
   buildXiangqiReplayFromMoves,
@@ -131,14 +131,16 @@ export function mountXiangqiAnalysis(
       onImport: (text) => {
         const trimmed = text.trim();
         if (!trimmed) return t('analysis.pasteGameToImport');
-        const result = importXiangqiGame(trimmed);
+        const result = importXiangqiPaste(trimmed);
         if (result.error || result.moves.length === 0) {
           return result.error ?? 'No moves recognized.';
         }
-        // A full-game import is anchored at the standard start, so it replaces
-        // any custom position.
+        // A full-game import replaces any custom position: it anchors at the
+        // standard start, UNLESS the paste carried its own [FEN], in which case
+        // the moves only replay correctly from that position.
         const url = new URL(window.location.href);
-        url.searchParams.delete('fen');
+        if (result.startFen) url.searchParams.set('fen', result.startFen);
+        else url.searchParams.delete('fen');
         url.searchParams.set(
           'moves',
           result.moves.map((move) => `${move.from}-${move.to}`).join(' '),
