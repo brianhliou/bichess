@@ -1,6 +1,7 @@
 import { assert, test } from 'vitest';
 import {
   CHAMPIONS,
+  CHART_LAYOUT,
   EDITIONS,
   EDITION_GAPS,
   FIRST_YEAR,
@@ -126,7 +127,10 @@ test('the figure draws a bar for every champion and closes its markup', () => {
   assert.match(svg, /^<svg /);
   assert.match(svg, /<\/svg>$/);
   for (const champ of CHAMPIONS) {
-    assert.equal(svg.includes(`>${champ.name}</text>`), true, `${champ.name} missing from figure`);
+    // The row label is "<English> <Chinese>", so match the name, not the whole
+    // text node.
+    assert.equal(svg.includes(`>${champ.name} `), true, `${champ.name} missing from figure`);
+    assert.equal(svg.includes(champ.zh), true, `${champ.zh} missing from figure`);
   }
   // Bars merge across cancelled years: Hu's 1974-1979 must be one rect, not two.
   const huRun = svg.match(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g) ?? [];
@@ -140,7 +144,9 @@ test('bars bridge a single cancelled year but not the Cultural Revolution', () =
   const widths = [...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)" height="12"/g)].map(
     (m) => ({ x: Number(m[1]), w: Number(m[2]) }),
   );
-  const cell = (920 - 178 - 14) / (2025 - 1956 + 1);
+  const cell =
+    (CHART_LAYOUT.width - CHART_LAYOUT.padLeft - CHART_LAYOUT.padRight) /
+    (LAST_YEAR - FIRST_YEAR + 1);
   const spans = widths.map((r) => Math.round(r.w / cell));
   assert.equal(spans.includes(6), true, 'expected a six-year bar for Hu 1974-1979');
   assert.equal(

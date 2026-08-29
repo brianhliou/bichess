@@ -180,9 +180,13 @@ function runs(years: number[]): Array<{ from: number; to: number }> {
   return out;
 }
 
-const PAD_L = 178;
-const PAD_R = 14;
-const WIDTH = 920;
+/** Layout the figure is drawn on. Exported so tests read it rather than
+ *  restating it: a duplicated PAD_L broke two assertions when it moved. */
+export const CHART_LAYOUT = { width: 920, padLeft: 224, padRight: 14 } as const;
+
+const PAD_L = CHART_LAYOUT.padLeft;
+const PAD_R = CHART_LAYOUT.padRight;
+const WIDTH = CHART_LAYOUT.width;
 const ROW_H = 21;
 const BAR_H = 12;
 const AXIS_H = 40;
@@ -288,9 +292,14 @@ export function xiangqiChampionTimelineSvg(): string {
         `y2="${midY.toFixed(1)}" stroke="var(--site-border)" stroke-width="1" opacity="0.35"/>`,
     );
 
+    // English then Chinese, right-aligned as one run so the count column stays
+    // put. The Chinese sits in a quieter fill: it identifies the player for a
+    // reader who wants it without competing with the name most of this page's
+    // readers can actually parse.
     parts.push(
       `<text x="${PAD_L - 34}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="12.5" ` +
-        `fill="var(--site-heading)">${esc(champ.name)}</text>`,
+        `class="xq-champ-name">${esc(champ.name)} ` +
+        `<tspan class="xq-champ-zh">${esc(champ.zh)}</tspan></text>`,
     );
     parts.push(
       `<text x="${PAD_L - 12}" y="${(midY + 4).toFixed(1)}" text-anchor="end" font-size="11.5" ` +

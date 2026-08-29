@@ -1358,6 +1358,14 @@
   fill: var(--site-muted);
 }
 
+.xq-champ-name {
+  fill: var(--site-heading);
+}
+
+.xq-champ-zh {
+  fill: var(--site-muted);
+}
+
 .xq-champ-credit {
   fill: var(--site-muted);
   opacity: 0.75;
@@ -1653,6 +1661,9 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: left;
+  /* Coordinate notation contains a hyphen, which CSS treats as a break
+     opportunity, so "g10-e8" wrapped to two lines inside its own button. */
+  white-space: nowrap;
   cursor: pointer;
 }
 

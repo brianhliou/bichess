@@ -652,6 +652,15 @@ export function mountXiangqiReplay(
       // that was better than the one played.
       tag.textContent = 'better was';
       branch.appendChild(tag);
+      // A line replacing a Black move starts mid-pair, so it opens the way a
+      // score sheet does: the move number, then an ellipsis standing in for
+      // Red's move, rather than a bare move with no number at all.
+      if (!isRed) {
+        const lead = document.createElement('span');
+        lead.className = 'xq-replay-move-n';
+        lead.textContent = `${Math.ceil(ply / 2)}\u2026`;
+        branch.appendChild(lead);
+      }
       line.forEach((_mv, i) => {
         // Number the line from the move it replaces so it reads like a score.
         const movesIn = isRed ? i : i + 1;
