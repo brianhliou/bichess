@@ -27,7 +27,11 @@ import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 // Geometry/colours mirror the static xiangqi diagrams in articles-data.ts so
 // the replay board is visually identical to the rules diagrams.
 const CELL = 31;
-const MARGIN = 18;
+// A piece at an edge intersection overhangs the grid by half its width, which
+// is the only thing this margin has to clear (PIECE is 28, so 14). It was 18
+// with another 4 of PAD outside it: 8px per side of dead space, which at a
+// fixed column width is 8% of board scale given away.
+const MARGIN = 15;
 const PIECE = tokenPieceSize(CELL);
 // The live board draws its judgment badge at r=13 / offset 21 on a 60px cell.
 // Same proportions here so the badge sits in the same place relative to the
@@ -43,7 +47,7 @@ const GLYPH_CLASS: Record<string, string> = {
   // the badge renders as an empty disc.
   '!': 'xq-marker--good',
 };
-const PAD = 4;
+const PAD = 0;
 const BOARD_W = MARGIN * 2 + 8 * CELL;
 const BOARD_H = MARGIN * 2 + 9 * CELL;
 const RADIUS = 8;
@@ -450,7 +454,7 @@ export function mountXiangqiReplay(
     // normally inside it.
     const moveInner = document.createElement('div');
     moveInner.className = 'xq-replay-move-inner';
-    moveInner.append(moveList, resultFoot);
+    moveInner.append(moveList);
     moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
@@ -683,6 +687,9 @@ export function mountXiangqiReplay(
       });
       moveList.appendChild(branch);
     }
+    // Last item in the scroller, not a pinned footer: the result belongs at the
+    // end of the game, and reaching it should mean scrolling to the end.
+    moveList.appendChild(resultFoot);
   }
 
   /**
