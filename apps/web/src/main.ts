@@ -1,4 +1,5 @@
 import './app-base.css';
+import { embedStudyRouteFromPath } from './embed/embed-route.js';
 import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
@@ -177,6 +178,9 @@ const wantsLearn = learnEnabled() && (path === '/learn' || page === 'learn');
 // Interactive beginner course (lichess /learn parity), xiangqi first. Ungated —
 // distinct from the legacy /learn hub above.
 const wantsLearnXiangqi = path === '/learn/xiangqi';
+// The one route rendered inside someone else's page. Checked before everything
+// else so the embed never picks up site chrome.
+const embedStudyRoute = embedStudyRouteFromPath(path);
 const wantsRulesIndex =
   path === '/rules' || path === '/zh-hans/rules' || path === '/zh-hant/rules' || page === 'rules';
 const articleSlug = articleSlugFromPath(path);
@@ -702,6 +706,12 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountRulesIndex }) =>
       mountRulesIndex(appRoot, articleLang),
+    ),
+  );
+} else if (embedStudyRoute) {
+  void mountOrReport(() =>
+    import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
+      mountEmbedStudy(appRoot, embedStudyRoute),
     ),
   );
 } else if (wantsLearnXiangqi) {

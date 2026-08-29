@@ -186,6 +186,16 @@ export function legacyPageRedirect(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Paths served to be embedded in a third-party page. Everything else on this
+ * site is same-origin only; these are deliberately frameable, so the pattern is
+ * narrow on purpose: a study chapter, by id, and nothing else.
+ */
+export function isEmbedRoute(pathname: string): boolean {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(normalized);
+}
+
 export function isClientRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
@@ -195,6 +205,11 @@ export function isClientRoute(pathname: string): boolean {
     // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
     // ungated xiangqi course) stays a client route.
     normalized === '/learn/xiangqi' ||
+    // /embed/study/:studyId/:chapterId — the one route on this site meant to be
+    // rendered inside someone else's page. It is a client route like any other;
+    // what makes it an embed is that the framing headers let it be framed and
+    // the page renders the board alone (see isEmbedRoute).
+    isEmbedRoute(normalized) ||
     normalized === '/rules' ||
     normalized === '/zh-hans/rules' ||
     normalized === '/zh-hant/rules' ||

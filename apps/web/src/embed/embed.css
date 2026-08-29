@@ -1,0 +1,36 @@
+/* The embed runs inside a page we do not control, so it paints its own ground
+   and claims no more room than the widget needs. */
+.embed-body {
+  margin: 0;
+  padding: 0;
+  background: var(--site-bg);
+}
+
+.embed-root {
+  padding: 8px;
+}
+
+.embed-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.embed-credit {
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.embed-credit:hover {
+  color: var(--site-link);
+  text-decoration: underline;
+}
+
+.embed-note {
+  padding: 24px;
+  color: var(--site-muted);
+  font-size: 14px;
+  text-align: center;
+}
