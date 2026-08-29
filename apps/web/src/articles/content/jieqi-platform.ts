@@ -61,7 +61,7 @@ export const jieqiPlatformArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Mistboard supports jieqi in full: play, analyse, review and study. It is free, it works without an account, and it is open source. The board comes in intersection or square-grid layouts with a few piece sets, coordinates are optional, and it stays full size on a phone.',
+        'Mistboard supports jieqi in full: play it, analyse it, review it and study it. Free, no account, open source.',
     },
   ],
   sections: [
@@ -71,12 +71,22 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Play the engine at 1+1, 3+2 or 5+5, or send a link to a friend. Neither needs an account.',
+            'Open a board and play the engine at 1+1, 3+2 or 5+5, or send a link to a friend and play them. Neither route asks you to sign up, and there is nothing to install.',
         },
         {
           kind: 'paragraph',
           text:
-            'Every game is saved. You can replay it move by move, share the link, and run analysis over it whenever you like, including games you played as a guest. Jieqi here is casual: there is no jieqi ladder yet.',
+            'The board is the one from the replay above: intersection or square-grid layout, a few piece sets, coordinates on or off, and full size on a phone rather than a shrunken desktop board.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'Every game is kept, including games you played as a guest. You can replay it move by move, send the link to someone, and run the analysis below over it whenever you like, months later if you want.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'What is missing: jieqi here is casual. The rating pool exists but no games are rated yet and there is no jieqi ladder, so nothing you play changes a number.',
         },
       ],
     },
