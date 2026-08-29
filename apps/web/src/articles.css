@@ -1611,11 +1611,14 @@
 
 /* Solid block, not a tinted outline. At a glance across a 180-ply list an
    outlined current move is indistinguishable from a hovered one. */
+/* Nothing here may change the button's metrics. A bolder weight is wider, and
+   in the wrap-flow sideline that shifts every move after the current one on each
+   step, so the list appears to twitch as the reader walks it. The solid block
+   carries the state on its own. */
 .xq-replay-annotated .xq-replay-move-button.is-current {
   border-color: transparent;
   background: var(--site-accent);
   color: var(--site-on-accent);
-  font-weight: 600;
 }
 
 .xq-replay-annotated .xq-replay-move-button.is-current .xq-replay-glyph {
@@ -1629,21 +1632,32 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 1px 2px;
+  gap: 0 1px;
   margin: 1px 0 3px;
-  padding: 4px 4px 5px;
+  padding: 4px 3px 5px;
   border-radius: 4px;
   background: var(--site-bg-soft);
 }
 
 .xq-replay-annotated .xq-replay-branch .xq-replay-move-button {
   min-width: 0;
-  font-size: 11.5px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  line-height: 1.35;
   color: var(--site-muted);
 }
 
+.xq-replay-annotated .xq-replay-branch .xq-replay-move-n {
+  min-width: 0;
+  font-size: 9.5px;
+}
+
+/* Inherit the solid block. This used to set accent text, which was right when
+   the current move was an outline and wrong the moment it became an accent
+   fill: the move was then painted on its own colour. */
 .xq-replay-annotated .xq-replay-branch .xq-replay-move-button.is-current {
-  color: var(--site-accent);
+  color: var(--site-on-accent);
 }
 
 .xq-replay-annotated .xq-replay-branch-tag {
