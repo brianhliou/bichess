@@ -39,6 +39,7 @@ export const EN_CONTENT = {
   'videos.source.mistboard': 'Made by Mistboard',
   'videos.badge.mistboard': 'Mistboard',
   'videos.sortLabel': 'Sort',
+  'videos.sort.featured': 'Recommended',
   'videos.sort.newest': 'Newest',
   'videos.sort.longest': 'Longest',
   'videos.sort.shortest': 'Shortest',

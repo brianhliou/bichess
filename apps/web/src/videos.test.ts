@@ -111,6 +111,17 @@ describe('videos data', () => {
     expect(new Set(VIDEOS.map(videoKey)).size).toBe(VIDEOS.length);
   });
 
+  // The length sorts push an unknown duration to the end of the list, so a
+  // catalogue that is mostly unknown does not sort badly, it does not sort at
+  // all: two of the three sort modes degrade to one bucket. That is what this
+  // was before `scripts/videos-audit.mjs` backfilled 36 of the entries from
+  // YouTube. Run `npm run videos:audit -- --missing --write` when this fails.
+  it("knows every entry's runtime, so the length sorts mean something", () => {
+    for (const video of VIDEOS) {
+      expect(video.durationMinutes, `${video.title} has no durationMinutes`).toBeGreaterThan(0);
+    }
+  });
+
   it('covers every topic tag and difficulty level with at least one entry', () => {
     for (const tag of VIDEO_TAGS) {
       expect(VIDEOS.some((video) => video.tags.includes(tag))).toBe(true);
@@ -219,14 +230,15 @@ describe('video card', () => {
 });
 
 describe('videos page', () => {
-  it('renders every curated entry, newest first, once language is widened', () => {
+  it('renders every curated entry in editorial order once language is widened', () => {
     const root = mountAllLanguages();
     const cards = root.querySelectorAll<HTMLAnchorElement>(
       '.videos-catalog-grid .videos-card-link',
     );
     expect(cards.length).toBe(VIDEOS.length);
     expect(root.querySelector('.videos-count')?.textContent).toBe(`${VIDEOS.length} videos`);
-    expect(visibleTitles(root)).toEqual(sortVideos(VIDEOS, 'newest').map((v) => v.title));
+    // The page opens on the curated ranking, which is the array as written.
+    expect(visibleTitles(root)).toEqual(VIDEOS.map((v) => v.title));
     expect(root.querySelector('.videos-empty')?.hasAttribute('hidden')).toBe(true);
   });
 
@@ -292,8 +304,15 @@ describe('videos page', () => {
     if (!search) throw new Error('missing search input');
     search.value = 'CHECKMATE';
     search.dispatchEvent(new Event('input'));
-    const expected = VIDEOS.filter((v) => v.title.toLowerCase().includes('checkmate'));
+    // Author too, which is what this test is named for and did not check: the
+    // expectation filtered titles only, and passed until a channel called
+    // `iwantcheckmate` joined the catalogue and the page correctly returned one
+    // more card than the test predicted.
+    const expected = VIDEOS.filter((v) =>
+      `${v.title} ${v.author}`.toLowerCase().includes('checkmate'),
+    );
     expect(expected.length).toBeGreaterThan(0);
+    expect(expected.some((v) => !v.title.toLowerCase().includes('checkmate'))).toBe(true);
     expect(new Set(visibleTitles(root))).toEqual(new Set(expected.map((v) => v.title)));
   });
 
@@ -326,7 +345,8 @@ describe('videos page', () => {
       (el) => el.querySelector('.videos-facet-label')?.textContent === '難度',
     );
     expect(levelRow).toBeDefined();
-    expect(page.querySelector('.videos-sort-select option')?.textContent).toBe('最新');
+    // First option is the default sort, which is the editorial ranking.
+    expect(page.querySelector('.videos-sort-select option')?.textContent).toBe('推薦');
   });
 });
 
@@ -427,6 +447,25 @@ describe('buildHomeVideoCards', () => {
     expect(new Set(languages)).toEqual(new Set<VideoLanguage>(['zh']));
   });
 
+  // The strip drops an unresolved key rather than breaking, which is right at
+  // runtime and invisible in a test: every assertion below this one passes just
+  // as well with a half-empty row. So assert the arcs are whole. A cut entry, a
+  // typo, or a renamed id fails here instead of quietly shortening the homepage.
+  it('fills every arc, with no curated key silently dropped', () => {
+    const known = new Set([...FIRST_PARTY_VIDEOS, ...VIDEOS].map((video) => videoKey(video)));
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const row = buildHomeVideoCards(8, locale);
+      expect(row, `no strip for ${locale}`).not.toBeNull();
+      const cards = row!.querySelectorAll('.landing-video-card');
+      expect(cards.length, `${locale} arc is short`).toBe(8);
+    }
+    // And the arcs draw only on entries that exist, in either list.
+    const row = buildHomeVideoCards(8, 'en');
+    for (const card of [...row!.querySelectorAll<HTMLAnchorElement>('.landing-video-card')]) {
+      expect(known.has(`yt:${new URL(card.href).searchParams.get('v')}`)).toBe(true);
+    }
+  });
+
   it('only surfaces curated keys that resolve against the catalog', () => {
     const row = buildHomeVideoCards(8, 'en');
     // Ours are curated into the strip too, and they live outside VIDEOS.
@@ -441,6 +480,38 @@ describe('buildHomeVideoCards', () => {
       const id = new URL(href).searchParams.get('v');
       expect(known.has(`yt:${id}`)).toBe(true);
     }
+  });
+});
+
+describe('sortVideos', () => {
+  it('leaves the editorial order alone under `featured`', () => {
+    expect(sortVideos(VIDEOS, 'featured')).toEqual([...VIDEOS]);
+    // A copy, not the array itself: callers sort and slice the result freely.
+    expect(sortVideos(VIDEOS, 'featured')).not.toBe(VIDEOS);
+  });
+
+  // The point of ranking by array order rather than by a score is that a
+  // filtered view stays ranked. Sorting a subset must not reshuffle it into
+  // whatever order the filter happened to produce.
+  it('keeps a filtered subset in catalogue order', () => {
+    const english = VIDEOS.filter((video) => video.language === 'en');
+    expect(sortVideos(english, 'featured')).toEqual(english);
+    expect(english.length).toBeGreaterThan(1);
+  });
+
+  // Guards a specific regression: if someone re-sorts videos-data.ts by
+  // addedAt, or reverts the default sort, `featured` silently becomes `newest`
+  // and the curation is gone with no test failing. These differ today, and the
+  // catalogue is ranked, so they should keep differing.
+  it('is a real ranking, not the curation date in disguise', () => {
+    expect(sortVideos(VIDEOS, 'featured')).not.toEqual(sortVideos(VIDEOS, 'newest'));
+  });
+
+  it('orders by length in both directions', () => {
+    const longest = sortVideos(VIDEOS, 'longest').map((v) => v.durationMinutes ?? 0);
+    const shortest = sortVideos(VIDEOS, 'shortest').map((v) => v.durationMinutes ?? 0);
+    expect(longest).toEqual([...longest].sort((a, b) => b - a));
+    expect(shortest).toEqual([...shortest].sort((a, b) => a - b));
   });
 });
 

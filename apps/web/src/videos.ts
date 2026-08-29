@@ -7,9 +7,10 @@
 // and prod; revisit lazy embeds only if the dev header scoping changes.
 //
 // The catalog filters on four axes (topic / level / game / spoken language) plus
-// a source filter, and sorts by recency or length. Watch URL and thumbnail are
-// derived per `source` so first-party Mistboard videos render alongside YouTube
-// ones.
+// a source filter. It opens in editorial order (`featured`), which is the order
+// of the VIDEOS array itself, and can be re-sorted by recency or length. Watch
+// URL and thumbnail are derived per `source` so first-party Mistboard videos
+// render alongside YouTube ones.
 
 import './videos.css';
 
@@ -71,11 +72,12 @@ export function videoLanguageForLocale(locale: Locale): VideoLanguage {
   }
 }
 
-export type VideoSort = 'newest' | 'longest' | 'shortest';
+export type VideoSort = 'featured' | 'newest' | 'longest' | 'shortest';
 
-const SORT_OPTIONS: readonly VideoSort[] = ['newest', 'longest', 'shortest'];
+const SORT_OPTIONS: readonly VideoSort[] = ['featured', 'newest', 'longest', 'shortest'];
 
 const SORT_LABEL_KEYS: Record<VideoSort, `videos.sort.${VideoSort}`> = {
+  featured: 'videos.sort.featured',
   newest: 'videos.sort.newest',
   longest: 'videos.sort.longest',
   shortest: 'videos.sort.shortest',
@@ -210,7 +212,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
     sources: new Set(),
     languages: new Set(),
     query: '',
-    sort: 'newest',
+    sort: 'featured',
   };
 
   // The one facet that starts with a selection: a visitor reading zh-Hant should
@@ -310,7 +312,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
     apply();
   });
   sortSelect.addEventListener('change', () => {
-    state.sort = (sortSelect.value as VideoSort) ?? 'newest';
+    state.sort = (sortSelect.value as VideoSort) ?? 'featured';
     apply();
   });
 
@@ -360,11 +362,20 @@ export function filterVideos(videos: readonly VideoEntry[], filters: VideoFilter
   });
 }
 
-// Newest first by default; length sorts push unknown-duration videos to the end.
-// V8's stable sort preserves the editorial array order within a tie (same date).
+// Editorial order first: `featured` is the VIDEOS array as written, so the
+// ranking is maintained by moving lines in videos-data.ts rather than by a score
+// this has to recompute. It is deliberately a no-op sort and not the absence of
+// one, so that a filtered subset still comes out ranked: the facets slice the
+// list, the order survives the slice.
+//
+// The other modes reorder it. Length sorts push unknown-duration videos to the
+// end, though the catalogue has none: `scripts/videos-audit.mjs` backfills
+// durations and a test in videos.test.ts fails if one lands without.
 export function sortVideos(videos: readonly VideoEntry[], sort: VideoSort): VideoEntry[] {
   const list = [...videos];
   switch (sort) {
+    case 'featured':
+      return list;
     case 'newest':
       return list.sort((a, b) => b.addedAt.localeCompare(a.addedAt));
     case 'longest':
@@ -538,17 +549,28 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
 // ── Homepage video strip (band 3, beneath the blog row) ─────────────────────
 // A curated front-door set, hand-picked like articles' HOME_ARTICLE_SLUGS. Order
 // IS the editorial arc, and the carousel reveals it three cards at a time:
-// 60-second hook -> full rules primer -> chess-player framing -> tactics ->
-// openings -> endgames -> a title game -> culture. One slot per role: the earlier
+// ours -> 60-second hook -> full rules primer -> first tactics -> openings ->
+// a famous sacrifice -> a title game -> culture. One slot per role: the earlier
 // draft spent five of eight slots on near-duplicate "how to play" videos, which
 // read as one repeated promise and hid the depth of the catalog behind it.
 //
+// This is NOT the catalogue ranking. videos-data.ts is ordered best-first and
+// /videos opens on that; here the roles come first, so a lower-ranked video can
+// hold a slot no higher-ranked one covers. What the ranking is good for is
+// checking each slot against the alternatives for its role, which is how the
+// endgames slot came out: it held a 574-view, 27-minute lecture, the second
+// weakest entry in the English catalogue, because English endgame video is
+// uniformly thin and the role forced a pick. The slot now shows a 50k-view
+// six-minute knight sacrifice instead. Endgames keep their facet on /videos;
+// they do not get a front-door card until something worth clicking exists.
+// (The Chinese arc keeps its endgames slot: 13k lifetime views, a real
+// teaching video, not the same case.)
+//
 // Newest-first is deliberately NOT used here (it skews to dense game commentary).
 // Keys are videoKey() values; an unknown key is dropped so a removed video never
-// breaks the row. First-party Mistboard videos, once they exist, can be pinned
-// here to lead the strip. Every English id below was re-verified live against
-// YouTube's oembed endpoint on 2026-07-22, and every zh/vi id on 2026-08-15
-// (200 + exact title/author match).
+// breaks the row -- resilient at runtime, invisible to a typo, so a test asserts
+// every key resolves and every arc is full. Every id below was verified live
+// against YouTube on 2026-08-28 by `npm run videos:audit`.
 //
 // One arc per spoken language, each hand-ordered on the same beats: the strip a
 // visitor sees follows their locale, because a homepage row of video they cannot
@@ -565,7 +587,7 @@ const HOME_VIDEO_KEYS: Record<VideoLanguage, readonly string[]> = {
     'yt:kSL7JErRMx8', // Full rules primer — AncientChess
     'yt:950nyyjOirU', // Basic checkmate strategies — the first step past the rules
     'yt:MyLXgkL4C5A', // The Most Popular Openings in Xiangqi
-    'yt:dmSDt1VQNfs', // Endgame compositions — ties to the classical PD study corpus
+    'yt:RzGPLnQgsIE', // Knight sacrifice, mate in 13 — the game at its most vivid
     'yt:uF3-KrlXprE', // 2023 World Championship final — the aspirational ceiling
     'yt:gkD29aQW3Vw', // The Four Types of Chinese Chess Players — culture
   ],
