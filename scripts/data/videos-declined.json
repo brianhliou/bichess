@@ -1,0 +1,12 @@
+{
+  "_comment": "Videos deliberately kept out of the /videos catalogue. videos-mine.mjs skips these, so a sweep stops re-proposing what was already judged. Removing an id here puts it back in play.",
+  "declined": {
+    "MtyZ_qUNA0g": "cut 2026-08-28: xqinenglish 2003 A League, 9th game commentary on a shelf of 8",
+    "RMGw9pKNvLM": "cut 2026-08-28: xqinenglish 2001 BGN Finals, same shelf, 164 views",
+    "ltn57_UWwgg": "cut 2026-08-28: xqinenglish Basic Midgame Tactics, 7th tactics entry, 75 views",
+    "qlslbnMZgIs": "cut 2026-08-28: Offensive Central Cannon (1m), third Central Cannon short",
+    "5beHPTEFZtU": "cut 2026-08-28: Best response vs Central Cannon (1m), same",
+    "vfVak5NY-3A": "cut 2026-08-28: Cannon pin pattern (1m), weakest of seven shorts",
+    "pji0WSzB1Qw": "cut 2026-08-28: Discovered Horse (1m), Double Chariot covers the shelf and carries the thin endgames tag"
+  }
+}
