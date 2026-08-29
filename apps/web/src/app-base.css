@@ -420,6 +420,11 @@
 
 body {
   margin: 0;
+  /* lichess's base. Only reaches text that sets no size of its own, which is
+     about 4% of visible elements (measured 2026-08-28, heaviest on /faq): the
+     rest of the site is explicit px. Deliberately NOT on :root, where it would
+     rescale all 344 rem declarations instead. */
+  font-size: 14px;
   background: var(--site-page-gradient);
   color: var(--site-text);
   /* Match lichess's whole-page rendering: grayscale/antialiased smoothing so

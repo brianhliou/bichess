@@ -70,7 +70,9 @@
   padding: 8px 14px;
   color: var(--site-muted);
   font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
+  /* lichess sets its side rail (.subnav a) at 14px; ours read a size larger
+     than the page body they sit beside. */
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.25;
   text-decoration: none;
