@@ -690,11 +690,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Five world titles across fifteen years, 1990 to 2005, more than anyone before or since. He never won the Chinese championship more than five times either, and for most of his career he was the second best player in his own country, behind Hu Ronghua. That gap is the whole subject of this page.',
+          text: 'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.',
         },
         {
           kind: 'paragraph',
-          text: 'Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades, and the recurring answer to who could actually beat these men. Lü Qin beat him in 1990, 1995 and 1997.',
+          text: 'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.',
         },
         {
           kind: 'xq-replay',
@@ -709,7 +709,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'World champion in 1991, and four times Chinese national champion between 1990 and 2008. He is one of the three men on this list with no ruling against him.',
+          text: 'World champion in 1991 and four times Chinese national champion, spread across eighteen years from 1990 to 2008, which is a longer span at the top than anyone here except Hu Ronghua managed. He learned in Harbin under Wang Jialiang, known as the Northeast Tiger, and the sport made him the New Northeast Tiger in turn.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'He is one of three men on this list with no ruling against him.',
         },
         {
           kind: 'xq-replay',
@@ -724,11 +728,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'World champion in 1993 in Beijing, with seven and a half points from nine, a year after taking the Chinese national title. He is the one champion here without a game.',
+          text: 'World champion in 1993 in Beijing with seven and a half points from nine, the year after taking the Chinese national title. He is from Taizhou in Jiangsu, and the sport calls him 笑面佛, the Smiling Buddha, because he smiles right through a game. What is behind the smile is tight openings and a habit of grinding advantages too small to see into wins.',
         },
         {
           kind: 'paragraph',
-          text: 'That is a fact about the archives rather than about him. Four games survive from the 1993 edition in the databases this article draws on, and none of them are his. Showing a game from a different event would be a different claim than the one this page makes.',
+          text: 'He is the one champion here without a game, and that is a fact about the archives rather than about him. Four games survive from the 1993 edition in the databases this article draws on, and none of them are his. Showing a game from another event would be a different claim than the one this page makes.',
         },
       ],
     },
@@ -737,7 +741,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Three world titles, 1999, 2003 and 2007, alongside six Chinese national championships. Like Lü Qin he came out of Guangdong, and like Lü Qin he spent his best years as the second name in his own country.',
+          text: 'Three world titles, 1999, 2003 and 2007, alongside six Chinese national championships. He won his first national title at eighteen, second only to Hu Ronghua’s fifteen, and spent two decades as the best player in the country not named Hu Ronghua.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Like Lü Qin he came out of Guangdong, like Lü Qin he built his game on endgames, and like Lü Qin he is one of the three men here with a clean record.',
         },
         {
           kind: 'xq-replay',
@@ -752,7 +760,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2009 champion, at twenty-two, and the first name in the run that ends this list. He was banned for life in January 2025.',
+          text: 'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.',
         },
         {
           kind: 'xq-replay',
@@ -767,7 +779,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'World champion in 2011 and Chinese national champion in 2006 and 2013. He holds the blindfold simultaneous record this sport measures itself by, twenty boards at once in 2010, which broke the nineteen Liu Dahua had set in 1995. He drew a five-year ban in April 2026.',
+          text: 'Born in Yongjia, Zhejiang, in 1984. He took the Chinese national title in 2010 and the world title in Jakarta the year after, and he was the first player to pass 2700 on the rating list.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'He is better known outside the tournament hall for blindfold play. On 3 January 2011 he took nineteen boards at once against Liu Dahua’s record and beat it with twenty, ending a mark that had stood since February 1995; he went to twenty-two in 2013 and to twenty-six after that, which is where the Guinness entry sits. He drew a five-year ban in April 2026.',
         },
         {
           kind: 'xq-replay',
@@ -782,11 +798,15 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Three world titles, 2013, 2017 and 2022, and the strongest player of his generation by a distance. In September 2025 a court in Hangzhou convicted him.',
+          text: 'Three world titles and four Chinese national ones, and ten consecutive years at the top of the world rating list. In May 2023 he became the first player to hold a live rating above 2800. Beijing called him 外星人, the alien, for arriving from outside the provincial team system and beating everyone anyway.',
         },
         {
           kind: 'paragraph',
-          text: 'The opponent here is the reason to show this one: Wang Kuo is himself a Chinese national champion, and the strongest man Wang Tianyi faced in any of his three world finals.',
+          text: 'The Chinese Xiangqi Association banned him for life in September 2024 and revoked his grandmaster title. A court in Hangzhou convicted him a year later.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The opponent below is the reason to show this particular game: Wang Kuo is himself a Chinese national champion, and the strongest man Wang Tianyi faced across his three world finals.',
         },
         {
           kind: 'xq-replay',
@@ -801,11 +821,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2015 champion, and by then the best player in China: he took the national title in 2014 and again in 2015, which is the harder double. He was banned for life in January 2025.',
+          text: 'Born in Chengdu in 1994. He took the Chinese national title in 2014 and again in 2015, then the world title in the same year, which is the harder order to do it in. He went to Tsinghua by recommendation in 2020 and won the individual gold at the 2023 Asian Games, China’s two hundredth medal of those Games.',
         },
         {
           kind: 'paragraph',
-          text: 'His title year produced the longest game in either of these articles, and the opponent is the reason to show it.',
+          text: 'He was banned for life on 12 January 2025. His title year also produced the longest game in either of these articles, and the opponent is the reason to show it.',
         },
         {
           kind: 'xq-replay',
@@ -820,7 +840,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2019 champion, in Vancouver, on a nine-round Swiss he led from the front. He was banned for life in April 2026.',
+          text: 'From Wujiang in Suzhou, born 1981, playing from the age of seven and national youth champion at sixteen. He waited a long time for the senior title and took it in 2017 by beating the defending champion Wang Tianyi, becoming the nineteenth man to win the Chinese championship. The world title followed in Vancouver in 2019.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'He was banned for life in April 2026.',
         },
         {
           kind: 'xq-replay',
@@ -835,7 +859,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2023 champion in Houston, and one of only two men here who never won the Chinese national title. He drew a six-month ban in January 2025, the lightest ruling on this page.',
+          text: 'Born in Anshan, Liaoning, in 1988, and one of only two men on this list who never won the Chinese national championship. He took the 2023 world title in Houston by beating Lại Lý Huynh in a tiebreak, which is the second time on this page that the future champion loses to a champion before becoming one.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'He drew a six-month ban in January 2025, the lightest ruling here.',
         },
         {
           kind: 'xq-replay',
@@ -884,17 +912,17 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2025 championship was played in Shanghai over nine Swiss rounds with fifty-one players. It was won by Lại Lý Huynh of Vietnam, the first man from outside China to take the standard title in the thirty-five years the event has existed.',
+          text: 'The 2025 championship was played in Shanghai in September, and won by Lại Lý Huynh of Vietnam, who beat Yin Sheng of China in the final on the twenty-seventh. He is the first man from outside China to take the standard title in the thirty-five years the event has existed.',
         },
         {
           kind: 'xq-replay',
           spec: { ...C_BV0kkYY4 },
           caption:
-            'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, from the championship he won. Two hundred and seventeen plies, and he had to win it twice: the engine has him level as late as move ninety.',
+            'Lại Lý Huynh vs Fung Ka-chun, 23 September 2025, four days before the final. Two hundred and seventeen plies, and the engine has him level as late as move ninety.',
         },
         {
           kind: 'paragraph',
-          text: 'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. Lại Lý Huynh has been on the world stage since 2015 and had already beaten most of the field before any of this happened, and Vietnam has been the second strongest xiangqi nation for a generation without much English notice.',
+          text: 'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. He was born in Vĩnh Long in 1990, won the world rapid title in 2022, and reached this final in 2023 before losing it to Meng Chen in a tiebreak. He appears twice more on this page, losing to Zheng Weitong in 2015 and to Meng Chen in 2023, which is a decade of arriving before he won anything. Vietnam has been the second strongest xiangqi nation for a generation without much English notice.',
         },
       ],
     },

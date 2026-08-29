@@ -39,14 +39,50 @@ describe('the world championship article states the record correctly', () => {
     expect(worldTitleCount('Lü Qin')).toBe(5);
     expect(worldTitleCount('Xu Yinchuan')).toBe(3);
     expect(worldTitleCount('Wang Tianyi')).toBe(3);
-    const three = worldTitleCount('Lü Qin') + worldTitleCount('Xu Yinchuan') + worldTitleCount('Wang Tianyi');
+    const three =
+      worldTitleCount('Lü Qin') + worldTitleCount('Xu Yinchuan') + worldTitleCount('Wang Tianyi');
     expect(three, 'the "eleven of nineteen" claim').toBe(11);
     expect(prose).toContain('eleven of the nineteen editions');
+  });
 
-    const lu = WORLD_CHAMPIONS.find((c) => c.name === 'Lü Qin');
-    expect(Math.min(...(lu?.years ?? []))).toBe(1990);
-    expect(Math.max(...(lu?.years ?? []))).toBe(2005);
-    expect(prose).toContain('across fifteen years, 1990 to 2005');
+  it('never states a national title year the champion did not win', () => {
+    // The check that was missing. A section said Jiang Chuan was national
+    // champion "in 2006 and 2013"; he won in 2010, and nothing objected,
+    // because every existing assertion compared the article against the WORLD
+    // record while this claim was about the national one.
+    //
+    // Scoped to the sentence that makes the claim, so a year mentioned for any
+    // other reason (a game date, another man's title) is not swept in.
+    const wrong: string[] = [];
+    for (const section of article.sections) {
+      const champion = CHAMPIONS.find((c) => section.heading?.includes(c.zh));
+      if (!champion) continue;
+      const text = (section.blocks ?? [])
+        .map((b) => (b as { text?: string }).text ?? '')
+        .join(' ');
+      for (const sentence of text.split(/(?<=[.])\s+/)) {
+        if (!/national (title|champion)/i.test(sentence)) continue;
+        // A sentence about a national title routinely names world-title years
+        // too ("World champion in 1991 and four times national champion"), so
+        // the bar is that a year must belong to ONE of his two records. Jiang
+        // Chuan's "2006 and 2013" belonged to neither: he won the national in
+        // 2010 and the world in 2011.
+        const his = new Set([
+          ...champion.years,
+          ...(WORLD_CHAMPIONS.find((w) => w.name === champion.name)?.years ?? []),
+        ]);
+        for (const year of sentence.match(/\b(19|20)\d{2}\b/g) ?? []) {
+          if (!his.has(Number(year))) {
+            wrong.push(
+              `${champion.name}: "${sentence.trim().slice(0, 88)}" names ${year}, ` +
+                `but his titles are national ${champion.years.join(', ')} / world ` +
+                  `${WORLD_CHAMPIONS.find((w) => w.name === champion.name)?.years.join(', ') ?? 'none'}`,
+            );
+          }
+        }
+      }
+    }
+    expect(wrong, `national title years that are not his:\n${wrong.join('\n')}`).toEqual([]);
   });
 
   it('is right that Hu Ronghua never won it', () => {
