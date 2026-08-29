@@ -1638,53 +1638,6 @@
   text-transform: uppercase;
 }
 
-.xq-replay-annotated .xq-replay-line {
-  flex: none;
-  margin: 6px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: var(--site-bg-soft);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--site-muted);
-}
-
-.xq-replay-annotated .xq-replay-line:empty {
-  display: none;
-}
-
-/* Sentence case, not uppercase: the head carries a whole summary line now
-   ("Mistake · 12.6% win chance given up · eval +0.10"), and uppercasing a
-   sentence that long shouts. */
-.xq-replay-annotated .xq-replay-line-head {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--site-heading);
-}
-
-.xq-replay-annotated .xq-replay-line-note {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 13px;
-  color: var(--site-text);
-}
-
-.xq-replay-annotated .xq-replay-line-exit {
-  padding: 3px 9px;
-  border: 1px solid var(--site-border);
-  border-radius: 5px;
-  background: var(--site-surface);
-  color: var(--site-text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.xq-replay-annotated .xq-replay-line-exit:hover {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
-}
-
 .xq-replay-annotated .xq-replay-glyph {
   font-weight: 700;
 }

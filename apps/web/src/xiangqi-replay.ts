@@ -285,8 +285,6 @@ export function mountXiangqiReplay(
   const annotated = spec.annotations;
   const moveList = document.createElement('ol');
   moveList.className = 'xq-replay-moves';
-  const lineBox = document.createElement('div');
-  lineBox.className = 'xq-replay-line';
 
   const resultFoot = document.createElement('div');
   resultFoot.className = 'xq-replay-result';
@@ -341,7 +339,7 @@ export function mountXiangqiReplay(
     // normally inside it.
     const moveInner = document.createElement('div');
     moveInner.className = 'xq-replay-move-inner';
-    moveInner.append(moveList, lineBox, resultFoot);
+    moveInner.append(moveList, resultFoot);
     moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
@@ -520,6 +518,7 @@ export function mountXiangqiReplay(
         moveButton(mainlineLabels[ply - 1] ?? '', {
           current: !variation && ply === index,
           glyph: a?.glyph,
+          title: judgmentTitle(a),
           onClick: () => {
             variation = null;
             goto(ply);
@@ -534,7 +533,10 @@ export function mountXiangqiReplay(
       branch.className = 'xq-replay-branch';
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
-      tag.textContent = 'engine';
+      // "engine" named the source; this names the thing, which is what a reader
+      // needs. Every branch belongs to a ?!/?/?? move, so it is always a line
+      // that was better than the one played.
+      tag.textContent = 'better was';
       branch.appendChild(tag);
       line.forEach((_mv, i) => {
         // Number the line from the move it replaces so it reads like a score.
@@ -561,74 +563,59 @@ export function mountXiangqiReplay(
   }
 
   /**
-   * Our own analysis writes judged-move notes to a fixed template. Rendering it
-   * verbatim under a head that already said "Mistake" repeated the word, and
-   * the trailing sentence pointed at a line that is now drawn inline three
-   * pixels away. Matching the template lets the box say it once; anything that
-   * does not match is human prose and is shown as written.
+   * Our own analysis writes judged-move notes to a fixed template. This used to
+   * be rendered as a card under the move list, which restated the glyph already
+   * on the move, pointed at a line already drawn beside it, and appeared and
+   * disappeared as the reader stepped, shoving the list around. The one thing
+   * only it carried was the numbers, so those move onto the move itself.
    */
   const MACHINE_NOTE =
     /^(blunder|mistake|inaccuracy):\s*([\d.]+)\s*win% given up, eval\s*(\S+?)\s*after\.\s*The engine wanted the line in the sibling branch\.?$/i;
 
-  function renderLineBox(): void {
-    if (!annotated) return;
-    lineBox.replaceChildren();
-    const a = variation ? annotationAt(variation.atPly) : annotationAt(index);
-    if (!a) return;
-    const label =
-      a.glyph === '??'
-        ? 'Blunder'
-        : a.glyph === '?'
-          ? 'Mistake'
-          : a.glyph === '?!'
-            ? 'Inaccuracy'
-            : a.glyph === '!!'
-              ? 'Brilliant'
-              : a.glyph === '!'
-                ? 'Great'
-                : '';
+  const GLYPH_LABEL: Record<string, string> = {
+    '??': 'Blunder',
+    '?': 'Mistake',
+    '?!': 'Inaccuracy',
+    '!!': 'Brilliant',
+    '!': 'Great',
+  };
 
+  /** Hover text for a judged move: the judgment, the cost, and the eval. */
+  function judgmentTitle(a: XiangqiReplayAnnotation | undefined): string | undefined {
+    if (!a?.glyph) return undefined;
+    const label = GLYPH_LABEL[a.glyph] ?? '';
     const machine = a.note?.match(MACHINE_NOTE);
-    const head = document.createElement('div');
-    head.className = 'xq-replay-line-head';
-    // These specs carry no `cp`, so the only eval available is the one inside
-    // the generated note; prefer a structured value when a spec does have one.
-    const evaluation = evalText(a) || (machine?.[3] ?? '');
-    head.textContent = [
-      label,
-      machine ? `${machine[2]}% win chance given up` : '',
-      evaluation ? `eval ${evaluation}` : '',
-    ]
+    if (!machine) {
+      // Prose we did not generate (the positive classifier writes its own).
+      const note = a.note?.replace(/^(great|brilliant):\s*/i, '');
+      return [label, note].filter(Boolean).join(': ');
+    }
+    const evaluation = evalText(a) || machine[3];
+    return [label, `${machine[2]}% win chance given up`, evaluation ? `eval ${evaluation}` : '']
       .filter(Boolean)
       .join(' \u00b7 ');
-    lineBox.appendChild(head);
-
-    // Only prose we did not generate gets its own paragraph.
-    if (a.note && !machine) {
-      const note = document.createElement('p');
-      note.className = 'xq-replay-line-note';
-      note.textContent = a.note.replace(/^(great|brilliant):\s*/i, '');
-      lineBox.appendChild(note);
-    }
-
-    if (variation) {
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'xq-replay-line-exit';
-      back.textContent = 'Back to the game';
-      back.addEventListener('click', leaveVariation);
-      lineBox.appendChild(back);
-    }
   }
 
   function render(): void {
     const view = viewState();
     frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key);
     if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
-    first.disabled = index === 0;
-    prev.disabled = index === 0;
-    next.disabled = index === total;
-    last.disabled = index === total;
+    // While a sideline is open the controls walk the LINE, so their enabled
+    // state has to come from the line's cursor. Reading the mainline index here
+    // meant entering a line from ply 0 left prev disabled, and stepping back
+    // out is one of only two ways to leave a line.
+    const line = variation;
+    if (line) {
+      first.disabled = false;
+      prev.disabled = false;
+      next.disabled = line.cursor >= line.moves.length;
+      last.disabled = line.cursor >= line.moves.length;
+    } else {
+      first.disabled = index === 0;
+      prev.disabled = index === 0;
+      next.disabled = index === total;
+      last.disabled = index === total;
+    }
     if (slider.isConnected) slider.value = String(index);
     if (variation) {
       narrative.textContent = `Engine line, ${variation.cursor} of ${variation.moves.length}`;
@@ -644,7 +631,6 @@ export function mountXiangqiReplay(
     // The card always shows the result, the way a game page does; the running
     // narrative line is the plain stepper's job.
     resultFoot.textContent = spec.resultText;
-    renderLineBox();
     renderMoveList();
     if (takeFocusAfterRender) {
       takeFocusAfterRender = false;

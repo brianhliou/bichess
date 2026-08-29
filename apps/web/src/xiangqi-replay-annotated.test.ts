@@ -82,8 +82,19 @@ test('clicking into the line steps the board, and arrows walk the line not the g
   (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
   expect(branchButtons(el)[1]?.className).toContain('is-current');
 
-  (el.querySelector('.xq-replay-line-exit') as HTMLButtonElement).click();
+  // The "Back to the game" button is gone with the annotation card, so both
+  // remaining exits have to work or a reader can get stuck in a sideline.
+  // 1. Stepping back past the head of the line drops out of it.
+  (el.querySelector('.stepper-button-prev') as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-prev') as HTMLButtonElement).click();
   expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+
+  // 2. Clicking any mainline move leaves the line and goes there.
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  expect(branchButtons(el)[0]?.className).toContain('is-current');
+  (mainButtons(el)[1] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+  expect(mainButtons(el)[1]?.className).toContain('is-current');
   c.destroy();
 });
 
@@ -152,10 +163,9 @@ test('the study layout drops the scrubber and the ply counter', () => {
   plain.destroy();
 });
 
-test('a generated judgment note is summarised, not repeated under its own label', () => {
-  // Our analysis writes a fixed template. Rendered verbatim under a head that
-  // already said "Mistake" it read "Mistakemistake: 12.6 win% given up ...",
-  // and its closing sentence pointed at a line now drawn inline beside it.
+test('a judged move carries its cost on the move, not in a card below', () => {
+  // There used to be a card under the list restating the glyph, pointing at a
+  // line already drawn beside it, and shifting the list as the reader stepped.
   const c = mountXiangqiReplay(el, {
     ...base,
     annotations: {
@@ -163,33 +173,32 @@ test('a generated judgment note is summarised, not repeated under its own label'
         1: {
           glyph: '?',
           note: 'mistake: 12.6 win% given up, eval +0.10 after. The engine wanted the line in the sibling branch.',
+          line: 'h0g2 h9g7',
         },
       },
     },
   });
-  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
-  const box = el.querySelector('.xq-replay-line');
-  expect(box?.textContent).toContain('Mistake');
-  expect(box?.textContent).toContain('12.6% win chance given up');
-  expect(box?.textContent).toContain('eval +0.10');
-  expect(box?.textContent).not.toContain('sibling branch');
-  expect(box?.textContent?.toLowerCase().match(/mistake/g)).toHaveLength(1);
-  // The engine credit is stated once in the article prose, never on a board:
-  // repeated under all sixteen embeds it was noise.
-  expect(el.querySelector('.xq-replay-engine')).toBeNull();
+  expect(el.querySelector('.xq-replay-line')).toBeNull();
+
+  const title = mainButtons(el)[0]?.getAttribute('title') ?? '';
+  expect(title).toContain('Mistake');
+  expect(title).toContain('12.6% win chance given up');
+  expect(title).toContain('eval +0.10');
+  expect(title).not.toContain('sibling branch');
+
+  // The sideline says what it is rather than where it came from.
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('better was');
   c.destroy();
 });
 
-test('prose we did not generate is shown as written', () => {
+test('prose we did not generate reaches the reader intact', () => {
   const c = mountXiangqiReplay(el, {
     ...base,
     annotations: {
       byPly: { 1: { glyph: '!!', note: 'Brilliant: the cannon cannot be taken.' } },
     },
   });
-  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
-  const box = el.querySelector('.xq-replay-line');
-  expect(box?.textContent).toContain('the cannon cannot be taken');
+  expect(mainButtons(el)[0]?.getAttribute('title')).toContain('the cannon cannot be taken');
   c.destroy();
 });
 
