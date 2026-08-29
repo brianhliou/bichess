@@ -65,4 +65,11 @@ describe('tools nav', () => {
     expect(games?.labelKey).toBe('nav.games');
     expect(watchNavItems().some((item) => item.href === '/games')).toBe(false);
   });
+
+  it('offers the import door, which is otherwise reachable only by URL', async () => {
+    const { toolsNavItems } = await import('./nav-items.js');
+    const imported = toolsNavItems().find((item) => item.href === '/import');
+    expect(imported?.label).toBe('Import game');
+    expect(imported?.labelKey).toBe('nav.import');
+  });
 });

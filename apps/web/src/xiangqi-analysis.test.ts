@@ -96,7 +96,11 @@ describe('mountXiangqiAnalysisPage', () => {
     expect(root.querySelector('.xiangqi-live-board')).not.toBeNull();
     expect(root.querySelector('.move-tree')).not.toBeNull();
     expect(root.querySelector('.dxq-postgame__actions')).toBeNull();
-    expect(root.textContent).not.toContain('Import game');
+    // Scoped past the nav on purpose: "Import game" is now a Tools menu entry on
+    // every page, so an unscoped text check would match the chrome rather than
+    // the paste-form gate this is actually guarding against.
+    const board = [...root.children].filter((el) => !el.classList.contains('site-nav'));
+    expect(board.map((el) => el.textContent).join('')).not.toContain('Import game');
     expect(root.textContent).not.toContain('Save as study');
     expect(root.textContent).not.toContain('Back home');
     root.remove();

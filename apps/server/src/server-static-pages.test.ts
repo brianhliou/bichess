@@ -746,6 +746,28 @@ test('serveStudyPage without persistence serves the plain shell (no meta leak, n
   assert.match(response.body, /<title>Mistboard<\/title>/);
 });
 
+test('the /games database carries its own route meta and sitemap entry', async () => {
+  // /games spent its life serving the generic homepage <title> and staying out
+  // of the sitemap. It is not a search form: unfiltered it lists the most
+  // recently finished games, so it is indexable content.
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/games',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.equal(served, true);
+  assert.match(response.body, /<title>Xiangqi Game Database \| Mistboard<\/title>/);
+  assert.doesNotMatch(response.body, /noindex/);
+
+  const sitemap = captureResponse();
+  await serveSitemap({ response: sitemap, publicHost: 'https://mistboard.com', staticDir });
+  assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/games<\/loc>/);
+});
+
 test('the /study index carries its own route meta and sitemap entry', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');

@@ -91,6 +91,19 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
   },
+  '/games': {
+    // Unfiltered, this route lists the most recently finished games across
+    // every lane, so it is a live content page rather than a search form. That
+    // is what makes it worth indexing at all.
+    title: 'Xiangqi Game Database | Mistboard',
+    description:
+      'Search and browse xiangqi (Chinese chess) games: tournament archives, live broadcasts, and games played on Mistboard. Filter by player, event, result, date, or length.',
+  },
+  '/import': {
+    title: 'Import a Xiangqi Game | Mistboard',
+    description:
+      'Paste a xiangqi (Chinese chess) game and get a browsable board with free engine analysis. Reads PGN, WXF, Chinese notation, ICCS coordinates, and dpxq records.',
+  },
   '/stats': {
     title: 'Statistics | Mistboard',
     description:
@@ -561,6 +574,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/analysis',
   '/editor',
   '/study',
+  '/games',
+  '/import',
   '/feed',
   '/videos',
   '/zh-hans/videos',

@@ -125,7 +125,7 @@ export function utilityNavItems(): NavItem[] {
 
 // Tools dropdown (lichess parity): the analysis board is the anchor tool, the
 // board editor sits beside it, and the games database closes the set the way
-// lichess's advanced search does. Import is deferred until that surface exists.
+// lichess's advanced search does, with Import beside them.
 //
 // Games moved here from Watch (2026-08-28) on live-vs-finished, not
 // browse-vs-query: Mistboard TV and Broadcasts are things happening now, and a
@@ -137,6 +137,7 @@ export function toolsNavItems(): NavItem[] {
   return [
     { label: 'Analysis board', labelKey: 'nav.analysis', href: '/analysis/xiangqi' },
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
+    { label: 'Import game', labelKey: 'nav.import', href: '/import' },
     { label: 'Games', labelKey: 'nav.games', href: '/games' },
     ...utilityNavItems(),
   ];

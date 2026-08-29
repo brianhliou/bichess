@@ -17,6 +17,7 @@ export const ZH_HANT_SHELL = {
   'nav.articles': '文章',
   'nav.watch': '觀看',
   'nav.broadcasts': '直播',
+  'nav.import': '匯入棋譜',
   'nav.games': '棋譜',
   'nav.community': '社群',
   'nav.players': '玩家',
