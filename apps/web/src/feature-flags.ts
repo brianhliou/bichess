@@ -135,3 +135,13 @@ export function kriegspielEnabled(): boolean {
 export function learnEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_LEARN_ENABLED === 'true';
 }
+
+// The coordinate + notation trainer (/learn/coordinates). Built and tested, but
+// PARKED: it is not linked from the nav, not in the sitemap, and the server
+// drops it from isClientRoute so a prod direct hit lands on the branded 404
+// shell. On in dev so the code stays reachable and cannot rot silently.
+// Read #327 before unparking: the site offers four notations and the drill
+// covers two, and an ICCS reader would be taught every rank off by one.
+export function coordinateTrainerEnabled(): boolean {
+  return import.meta.env.DEV || import.meta.env.VITE_COORDINATE_TRAINER_ENABLED === 'true';
+}

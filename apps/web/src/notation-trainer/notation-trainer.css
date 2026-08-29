@@ -1,0 +1,618 @@
+/* Coordinate trainer, laid out after lichess's: a score card and the whole
+   control stack on the left, board in the middle with the prompt drawn large
+   over it, an explanation card and the start button on the right.
+
+   The page never scrolls. Everything is sized from a height budget the way
+   puzzles.css does it, so the board shrinks to fit rather than pushing the
+   keypad off the bottom; the two side columns scroll inside themselves on a
+   short viewport rather than scrolling the document. Below the breakpoint the
+   columns stack and normal document scrolling comes back, because a board plus
+   a keypad plus a control stack genuinely does not fit a phone. */
+
+.notation-page {
+  background: var(--site-page-gradient);
+}
+
+.notation-shell {
+  /* Fallback only. notation-trainer-page.ts measures the real nav and sets this
+     as an inline custom property, because the nav's height is not a constant. */
+  --notation-nav-height: 61px;
+  --notation-page-height: calc(100dvh - var(--notation-nav-height));
+  /* Room under the board for the progress bar, the ask line and (when naming)
+     the keypad. Fixed per direction rather than content-derived, so the board
+     never resizes mid-run and never resizes when the file keypad swaps for the
+     taller square one. Finding needs no keypad, so it gets the space back. */
+  --notation-below-board: 3.25rem;
+  --notation-board-fit: min(720px, calc(var(--notation-page-height) - var(--notation-below-board)));
+  /* Deriving the width from the height budget caps the height too, which is how
+     the board is kept inside a page that never scrolls. The ratio is measured
+     off the rendered SVG (see syncBoardRatio) rather than hardcoded, because
+     the intersection and cell layouts have different viewBoxes and the edge
+     labels add a gutter to both dimensions. 552/612 is the fallback for the
+     first paint, before the first board exists.
+
+     This must be a definite length rather than a percentage on the board
+     itself: an `auto` grid track sizes to its content, and a percentage inside
+     it has nothing to resolve against, so the board would collapse to the
+     SVG's 300px default. */
+  --notation-board-ratio: calc(552 / 612);
+  --notation-board-width: calc(var(--notation-board-fit) * var(--notation-board-ratio));
+
+  box-sizing: border-box;
+  height: var(--notation-page-height);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(13rem, 16rem) var(--notation-board-width) minmax(16rem, 21rem);
+  justify-content: center;
+  align-items: start;
+  gap: 1.25rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--site-text);
+}
+
+.notation-shell.is-naming {
+  --notation-below-board: 11.5rem;
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+
+.notation-card {
+  box-sizing: border-box;
+  background: var(--site-panel);
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  padding: 0.6rem 0.75rem;
+}
+
+.notation-card--readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.notation-card__title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--site-muted);
+}
+
+.notation-readout {
+  font-size: clamp(1.9rem, 5.5vh, 3rem);
+  line-height: 1.05;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-heading);
+}
+
+.notation-readout.is-wrong {
+  color: var(--site-danger, #c0392b);
+}
+
+.notation-card--status {
+  padding: 0.5rem 0.75rem;
+}
+
+.notation-status__line {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.notation-status__line[hidden] {
+  display: none;
+}
+
+.notation-status__line.is-result {
+  color: var(--site-heading);
+  font-weight: 600;
+}
+
+/* ── Left column ────────────────────────────────────────────────────────── */
+
+.notation-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* score|time, status, controls, stop. The controls row is the flexible one:
+     on a short viewport IT scrolls, so the readouts stay pinned at the top and
+     the Stop link stays reachable at the bottom. */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-content: start;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.notation-card--status,
+.notation-controls,
+.notation-quit {
+  grid-column: 1 / -1;
+}
+
+.notation-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.notation-controls[hidden],
+.notation-quit[hidden],
+.notation-table[hidden] {
+  display: none;
+}
+
+.notation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.notation-field[hidden] {
+  display: none;
+}
+
+.notation-field__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--site-muted);
+}
+
+/* One row of buttons with the active one filled, rather than a radio list.
+   It reads as a setting you flick, not a form you fill in. */
+.notation-segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+}
+
+.notation-segment {
+  padding: 0.4rem 0.25rem;
+  border: 0;
+  border-radius: calc(var(--site-radius-sm) - 1px);
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.notation-segment:hover:not(.is-active):not(:disabled) {
+  background: var(--site-hover);
+}
+
+.notation-segment.is-active {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.notation-segment:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.notation-segment:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+.notation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.notation-toggle.is-disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.notation-toggle__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.notation-toggle__track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--site-border);
+  transition: background 120ms ease;
+}
+
+.notation-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 120ms ease;
+}
+
+.notation-toggle__input:checked + .notation-toggle__track {
+  background: var(--site-accent);
+}
+
+.notation-toggle__input:checked + .notation-toggle__track::after {
+  transform: translateX(14px);
+}
+
+.notation-toggle__input:focus-visible + .notation-toggle__track {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.notation-hint {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.notation-hint[hidden] {
+  display: none;
+}
+
+/* Ends the run without pretending to be the primary action, the way lichess's
+   « BACK does. The primary button is Start, and it lives on the right. */
+.notation-quit {
+  justify-self: start;
+  padding: 0.35rem 0;
+  border: 0;
+  background: none;
+  color: var(--site-link);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ── Middle column ──────────────────────────────────────────────────────── */
+
+.notation-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.notation-board {
+  position: relative;
+  width: 100%;
+  margin-inline: auto;
+  /* Lets the prompt size itself against the board rather than the viewport, so
+     it stays the same fraction of the board at every board size. */
+  container-type: inline-size;
+}
+
+.notation-board__svg :is(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.notation-coord {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.notation-coord[hidden] {
+  display: none;
+}
+
+/* Big, and off centre. Both are deliberate: lichess runs its coordinate at
+   roughly a fifth of the board and parks it left of middle, which keeps the
+   answer readable from the far side of the board without sitting on the
+   centre file. Clicks pass through regardless. */
+.notation-coord__current {
+  position: absolute;
+  left: 9%;
+  top: 38%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: min(21cqw, 8rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--site-heading);
+  /* Not fully opaque, and a halo rather than a panel: at full weight it would
+     hide the very intersections it is asking about. */
+  opacity: 0.82;
+  text-shadow:
+    0 0 12px var(--site-panel),
+    0 0 28px var(--site-panel),
+    0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* The one after this one. Removes the dead beat between answers: you can read
+   ahead instead of waiting for the repaint. */
+.notation-coord__next {
+  position: absolute;
+  left: 56%;
+  top: 62%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: min(8.5cqw, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--site-muted);
+  opacity: 0.6;
+  text-shadow:
+    0 0 10px var(--site-panel),
+    0 0 20px var(--site-panel);
+}
+
+.notation-coord.is-wrong .notation-coord__current {
+  color: var(--site-danger, #c0392b);
+}
+
+/* Hover affordance on the click targets. The hit box is a 52-unit square, so
+   rx: 26px rounds it into a disc centred on the intersection: the shape of the
+   thing being aimed at, rather than a square on an intersection board. */
+.notation-page .xq-live-hit rect {
+  rx: 26px;
+  transition: fill 90ms ease;
+}
+
+.notation-page .xq-live-hit:hover rect {
+  fill: rgba(31, 111, 91, 0.28);
+}
+
+/* On the cell layout the target IS a cell, so a disc reads as the wrong shape.
+   The hit box is 52 units inside a 60-unit cell, so this is an inset rounded
+   square rather than a full cell: enough to say "this one" without pretending
+   to be the cell's own border. */
+.notation-page [data-xiangqi-layout="cell"] .xq-live-hit rect {
+  rx: 7px;
+}
+
+.notation-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--site-border-soft);
+  overflow: hidden;
+  flex: none;
+}
+
+.notation-progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--site-accent);
+  /* No transition: the bar is redrawn every 50ms and an eased width would lag
+     the clock it is reporting. */
+}
+
+.notation-progress.is-untimed span {
+  background: var(--site-border);
+}
+
+.notation-progress.is-wrong span {
+  background: var(--site-danger, #c0392b);
+}
+
+.notation-ask {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--site-muted);
+}
+
+.notation-ask[hidden] {
+  display: none;
+}
+
+.notation-answers--files {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.notation-answers--square {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.notation-answer {
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  color: inherit;
+  cursor: pointer;
+}
+
+.notation-answer:hover {
+  background: var(--site-hover);
+}
+
+.notation-answer:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* Echo of the typed square. Holds its line whether or not anything has been
+   typed, so the keypad below does not jump on the first keystroke. */
+.notation-typed {
+  min-height: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+}
+
+.notation-typed.is-placeholder {
+  color: var(--site-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: normal;
+}
+
+.notation-keys {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.notation-keys--files {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+
+.notation-keys--ranks {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+.notation-keys .notation-answer {
+  padding: 0.4rem 0;
+  font-size: 0.88rem;
+}
+
+/* The highlighted point or column in the naming drills. Rings rather than a
+   filled band: the pieces stay readable underneath, and the starting position
+   is the reader's landmark for where a file is. */
+.notation-marker {
+  stroke: var(--site-accent);
+  opacity: 0.9;
+}
+
+.notation-marker--wrong {
+  stroke: var(--site-danger, #c0392b);
+}
+
+/* ── Right column ───────────────────────────────────────────────────────── */
+
+.notation-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+  /* The card scrolls, not the column, so Start never falls below its own fold
+     on a short viewport. */
+  overflow: hidden;
+}
+
+.notation-card--explain {
+  padding: 1rem 1.1rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.notation-card--explain p {
+  margin: 0 0 0.7rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+.notation-card--explain p:last-child {
+  margin-bottom: 0;
+}
+
+.notation-explain__heading {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.notation-explain__mode {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.notation-why {
+  margin: 0 0 0.9rem;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+.notation-why li {
+  margin-bottom: 0.35rem;
+}
+
+.notation-start {
+  align-self: center;
+  flex: none;
+  padding: 0.7rem 1.75rem;
+  border: 1px solid var(--site-accent);
+  border-radius: var(--site-radius);
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notation-start:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+/* ── Narrow: stack, and let the document scroll again ───────────────────── */
+
+@media (max-width: 1080px) {
+  .notation-shell {
+    height: auto;
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr);
+    --notation-board-fit: min(560px, calc(var(--notation-page-height) - 16rem));
+    --notation-board-width: min(
+      100%,
+      calc(var(--notation-board-fit) * var(--notation-board-ratio))
+    );
+  }
+
+  .notation-side,
+  .notation-table,
+  .notation-controls,
+  .notation-card--explain {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .notation-side {
+    grid-template-rows: none;
+  }
+
+  .notation-readout {
+    font-size: 1.9rem;
+  }
+
+  .notation-main {
+    order: -1;
+  }
+}
