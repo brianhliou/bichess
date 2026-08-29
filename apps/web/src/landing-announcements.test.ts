@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { localizeAnnouncement } from './announcement-i18n.js';
 import { type AnnouncementKind, announcements } from './announcements.js';
+import { localizedArticleHref } from './article-i18n.js';
+import { articles } from './articles-data.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildNewsPage } from './news-page.js';
 import { uiIconForAnnouncementKind } from './ui-icon.js';
@@ -172,7 +174,16 @@ describe('landing announcements', () => {
     const more = landing.querySelector<HTMLElement>('.site-box-more');
     const news = buildNewsPage('zh-Hant');
 
-    const newestHref = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0]?.href;
+    // The rail localizes an href that HAS a localized form, so the expectation
+    // has to localize too. It read the raw href until 2026-08-29, which passed
+    // only because the newest entry happened to point at /import; the first
+    // newest entry pointing at a translated article turned that into a failure
+    // reporting the correct behaviour.
+    const newestRailEntry = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const slug = /^\/(?:blog|rules)\/([a-z0-9-]+)$/.exec(newestRailEntry?.href ?? '')?.[1];
+    const article = slug ? articles.find((a) => a.slug === slug) : undefined;
+    const newestHref = article ? localizedArticleHref(article, 'zh-Hant') : newestRailEntry?.href;
+
     expect(landing.getAttribute('aria-label')).toBe('新聞');
     expect(firstRow?.getAttribute('href')).toBe(newestHref);
     expect(more?.textContent).toBe('更多 »');
