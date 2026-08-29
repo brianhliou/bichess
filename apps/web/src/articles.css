@@ -1389,7 +1389,12 @@
      about 54/46, which gave the list more room than it can use. The floor on
      the second track keeps a move pair (number + two moves) on one line at the
      narrowest width before the layout stacks. */
-  grid-template-columns: minmax(0, 2.85fr) minmax(170px, 1fr);
+  /* The floor is the widest notation, not a guess. Chinese renders a move as
+     four full-width glyphs, and the widest cell is that plus a judgment badge
+     (车四平八??) at 82px, against ~63 for coordinates. A column sized for
+     coordinates spilled mainline buttons past their cells as soon as a reader
+     switched notation. */
+  grid-template-columns: minmax(0, 2.85fr) minmax(226px, 1fr);
   align-items: stretch;
   width: 100%;
   overflow: hidden;
@@ -1409,16 +1414,16 @@
 .xq-replay-annotated .xq-replay-seat {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
-  font-size: 13px;
+  gap: 9px;
+  padding: 9px 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--site-heading);
 }
 
 .xq-replay-annotated .xq-replay-seat-dot {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   flex: none;
   border-radius: 50%;
   border: 1px solid var(--site-border);
@@ -1445,6 +1450,7 @@
    old layout read as a diagram sitting in a box rather than as one object. */
 .xq-replay-annotated .raw-svg-stepper-frame-xq {
   width: 100%;
+  padding-inline: 12px;
 }
 
 .xq-replay-annotated .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"] {
@@ -1627,7 +1633,7 @@
    moves line up down the column instead of drifting with label length. */
 .xq-replay-annotated .xq-replay-row {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
   align-items: baseline;
   gap: 2px;
 }
@@ -1637,9 +1643,9 @@
 }
 
 .xq-replay-annotated .xq-replay-move-n {
-  min-width: 22px;
+  min-width: 24px;
   color: var(--site-muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
@@ -1657,7 +1663,7 @@
   font: inherit;
   /* Weight lives on the base button, never on .is-current: the highlight must
      not change the button's width (see articles-replay-css.test.ts). */
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: left;
@@ -1697,7 +1703,6 @@
   gap: 0 1px;
   margin: 1px 0 3px;
   padding: 4px 3px 5px;
-  border-radius: 4px;
   background: var(--site-bg-soft);
 }
 

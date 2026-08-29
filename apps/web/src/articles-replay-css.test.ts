@@ -61,3 +61,15 @@ describe('the board judgment badge', () => {
     }
   });
 });
+
+describe('the move column', () => {
+  it('is floored at the widest notation, not the narrowest', () => {
+    // The widest cell is Chinese notation plus a judgment badge (车四平八??) at
+    // 82px, against ~63 for coordinates. A column sized for coordinates spilled
+    // mainline buttons past their cells as soon as a reader switched notation.
+    const grid = rule('.xq-replay-annotated .xq-replay-grid {');
+    const floor = grid.match(/minmax\((\d+)px,\s*1fr\)/);
+    expect(floor, 'the move track should carry an explicit floor').not.toBeNull();
+    expect(Number(floor?.[1])).toBeGreaterThanOrEqual(226);
+  });
+});
