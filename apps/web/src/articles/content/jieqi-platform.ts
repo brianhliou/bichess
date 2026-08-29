@@ -184,7 +184,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). What would fix it is a trained net: almost all of modern Pikafish's strength lives in one, and jieqi has none yet. If you train nets, or you know jieqi well enough to say where its judgement goes wrong, that is the help we would most like.",
+            "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and jieqi has no good one. We trained a net and it never came out stronger than the hand-written evaluation it was meant to replace, so this is an open problem rather than a chore nobody has got round to. If you train nets, or you know jieqi well enough to say where the engine's judgement goes wrong, that is the help we would most like.",
         },
       ],
     },
