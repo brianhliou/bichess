@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { importXiangqiGame } from './xiangqi-import.js';
+import { createInitialXiangqiBoard } from './variants-xiangqi.js';
+import { importXiangqiGame, xiangqiBoardFromDhtmlxqBinit } from './xiangqi-import.js';
 
 test('importXiangqiGame reads native coordinate notation', () => {
   const result = importXiangqiGame('h3e3 h8e8 h1g3');
@@ -73,4 +74,64 @@ test('importXiangqiGame reads woodblock-style records (包, 。, capture glosses
   assert.equal(glossed.error, undefined);
   assert.equal(glossed.moves.length, 4);
   assert.deepEqual(glossed.moves[2], { from: 'e3', to: 'e7' });
+});
+
+// Both records are real 適情雅趣 (Elegant Pastime Manual) compositions from
+// xqinenglish.com, each paired with its own published solution.
+const COMPOSITION_1 = {
+  binit: '1171999949999999771247999999999902992041305042993822995899999999',
+  movelist: '113130317150415077715041714131301210',
+};
+const COMPOSITION_2 = {
+  binit: '5713999939999999736383999999999908379930404199993342524899999999',
+  movelist: '73705250575041506360504160644150133233328343',
+};
+const STANDARD_BINIT = '0919293949596979891777062646668600102030405060708012720323436383';
+
+test('xiangqiBoardFromDhtmlxqBinit decodes the standard start', () => {
+  assert.deepEqual(xiangqiBoardFromDhtmlxqBinit(STANDARD_BINIT), createInitialXiangqiBoard());
+});
+
+test('xiangqiBoardFromDhtmlxqBinit accepts the tagged form', () => {
+  assert.deepEqual(
+    xiangqiBoardFromDhtmlxqBinit(`[DhtmlXQ_binit]${STANDARD_BINIT}[/DhtmlXQ_binit]`),
+    createInitialXiangqiBoard(),
+  );
+});
+
+test("xiangqiBoardFromDhtmlxqBinit treats '99' as off the board", () => {
+  const board = xiangqiBoardFromDhtmlxqBinit(COMPOSITION_1.binit);
+  assert.equal(Object.keys(board ?? {}).length, 15);
+});
+
+test('xiangqiBoardFromDhtmlxqBinit rejects a position missing a general', () => {
+  const noRedKing = `${STANDARD_BINIT.slice(0, 8)}99${STANDARD_BINIT.slice(10)}`;
+  assert.equal(xiangqiBoardFromDhtmlxqBinit(noRedKing), null);
+});
+
+test('xiangqiBoardFromDhtmlxqBinit rejects a malformed binit', () => {
+  assert.equal(xiangqiBoardFromDhtmlxqBinit('123'), null);
+  assert.equal(xiangqiBoardFromDhtmlxqBinit('x'.repeat(64)), null);
+});
+
+for (const [name, record] of [
+  ['composition 1', COMPOSITION_1],
+  ['composition 2', COMPOSITION_2],
+] as const) {
+  test(`importXiangqiGame replays ${name} from its own start`, () => {
+    const result = importXiangqiGame(
+      `[DhtmlXQ_binit]${record.binit}[/DhtmlXQ_binit][DhtmlXQ_movelist]${record.movelist}[/DhtmlXQ_movelist]`,
+    );
+    assert.equal(result.error, undefined);
+    assert.equal(result.format, 'dhtmlxq');
+    assert.equal(result.moves.length, record.movelist.length / 4);
+    // The whole point: it starts from the composition, not the opening array.
+    assert.notDeepEqual(result.initialState?.board, createInitialXiangqiBoard());
+  });
+}
+
+test('importXiangqiGame keeps the standard start when a record has no binit', () => {
+  const result = importXiangqiGame('[DhtmlXQ_movelist]7747724279677062[/DhtmlXQ_movelist]');
+  assert.equal(result.format, 'dhtmlxq');
+  assert.equal(result.initialState, undefined);
 });
