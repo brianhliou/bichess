@@ -96,34 +96,39 @@ export const jieqiPlatformArticle: Article = {
           caption:
             'The same game, graded. The engine lost this one, and the graph shows why: it led for most of the middlegame and gave it back at the end.',
         } as ArticleBlock,
-        { kind: 'sub-heading', text: 'Reveals are priced separately from decisions' },
+        { kind: 'sub-heading', text: 'It tells you how lucky each flip was' },
         {
           kind: 'paragraph',
           text:
-            'About half the moves in a jieqi game are reveals, and a reveal is a decision plus a random draw. Grading them together would score you on your luck, so Mistboard scores them apart: every reveal is evaluated across each piece the tile could have been, weighted by how many of that piece you have left.',
+            'About half your moves in jieqi turn a piece over, and you do not know what you are turning over. So the engine works out what every piece that tile could have been would have been worth, and compares that to what you actually got. The difference is your luck on that flip, in win percentage, good or bad.',
         },
         {
           kind: 'image-figure',
           src: '/article-thumbs/jieqi-reveal-candidates.png',
           alt: 'A jieqi review move list. Move 19 is a reveal carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent, each with its own ranked candidates. The ordinary plies between them carry a single evaluation and no candidates, one of them flagged as a blunder with the better move named.',
           caption:
-            'Reveal plies get ranked candidates and a price for the draw, good or bad. Ordinary plies get a normal evaluation.',
+            'Every flip carries what the luck was worth, plus the moves you could have played instead. Ordinary moves just get an evaluation.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
           text:
-            'Each percentage is that move\'s win percentage for the player to move, averaged over every piece the tile could turn out to be. It is not a probability that the move is best and not an engine rank. The list is the engine\'s top three plus your move when your move is not already there, which is why some reveals show three rows and others four.',
+            'The percentages are how often each move wins, averaged over every piece that tile might have been. They are not a chance of being the best move and not a ranking. You get the engine\'s three favourites plus your own move when it is not already among them, which is why some flips list three and some list four.',
         },
         {
           kind: 'paragraph',
           text:
-            'Accuracy is then graded on the decision half only, so a lucky tile cannot inflate it and an unlucky one cannot dent it.',
+            'Your accuracy score is then built from the choices alone. Drawing a good piece cannot flatter it and drawing a bad one cannot spoil it.',
         },
         { kind: 'sub-heading', text: 'The same engine runs in your browser' },
         {
           kind: 'paragraph',
           text:
-            'The analysis board runs the engine locally, compiled to WebAssembly, with several candidate moves drawn on the board as you move through a line. Nothing is queued and nothing is sent anywhere. It needs no account.',
+            'The analysis board runs the engine on your own machine, compiled to WebAssembly, drawing several candidate moves on the board as you walk a line. Nothing is queued and nothing is sent anywhere. It needs no account.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'It is the same engine, from the same source, as the one that plays you on the server. [Both are open](https://github.com/brianhliou/pikafish-jieqi-wasm), so the two can never quietly disagree about the rules, and if an evaluation on this page looks wrong you can read the code that produced it.',
         },
         {
           kind: 'image-figure',
@@ -136,6 +141,32 @@ export const jieqiPlatformArticle: Article = {
           buttons: [
             { label: 'Open the analysis board', href: '/analysis/jieqi', emphasis: 'primary' },
           ],
+        },
+      ],
+    },
+    {
+      heading: 'The engine',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text:
+            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch: classical search, hand-written evaluation, no neural network. The server build is pinned to a single upstream commit, so the engine behind your games and your analysis does not change under you.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'It only ever sees the redacted board, with every face-down piece written as a faceless x. It does not know the deal, and a test fails the build if the wire format ever leaks a true identity.',
+        },
+        { kind: 'sub-heading', text: 'What would make it stronger' },
+        {
+          kind: 'paragraph',
+          text:
+            'A net. Almost all of modern Pikafish\'s strength lives in its NNUE, the small neural network that does its evaluating, and no jieqi net has been trained: the branch we ship predates NNUE and evaluates by hand. That is measurable rather than theoretical. The engine values its own face-down pieces too optimistically and over-commits them, and we measured that bias holding steady from depth 8 to depth 48, so it sits in the evaluation and no amount of extra thinking time touches it.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The hook is already wired: point the engine at a net file and it loads one. What is missing is jieqi training data at a scale we do not have. It is the single change that would most improve both the bot and the analysis on this page, so if you train nets, or you know jieqi well enough to say where the evaluation goes wrong, that is the contribution we would most like to have.',
         },
       ],
     },
@@ -158,32 +189,6 @@ export const jieqiPlatformArticle: Article = {
             { label: 'Open the study', href: '/study/wd6c7qvG', emphasis: 'primary' },
             { label: 'Browse all studies', href: '/study', emphasis: 'secondary' },
           ],
-        },
-      ],
-    },
-    {
-      heading: 'The engine',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text:
-            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch: classical search, hand-written evaluation, no neural network. [Our fork and the WebAssembly build](https://github.com/brianhliou/pikafish-jieqi-wasm) are public, and one source produces both the engine that plays you and the one that analyses in your browser. The server build is pinned to a single upstream commit, so it does not change under you between games.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'It only ever sees the redacted board, with every face-down piece written as a faceless x. It does not know the deal, and a test fails the build if the wire format ever leaks a true identity.',
-        },
-        { kind: 'sub-heading', text: 'Where it is weak' },
-        {
-          kind: 'paragraph',
-          text:
-            'It values its own face-down pieces optimistically and over-commits them. We measured that bias holding steady from depth 8 to depth 48, which puts it in the evaluation rather than the search, so more thinking time will not remove it. The game at the top of this page is one the engine lost that way.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The fix is a net. Almost all of modern Pikafish\'s strength lives in its NNUE, and there is no trained jieqi one; the branch we ship predates it and evaluates by hand. The hook is wired, so pointing the engine at a net file would load it. Producing that net needs jieqi training data at a scale we do not have, and it is the single change that would most improve both the bot and the analysis on this page. If you train nets, or you know jieqi well enough to say where the evaluation goes wrong, that is the contribution we would most like to have.',
         },
       ],
     },
