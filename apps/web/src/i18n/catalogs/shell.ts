@@ -11,6 +11,7 @@ export const EN_SHELL = {
   'nav.articles': 'Articles',
   'nav.watch': 'Watch',
   'nav.broadcasts': 'Broadcasts',
+  'nav.import': 'Import game',
   'nav.games': 'Games',
   'nav.community': 'Community',
   'nav.players': 'Players',

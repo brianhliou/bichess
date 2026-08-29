@@ -1,0 +1,69 @@
+.xiangqi-import-page {
+  background: var(--site-page-gradient);
+}
+
+.xiangqi-import-shell {
+  max-width: 760px;
+}
+
+.xiangqi-import-lede {
+  color: var(--site-muted);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.xiangqi-import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.xiangqi-import-label {
+  color: var(--site-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xiangqi-import-textarea {
+  width: 100%;
+  min-height: 14rem;
+  box-sizing: border-box;
+  padding: 0.6rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-bg);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.xiangqi-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.xiangqi-import-error {
+  color: var(--site-danger, #c0392b);
+  font-size: 0.85rem;
+  min-height: 1.2em;
+}
+
+.xiangqi-import-formats {
+  margin: 1.25rem 0 0;
+  color: var(--site-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.xiangqi-import-formats code {
+  font-size: 0.8rem;
+}

@@ -277,6 +277,7 @@ const editorVariant = editorVariantFromPath(path);
 // server-http 301s them here, so this matcher stays single-valued: a route
 // literal here that isClientRoute does not know about is a conformance failure.
 const wantsHistoricalXiangqiSearch = path === '/games';
+const wantsXiangqiImport = path === '/import';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;
@@ -412,6 +413,13 @@ if (replaySample) {
     import('./study.js').then(({ mountStudy }) => {
       mountStudy(appRoot, studyId, studyChapterId ?? undefined);
     }),
+  );
+} else if (wantsXiangqiImport) {
+  setTitle('Import a game');
+  void mountOrReport(() =>
+    import('./xiangqi-import-page.js').then(({ mountXiangqiImport }) =>
+      mountXiangqiImport(appRoot),
+    ),
   );
 } else if (wantsHistoricalXiangqiSearch) {
   setTitle('Xiangqi game search');
