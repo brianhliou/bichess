@@ -155,11 +155,19 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Studies work for jieqi the way they do for xiangqi. Build one from a game or from a position you set up, keep several chapters in it, write notes against the moves, and share the link. Because a jieqi game starts from a deal rather than a fixed position, each chapter carries its own deal, so a study opens on exactly the board you saved.',
+            'Studies work for jieqi the way they do for xiangqi. Build one from a game or from a position you set up, keep several chapters in it, write notes against the moves, and share the link. Because a jieqi game starts from a deal rather than a fixed position, each chapter carries its own deal, so a study opens on exactly the board you saved rather than a fresh shuffle.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'There is not much jieqi to study in English, so we made some. [Jieqi engine reference games](/study/wd6c7qvG) is eighteen chapters of PikaJieQi against itself, every game played out to a real finish. They are engine games, not master games, and the engine has the bias described below, so read them as a starting point rather than as authority. You can step through any of them, branch off to try your own line, and run the browser engine over the result.',
         },
         {
           kind: 'cta',
-          buttons: [{ label: 'Browse studies', href: '/study', emphasis: 'primary' }],
+          buttons: [
+            { label: 'Open the study', href: '/study/wd6c7qvG', emphasis: 'primary' },
+            { label: 'Browse all studies', href: '/study', emphasis: 'secondary' },
+          ],
         },
       ],
     },
