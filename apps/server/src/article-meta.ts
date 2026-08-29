@@ -42,11 +42,12 @@ const RETIRED_RULES_SLUGS = new Set([
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'xiangqi-world-championship',
-  // Written and reviewable at /blog/<slug> in dev, deliberately not published:
-  // the jieqi page wants Brian's read at full length, and the Vietnamese one
-  // wants a native reader before it reaches the audience it is written for.
-  'jieqi-platform',
+  // The two Vietnamese pages are written and wired but NOT published: neither has
+  // had a native read, and rules copy that is subtly wrong is worse than none.
+  // That is a reviewer, not a task, and it is the real blocker on the Vietnamese
+  // search play rather than anything in the code.
   'co-up',
+  'luat-co-up',
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
@@ -70,10 +71,16 @@ export const ARTICLE_META: Record<
   { title: string; description: string; kind: ArticleKind }
 > = {
   'co-up': {
-    title: 'Chơi cờ úp online',
+    title: 'Cờ úp trên Mistboard',
     kind: 'article',
     description:
-      'Cờ úp trên Mistboard: chơi với engine hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích của engine.',
+      'Chơi cờ úp với máy hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích engine tách riêng phần may rủi khỏi phần quyết định.',
+  },
+  'luat-co-up': {
+    title: 'Luật cờ úp',
+    kind: 'article',
+    description:
+      'Luật cờ úp đầy đủ: cách bày quân, cách đi quân úp trước và sau khi lật, ăn quân úp, chiếu bí và các trường hợp hòa.',
   },
   'jieqi-platform': {
     title: 'Jieqi on Mistboard',

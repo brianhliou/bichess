@@ -201,6 +201,14 @@ export default defineConfig(({ command }) => {
       : {}),
     test: {
       environment: 'happy-dom',
+      // Above vitest's 5s default. A test that opens with `await import()` is
+      // charged the whole cold module graph, and the heavy ones cost ~850ms on
+      // an idle machine; across 260+ files on parallel workers that blew the
+      // 5s budget and failed a release, while the same file passed alone and
+      // on a warm rerun. The files that use vi.doMock + vi.resetModules cannot
+      // avoid importing per test, so the budget is the only lever for them.
+      // Kept at 15s, not higher, so a genuinely hung test still fails fast.
+      testTimeout: 15_000,
       // Parked-variant suites live in *.parkedtest.ts so they stay out of the
       // default run (see the parked block in packages/game/src/game-specs.ts);
       // MISTBOARD_TEST_PARKED=1 (npm run test:parked) targets only those. Both

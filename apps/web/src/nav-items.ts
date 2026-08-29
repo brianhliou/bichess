@@ -39,22 +39,20 @@ export function primaryNavItems(): NavItem[] {
 
 // Top-nav Community dropdown (lichess-aligned order): Players (the leaderboard),
 // Coaches (the verified-coach directory), Friends (your following list), Forum,
-// Blog (the articles surface), Discord (off-site invite). Teams is deliberately deferred. Kept distinct
+// Blog (the articles surface). Teams is deliberately deferred. Kept distinct
 // from communityRailItems(): the dropdown is the wide social entry, the rail is
 // the leaderboard/bots sub-nav.
+//
+// The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28: not
+// a defect, a decision to stop promoting it from the top nav for now. It is
+// still linked from the footer and the forum home, which is why the invite
+// constants below are still exported and the blockedIn machinery still runs.
 export function communityNavItems(): NavItem[] {
   return [
     { label: 'Players', labelKey: 'nav.players', href: '/player' },
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
     { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
-    {
-      label: 'Discord',
-      labelKey: 'nav.discord',
-      href: DISCORD_INVITE_URL,
-      external: true,
-      blockedIn: DISCORD_BLOCKED_IN,
-    },
   ];
 }
 
@@ -107,10 +105,6 @@ export function watchNavItems(): NavItem[] {
   return [
     { label: 'Mistboard TV', labelKey: 'nav.tv', href: '/watch' },
     { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
-    // The games database belongs with the watching surfaces because that is what
-    // it holds: other people's finished games, from broadcasts, from the
-    // archive, and from play here. It was reachable only by URL until now.
-    { label: 'Games', labelKey: 'nav.games', href: '/games' },
     // Streamers appears only once the curated directory has someone in it.
     // Deriving the link from the data means an empty /streamer is never
     // reachable from the nav, and seeding the first entry needs no second edit.
@@ -128,12 +122,21 @@ export function utilityNavItems(): NavItem[] {
 }
 
 // Tools dropdown (lichess parity): the analysis board is the anchor tool, the
-// board editor sits beside it, and the engine Lab link folds in after them when
-// enabled. Import / search are deferred until those surfaces exist.
+// board editor sits beside it, and the games database closes the set the way
+// lichess's advanced search does, with Import beside them.
+//
+// Games moved here from Watch (2026-08-28) on live-vs-finished, not
+// browse-vs-query: Mistboard TV and Broadcasts are things happening now, and a
+// finished-games list between them reads as a third live surface. Note the page
+// is NOT lichess's empty search form. Unfiltered it lists the 50 most recently
+// finished games, so it browses as well as queries; that landing feed is the
+// part worth keeping if this ever gets rebuilt for parity.
 export function toolsNavItems(): NavItem[] {
   return [
     { label: 'Analysis board', labelKey: 'nav.analysis', href: '/analysis/xiangqi' },
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
+    { label: 'Import game', labelKey: 'nav.import', href: '/import' },
+    { label: 'Games', labelKey: 'nav.games', href: '/games' },
     ...utilityNavItems(),
   ];
 }

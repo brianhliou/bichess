@@ -216,6 +216,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/play' ||
     normalized === '/watch' ||
     normalized === '/videos' ||
+    normalized === '/zh-hans/videos' ||
+    normalized === '/zh-hant/videos' ||
     normalized === '/streamer' ||
     normalized === '/puzzles' ||
     normalized === '/source' ||
@@ -256,6 +258,9 @@ export function isClientRoute(pathname: string): boolean {
     // 301 to it in server-http and are not client routes any more. The per-game
     // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
     normalized === '/games' ||
+    // Import: paste a game, land on the analysis board. Mints nothing, so it
+    // needs no server route of its own beyond being served the SPA shell.
+    normalized === '/import' ||
     normalized === '/engines' ||
     normalized === '/accounts' ||
     normalized === '/bots' ||

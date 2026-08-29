@@ -7,7 +7,9 @@ import '../live-xiangqi.css';
 import './learn-xiangqi.css';
 
 import type { XiangqiPieceRole, XiangqiSquare } from '@mistboard/game';
+import { loadCachedCurrentUser } from '../account-nav.js';
 import { initLiveSound, playSound } from '../live-sound.js';
+import { isLikelySignedIn } from '../signed-in-state.js';
 import { buildNav } from '../site-shell.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import {
@@ -48,12 +50,23 @@ const SPARKLE_MS = 500;
 const SCORE_COUNT_UP_MS = 900;
 
 // "What next?" funnel tiles (map bottom). Watch takes lichess's Practice slot.
-const WHAT_NEXT_TILES: { title: string; subtitle: string; href: string; glyph: string }[] = [
+const WHAT_NEXT_TILES: {
+  title: string;
+  subtitle: string;
+  href: string;
+  glyph: string;
+  /** Renders in the done state, ribbon and all, once the visitor has an account.
+   *  Only Register can be finished: every other tile is somewhere to go, not a
+   *  thing to complete. Asking a signed-in player to register reads as though
+   *  the progress the card promises to keep is not actually being kept. */
+  doneWhenSignedIn?: boolean;
+}[] = [
   {
     title: 'Register',
     subtitle: 'Keep your progress on any device',
     href: '/account',
     glyph: '👤',
+    doneWhenSignedIn: true,
   },
   { title: 'Puzzles', subtitle: 'Sharpen your tactics', href: '/puzzles', glyph: '🎯' },
   { title: 'Play people', subtitle: 'Opponents from around the world', href: '/', glyph: '⚔️' },
@@ -77,6 +90,10 @@ export function mountLearnXiangqi(root: HTMLElement): void {
   root.replaceChildren(buildNav(), page);
 
   let progress: LearnProgress = loadLearnProgress();
+  // The hint, not the answer: it paints the right shape on the first frame and
+  // is reconciled below once /api/auth/me settles. A stale one is possible
+  // (signed out in another tab), which is exactly what the reconcile is for.
+  let signedIn = isLikelySignedIn();
   let runner: LevelRunner | null = null;
   const pageTimers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -119,6 +136,19 @@ export function mountLearnXiangqi(root: HTMLElement): void {
   }
 
   window.addEventListener('hashchange', render);
+
+  // Reconcile the auth guess. Re-render only when the answer differs AND we are
+  // on the map: a player who opened a level while this was in flight is mid-move
+  // on a board the runner owns, and rebuilding the page under them would throw
+  // that away to restyle a tile they cannot see.
+  void loadCachedCurrentUser()
+    .then((user) => user !== null)
+    .catch(() => false)
+    .then((resolved) => {
+      if (resolved === signedIn) return;
+      signedIn = resolved;
+      if (parseRoute().kind === 'map') render();
+    });
   // Pieces are baked as inline SVG glyphs at render time, so a live piece-set
   // change (fired by the appearance picker) needs a full re-render to repaint
   // the board and the piece legend. Without this, the setting only takes effect
@@ -140,7 +170,7 @@ export function mountLearnXiangqi(root: HTMLElement): void {
           render();
         }
       }),
-      buildLearnMapMain(progress),
+      buildLearnMapMain(progress, signedIn),
     );
   }
 
@@ -539,7 +569,7 @@ function buildLearnMapSidebar(progress: LearnProgress, onReset?: () => void): HT
   return side;
 }
 
-function buildLearnMapMain(progress: LearnProgress): HTMLElement {
+function buildLearnMapMain(progress: LearnProgress, signedIn: boolean): HTMLElement {
   const main = document.createElement('main');
   main.className = 'learn-xq-map-main';
   for (const categ of learnXiangqiCategories) {
@@ -553,7 +583,7 @@ function buildLearnMapMain(progress: LearnProgress): HTMLElement {
     section.append(heading, grid);
     main.append(section);
   }
-  main.append(buildLearnWhatNextSection());
+  main.append(buildLearnWhatNextSection(signedIn));
   return main;
 }
 
@@ -593,7 +623,7 @@ function buildLearnStageTile(progress: LearnProgress, stage: LearnStage): HTMLEl
   return tile;
 }
 
-function buildLearnWhatNextSection(): HTMLElement {
+function buildLearnWhatNextSection(signedIn: boolean): HTMLElement {
   const section = document.createElement('section');
   section.className = 'learn-xq-categ learn-xq-what-next';
   const heading = document.createElement('h2');
@@ -604,12 +634,30 @@ function buildLearnWhatNextSection(): HTMLElement {
   const grid = document.createElement('div');
   grid.className = 'learn-xq-tile-grid';
   for (const item of WHAT_NEXT_TILES) {
+    const done = item.doneWhenSignedIn === true && signedIn;
     const tile = document.createElement('a');
-    tile.className = 'learn-xq-tile learn-xq-tile--link';
+    tile.className = `learn-xq-tile learn-xq-tile--${done ? 'done' : 'link'}`;
     tile.href = item.href;
     tile.innerHTML = `
         <div class="learn-xq-tile-illus learn-xq-tile-glyph">${item.glyph}</div>
         <div class="learn-xq-tile-text"><h3>${item.title}</h3><p>${item.subtitle}</p></div>`;
+    // Same anatomy a finished stage uses: the folded corner ribbon is what
+    // actually reads as "done" on this page, since the done and link tints are
+    // the same colour.
+    if (done) {
+      const wrap = document.createElement('div');
+      wrap.className = 'learn-xq-ribbon-wrap';
+      const ribbon = document.createElement('div');
+      ribbon.className = 'learn-xq-ribbon learn-xq-ribbon--done';
+      // Labelled, not decorative: a bare check character is what a screen
+      // reader would otherwise announce, and it is the only thing on the tile
+      // that says the visitor has already done this.
+      ribbon.setAttribute('role', 'img');
+      ribbon.setAttribute('aria-label', 'Completed');
+      ribbon.innerHTML = '<span class="learn-xq-check">✓</span>';
+      wrap.append(ribbon);
+      tile.append(wrap);
+    }
     grid.append(tile);
   }
   section.append(heading, copy, grid);
@@ -624,6 +672,9 @@ export function renderLearnXiangqiShellForPrerender(): string {
   const emptyProgress: LearnProgress = { stages: {} };
   const page = document.createElement('div');
   page.className = 'learn-xq learn-xq--map';
-  page.append(buildLearnMapSidebar(emptyProgress), buildLearnMapMain(emptyProgress));
+  // Signed-out, always: this HTML is built once and served to every visitor, so
+  // it cannot carry one visitor's auth state. The client mount restyles the
+  // Register tile on takeover, the same way it fills in real progress.
+  page.append(buildLearnMapSidebar(emptyProgress), buildLearnMapMain(emptyProgress, false));
   return `${buildNav().outerHTML}${page.outerHTML}`;
 }

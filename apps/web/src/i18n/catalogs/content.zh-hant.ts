@@ -41,6 +41,7 @@ export const ZH_HANT_CONTENT = {
   'videos.source.mistboard': 'Mistboard 原創',
   'videos.badge.mistboard': 'Mistboard',
   'videos.sortLabel': '排序',
+  'videos.sort.featured': '推薦',
   'videos.sort.newest': '最新',
   'videos.sort.longest': '最長',
   'videos.sort.shortest': '最短',

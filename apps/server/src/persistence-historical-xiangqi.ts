@@ -114,8 +114,27 @@ export type HistoricalXiangqiGameListItem = Pick<
   sourceName: string;
 };
 
+/** How a games listing is ordered. Shared across every lane of the /games
+ *  union, because the union merges pages that were each ordered server-side:
+ *  if one lane pushes a different key down than the merge sorts on, the page is
+ *  "the longest games among the most recent N" rather than the longest games,
+ *  and it looks entirely plausible. Keep lanes and comparator in lockstep. */
+export type XiangqiGameSort = 'recent' | 'oldest' | 'longest' | 'shortest';
+
+export const XIANGQI_GAME_SORTS: readonly XiangqiGameSort[] = [
+  'recent',
+  'oldest',
+  'longest',
+  'shortest',
+];
+
+export function isXiangqiGameSort(value: string): value is XiangqiGameSort {
+  return (XIANGQI_GAME_SORTS as readonly string[]).includes(value);
+}
+
 export type HistoricalXiangqiGameQueryFilters = {
   sourceSlug?: string;
+  sort?: XiangqiGameSort;
   player?: string;
   event?: string;
   result?: HistoricalXiangqiResult;
@@ -127,6 +146,20 @@ export type HistoricalXiangqiGameQueryFilters = {
   offset?: number;
   limit?: number;
 };
+
+/** ORDER BY for each sort, pushed down so the union's merge key matches. */
+export function historicalOrderBy(sort: XiangqiGameSort | undefined): string {
+  switch (sort) {
+    case 'oldest':
+      return 'games.played_on ASC NULLS LAST, games.id ASC';
+    case 'longest':
+      return 'games.ply_count DESC, games.id DESC';
+    case 'shortest':
+      return 'games.ply_count ASC, games.id ASC';
+    default:
+      return 'games.played_on DESC NULLS LAST, games.id DESC';
+  }
+}
 
 export type HistoricalXiangqiGameQueryPage = {
   games: HistoricalXiangqiGameListItem[];
@@ -657,7 +690,7 @@ export async function queryHistoricalXiangqiGames(
      LEFT JOIN historical_xiangqi_players red_players ON red_players.id = games.red_player_id
      LEFT JOIN historical_xiangqi_players black_players ON black_players.id = games.black_player_id
      WHERE ${clause}
-     ORDER BY games.played_on DESC NULLS LAST, games.id DESC
+     ORDER BY ${historicalOrderBy(filters.sort)}
      LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}`,
     pageValues,
   );

@@ -201,7 +201,15 @@ const wantsForum =
   page === 'forum';
 const wantsLegacyPlay = path === '/play' || page === 'play';
 const wantsWatch = path === '/watch' || page === 'watch';
-const wantsVideos = path === '/videos' || page === 'videos';
+// Locale-prefixed too. localeFromPath() is generic over any /zh-han[st]/*
+// pathname and outranks both the stored choice and the browser language, so the
+// prefix alone lands a visitor on the Chinese catalogue -- which is the whole
+// point of a shareable, indexable Chinese URL (#293).
+const wantsVideos =
+  path === '/videos' ||
+  path === '/zh-hans/videos' ||
+  path === '/zh-hant/videos' ||
+  page === 'videos';
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
@@ -273,6 +281,7 @@ const editorVariant = editorVariantFromPath(path);
 // server-http 301s them here, so this matcher stays single-valued: a route
 // literal here that isClientRoute does not know about is a conformance failure.
 const wantsHistoricalXiangqiSearch = path === '/games';
+const wantsXiangqiImport = path === '/import';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;
@@ -408,6 +417,13 @@ if (replaySample) {
     import('./study.js').then(({ mountStudy }) => {
       mountStudy(appRoot, studyId, studyChapterId ?? undefined);
     }),
+  );
+} else if (wantsXiangqiImport) {
+  setTitle('Import a game');
+  void mountOrReport(() =>
+    import('./xiangqi-import-page.js').then(({ mountXiangqiImport }) =>
+      mountXiangqiImport(appRoot),
+    ),
   );
 } else if (wantsHistoricalXiangqiSearch) {
   setTitle('Xiangqi game search');

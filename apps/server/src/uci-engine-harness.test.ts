@@ -19,16 +19,44 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 // ── parseInfoMultiPv ──────────────────────────────────────────────────────────
 
-test('parseInfoMultiPv extracts rank, score, and the pv first move', () => {
+test('parseInfoMultiPv extracts rank, score, and the whole pv', () => {
   const row = parseInfoMultiPv(
     'info depth 10 seldepth 14 multipv 2 score cp -340 nodes 12345 pv c6c5 e3e4 g0e2',
   );
-  assert.deepEqual(row, { index: 2, depth: 10, cp: -340, mate: null, move: 'c6c5' });
+  assert.deepEqual(row, {
+    index: 2,
+    depth: 10,
+    cp: -340,
+    mate: null,
+    move: 'c6c5',
+    pv: ['c6c5', 'e3e4', 'g0e2'],
+    bound: null,
+  });
 });
 
 test('parseInfoMultiPv reads a mate score', () => {
   const row = parseInfoMultiPv('info depth 20 multipv 1 score mate 3 pv e7e8');
-  assert.deepEqual(row, { index: 1, depth: 20, cp: null, mate: 3, move: 'e7e8' });
+  assert.deepEqual(row, {
+    index: 1,
+    depth: 20,
+    cp: null,
+    mate: 3,
+    move: 'e7e8',
+    pv: ['e7e8'],
+    bound: null,
+  });
+});
+
+// A fail-high/fail-low row is an ABORTED iteration, not a result. The parser must
+// surface that so a reader can prefer the last EXACT row for the rank — the same
+// trap that corrupted 38% of positions when parseInfoScore ignored it.
+test('parseInfoMultiPv flags a bounded row', () => {
+  const row = parseInfoMultiPv('info depth 22 multipv 1 score cp 51 lowerbound pv b2b9');
+  assert.equal(row?.bound, 'lower');
+  assert.equal(
+    parseInfoMultiPv('info depth 22 multipv 2 score cp -12 upperbound pv c3c4')?.bound,
+    'upper',
+  );
 });
 
 test('parseInfoMultiPv returns undefined without multipv, score, or pv', () => {

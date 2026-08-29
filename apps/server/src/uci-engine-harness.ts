@@ -479,11 +479,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
  * Returns undefined for non-info, score-less, or pv-less lines. The score is from the
  * side-to-move POV, exactly as the engine reports it. `index` is the 1-based MultiPV rank.
  */
-export function parseInfoMultiPv(
-  line: string,
-):
-  | { index: number; depth: number; cp: number | null; mate: number | null; move: string }
-  | undefined {
+export function parseInfoMultiPv(line: string): UciMultiPvLine | undefined {
   if (!line.startsWith('info ') || !line.includes(' multipv ') || !line.includes(' score ')) {
     return undefined;
   }
@@ -493,19 +489,24 @@ export function parseInfoMultiPv(
   let cp: number | null = null;
   let mate: number | null = null;
   let move: string | null = null;
+  let pv: string[] = [];
+  let bound: 'lower' | 'upper' | null = null;
   for (let i = 1; i < tokens.length; i += 1) {
     if (tokens[i] === 'multipv') index = Number(tokens[i + 1]);
     else if (tokens[i] === 'depth') depth = Number(tokens[i + 1]);
+    else if (tokens[i] === 'lowerbound') bound = 'lower';
+    else if (tokens[i] === 'upperbound') bound = 'upper';
     else if (tokens[i] === 'score') {
       if (tokens[i + 1] === 'cp') cp = Number(tokens[i + 2]);
       else if (tokens[i + 1] === 'mate') mate = Number(tokens[i + 2]);
     } else if (tokens[i] === 'pv') {
-      move = tokens[i + 1] ?? null;
-      break; // the pv is the rest of the line; we only want its first move
+      pv = tokens.slice(i + 1);
+      move = pv[0] ?? null;
+      break; // the pv is the rest of the line
     }
   }
   if (!index || !move) return undefined;
-  return { index, depth, cp, mate, move };
+  return { index, depth, cp, mate, move, pv, bound };
 }
 
 export type UciMultiPvLine = {
@@ -519,6 +520,28 @@ export type UciMultiPvLine = {
   mate: number | null;
   /** Depth this row was last reported at. */
   depth: number;
+  /** Full principal variation for this rank (engine UCI), `move` first. */
+  pv: string[];
+  /**
+   * Set when the engine flagged this row as a fail-high/fail-low bound, i.e. an
+   * ABORTED iteration rather than a result — same trap as parseInfoScore's
+   * `bound`. Consumers must prefer the last EXACT row for a given index.
+   * NOTE: `runUciMultiPv` does NOT yet honour this and overwrites per index
+   * unconditionally; `UciEngineSession.multiPvPosition` does.
+   */
+  bound: 'lower' | 'upper' | null;
+};
+
+/** A single search reported both ways: rank-1 scalar (same shape as UciEval) plus
+ *  the ranked table. See `UciEngineSession.multiPvPosition`. */
+export type UciMultiPvEval = {
+  best: string | null;
+  cp: number | null;
+  mate: number | null;
+  depth: number;
+  pv?: string[];
+  /** Ranked rows, index 1 first. Empty when the search reported no scored line. */
+  lines: UciMultiPvLine[];
 };
 
 /**
@@ -688,6 +711,93 @@ export class UciEngineSession {
                 pv: chosen?.pv,
                 nodes: chosen?.nodes ?? undefined,
                 timeMs: chosen?.timeMs ?? undefined,
+              });
+            }
+          },
+          reject: (err) => {
+            clearTimeout(timer);
+            reject(err);
+          },
+        });
+        this.write(`${args.positionCommand}\n${args.goCommand}\n`);
+      });
+    });
+  }
+
+  /**
+   * Like `evalPosition`, but ALSO returns the ranked MultiPV table for the same
+   * search. The session must have been created with `setoption name MultiPV
+   * value N` in its initCommands.
+   *
+   * Two traps this handles and a naive reader does not:
+   *
+   * 1. **Bounded rows.** Per index it keeps the last EXACT row and falls back to
+   *    a bounded one only if that index never produced an exact line. A
+   *    fail-high/fail-low row is an aborted iteration, not a result (see
+   *    `parseInfoScore`'s `bound`).
+   * 2. **The scalar result must come from rank 1.** With MultiPV > 1 the last
+   *    scored `info` line is usually the rank-2 line, so reading "the last
+   *    score" silently returns the second-best eval. The scalar fields here are
+   *    rank 1's, never rank 2's.
+   *
+   * Lines with no `multipv` token at all (terminal positions, where the engine
+   * reports `score mate 0` and no pv) are treated as rank 1, so a checkmate
+   * still scores exactly as it does through `evalPosition`.
+   */
+  multiPvPosition(args: {
+    positionCommand: string;
+    goCommand: string;
+    timeoutMs: number;
+    timeoutMessage: string;
+  }): Promise<UciMultiPvEval> {
+    return this.enqueue(async () => {
+      await this.readyPromise;
+      return await new Promise<UciMultiPvEval>((resolveTable, reject) => {
+        const exact = new Map<number, UciMultiPvLine>();
+        const bounded = new Map<number, UciMultiPvLine>();
+        const keep = (row: UciMultiPvLine): void => {
+          if (row.bound === null) exact.set(row.index, row);
+          else if (!exact.has(row.index)) bounded.set(row.index, row);
+        };
+        const timer = setTimeout(() => {
+          this.fail(new Error(args.timeoutMessage));
+        }, args.timeoutMs);
+        timer.unref();
+        this.consume({
+          onLine: (line) => {
+            const row = parseInfoMultiPv(line);
+            if (row) keep(row);
+            else if (line.startsWith('info ') && !line.includes(' multipv ')) {
+              // No rank on the line: a single-line report (terminal position, or
+              // an engine that only emits multipv above rank 1). Treat as rank 1.
+              const score = parseInfoScore(line);
+              if (score) {
+                keep({
+                  index: 1,
+                  move: score.pv[0] ?? '',
+                  cp: score.cp,
+                  mate: score.mate,
+                  depth: score.depth,
+                  pv: score.pv,
+                  bound: score.bound,
+                });
+              }
+            }
+            const move = parseBestmoveLine(line);
+            if (move !== undefined) {
+              clearTimeout(timer);
+              this.consumer = null;
+              const merged = new Map(bounded);
+              for (const [index, row] of exact) merged.set(index, row);
+              const lines = [...merged.values()].sort((a, b) => a.index - b.index);
+              const top = merged.get(1);
+              resolveTable({
+                best: move,
+                cp: top?.cp ?? null,
+                mate: top?.mate ?? null,
+                depth: top?.depth ?? 0,
+                pv: top?.pv,
+                lines,
               });
             }
           },

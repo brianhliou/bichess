@@ -338,7 +338,30 @@ try {
     localePreloadLinks[lang] = `<link rel="modulepreload" crossorigin href="/${node.file}">`;
   }
 
+  // Cross-language alternates. The zh variants below are URL-prefixed renderings of
+  // ONE article, so their hreflang is derived. A Vietnamese page is a SEPARATE
+  // article (the settled language policy keeps INTERFACE locales at en/zh-Hans/
+  // zh-Hant while leaving CONTENT languages open), so nothing derives the relation
+  // between /blog/jieqi-platform and /blog/co-up. It has to be declared, or the two
+  // pages compete instead of reinforcing each other.
+  //
+  // Declared once per pair and expanded both ways, so the two directions cannot
+  // drift apart. An alternate is only emitted when the partner is actually
+  // published: pointing Google at a draft is pointing it at a 404.
+  const CROSS_LANGUAGE_PAIRS = [{ en: 'jieqi-platform', vi: 'co-up' }];
+
   const published = articles.filter((a) => a.status === 'published');
+  const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
+  const crossLanguageAlternates = new Map();
+  for (const pair of CROSS_LANGUAGE_PAIRS) {
+    for (const [langA, slugA] of Object.entries(pair)) {
+      const partners = Object.entries(pair)
+        .filter(([langB]) => langB !== langA)
+        .map(([langB, slugB]) => ({ lang: langB, slug: slugB }))
+        .filter((partner) => publishedBySlug.has(partner.slug));
+      if (partners.length > 0) crossLanguageAlternates.set(slugA, partners);
+    }
+  }
   let count = 0;
 
   for (const article of published) {
@@ -360,6 +383,11 @@ try {
             `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${base}/${slug}" />`,
           ]
         : []),
+      ...(crossLanguageAlternates.get(article.slug) ?? []).map((partner) => {
+        const partnerArticle = publishedBySlug.get(partner.slug);
+        const partnerBase = partnerArticle.kind === 'rules' ? 'rules' : 'blog';
+        return `<link rel="alternate" hreflang="${partner.lang}" href="${host}/${partnerBase}/${encodeURIComponent(partner.slug)}" />`;
+      }),
       `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
     ].join('');
 
@@ -396,15 +424,41 @@ try {
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
         ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
       };
-      // Extra nodes (ItemList and friends) ride alongside the Article node, each
-      // in its own script tag so a malformed one cannot take the Article with it.
-      const extraLd = (article.structuredData?.() ?? [])
+      // Extra documents ride alongside the Article node, each in its own script
+      // tag so a malformed one cannot take the Article down with it. Two
+      // independent sources feed this list and both must survive: an article's
+      // own structuredData() (the champions ItemList), and FAQ blocks.
+      //
+      // FAQ blocks become a separate FAQPage rather than folding into the
+      // Article node, because they are a different schema type that Google reads
+      // independently. Built from the SAME block the page renders, so the markup
+      // and the structured data cannot describe different questions, and from the
+      // LOCALIZED article, so a zh or vi variant emits its own language's.
+      const faqItems = [
+        ...(localized.intro ?? []),
+        ...(localized.sections ?? []).flatMap((sec) => sec.blocks ?? []),
+      ]
+        .filter((b) => b.kind === 'faq')
+        .flatMap((b) => b.items ?? []);
+      const faqLd =
+        faqItems.length > 0
+          ? {
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              inLanguage: v.htmlLang,
+              mainEntity: faqItems.map((item) => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: { '@type': 'Answer', text: item.answer },
+              })),
+            }
+          : null;
+      const ldScript = [jsonLd, ...(article.structuredData?.() ?? []), ...(faqLd ? [faqLd] : [])]
         .map(
-          (node) =>
-            `<script type="application/ld+json">${JSON.stringify(node).replace(/</g, '\\u003c')}</script>`,
+          (doc) =>
+            `<script type="application/ld+json">${JSON.stringify(doc).replace(/</g, '\\u003c')}</script>`,
         )
         .join('');
-      const ldScript = `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>${extraLd}`;
       // Self-referencing canonical: each language variant declares its OWN clean
       // URL as canonical (not all three → English). hreflang expresses the
       // language relationship; the canonical consolidates query-param, SPA-shell,

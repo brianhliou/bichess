@@ -9,7 +9,7 @@ import {
 
 describe('historical xiangqi search page', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/historical-xiangqi/games');
+    window.history.replaceState(null, '', '/games');
   });
 
   afterEach(() => {
@@ -20,6 +20,7 @@ describe('historical xiangqi search page', () => {
     expect(historicalXiangqiReviewUrl('hxq game')).toBe('/historical-xiangqi/game/hxq%20game');
     expect(
       historicalXiangqiSearchApiUrl({
+        sort: 'recent',
         player: 'Hu Ronghua',
         event: '',
         source: 'xqbase',
@@ -144,6 +145,70 @@ describe('historical xiangqi search page', () => {
       '2026全国象棋团体赛',
     );
     expect(event?.querySelector('.historical-xiangqi-zh')?.textContent).toContain('第3轮');
+  });
+
+  // Applying a filter used to rewrite the bar to `/historical-xiangqi/games`,
+  // a retired path that 301s back here, so a copied or reloaded filtered URL
+  // took a redirect hop and lost its query.
+  it('keeps the canonical /games path when filters are applied', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),
+    );
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+    const form = root.querySelector<HTMLFormElement>('form.historical-xiangqi-filters');
+    const player = form?.querySelector<HTMLInputElement>('input[type="search"]');
+    if (!form || !player) throw new Error('filter form did not render');
+    player.value = 'Hu Ronghua';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await Promise.resolve();
+
+    expect(window.location.pathname).toBe('/games');
+    expect(window.location.search).toBe('?player=Hu+Ronghua');
+  });
+
+  it('round-trips a non-default sort through the URL and the API call', async () => {
+    window.history.replaceState(null, '', '/games?sort=longest');
+    const requested: string[] = [];
+    const fetchSpy = vi.fn(async (url: string) => {
+      requested.push(url);
+      return jsonResponse({ total: 0, offset: 0, limit: 50, games: [] });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+
+    expect(requested[0]).toContain('sort=longest');
+    expect(window.location.search).toContain('sort=longest');
+    // The default stays out of the URL so a plain /games link is still canonical.
+    const select = [...root.querySelectorAll<HTMLSelectElement>('select')].find((el) =>
+      [...el.options].some((option) => option.value === 'shortest'),
+    );
+    expect(select?.value).toBe('longest');
+  });
+
+  // Regression: every select was built by setting `selected` on a detached
+  // option before appending it, which the selectedness reset discards for
+  // anything past the second position. Every result past "Red wins" rendered as
+  // "Red wins" while the rows below were filtered correctly.
+  it('renders the saved filter in every select, not just the first two options', async () => {
+    window.history.replaceState(null, '', '/games?result=1%2F2-1%2F2&sort=shortest');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),
+    );
+    const root = document.createElement('div');
+
+    await mountHistoricalXiangqiSearch(root);
+
+    const selects = [...root.querySelectorAll<HTMLSelectElement>('select')];
+    const byOption = (value: string): HTMLSelectElement | undefined =>
+      selects.find((el) => [...el.options].some((option) => option.value === value));
+    expect(byOption('1/2-1/2')?.value).toBe('1/2-1/2');
+    expect(byOption('shortest')?.value).toBe('shortest');
   });
 
   it('uses server-provided review URLs for non-archive rows', async () => {

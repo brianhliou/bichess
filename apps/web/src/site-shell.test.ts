@@ -65,14 +65,9 @@ describe('site shell nav', () => {
     expect(communityPanel?.querySelector<HTMLAnchorElement>('a[href="/blog"]')?.textContent).toBe(
       'Blog',
     );
-    // Off-site invite: no locale prefix, new tab, never marked active.
-    const discord = communityPanel?.querySelector<HTMLAnchorElement>(
-      'a[href^="https://discord.gg/"]',
-    );
-    expect(discord?.textContent).toBe('Discord');
-    expect(discord?.target).toBe('_blank');
-    expect(discord?.rel).toContain('noopener');
-    expect(discord?.classList.contains('active')).toBe(false);
+    // The Discord invite was pulled from this dropdown on 2026-08-28. It is
+    // still in the footer, so the assertion moves rather than disappearing.
+    expect(communityPanel?.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
     // The Community title is a link to the player page, not just a toggle.
     const communityToggle = [
       ...nav.querySelectorAll<HTMLElement>('.site-nav-menu > .site-nav-menu-toggle'),
@@ -97,26 +92,25 @@ describe('site shell nav', () => {
     expect(
       watchPanel?.querySelector<HTMLAnchorElement>('a[href="/broadcast/xiangqi"]')?.textContent,
     ).toBe('Broadcasts');
-    // The games database was reachable only by typing its URL until it landed
-    // here; losing this entry makes the whole surface invisible again.
-    expect(watchPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
-      'Games',
-    );
     expect(
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Broadcasts', 'Games', 'Video library']);
+    ).toEqual(['Mistboard TV', 'Broadcasts', 'Video library']);
 
-    // Tools dropdown surfaces the analysis board.
+    // Tools dropdown surfaces the analysis board, and the games database, which
+    // moved here out of Watch. It is reachable only by typing its URL if this
+    // entry goes missing, so assert the rendered link, not just the item list.
     const toolsMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Tools',
     );
+    const toolsPanel = toolsMenu?.querySelector<HTMLElement>('.site-nav-menu-panel');
     expect(
-      toolsMenu
-        ?.querySelector<HTMLElement>('.site-nav-menu-panel')
-        ?.querySelector<HTMLAnchorElement>('a[href="/analysis/xiangqi"]')?.textContent,
+      toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/analysis/xiangqi"]')?.textContent,
     ).toBe('Analysis board');
+    expect(toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
+      'Games',
+    );
 
     const learnMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Learn',
@@ -199,16 +193,16 @@ describe('site shell geo-blocked links', () => {
     document.body.innerHTML = '';
   });
 
+  // The nav no longer carries the invite at all, so the country gate is now
+  // observable only on the footer. Still worth holding: the gate is the reason
+  // a third of visitors do not get a link that hangs, and it would otherwise
+  // have no test left after the nav entry came out.
   it('hides the Discord invite for viewers in mainland China, keeps it elsewhere', () => {
     document.cookie = 'mb_cc=CN; Path=/';
-    const cnNav = buildNav();
-    expect(cnNav.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
-    // The rest of the Community menu is untouched.
-    expect(cnNav.querySelector('a[href="/forum"]')).not.toBeNull();
+    expect(buildNav().querySelector('a[href="/forum"]')).not.toBeNull();
     expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
 
     document.cookie = 'mb_cc=US; Path=/';
-    expect(buildNav().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
     expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
   });
 });

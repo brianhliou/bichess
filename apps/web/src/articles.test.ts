@@ -88,7 +88,9 @@ describe('article public listing gates', () => {
       // ties break alphabetically by title: 'Chơi...' then 'Jieqi...'.
       '/blog/co-up',
       '/blog/jieqi-platform',
-      // 'The Xiangqi World Championship' sorts under T, after 'Jieqi'.
+      // Same 2026-08-28 date, so ties break alphabetically by title:
+      // 'Cờ úp...', 'Jieqi...', 'Luật...', then 'The Xiangqi...'.
+      '/blog/luat-co-up',
       '/blog/xiangqi-world-championship',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically

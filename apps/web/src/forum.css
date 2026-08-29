@@ -1598,16 +1598,38 @@ a.forum-post-author-name:focus-visible {
   font-size: 14px;
 }
 
+/* lichess's forum index is flatter than it looks: two families, three sizes
+   (38 / 30 / 14) and two weights. The column headers are Roboto 300 (their
+   `th`), everything in the rows is Noto Sans 400 at 14px (their `td`) --
+   counts, "by", the timestamp and the latest-post link alike. Measured off
+   lichess.org/forum on 2026-08-28. */
 .forum-category-index-stat {
   color: var(--forum-text);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
 }
 
 .forum-category-index-last,
 .forum-category-index-last span {
   color: var(--forum-muted);
-  font-size: 15px;
+  font-size: 14px;
+}
+
+/* The header row only. One class serves both the header cell and the data cell
+   below it, which is why this is scoped rather than set on the class itself. */
+.forum-category-index-header .forum-category-index-stat,
+.forum-category-index-header .forum-category-index-last {
+  color: var(--forum-muted);
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+}
+
+/* Row links sit at body weight, as lichess's do. Bolding them made our list
+   read louder than the page it is meant to match. */
+.forum-category-latest-title,
+.forum-category-latest-author {
+  font-weight: 400;
 }
 
 .forum-category-latest-title,

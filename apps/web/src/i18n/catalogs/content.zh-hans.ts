@@ -41,6 +41,7 @@ export const ZH_HANS_CONTENT = {
   'videos.source.mistboard': 'Mistboard 原创',
   'videos.badge.mistboard': 'Mistboard',
   'videos.sortLabel': '排序',
+  'videos.sort.featured': '推荐',
   'videos.sort.newest': '最新',
   'videos.sort.longest': '最长',
   'videos.sort.shortest': '最短',

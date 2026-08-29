@@ -96,6 +96,13 @@ const BLOCK_PROSE: {
   // Headers and caption are prose; cells are data and mostly numbers, so they
   // are not sent for translation.
   table: (block) => [...((block as { headers?: string[] }).headers ?? []), ...caption(block)],
+  // Both halves of every pair: an FAQ is translatable copy, and an answer that
+  // ships untranslated beside a translated question is worse than either.
+  faq: (block) =>
+    ((block as { items?: { question: string; answer: string }[] }).items ?? []).flatMap((item) => [
+      item.question,
+      item.answer,
+    ]),
 };
 
 function blockProse(block: ArticleBlock, path: string): Prose[] {

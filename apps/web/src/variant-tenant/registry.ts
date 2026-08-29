@@ -375,7 +375,13 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
+        // Rated opened 2026-08-28. Everything it needs was already in place: the
+        // `jieqi` rating pool exists, the leaderboard serves that bucket, and the
+        // server's rated switch is on in prod. This flag was the only thing shut.
+        // PvE and private challenges stay unrated regardless of it, since the
+        // setup dialog excludes mode === 'pve' and friend links set ratedDisabled,
+        // so this opens rated MATCHMAKING for signed-in players and nothing else.
+        supportsRated: true,
         supportsStartFormat: false,
         supportsTimeControl: true,
       },

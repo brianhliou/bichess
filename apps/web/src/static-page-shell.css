@@ -70,7 +70,9 @@
   padding: 8px 14px;
   color: var(--site-muted);
   font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
+  /* lichess sets its side rail (.subnav a) at 14px; ours read a size larger
+     than the page body they sit beside. */
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.25;
   text-decoration: none;
@@ -101,11 +103,19 @@
   margin-bottom: 0;
 }
 
+/* Subheadings on the static-page-dom family (terms, privacy, thanks, lag).
+   Kept in step with .about-subheading in pages-static.css, which is the same
+   heading on /about and /faq: two rules, one visual role. lichess sets its
+   equivalent at 700 (FAQ questions 18.2px 700, h3 sub-sections Roboto 700);
+   ours were 400, lighter than the bold inside the body copy beneath them, so a
+   subheading did not read as one. Size is left at 18px: lichess's page-level h2
+   is Roboto 30px 300, and matching that is a redesign of these pages rather
+   than a weight fix. */
 .static-prose h2 {
   margin: 28px 0 10px;
   color: var(--site-heading);
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0;
 }
 

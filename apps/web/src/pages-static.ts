@@ -134,6 +134,7 @@ export async function mountArticle(
     buildArticlePage,
     mountPendingWidgets,
     mountArticleEnhancements,
+    mountArticleLightbox,
     mountArticleThumbnails,
   } = await import('./articles.js');
   const { findArticle } = await import('./articles-data.js');
@@ -158,6 +159,7 @@ export async function mountArticle(
   root.append(buildNav(), articlePage);
   mountPendingWidgets(articlePage);
   mountArticleEnhancements(articlePage);
+  mountArticleLightbox(articlePage);
   // The variant rail carries board-kind thumbnails that mount like index cards.
   mountArticleThumbnails(articlePage);
 }

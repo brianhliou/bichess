@@ -128,14 +128,21 @@ export type XiangqiGameAnalysis = {
  */
 export async function analyzeXiangqiPostgame(
   payload: { timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }> },
-  analyze: (movesUci: string[]) => Promise<PlyEval[]> = (movesUci) => analyzeXiangqiGame(movesUci),
+  // `moves` is the same game in native notation, handed alongside the UCI prefix
+  // list because the offered-piece pass needs a board (#315). Injected test
+  // analyzers may ignore it.
+  analyze: (movesUci: string[], moves: readonly XiangqiMove[]) => Promise<PlyEval[]> = (
+    movesUci,
+    moves,
+  ) => analyzeXiangqiGame(movesUci, { moves }),
 ): Promise<XiangqiGameAnalysis> {
-  const movesUci = payload.timeline
+  const moves = payload.timeline
     .filter((entry): entry is { type: 'move-played'; move: XiangqiMove } =>
       Boolean(entry.type === 'move-played' && entry.move),
     )
-    .map((entry) => xiangqiMoveToPikafishUci(entry.move));
-  const plies = await analyze(movesUci);
+    .map((entry) => entry.move);
+  const movesUci = moves.map((move) => xiangqiMoveToPikafishUci(move));
+  const plies = await analyze(movesUci, moves);
   return {
     engineId: XIANGQI_ANALYSIS_ENGINE_ID,
     depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
@@ -144,13 +151,18 @@ export async function analyzeXiangqiPostgame(
     // unconvertible pv token TRUNCATES the line there (never splice around it —
     // the moves after it would land on the wrong position).
     plies: plies.map((p) => {
-      const pv: string[] = [];
-      for (const move of p.pv ?? []) {
-        const converted = pikafishBestToOurUci(move);
-        if (!converted) break;
-        pv.push(converted);
-      }
-      return { ...p, best: pikafishBestToOurUci(p.best), pv: pv.length ? pv : undefined };
+      const pv = pikafishLineToOurUci(p.pv);
+      // The runner-up move and the accepted-offer line travel the same way as
+      // `best`/`pv`: converted here, never served in the engine's dialect. An
+      // unconvertible root move drops the whole field rather than serving half.
+      const secondMove = pikafishBestToOurUci(p.second?.move ?? null);
+      const second = p.second && secondMove ? { ...p.second, move: secondMove } : undefined;
+      const capture = pikafishBestToOurUci(p.offerLine?.capture ?? null);
+      const offerLine =
+        p.offerLine && capture
+          ? { capture, pv: pikafishLineToOurUci(p.offerLine.pv) ?? [] }
+          : undefined;
+      return { ...p, best: pikafishBestToOurUci(p.best), pv, second, offerLine };
     }),
   };
 }
@@ -159,6 +171,18 @@ function pikafishBestToOurUci(best: string | null): string | null {
   if (!best) return null;
   const squares = pikafishUciToXiangqiSquares(best);
   return squares ? `${squares.from}${squares.to}` : null;
+}
+
+/** Convert a whole line, TRUNCATING at the first unconvertible token (never splice
+ *  around it — every move after would land on the wrong position). */
+function pikafishLineToOurUci(line: readonly string[] | undefined): string[] | undefined {
+  const out: string[] = [];
+  for (const move of line ?? []) {
+    const converted = pikafishBestToOurUci(move);
+    if (!converted) break;
+    out.push(converted);
+  }
+  return out.length ? out : undefined;
 }
 
 type XiangqiAnalysisPayload = { timeline: ReadonlyArray<{ type: string; move?: XiangqiMove }> };
@@ -208,7 +232,8 @@ export async function resolveXiangqiAnalysis(
         await analyzeXiangqiPostgame(
           payload,
           analyze ??
-            ((movesUci) => analyzeXiangqiGame(movesUci, { progress: progress ?? undefined })),
+            ((movesUci, moves) =>
+              analyzeXiangqiGame(movesUci, { moves, progress: progress ?? undefined })),
         )
       ).plies,
     validate: (series) => {

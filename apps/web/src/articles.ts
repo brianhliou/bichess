@@ -40,6 +40,7 @@ import {
   type CrossroadsReplayBlock,
   type CtaBlock,
   type DropMiniXiangqiReplayBlock,
+  type FaqBlock,
   type FortressXiangqiReplayBlock,
   findArticle,
   type ImageFigureBlock,
@@ -1031,6 +1032,60 @@ function buildTocSidebar(body: HTMLElement, lang?: ArticleLang): HTMLElement | n
   return aside;
 }
 
+// Click any article figure to see it full size. Screenshots of the review panel
+// are unreadable at article-column width, which is where most of this page's
+// evidence lives.
+//
+// A native <dialog> opened with showModal(), because it brings focus trapping,
+// Esc-to-close and inertness of the page behind it for free; hand-rolling a
+// modal means reimplementing all three and getting one of them wrong. Delegated
+// from the root rather than bound per figure, so it covers prerendered HTML and
+// any figure mounted later without a second wiring pass.
+export function mountArticleLightbox(root: HTMLElement): () => void {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'article-lightbox';
+  const frame = document.createElement('div');
+  frame.className = 'article-lightbox-frame';
+  dialog.append(frame);
+
+  const close = (): void => {
+    if (dialog.open) dialog.close();
+  };
+
+  const onClick = (event: Event): void => {
+    const trigger = (event.target as HTMLElement | null)?.closest?.('.article-figure-zoom');
+    if (!trigger || !root.contains(trigger)) return;
+    const source = trigger.querySelector('img, svg');
+    if (!source) return;
+    frame.replaceChildren(source.cloneNode(true));
+    // The caption is part of the evidence, so it comes along.
+    const caption = trigger.closest('figure')?.querySelector('.article-figure-caption');
+    if (caption) {
+      const copy = document.createElement('p');
+      copy.className = 'article-lightbox-caption';
+      copy.textContent = caption.textContent;
+      frame.append(copy);
+    }
+    if (!dialog.isConnected) document.body.append(dialog);
+    dialog.showModal();
+  };
+
+  // Clicking the backdrop closes. The dialog element itself is the backdrop, so a
+  // click that lands on it rather than on the frame inside it means "outside".
+  const onDialogClick = (event: MouseEvent): void => {
+    if (event.target === dialog) close();
+  };
+
+  root.addEventListener('click', onClick);
+  dialog.addEventListener('click', onDialogClick);
+  return () => {
+    root.removeEventListener('click', onClick);
+    dialog.removeEventListener('click', onDialogClick);
+    close();
+    dialog.remove();
+  };
+}
+
 export function mountArticleEnhancements(root: HTMLElement): () => void {
   const sidebar = root.querySelector<HTMLElement>('.article-toc-sidebar');
   const body = root.querySelector<HTMLElement>('.article-body');
@@ -1154,6 +1209,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
+  if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
@@ -1603,7 +1659,14 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   img.src = block.src;
   img.alt = block.alt;
   img.loading = 'lazy';
-  figure.append(img);
+  // A real <button>, so the zoom is keyboard-reachable and announced, and so the
+  // markup carries the affordance rather than a click handler that the prerender
+  // cannot serialize. mountArticleLightbox wires the behaviour in the browser.
+  const zoom = document.createElement('button');
+  zoom.type = 'button';
+  zoom.className = 'article-figure-zoom';
+  zoom.append(img);
+  figure.append(zoom);
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
@@ -1835,6 +1898,26 @@ function highlightCode(text: string): string {
                 : '';
     return cls ? `<span class="${cls}">${m}</span>` : m;
   });
+}
+
+// A <dl> rather than heading/paragraph pairs: the questions are labels for their
+// answers, not sections of the document, and keeping them out of the heading
+// hierarchy stops them colonising the on-this-page rail. The prerender reads the
+// same block to emit FAQPage JSON-LD, so the markup and the structured data can
+// never describe different questions.
+function renderFaqBlock(block: FaqBlock): HTMLElement {
+  const list = document.createElement('dl');
+  list.className = 'article-faq';
+  for (const item of block.items) {
+    const dt = document.createElement('dt');
+    dt.className = 'article-faq-question';
+    dt.textContent = item.question;
+    const dd = document.createElement('dd');
+    dd.className = 'article-faq-answer';
+    dd.textContent = item.answer;
+    list.append(dt, dd);
+  }
+  return list;
 }
 
 function renderTableBlock(block: TableBlock): HTMLElement {

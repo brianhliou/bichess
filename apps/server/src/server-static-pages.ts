@@ -30,7 +30,88 @@ export type PageMeta = {
 // of one another. Keyed by exact pathname; a route absent here keeps the default
 // homepage meta. Only list a route in SITEMAP_STATIC_ROUTES once it has an entry
 // here, or the sitemap advertises a set of identical shells.
-const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
+type SpaRouteMeta = {
+  title: string;
+  description: string;
+  /** Sets <html lang> on the served shell. Omit for English routes. */
+  htmlLang?: string;
+  /** The unprefixed path shared by this route's locale variants (e.g.
+   *  '/videos'). Present on all three, it emits hreflang alternates so the set
+   *  reads as one page in three languages rather than three near-duplicates
+   *  competing with each other. */
+  localeGroup?: string;
+};
+
+const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
+  '/videos': {
+    title: 'Xiangqi Video Library | Mistboard',
+    description:
+      'Curated xiangqi (Chinese chess) videos in English and Chinese: rules, openings, tactics, endgames, and commented games.',
+    localeGroup: '/videos',
+  },
+  '/zh-hans/videos': {
+    title: '象棋视频库 | Mistboard',
+    description: '精选中文与英文象棋视频：规则、开局、战术、残局与讲解对局。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/videos',
+  },
+  '/zh-hant/videos': {
+    title: '象棋影片庫 | Mistboard',
+    description: '精選中文與英文象棋影片：規則、開局、戰術、殘局與講解對局。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/videos',
+  },
+  // The ten routes below were advertised in the sitemap while serving the
+  // homepage title and description, which the note above forbids. Each
+  // description is drawn from the page's own copy rather than written fresh,
+  // so a search result cannot promise something the page does not say.
+  '/about': {
+    title: 'About Mistboard | Chinese Chess (Xiangqi) in English',
+    description:
+      'A free, open-source place to play xiangqi (Chinese chess) in English, built for serious play. What the site is, and who it is for.',
+  },
+  '/faq': {
+    title: 'FAQ | Mistboard',
+    description:
+      'Which games are hosted, whether you need an account, how rated play and cheat prevention work, and where the game library comes from.',
+  },
+  '/forum': {
+    title: 'Forum | Mistboard',
+    description:
+      'Community discussion: general games talk, game analysis, site feedback, and off-topic.',
+  },
+  '/coach': {
+    title: 'Xiangqi Coaches | Mistboard',
+    description:
+      'Find a coach to study with. Every coach listed here holds a verified xiangqi or chess title.',
+  },
+  '/streamer': {
+    title: 'Xiangqi Streamers | Mistboard',
+    description: 'Chinese chess (xiangqi) and variant streamers to watch live and on demand.',
+  },
+  '/player': {
+    title: 'Xiangqi Leaderboard | Mistboard',
+    description: 'The highest rated players on Mistboard, by game and time control.',
+  },
+  '/player/rating-stats': {
+    title: 'Rating Distribution | Mistboard',
+    description:
+      'How Mistboard ratings are spread across each rated game, with player counts and averages.',
+  },
+  '/patron': {
+    title: 'Become a Patron | Mistboard',
+    description:
+      'Mistboard is independent and ad-free. Core play and learning stay free, and Patron support helps keep the servers running.',
+  },
+  '/source': {
+    title: 'Source Code | Mistboard',
+    description:
+      'Mistboard is an independent open-source project, published under AGPL-3.0-or-later. Browse the repository and the license.',
+  },
+  '/contribute': {
+    title: 'Contribute | Mistboard',
+    description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
+  },
   '/learn/xiangqi': {
     title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:
@@ -60,6 +141,19 @@ const SPA_ROUTE_META: Record<string, { title: string; description: string }> = {
     title: 'Updates and Announcements | Mistboard',
     description:
       'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
+  },
+  '/games': {
+    // Unfiltered, this route lists the most recently finished games across
+    // every lane, so it is a live content page rather than a search form. That
+    // is what makes it worth indexing at all.
+    title: 'Xiangqi Game Database | Mistboard',
+    description:
+      'Search and browse xiangqi (Chinese chess) games: tournament archives, live broadcasts, and games played on Mistboard. Filter by player, event, result, date, or length.',
+  },
+  '/import': {
+    title: 'Import a Xiangqi Game | Mistboard',
+    description:
+      'Paste a xiangqi (Chinese chess) game and get a browsable board with free engine analysis. Reads PGN, WXF, Chinese notation, ICCS coordinates, and dpxq records.',
   },
   '/stats': {
     title: 'Statistics | Mistboard',
@@ -270,6 +364,17 @@ export async function routePreloadLinksForPath(params: {
   return null;
 }
 
+/** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant'. */
+function localeAlternateLinks(publicHost: string, basePath: string): string {
+  return (['en', 'zh-hans', 'zh-hant'] as const)
+    .map((slug) => {
+      const href = `${publicHost}${slug === 'en' ? '' : `/${slug}`}${basePath}`;
+      const hreflang = slug === 'en' ? 'en' : slug === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
+      return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
+    })
+    .join('');
+}
+
 // Serves the SPA shell with the matched route's preload hints baked into <head>.
 // Returns false without touching the response when the route has no hints (or
 // the manifest is absent), so the caller can fall back to the plain static
@@ -284,7 +389,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   const positionMeta = positionRouteMeta(params.pathname, params.search ?? '');
-  const routeMeta = positionMeta ?? SPA_ROUTE_META[params.pathname];
+  // Read separately from routeMeta: that one is a union with the position-route
+  // shape, which carries no locale of its own (a FEN is not a language).
+  const spaMeta = SPA_ROUTE_META[params.pathname];
+  const routeMeta = positionMeta ?? spaMeta;
   const noindex = isNoindexRoute(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
@@ -303,6 +411,15 @@ export async function serveSpaShellWithRoutePreloads(params: {
         ? `${params.publicHost}${positionMeta.imagePath}`
         : undefined,
     });
+  }
+  if (spaMeta?.htmlLang) {
+    html = html.replace('<html lang="en">', `<html lang="${spaMeta.htmlLang}">`);
+  }
+  if (spaMeta?.localeGroup && params.publicHost) {
+    html = html.replace(
+      '</head>',
+      `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
+    );
   }
   if (noindex) {
     html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
@@ -521,8 +638,12 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/analysis',
   '/editor',
   '/study',
+  '/games',
+  '/import',
   '/feed',
   '/videos',
+  '/zh-hans/videos',
+  '/zh-hant/videos',
   '/streamer',
   '/player',
   '/player/rating-stats',
