@@ -49,6 +49,16 @@ export const jieqiPlatformArticle: Article = {
         'It is a young game. Jieqi (揭棋) grew out of Hong Kong and Guangdong and has spread over the last couple of decades, mostly among Chinese and Vietnamese players, who know it as cờ úp. The board, the pieces and the moves are xiangqi\'s; what is new is that you start without knowing which piece is which, including your own.',
     },
     {
+      // A reader who arrived from a "play jieqi" search wants a board, not an
+      // argument. The authority material below still does its job for whoever
+      // scrolls; it should not be the toll they pay to reach a button.
+      kind: 'cta',
+      buttons: [
+        { label: 'Play the engine', href: '/?play=computer&gameSpecId=jieqi', emphasis: 'primary' },
+        { label: 'Play a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
+      ],
+    },
+    {
       kind: 'jieqi-replay',
       spec: {
         red: JIEQI_PLATFORM_GAME.red,

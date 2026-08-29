@@ -47,6 +47,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // wants a native reader before it reaches the audience it is written for.
   'jieqi-platform',
   'co-up',
+  'luat-co-up',
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
