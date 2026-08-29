@@ -1376,7 +1376,12 @@
    (feedback_css_chunk_order_cascade). */
 .xq-replay-annotated .xq-replay-grid {
   display: grid;
-  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  /* Roughly 70/30, the balance lichess uses: the board is the thing being read
+     and the move list is an index to it. A fixed board width made the split
+     about 54/46, which gave the list more room than it can use. The floor on
+     the second track keeps a move pair (number + two moves) on one line at the
+     narrowest width before the layout stacks. */
+  grid-template-columns: minmax(0, 2.2fr) minmax(196px, 1fr);
   align-items: stretch;
   width: 100%;
   overflow: hidden;
@@ -1546,7 +1551,7 @@
   gap: 1px;
   min-height: 0;
   margin: 0;
-  padding: 6px;
+  padding: 6px 4px;
   overflow-y: auto;
   border: none;
   border-radius: 0;
@@ -1570,7 +1575,7 @@
 }
 
 .xq-replay-annotated .xq-replay-move-n {
-  min-width: 22px;
+  min-width: 20px;
   color: var(--site-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -1580,8 +1585,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: 3px;
-  min-width: 66px;
-  padding: 3px 7px;
+  min-width: 58px;
+  padding: 3px 6px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
