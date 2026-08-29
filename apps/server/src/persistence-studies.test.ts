@@ -15,6 +15,7 @@ import {
   reorderStudyChapters,
   setChapterGamebook,
   setChapterOrientation,
+  setChapterTags,
   setStudyFeatured,
   setStudyLike,
   updateChapterTree,
@@ -65,6 +66,42 @@ definePersistenceTests('studies', () => {
     assert.ok(fetched);
     assert.equal(fetched.chapters.length, 1);
     assert.deepEqual(fetched.chapters[0]!.root, tree);
+  });
+
+  test('retags a chapter, replacing rather than merging, and enforces ownership', async () => {
+    // Chapter tags were write-once: settable at creation, then permanent, with
+    // no PATCH field and no UI editor. An import that got a player name wrong
+    // could only be fixed by deleting the chapter.
+    const owner = await makeUser('retag');
+    const stranger = await makeUser('retag-stranger');
+    const study = await makeStudy(owner.id);
+    assert.ok(study);
+    const chapterId = study.chapters[0]!.id;
+
+    const set = await setChapterTags(chapterId, owner.id, {
+      red: 'Xu Chao',
+      black: 'Huang Xueqian',
+      result: '1-0',
+      event: '2019 World Championship',
+    });
+    assert.ok(set.ok);
+    assert.equal(set.chapter.tags.red, 'Xu Chao');
+    assert.equal(set.chapter.tags.event, '2019 World Championship');
+
+    // Replacement, not merge: dropping a key must actually clear it, or a tag
+    // set by mistake can never be removed.
+    const replaced = await setChapterTags(chapterId, owner.id, { red: 'Xu Chao' });
+    assert.ok(replaced.ok);
+    assert.equal(replaced.chapter.tags.red, 'Xu Chao');
+    assert.equal(replaced.chapter.tags.black, undefined);
+
+    const reread = await getStudyById(study.id);
+    assert.ok(reread);
+    assert.equal(reread.chapters[0]!.tags.black, undefined);
+
+    const denied = await setChapterTags(chapterId, stranger.id, { red: 'Nobody' });
+    assert.equal(denied.ok, false);
+    assert.equal(denied.ok === false && denied.error, 'forbidden');
   });
 
   test('saves a chapter tree, bumps the version, and enforces ownership', async () => {

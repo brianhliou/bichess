@@ -468,6 +468,7 @@ export {
   reorderStudyChapters,
   setChapterGamebook,
   setChapterOrientation,
+  setChapterTags,
   setStudyFeatured,
   setStudyLike,
   updateChapterTree,

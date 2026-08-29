@@ -890,12 +890,17 @@ export const xiangqiWorldChampionshipArticle: Article = {
           text: 'What the title is worth is a separate question again, and the honest answer is that it has always been worth less than the championship held in Beijing. That is not a slight on the men who won it. It is what happens when one country is this far ahead of the rest, and it is the thing 2025 has started to change.',
         },
         {
+          kind: 'paragraph',
+          text:
+            'Nine of the ten games on this page are chapters in a study you can work through properly: the full move tree, the engine\u2019s lines as branches you can walk, one chapter per champion in the order they appear here.',
+        },
+        {
           kind: 'cta',
           buttons: [
             { label: 'Learn how the pieces move', href: '/learn/xiangqi', emphasis: 'primary' },
             {
-              label: 'Every national champion since 1956',
-              href: '/blog/xiangqi-champions',
+              label: 'Play through the whole study',
+              href: '/study/1pfJeXA1',
               emphasis: 'secondary',
             },
           ],

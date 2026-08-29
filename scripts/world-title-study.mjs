@@ -74,18 +74,34 @@ function buildTree(spec) {
   return { version: 1, root };
 }
 
+/**
+ * Lowercase keys, and only these seven. The server allowlists
+ * red/black/result/event/date/round/site and silently DROPS anything else, so
+ * the first run sent PGN's capitalised Red/Black/Event/Result, got nine 201s
+ * back, and stored {} nine times: no players, no event and no result anywhere
+ * in the study UI.
+ *
+ * One helper for both the create and the update path, so the two cannot drift
+ * into writing different metadata for the same game.
+ */
+function tagsFor(game, spec) {
+  return {
+    red: spec.red,
+    black: spec.black,
+    result: spec.resultText,
+    event: spec.event,
+    ...(game.date ? { date: game.date } : {}),
+    ...(game.sourceUrl ? { site: game.sourceUrl } : {}),
+  };
+}
+
 function chapterFor(game, spec) {
   return {
     name: `${game.year} · ${game.champion}`,
     variant: 'xiangqi',
     orientation: 'red',
     root: buildTree(spec),
-    tags: {
-      Event: spec.event,
-      Red: spec.red,
-      Black: spec.black,
-      Result: spec.resultText,
-    },
+    tags: tagsFor(game, spec),
   };
 }
 
@@ -119,7 +135,10 @@ async function update(studyId, games, cookie) {
       continue;
     }
     const root = buildTree(game.spec);
-    if (JSON.stringify(chapter.root) === JSON.stringify(root)) {
+    const tags = tagsFor(game, game.spec);
+    const treeStale = JSON.stringify(chapter.root) !== JSON.stringify(root);
+    const tagsStale = Object.entries(tags).some(([k, v]) => (chapter.tags ?? {})[k] !== v);
+    if (!treeStale && !tagsStale) {
       console.log(`  = ${name}`);
       continue;
     }
@@ -127,15 +146,50 @@ async function update(studyId, games, cookie) {
       'PATCH',
       `/api/studies/${studyId}/chapters/${chapter.id}`,
       {
-        root,
-        baseVersion: chapter.version,
+        ...(treeStale ? { root, baseVersion: chapter.version } : {}),
+        ...(tagsStale ? { tags } : {}),
       },
       cookie,
     );
-    console.log(`  ~ ${name}`);
+    console.log(`  ~ ${name}${treeStale ? ' tree' : ''}${tagsStale ? ' tags' : ''}`);
     changed += 1;
   }
   console.log(`\n${changed} chapter(s) updated`);
+  await verify(studyId, games);
+}
+
+/**
+ * Read the study back and require every chapter to carry the players, the event
+ * and the result.
+ *
+ * This exists because the first run of this script reported nine successful
+ * writes and produced nine chapters with NO metadata: the tags went up under
+ * PGN's capitalised key names, the server's allowlist is lowercase, and it drops
+ * unknown keys without complaining. Every response was a 201. The only place
+ * that failure was visible was the study page itself.
+ *
+ * A write that a server may partly ignore is not confirmed by its own status
+ * code, so this reads the stored document instead of trusting the response.
+ */
+async function verify(studyId, games) {
+  const study = await (await fetch(`${BASE}/api/studies/${studyId}`)).json();
+  const byName = new Map(study.chapters.map((c) => [c.name, c]));
+  const bad = [];
+  for (const game of games) {
+    const name = `${game.year} · ${game.champion}`;
+    const stored = byName.get(name);
+    if (!stored) {
+      bad.push(`${name}: missing`);
+      continue;
+    }
+    const missing = ['red', 'black', 'result', 'event'].filter((k) => !(stored.tags ?? {})[k]);
+    if (missing.length) bad.push(`${name}: no ${missing.join(', ')}`);
+  }
+  if (bad.length) {
+    console.error(`\ntags did not stick:\n  ${bad.join('\n  ')}`);
+    process.exit(1);
+  }
+  console.log(`verified: ${games.length} chapters carry players, event and result`);
 }
 
 async function post(path, body, cookie) {
@@ -157,7 +211,15 @@ async function main() {
     const year = /^(\d{4})/.exec(spec.event)?.[1] ?? '';
     // The champion is whichever side is not the opponent, read off the result.
     const champion = spec.resultText === '1-0' ? spec.red : spec.black;
-    return { slug: game.slug, year, champion, spec };
+    const source = JSON.parse(readFileSync(join(DATA, `${game.slug}.json`), 'utf8')).game;
+    return {
+      slug: game.slug,
+      year,
+      champion,
+      spec,
+      date: (source.date ?? '').slice(0, 10),
+      sourceUrl: source.sourceUrl ?? '',
+    };
   });
   games.sort((a, b) => a.year.localeCompare(b.year));
 
@@ -210,6 +272,7 @@ async function main() {
     await post(`/api/studies/${studyId}/chapters`, chapterFor(game, game.spec), cookie);
     console.log(`  + ${game.year} · ${game.champion}`);
   }
+  await verify(studyId, games);
   console.log(`\n${BASE}/study/${studyId}`);
 }
 

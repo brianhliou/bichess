@@ -11,7 +11,7 @@
 //   DELETE /api/studies/:id                   delete (owner)
 //   POST   /api/studies/:id/chapters          add a chapter (owner)
 //   PATCH  /api/studies/:id/chapters          reorder all chapters (owner)
-//   PATCH  /api/studies/:id/chapters/:cid     save tree (version-guarded) OR rename (owner)
+//   PATCH  /api/studies/:id/chapters/:cid     save tree (version-guarded), rename, retag (owner)
 //   DELETE /api/studies/:id/chapters/:cid     delete a chapter (owner; refuses the last)
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
@@ -142,7 +142,7 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
 const CHAPTER_TAG_KEYS = ['red', 'black', 'result', 'event', 'date', 'round', 'site'] as const;
 const CHAPTER_TAG_MAX = 120;
 
-function parseChapterTags(value: unknown): persistence.StudyChapterTags {
+export function parseChapterTags(value: unknown): persistence.StudyChapterTags {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const source = value as Record<string, unknown>;
   const tags: Record<string, string> = {};
@@ -509,6 +509,26 @@ async function patchChapter(
     }
     reorientedChapter = result.chapter;
   }
+  // Tags follow orientation's shape: applied first, no early return, so a body
+  // carrying tags alongside a tree save lands both. An explicit `{}` clears
+  // them, which is the only way to remove a tag that should not be there.
+  let retaggedChapter: persistence.StudyChapterRecord | null = null;
+  if (body.tags !== undefined) {
+    if (!body.tags || typeof body.tags !== 'object' || Array.isArray(body.tags)) {
+      writeJson(response, 400, { error: 'invalid_tags' });
+      return true;
+    }
+    const result = await persistence.setChapterTags(
+      chapterId,
+      ownerId,
+      parseChapterTags(body.tags),
+    );
+    if (!result.ok) {
+      writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });
+      return true;
+    }
+    retaggedChapter = result.chapter;
+  }
   if ('root' in body && (typeof body.name === 'string' || parseI18nField(body.i18n))) {
     const combinedI18n = parseI18nField(body.i18n);
     const combinedName = typeof body.name === 'string' ? body.name.trim() : null;
@@ -570,8 +590,9 @@ async function patchChapter(
     writeJson(response, 200, { chapter: chapterView(result.chapter) });
     return true;
   }
-  if (reorientedChapter) {
-    writeJson(response, 200, { chapter: chapterView(reorientedChapter) });
+  const applied = retaggedChapter ?? reorientedChapter;
+  if (applied) {
+    writeJson(response, 200, { chapter: chapterView(applied) });
     return true;
   }
   writeJson(response, 400, { error: 'nothing_to_update' });

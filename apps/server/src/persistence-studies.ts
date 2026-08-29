@@ -775,6 +775,42 @@ export async function renameChapter(
   return { ok: true, chapter: mapChapter(updated.rows[0]!) };
 }
 
+/**
+ * Replace a chapter's PGN-style tags (owner).
+ *
+ * Tags were write-once at chapter creation: no PATCH accepted them and the study
+ * UI has no editor for them, so a chapter imported with a missing or wrong
+ * player name was wrong permanently and the only repair was deleting the
+ * chapter and losing its id. A whole nine-chapter study was created with its
+ * tags silently dropped, which is what surfaced this.
+ *
+ * Whole-object replacement rather than a merge, because the caller holds the
+ * complete tag set and a merge gives no way to CLEAR a tag that should not have
+ * been there. Sanitizing to the allowlist stays in the route, alongside the same
+ * sanitizing the create path does.
+ */
+export async function setChapterTags(
+  chapterId: string,
+  ownerId: string,
+  tags: StudyChapterTags,
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET tags = $1::jsonb, updated_at = now() WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
+    [JSON.stringify(tags), chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
 /** Flip a chapter between vanilla and gamebook (interactive-lesson) mode (owner). */
 /** Set which side the chapter's board faces on open. Stored per chapter rather
  *  than per reader: a black repertoire is authored to be read from black's side,
