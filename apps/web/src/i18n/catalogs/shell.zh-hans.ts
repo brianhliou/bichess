@@ -25,7 +25,6 @@ export const ZH_HANS_SHELL = {
   'nav.friends': '好友',
   'nav.forum': '论坛',
   'nav.blog': '博客',
-  'nav.discord': 'Discord',
   'nav.leaderboard': '排行榜',
   'nav.ratingStats': '评分统计',
   'nav.onlineBots': '在线机器人',

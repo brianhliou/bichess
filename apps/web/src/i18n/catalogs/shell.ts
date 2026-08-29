@@ -19,7 +19,6 @@ export const EN_SHELL = {
   'nav.friends': 'Friends',
   'nav.forum': 'Forum',
   'nav.blog': 'Blog',
-  'nav.discord': 'Discord',
   'nav.leaderboard': 'Leaderboard',
   'nav.ratingStats': 'Rating stats',
   'nav.onlineBots': 'Online bots',

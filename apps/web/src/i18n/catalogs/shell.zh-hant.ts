@@ -25,7 +25,6 @@ export const ZH_HANT_SHELL = {
   'nav.friends': '好友',
   'nav.forum': '論壇',
   'nav.blog': '網誌',
-  'nav.discord': 'Discord',
   'nav.leaderboard': '排行榜',
   'nav.ratingStats': '評分統計',
   'nav.onlineBots': '線上機器人',

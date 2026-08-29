@@ -48,12 +48,6 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
-    date: '2026-08-27',
-    kind: 'update',
-    headline: 'Mistboard has a Discord.',
-    body: 'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.',
-  },
-  {
     date: '2026-08-28',
     kind: 'update',
     headline: 'A bigger video library, and one that reads Chinese.',

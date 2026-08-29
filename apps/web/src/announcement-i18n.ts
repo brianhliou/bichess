@@ -48,9 +48,6 @@ const ZH_HANS: Record<string, string> = {
   'Who Is the Greatest Xiangqi Player?': '谁是最伟大的象棋棋手？',
   'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
     '象棋有九百年历史，全国冠军赛却只有六十九年。胡荣华，在头衔出现之前的那些人，以及被从记录中抹去的十年。',
-  'Mistboard has a Discord.': 'Mistboard 有 Discord 了。',
-  'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.':
-    '可以问规则、报告问题，或者找人下棋的地方。邀请链接在导航栏、页脚和论坛里。',
 
   // ── 2026-08-28 ── AWAITING A NATIVE READ. Vocabulary reused from strings the
   // site already publishes rather than translated in isolation: 视频库 is
@@ -251,9 +248,6 @@ const ZH_HANT: Record<string, string> = {
   'Who Is the Greatest Xiangqi Player?': '誰是最偉大的象棋棋手？',
   'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
     '象棋有九百年歷史，全國冠軍賽卻只有六十九年。胡榮華，在頭銜出現之前的那些人，以及被從記錄中抹去的十年。',
-  'Mistboard has a Discord.': 'Mistboard 有 Discord 了。',
-  'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.':
-    '可以問規則、回報問題，或者找人下棋的地方。邀請連結在導覽列、頁尾和論壇裡。',
 
   // ── 2026-08-28 ── AWAITING A NATIVE READ. Same vocabulary rule: 影片庫 is
   // videos.heading, 推薦 is the videos.sort.featured label.
