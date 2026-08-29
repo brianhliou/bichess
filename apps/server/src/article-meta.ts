@@ -42,6 +42,7 @@ const RETIRED_RULES_SLUGS = new Set([
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'xiangqi-champions',
+  'xiangqi-world-championship',
   // Written and reviewable at /blog/<slug> in dev, deliberately not published:
   // the jieqi page wants Brian's read at full length, and the Vietnamese one
   // wants a native reader before it reaches the audience it is written for.
@@ -104,6 +105,12 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for each of the thirteen who built the game\u2019s first fifty years. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
+  },
+  'xiangqi-world-championship': {
+    title: 'The Xiangqi World Championship',
+    kind: 'article',
+    description:
+      'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

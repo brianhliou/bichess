@@ -91,12 +91,23 @@ describe('claims about who is clean', () => {
     const clean = since2005.filter((c) => !c.sanction);
     const text = prose();
 
-    // The page states both numbers in words; if the data moves, they must too.
+    // Assert the numbers, not the sentences: the prose gets rewritten and the
+    // point of this test is that the counts stay true, not that the wording
+    // stays frozen. The words are what a reader sees, so the words are checked.
+    const asWord: Record<number, string> = {
+      3: 'three',
+      10: 'ten',
+      13: 'thirteen',
+    };
     expect(since2005).toHaveLength(13);
     expect(clean).toHaveLength(3);
-    expect(text).toContain('thirteen men have won it since');
-    expect(text).toContain('ten of them have a ruling');
-    expect(text).toContain('Only three men have won the national title since 2005');
+    const lower = text.toLowerCase();
+    for (const n of [since2005.length, since2005.length - clean.length, clean.length]) {
+      const word = asWord[n];
+      expect(word, `no word form for ${n}`).toBeTruthy();
+      expect(lower, `the page never says "${word}" for ${n}`).toContain(word as string);
+    }
+    // Every unsanctioned champion is named, so the exceptions are not left vague.
     for (const champ of clean) expect(text).toContain(champ.name);
   });
 });

@@ -792,85 +792,6 @@ const C_fOnPsRe1: XiangqiReplaySpec = {
   },
 };
 
-// 2025 · Shanghai, and the title leaves China
-const C_BV0kkYY4: XiangqiReplaySpec = {
-  iccs: "h2d2 g6g5 h0g2 h9g7 i0h0 i9h9 h0h4 h7i7 h4f4 b9c7 c3c4 b7a7 b0c2 a9b9 a0b0 b9b3 b2a2 b3b0 c2b0 a7a3 a2c2 c9e7 c2c3 h9h8 d2d7 h8h2 b0c2 a3a4 c4c5 h2g2 c3c6 e7c5 d7i7 c5e7 c2e1 g2d2 f4a4 g9i7 c0e2 d2d6 c6c0 c7b5 e1c2 g7f5 f0e1 f5g3 a4b4 d6d5 c2a3 b5d4 a3c4 e7c5 b4b6 g3f1 b6e6 d9e8 c0c1 f1h2 e3e4 g5g4 c1d1 d4e2 c4d2 e2d4 e6h6 h2f3 d2f3 d4b3 h6b6 d5d1 b6b3 g4f4 f3d2 f4e4 b3b9 e8d9 b9b4 e4e3 b4e4 d9e8 e4e3 i7g9 e3e6 i6i5 e6e5 c5e7 e5i5 d1c1 i5i6 c1c5 i3i4 c5g5 g0e2 g5e5 d2c4 e5e2 i6a6 e7c5 i4i5 e2e4 c4b2 e4e7 b2a4 e7c7 a6d6 c5a7 a4b6 g9e7 i5i6 e7c9 i6h6 c9e7 h6g6 e7c9 d6e6 c7b7 e6d6 b7c7 g6g7 c7b7 g7g8 b7c7 d6g6 c7b7 b6c4 b7c7 c4d6 c7d7 g8f8 e9d9 g6f6 d9e9 e0f0 e9d9 e1d2 c9e7 d0e1 e7c9 f8f9 e8f9 f6f9 d9d8 d6f5 d8e8 f5h6 c9e7 f9f8 e8e9 f8f7 a7c5 h6f5 d7d3 f5g7 e9d9 f7f9 d9d8 f9f6 d8d9 f0e0 d3d4 g7f5 d4d7 f6b6 d9e9 f5d6 e9d9 d6e4 d7d4 e4f6 d9d8 f6h7 d4d5 h7f8 d8e8 f8e6 e8e9 e6g7 e9d9 b6b9 d9d8 b9e9 d5d3 g7f9 d3f3 e1f0 f3e3 d2e1 e3f3 e9b9 d8e8 b9d9 f3f4 e0d0 f4f3 d9d5 f3f6 f9g7 f6f7 g7f5 f7f6 f5g3 e8e9 g3e4 f6f4 d5e5 e9f9 e5e6 f4f7 e4d6 f9f8 d0e0 f8f9 e1f2 f9f8 e0e1 f8f9 e6e5",
-  red: "Lại Lý Huynh",
-  black: "Fung Ka-chun",
-  event: "2025 19th World Xiangqi Championship",
-  resultText: "1-0",
-  annotations: {
-    byPly: {
-      "31": {
-        glyph: "?!",
-        note: "inaccuracy: 5.4 win% given up, eval -0.11 after. The engine wanted the line in the sibling branch.",
-        line: "c0e2 e7c5 d7i7 g9i7 f4a4 g2f2 a4d4 f2f7 d4d6 c7e8 d6c6 f7f5 c2a3 i7g9 c6c8 f5d5 c3b3 c5a7 b3b9 a7c9 a3c4 g9e7 b9b1 g7f5 c4b6",
-      },
-      "58": {
-        glyph: "?!",
-        note: "inaccuracy: 7.4 win% given up, eval +1.48 after. The engine wanted the line in the sibling branch.",
-        line: "d5f5 e6d6 d4e2 c1f1 f5f1 c4d2 i7g9 d6a6 f1f3 g0e2 f3e3 a6i6 e3e2 i3i4 g5g4 i6g6 g4h4 i4i5 g9e7 g6b6 e7c9 d2c4 e2e4 c4a5 e4a4",
-      },
-      "62": {
-        glyph: "?!",
-        note: "inaccuracy: 6.8 win% given up, eval +2.33 after. The engine wanted the line in the sibling branch.",
-        line: "d4c2 c4d2 d5f5 e6a6 c2b0 e4e5 f5e5 a6a9 e8d9 a9d9 e9e8 d1b1 i7g5 d2b3 g4g3 b3a5 e5e7 d9d5 h2f3 e1f2 e7c7 b1e1 c5e7 e2c0 e7g9 g0e2 g9e7 e2c4 e7c9",
-      },
-      "125": {
-        glyph: "?!",
-        note: "inaccuracy: 6.3 win% given up, eval +1.81 after. The engine wanted the line in the sibling branch.",
-        line: "g6e6 e9d9 g8f8 b7c7 b6d5 c7d7 e6e5 a7c5 e1d2 d9d8 f8e8 f9e8 e5e8 d8d9 e8e9 d9d8 e9e5 c9a7 d0e1 d7b7 e1f2 b7b0 e0e1 b0b7 e5e8 d8d9 e8e6 d9d8 e6c6 b7i7 c6a6 i7d7",
-      },
-      "126": {
-        glyph: "?!",
-        note: "inaccuracy: 5.7 win% given up, eval +2.53 after. The engine wanted the line in the sibling branch.",
-        line: "a7c5 c4e5 b7i7 e5g4 e8d9 e0f0 i7f7 e1f2 c9e7 g6e6 f9e8 f0f1 f7f5 g4h6 f5f9 e6a6 f9f4 a6d6 e9f9 d0e1 f9e9 d6g6 e9f9 g8h8 f4f5 h6g8",
-      },
-      "139": {
-        glyph: "?",
-        note: "mistake: 10.8 win% given up, eval +0.79 after. The engine wanted the line in the sibling branch.",
-        line: "f0e0 a7c5 f6g6 d9e9 f8g8 c5a7 d6f5 d7f7 f5h6 f7f4 e1f0 f4f3 g6d6 c9e7 e0d0 e8d9 g8h8 f3f8 h6g8",
-      },
-      "140": {
-        glyph: "??",
-        note: "blunder: 20.8 win% given up, eval +3.44 after. The engine wanted the line in the sibling branch.",
-        line: "c9e7 d6c4 a7c5 c4a5 e8f9 f6f9 d9d8 f9e9 d7c7 f0e0 c5a7 e1d0 a7c5 e9h9 d8e8 h9h5 e8d8 h5d5 d8e8 d5d6 e8e9 a5b3 c5a7 b3d4 c7c4 d4f5 c4e4 d0e1 a7c5",
-      },
-      "145": {
-        glyph: "??",
-        note: "blunder: 29.5 win% given up, eval +0.81 after. The engine wanted the line in the sibling branch.",
-        line: "f0e0 d7c7 f5d6 e8d8 f9e9 c7c0 e1d0 c0c7 e9e8 d8d9 d6c8 a7c5 e8e5 c7d7 e5c5 c9e7 c5i5 d9d8 i5i8 d8d9 i8e8 e7g9 e8e9 d9d8 e9g9 d7d2 g9g8 d8d9 g8g5 d9d8 c8a7 d2e2",
-      },
-      "182": {
-        glyph: "??",
-        note: "blunder: 36.4 win% given up, eval +6.35 after. The engine wanted the line in the sibling branch.",
-        line: "d5e5 e9b9 e5d5 b9b7 d8d9 g7e6 d9e9 b7b8 e7g5 b8b9 e9e8 e6g7 e8d8 b9b8 d8d9 b8b5 d9e9 b5b7 c5e7 b7b9",
-      },
-      "183": {
-        glyph: "??",
-        note: "blunder: 36.1 win% given up, eval +0.56 after. The engine wanted the line in the sibling branch.",
-        line: "g7e6 d3d7 e1d0 d7b7 e9c9 b7d7 c9c5 d8d9 c5f5 d7d6 f5e5 d6d7 e6g7 d7d2",
-      },
-      "208": {
-        glyph: "?!",
-        note: "inaccuracy: 5.9 win% given up, eval +1.38 after.",
-      },
-      "212": {
-        glyph: "??",
-        note: "blunder: 15.7 win% given up, eval +4.00 after.",
-      },
-      "215": {
-        glyph: "??",
-        note: "blunder: 15.5 win% given up, eval +1.96 after.",
-      },
-      "216": {
-        glyph: "??",
-        note: "blunder: 31 win% given up, eval mate in 20 after.",
-      },
-    },
-  },
-};
-
 // 2025 · Wang Yubo, and an empty top
 const C_aHRbltmz: XiangqiReplaySpec = {
   iccs: "c3c4 b7c7 h2e2 g9e7 c0a2 b9a7 b0d1 a9b9 h0g2 h7g7 g3g4 b9b5 i0h0 g7g4 g2f4 b5f5 b2b4 h9g7 e2f2 f5b5 a0b0 a6a5 b4b2 i9h9 h0h9 g7h9 b2e2 h9g7 f4e6 g7e6 e2e6 f9e8 e3e4 b5b0 d1b0 a7b5 f2f6 b5d4 e6g6 c6c5 b0d1 c5c4 a2c4 d4c2 c4e2 g4g3 f6i6 c7a7 d1c3 a7a3 e2c0 a5a4 g0e2 a4b4 i6i9 e9f9 c3d5 a3i3 d5f4 f9f8 g6f6 c2e3 f4g6 f8f9 g6h8 f9e9 f6g6 e8d7 g6e6 e7g5 f0e1 e3g2 h8f7 e9e8 f7g5 i3i0 e1f2 i0h0 g5i6 h0h6 i9i8 g3g7 i6h8 e8e9 h8f7 e9e8 e4e5 e8f8 f7g5 g2f4 e6f6 c9e7 g5e4 h6h9 i8i5 f4h3 i5f5 f8e8 e5e6 h9h6 e6d6 e8e9 f6e6 d9e8 d0e1 h3f4 c0a2 g7f7 e2g4 f7i7 e6e5 i7i6 e5a5 b4b3 a5a4 f4g2 g4i2 b3b2 a4a3 g2h4 i2g4 h4g6 f5b5 h6h4 g4i2 h4h5 a3a9 e8f7 b5b6 g6h8 d6d7 h5e5 d7e7 e9d9 e7d7 d9e9 e0d0 i6d6 d7d8 e9f9 b6b9 f9f8 b9b8 f7e8 d8e8 f8e8 b8h8 b2c2 a2c4 c2d2 d0e0 e8d8 h8h1 d6e6 a9a4 e5f5 c4e2 d2e2 e4d6 d8d9 a4d4 d9e9 i2g4 f5f3 h1h2 e2e1 e0e1 f3d3 d6c8 e9d9 h2h5 d3e3 e1d1 e3e5 d4d2 d9d8 h5h0",
@@ -980,14 +901,9 @@ export const xiangqiChampionsArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell.',
+        'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.',
     },
-    {
-      kind: 'paragraph',
-      text:
-        'What follows is every winner, and then thirteen of them in the order they first took the title, one annotated game each. The boards carry our own engine\u2019s reading: it marks what it judges a mistake, and what it judges brilliant, and hangs the line it preferred off the move. The analysis is Pikafish at a million nodes a position.',
-    },
-  ],
+    ],
   sections: [
     {
       heading: 'Before there was a title',
@@ -1000,12 +916,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'What survives from the Ming onward is manuals. 橘中秘 (Secrets Inside the Tangerine) was printed in 1632 and became the most reprinted xiangqi text of the Ming and Qing. 梅花谱 followed in the Qing, and four great endgame collections after it, including 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'The first era with contested titles ran through the 1920s and 1930s and had no federation. Regional matches were organised by newspapers, and the winners were given names rather than trophies. When East China played North China in Shanghai in February 1931, Zhou Deyu finished three points clear and was crowned 七省棋王, Chess King of Seven Provinces, the seven being simply how many provinces the four players came from. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.',
+            'What survives from the Ming onward is manuals: 橘中秘 of 1632, the most reprinted xiangqi text of the Ming and Qing, and 百局象棋谱 of 1801 with its hundred and seven positions named after proverbs. You can name the authors. You cannot say who was strongest, because nobody was keeping score. The first era with contested titles ran through the 1920s and 1930s and had no federation: newspapers organised the matches, and the winners were given names rather than trophies. Zhou Deyu finished three points clear when East China played North China in February 1931 and was crowned 七省棋王, Chess King of Seven Provinces, the seven being how many provinces the four players came from. Huang Songxuan then played him twenty games, finished one ahead, and Guangdong crowned him 九省棋王, Chess King of Nine Provinces. A title race settled by nickname inflation is not a system, but it was the closest the game had.',
         },
         {
           kind: 'paragraph',
@@ -1070,7 +981,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_kkN9Bwhq },
           caption:
-            'Yang Guanlin vs Hu Ronghua, 12 November 1965, round six. At 183 plies this is the longest of the national championship games here, and it is what an endgame reputation looks like in practice: Yang keeps the position alive for ninety moves until Hu runs out of ways to hold it. Watch move 41, where our engine marks his cannon swing to the centre as the move that finally breaks the balance.',
+            'Yang Guanlin vs Hu Ronghua, 12 November 1965. Ninety moves of endgame, and move 41 is the cannon swing that finally breaks it.',
         },
       ],
     },
@@ -1091,7 +1002,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_Ue0EgpS7 },
           caption:
-            'Li Yiting vs Yang Guanlin, 27 December 1956, the fifth round of the final group. Li was eighteen and playing the reigning best player in the country. Our engine grades his side at 99.0, the highest of any player here, and singles out his cannon shift on move 50: the alternative it likes second is eighteen percentage points worse.',
+            'Li Yiting vs Yang Guanlin, 27 December 1956. Li was eighteen, and our engine grades him 99.0, the highest of any player here.',
         },
       ],
     },
@@ -1112,7 +1023,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_0BM6N4j4 },
           caption:
-            'Yang Guanlin vs Hu Ronghua, 28 October 1960. Hu is a horse and an elephant ahead by move 43, Yang wins almost all of it back through the endgame, and Hu converts anyway. The move to watch is 24, where he offers a cannon Yang cannot take and our engine marks it brilliant.',
+            'Yang Guanlin vs Hu Ronghua, 28 October 1960. Move 24 is the one to watch: a cannon Yang cannot take, marked brilliant.',
         },
         {
           kind: 'paragraph',
@@ -1123,7 +1034,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_z88B1zTk },
           caption:
-            'Hu Ronghua vs Liu Dahua, 15 October 1994, the last round of the championship Tao Hanming won. Hu was forty-nine here, and won his fourteenth national title six years after it.',
+            'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.',
         },
       ],
     },
@@ -1144,13 +1055,13 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_H4ovjgj7 },
           caption:
-            'Li Laiqun vs Liu Dahua, 29 August 1980, round five. Li would take four national titles of his own starting two years later; here he is on the wrong end of one of the two tournaments Liu won.',
+            'Li Laiqun vs Liu Dahua, 29 August 1980. Li would take four titles of his own starting two years later.',
         },
         {
           kind: 'xq-replay',
           spec: { ...C_nj9VX8BK },
           caption:
-            'Yang Guanlin vs Liu Dahua, 3 September 1980, round nine. Seventy plies, and the outgoing era losing to the incoming one in under thirty-five moves.',
+            'Yang Guanlin vs Liu Dahua, 3 September 1980. The outgoing era losing to the incoming one in under thirty-five moves.',
         },
       ],
     },
@@ -1171,7 +1082,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_sUzJIb4U },
           caption:
-            'Li Laiqun vs Hu Ronghua, 7 December 1982, round three of the championship Li won. Eighty-five plies, one inaccuracy, and an engine grade of 98.4. Move 23 is the one it marks: his cannon push is twenty-two points better than anything else available, and Hu has nothing after it.',
+            'Li Laiqun vs Hu Ronghua, 7 December 1982, from the championship Li won. Move 23 is the cannon push, and Hu has nothing after it.',
         },
       ],
     },
@@ -1187,7 +1098,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_DCNGV4UV },
           caption:
-            'Lü Qin vs Yu Youhua, 23 November 1986, round twelve of the championship that gave Lü Qin his first national title. Our engine marks a brilliant move on each side of this game: Lü Qin\'s cannon offer on move 21, and Yu Youhua\'s horse on move 32. It is the only game where both players get one.',
+            'Lü Qin vs Yu Youhua, 23 November 1986. The only game where both players are marked brilliant: Lü Qin\'s cannon on 21, Yu Youhua\'s horse on 32.',
         },
       ],
     },
@@ -1208,7 +1119,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_rhF5YH7d },
           caption:
-            'Xu Tianhong vs Xu Yinchuan, 19 October 1990, round eight. A hundred and one plies with no blunder from either side, which is the game Xu Tianhong wanted. The boy took his own first title three years later.',
+            'Xu Tianhong vs Xu Yinchuan, 19 October 1990. No blunder from either side, which is the game Xu Tianhong wanted.',
         },
       ],
     },
@@ -1224,7 +1135,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_oyo2kgtC },
           caption:
-            'Zhao Guorong vs Hu Ronghua, 22 October 1989, round seven, the year before the first of his titles. Seventy-three plies and an engine grade of 97.7. Move 30 is the break: his chariot swing to the fourth file is twenty points better than the runner-up, and Hu does not recover.',
+            'Zhao Guorong vs Hu Ronghua, 22 October 1989, the year before his first title. Move 30 is the chariot swing, and Hu does not recover.',
         },
       ],
     },
@@ -1245,7 +1156,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_ZBE8Dp5U },
           caption:
-            'Xu Yinchuan vs Liu Dahua, 11 October 1995, round seven. Six inaccuracies between them and nothing worse. It is the only game here in which our engine finds neither a blunder nor a mistake from either player.',
+            'Xu Yinchuan vs Liu Dahua, 11 October 1995. The only game here in which our engine finds neither a blunder nor a mistake from either player.',
         },
       ],
     },
@@ -1266,7 +1177,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_hLWs5hR5 },
           caption:
-            'Tao Hanming vs Liu Dahua, 21 October 1996, round two. A hundred and thirty-one plies against a two-time champion. Tao\'s game asks more of both players than a positional grind does: more chances for everyone, and he was better at taking them.',
+            'Tao Hanming vs Liu Dahua, 21 October 1996. More chances for both players than a positional grind offers, and Tao was better at taking them.',
         },
       ],
     },
@@ -1282,7 +1193,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_HFq9qzB8 },
           caption:
-            'Xu Tianhong vs Yu Youhua, 3 November 2002, round two of the championship Yu finally won. The Smiling Buddha against the desperado. Move 27 is Yu\'s, a cannon shift the engine rates fourteen points above the alternative, and the game does not settle down again.',
+            'Xu Tianhong vs Yu Youhua, 3 November 2002, from the championship Yu finally won. The Smiling Buddha against the desperado.',
         },
       ],
     },
@@ -1297,13 +1208,13 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Every man who won the national championship from 2010 to 2023 now has a ruling against him. The next section is about how that happened.',
+            'Every man who won the national championship from 2010 to 2023 now has a ruling against him. What that means for the list is at the foot of the page.',
         },
         {
           kind: 'xq-replay',
           spec: { ...C_fOnPsRe1 },
           caption:
-            'Xu Tianhong vs Sun Yongzheng, 18 October 2010, round three, the year before his title. Sixty plies, the shortest game here, and move 18 is his: a central pawn push the engine rates seventeen points clear of the alternative.',
+            'Xu Tianhong vs Sun Yongzheng, 18 October 2010, the year before his title. Sixty plies, the shortest game here.',
         },
       ],
     },
@@ -1319,71 +1230,47 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_aHRbltmz },
           caption:
-            'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. A hundred and seventy-seven plies. Move 32 is the one the engine marks: his horse advance is ten points better than the runner-up and eighteen better than the move that would have let Su back in.',
+            'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.',
         },
       ],
     },
     {
-      heading: 'The world title, and the decade that was struck',
+      heading: 'The decade that was struck',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The World Xiangqi Championship has been held roughly every two years since 1990, organised by the World Xiangqi Federation. English readers tend to assume it is the senior title. It is not. The Chinese national championship is harder to win, because almost everyone capable of winning either is Chinese and only a handful of them qualify for the world event.',
+          text:
+            'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls \u5f55\u97f3\u95e8, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.',
         },
         {
-          kind: 'table',
-          headers: ['Year', 'Host', 'Champion'],
-          rows: [
-            ['1990', 'Singapore', 'Lü Qin 吕钦'],
-            ['1991', 'Kunming', 'Zhao Guorong 赵国荣'],
-            ['1993', 'Beijing', 'Xu Tianhong 徐天红'],
-            ['1995', 'Singapore', 'Lü Qin 吕钦'],
-            ['1997', 'Hong Kong', 'Lü Qin 吕钦'],
-            ['1999', 'Shanghai', 'Xu Yinchuan 许银川'],
-            ['2001', 'Macau', 'Lü Qin 吕钦'],
-            ['2003', 'Hong Kong', 'Xu Yinchuan 许银川'],
-            ['2005', 'Paris', 'Lü Qin 吕钦'],
-            ['2007', 'Macau', 'Xu Yinchuan 许银川'],
-            ['2009', 'Xintai', 'Zhao Xinxin 赵鑫鑫 (banned for life, 2025)'],
-            ['2011', 'Jakarta', 'Jiang Chuan 蒋川 (five-year ban, 2026)'],
-            ['2013', 'Huizhou', 'Wang Tianyi 王天一 (convicted, banned)'],
-            ['2015', 'Munich', 'Zheng Weitong 郑惟桐 (banned for life, 2025)'],
-            ['2017', 'Manila', 'Wang Tianyi 王天一 (convicted, banned)'],
-            ['2019', 'Vancouver', 'Xu Chao 许超 (banned for life, 2026)'],
-            ['2022', 'Kuching', 'Wang Tianyi 王天一 (convicted, banned)'],
-            ['2023', 'Houston', 'Meng Chen 孟辰 (six-month ban, 2025)'],
-            ['2025', 'Shanghai', 'Lại Lý Huynh (Vietnam)'],
+          kind: 'paragraph',
+          text:
+            'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.',
+        },
+        {
+          kind: 'paragraph',
+          text:
+            'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport\u2019s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.',
+        },
+        {
+          kind: 'cta',
+          buttons: [
+            {
+              label: 'The world title, and the same names',
+              href: '/blog/xiangqi-world-championship',
+              emphasis: 'secondary',
+            },
           ],
-          caption:
-            'Men\'s individual world champions. Lü Qin has the most with five. The bracketed notes are the Chinese Xiangqi Association\'s own published rulings.',
-          highlightRows: [18],
-        },
-        {
-          kind: 'paragraph',
-          text: 'The bracketed notes in both tables are rulings, not allegations. On 12 January 2025 the Chinese Xiangqi Association sanctioned forty-one people over the case the Chinese press calls 录音门, the recording gate, with lifetime bans for three of them; a court in Hangzhou convicted six grandmasters in September 2025; and a third batch of rulings in April 2026 added three more lifetime bans. Line the outcome up against the national table and every champion from 2010 to 2023 has a ruling against him. Line it up against the world table and every men\u2019s world champion from 2009 to 2023 does. Only three men have won the national title since 2005 and kept it clean: Xu Yinchuan, Zhao Guorong, and Wang Yubo in 2025. The names stay in the tables because a list that quietly dropped them would be a worse record, and because the source is the sport\u2019s own governing body. The full account is its own piece.',
         },
       ],
     },
     {
-      heading: 'Shanghai, September 2025',
+      heading: 'Where that leaves the list',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The 2025 World Xiangqi Championship was played in Shanghai over nine Swiss rounds with fifty-one players. It was won by Lại Lý Huynh of Vietnam, the first man from outside China to take the standard title in the thirty-five years the event has existed.',
-        },
-        {
-          kind: 'xq-replay',
-          spec: { ...C_BV0kkYY4 },
-          caption:
-            'L\u1EA1i L\u00FD Huynh vs Fung Ka-chun, 23 September 2025, from the championship in Shanghai that he won.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'It is tempting to read the two facts together, as though the bans opened a door. That reading is too neat. Lại Lý Huynh has been on the world stage since 2015 and had already beaten most of the field before any of this happened, and Vietnam has been the second strongest xiangqi nation for a generation without much English notice.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'Still, the sixty-nine years since 1956 divide cleanly enough. For fifty of them the question had a clear answer and it was usually Hu Ronghua. For the fifteen after that it had an answer the sport has since taken back. And in 2025 the answer left China for the first time.',
+          text:
+            'Sixty-nine years, fifty-seven championships, twenty-two winners. For the first fifty of those years the question had a clear answer and it was usually Hu Ronghua. For the fifteen after that it has an answer the sport has since taken back. Wang Yubo\u2019s title in December 2025 is the first since Xu Yinchuan in 2009 that nobody has had to qualify.',
         },
         {
           kind: 'paragraph',
@@ -1392,9 +1279,6 @@ export const xiangqiChampionsArticle: Article = {
         },
         {
           kind: 'cta',
-          // Not 'single-row': that layout is a horizontal scroller for articles
-          // with many buttons, and with two it just pushed the fallback one off
-          // a phone screen. The default row wraps and centres.
           buttons: [
             {
               label: 'Play through all sixteen games',

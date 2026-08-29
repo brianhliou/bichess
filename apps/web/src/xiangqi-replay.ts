@@ -312,12 +312,9 @@ export function mountXiangqiReplay(
       const label = document.createElement('span');
       label.className = 'xq-replay-seat-name';
       label.textContent = name;
-      const role = document.createElement('span');
-      role.className = 'xq-replay-seat-role';
-      // firstRole/secondRole ship parenthesised for the inline header line;
-      // the seat bar wants the bare word.
-      role.textContent = (side === 'red' ? copy.firstRole : copy.secondRole).replace(/[\s()]/g, '');
-      el.append(dot, label, role);
+      // No RED/BLACK text: the dot already says it, and so does the board two
+      // pixels below. The word was a third statement of the same fact.
+      el.append(dot, label);
       return el;
     };
     // Bottom seat is whoever the board is oriented for; the other sits on top.

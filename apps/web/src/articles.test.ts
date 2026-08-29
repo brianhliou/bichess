@@ -87,6 +87,8 @@ describe('article public listing gates', () => {
       // title, so 'Chơi...' then 'Every...' then 'Jieqi...'. Draft, so dev-only.
       '/blog/xiangqi-champions',
       '/blog/jieqi-platform',
+      // 'The Xiangqi World Championship' sorts under T, after 'Jieqi'.
+      '/blog/xiangqi-world-championship',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
