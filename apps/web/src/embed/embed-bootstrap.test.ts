@@ -31,6 +31,7 @@ describe('the embed document skips the site bootstrap', () => {
     ['analytics', 'phKey && phHost && import.meta.env.PROD && !isEmbedDocument'],
     ['the account nav', 'localeReady.then(() => initializeAccountNav())'],
     ['the server-status poll', "fetch('/api/server-status')"],
+    ['the friends widget', "import('./friends-online.js')"],
   ] as const) {
     it(`guards ${what}`, () => {
       const at = main.indexOf(needle);

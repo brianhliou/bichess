@@ -836,7 +836,10 @@ if (replaySample) {
 // (it no-ops for anonymous viewers), so it mounts once regardless of the page
 // that rendered above. Lazy-imported so its bundle only loads when the flag is
 // on.
-if (friendsOnlineEnabled()) {
+// Not in an embed: it self-gates by asking /api/auth/me who the viewer is, and
+// that question is the one an embed must not ask from inside a third party's
+// page. It was also the last thing still asking it after the guard above.
+if (friendsOnlineEnabled() && !isEmbedDocument) {
   void localeReady.then(() =>
     import('./friends-online.js').then(({ mountFriendsOnline }) => mountFriendsOnline()),
   );
