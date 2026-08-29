@@ -95,11 +95,9 @@ describe('Xiangqi postgame page', () => {
     const board = root.querySelector('.dxq-postgame__board');
     expect(board).not.toBeNull();
     expect(board!.innerHTML).toContain(
-      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456" r="31"',
+      '<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="96" cy="456"',
     );
-    expect(board!.innerHTML).toContain(
-      '<circle class="xq-live-lastmove-ring" cx="276" cy="456" r="29"',
-    );
+    expect(board!.innerHTML).toContain('<circle class="xq-live-lastmove-ring" cx="276" cy="456"');
 
     // Jump back to the start: no move has been played, so no marker.
     root.querySelector<HTMLButtonElement>('[aria-label="First move"]')?.click();

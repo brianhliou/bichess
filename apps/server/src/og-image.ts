@@ -23,6 +23,7 @@ import {
   SERVER_FOG_TRIPTYCH,
   XIANGQI_GLYPH_PATHS,
   type XiangqiOgPiece,
+  xiangqiChampionTimelineSvg,
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
@@ -253,6 +254,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', false),
   'dark-mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', true),
   'crossroads-chess': renderCrossroadsChessOgSvg,
+  'xiangqi-champions': renderChampionsOgSvg,
 };
 
 export async function serveArticleOgImage(params: {
@@ -751,6 +753,51 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
 // The skill-vs-luck card is the article's thesis in one image: the exhibit
 // game as played against the same game with every flip at its average tile.
 // Series are generated from the mined game (banqi-luck-og-data.ts).
+/**
+ * The champions article's card is its chart: the shape (a green cascade turning
+ * red from 2005) is the one thing that survives being viewed at feed size, and
+ * it is the only image on the page a reader would recognise later.
+ *
+ * Row labels are dropped: 22 names at card scale are illegible, and the card
+ * has the title for identification. The generator is the same one the article
+ * figure uses, called with an explicit palette because there is no stylesheet
+ * out here.
+ */
+function renderChampionsOgSvg(title: string): string {
+  const chart = xiangqiChampionTimelineSvg({
+    labels: false,
+    legend: false,
+    credit: false,
+    palette: {
+      bar: '#5da271',
+      barBanned: '#c96f62',
+      text: '#f4f6ef',
+      muted: '#9ba39a',
+      border: '#3a4048',
+    },
+  });
+  // The generator emits a full <svg>; strip its wrapper and place the content
+  // on the card canvas rather than nesting one root inside another.
+  const inner = chart.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const viewBox = chart.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  const cw = Number(viewBox?.[1] ?? 920);
+  const ch = Number(viewBox?.[2] ?? 500);
+  const margin = 56;
+  const availW = OG_WIDTH - margin * 2;
+  const availH = 452;
+  const scale = Math.min(availW / cw, availH / ch);
+  const dx = (OG_WIDTH - cw * scale) / 2;
+  const dy = 84;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<text x="${margin}" y="58" font-family="${FONT}" font-size="26" fill="#9ba39a" font-weight="700">57 CHAMPIONSHIPS \u00b7 22 WINNERS \u00b7 1956-2025</text>`,
+    `<g transform="translate(${dx.toFixed(1)} ${dy}) scale(${scale.toFixed(4)})">${inner}</g>`,
+    ogFooterLine(title, dy + ch * scale + 62),
+    `</svg>`,
+  ].join('');
+}
+
 function renderSkillVsLuckOgSvg(title: string): string {
   const { win, ghost } = SKILL_VS_LUCK_OG_SERIES;
   const plotX = 80;

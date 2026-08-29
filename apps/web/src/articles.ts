@@ -15,6 +15,8 @@ import {
   gameSpecForId,
   type Square,
 } from '@mistboard/game';
+import { track } from './analytics.js';
+import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
 import { localizeAnnouncementString } from './announcement-i18n.js';
@@ -369,6 +371,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 const HOME_ARTICLE_SLUGS = [
+  'xiangqi-champions',
   'titled-players',
   'riverbank-cannon',
   'skill-vs-luck',
@@ -1702,6 +1705,9 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
       markXqDiagramsNoTranslate(figure);
     }
   }
+  if (block.zoomable) {
+    makeFigureZoomable(figure, block.caption ?? 'Figure');
+  }
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
@@ -1973,11 +1979,32 @@ function renderCodeBlock(block: CodeBlock): HTMLElement {
   return figure;
 }
 
+/** The slug of the article being read, for event attribution. */
+function currentArticleSlug(): string {
+  return document.querySelector('[data-article-slug]')?.getAttribute('data-article-slug') ?? '';
+}
+
+/**
+ * An internal /blog or /rules link whose target is not visible in this build.
+ * A draft's URL 404s in production, so a published page linking to one ships a
+ * dead button; in dev everything is visible, so the link renders and can be
+ * reviewed. This is what lets a piece carry a link to its companion before the
+ * companion publishes: the button appears when the target does.
+ */
+function pointsAtHiddenArticle(href: string): boolean {
+  const match = /^\/(blog|rules)\/([^/?#]+)/.exec(href);
+  if (!match) return false;
+  const target = articles.find((a) => a.slug === decodeURIComponent(match[2] as string));
+  if (!target) return false;
+  return !isArticleVisibleInThisEnv(target);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
   for (const btn of block.buttons) {
+    if (pointsAtHiddenArticle(btn.href)) continue;
     const a = document.createElement('a');
     a.className = `article-cta article-cta-${btn.emphasis ?? 'primary'}`;
     a.href = btn.href;
@@ -1986,6 +2013,17 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
     }
+    // Article CTAs were the one conversion step on these pages with no signal
+    // at all: navigation to another route fires its own pageview, but nothing
+    // said which article sent the reader or which button they took.
+    a.addEventListener('click', () => {
+      track('article_cta_clicked', {
+        slug: currentArticleSlug(),
+        label: btn.label,
+        href: btn.href,
+        emphasis: btn.emphasis ?? 'primary',
+      });
+    });
     row.append(a);
   }
   return row;

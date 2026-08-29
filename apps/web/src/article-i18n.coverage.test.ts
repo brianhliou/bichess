@@ -38,6 +38,24 @@ describe('article translation coverage', () => {
     });
   }
 
+  // seoTitle drives the document <title> and og:title but is NOT prose, so the
+  // loop above cannot see it missing. A locked article without an entry ships a
+  // Chinese page under an English title, which is what the champions article did
+  // on 2026-08-29: the body, the html lang and the JSON-LD headline localized,
+  // and the one string a searcher actually reads in the results did not.
+  it('every locked article translates its seoTitle too', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const seoTitle = published.find((a) => a.slug === slug)?.seoTitle;
+      if (!seoTitle) continue;
+      for (const lang of ARTICLE_LANGS) {
+        if (!hasTranslation(lang, seoTitle))
+          missing.push(`[${lang}] ${slug}: ${truncate(seoTitle)}`);
+      }
+    }
+    expect(missing, `untranslated seoTitle:\n${missing.join('\n')}`).toEqual([]);
+  });
+
   it('locked slugs are real published articles', () => {
     const slugs = new Set(published.map((a) => a.slug));
     const unknown = TRANSLATED_ARTICLE_SLUGS.filter((s) => !slugs.has(s));

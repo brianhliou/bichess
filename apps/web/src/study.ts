@@ -8,6 +8,7 @@
 // same reading workspace without authoring controls.
 
 import './game-shell.css';
+import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { appendLinkedText } from './link-text.js';
@@ -131,6 +132,18 @@ function renderStudy(
     : chapters[0]!.id;
   // Bumped on every render so an in-flight async board mount knows it is stale.
   let mountSeq = 0;
+
+  // Study engagement had no instrumentation at all: we could see that someone
+  // loaded the page and nothing after it. Chapter opens are the read signal --
+  // a reader who works through five chapters is engaged, and unlike a per-move
+  // event it stays low volume. Deduped per chapter per page load so a rerender
+  // (gamebook toggle, autosave) does not inflate the count.
+  const openedChapters = new Set<string>();
+  track('study_opened', {
+    studyId: study.id,
+    chapters: chapters.length,
+    isOwner: Boolean(study.isOwner),
+  });
   let activeHandle: TreeReviewHandle | null = null;
   let activeAutosave: StudyAutosave | null = null;
 
@@ -551,6 +564,19 @@ function renderStudy(
     }
     const variant = chapter.variant;
     activeId = chapter.id;
+
+    if (!openedChapters.has(chapter.id)) {
+      openedChapters.add(chapter.id);
+      track('study_chapter_opened', {
+        studyId: study.id,
+        chapterId: chapter.id,
+        chapterIndex: chapters.findIndex((entry) => entry.id === chapter.id),
+        variant,
+        isOwner: Boolean(study.isOwner),
+        // How deep into the study this reader has gone so far.
+        chaptersOpened: openedChapters.size,
+      });
+    }
 
     const gamebookable = studyVariantSupportsGamebook(variant);
     const rail = (status: HTMLElement): HTMLElement =>

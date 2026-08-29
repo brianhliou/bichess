@@ -46,9 +46,10 @@ test('annotations lay the board and the move tree out in two columns', () => {
   expect(grid).not.toBeNull();
   expect(grid?.querySelector('.xq-replay-board-col .raw-svg-stepper-frame-xq')).not.toBeNull();
   expect(grid?.querySelector('.xq-replay-move-col .xq-replay-moves')).not.toBeNull();
-  // Every mainline ply is listed, in WXF rather than raw squares.
+  // Every mainline ply is listed, in the reader's notation setting. The stored
+  // default is coordinates; `notationTest` below covers the other styles.
   expect(mainButtons(el)).toHaveLength(4);
-  expect(mainButtons(el)[0]?.textContent).toContain('C2.5');
+  expect(mainButtons(el)[0]?.textContent).toContain('h3-e3');
   c.destroy();
 });
 
@@ -81,8 +82,19 @@ test('clicking into the line steps the board, and arrows walk the line not the g
   (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
   expect(branchButtons(el)[1]?.className).toContain('is-current');
 
-  (el.querySelector('.xq-replay-line-exit') as HTMLButtonElement).click();
+  // The "Back to the game" button is gone with the annotation card, so both
+  // remaining exits have to work or a reader can get stuck in a sideline.
+  // 1. Stepping back past the head of the line drops out of it.
+  (el.querySelector('.stepper-button-prev') as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-prev') as HTMLButtonElement).click();
   expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+
+  // 2. Clicking any mainline move leaves the line and goes there.
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  expect(branchButtons(el)[0]?.className).toContain('is-current');
+  (mainButtons(el)[1] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+  expect(mainButtons(el)[1]?.className).toContain('is-current');
   c.destroy();
 });
 
@@ -96,5 +108,245 @@ test('an illegal continuation truncates the branch', () => {
   // Only the legal first move survives; the rest of the line is dropped.
   expect(branchButtons(el)).toHaveLength(1);
   expect(el.querySelector('.raw-svg-stepper-frame-xq')?.innerHTML).toContain('<svg');
+  c.destroy();
+});
+
+test('move labels follow the notation preference and relabel when it changes', () => {
+  // The widget hardcoded WXF, so an article embed ignored the setting every
+  // other xiangqi surface on the site obeys.
+  // This environment has no localStorage; the preference reader swallows that
+  // and falls back to the default, which would make the assertions below pass
+  // for the wrong reason.
+  const store = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    },
+  });
+  const setNotation = (value: string) => {
+    store.set('mistboard.xiangqiNotation', value);
+    store.set('mistboard.xiangqiNotationVersion', '1');
+  };
+  setNotation('wxf');
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  expect(mainButtons(el)[0]?.textContent).toContain('C2.5');
+
+  setNotation('iccs');
+  window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
+  expect(mainButtons(el)[0]?.textContent).toContain('h2e2');
+
+  setNotation('coordinate');
+  window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
+  expect(mainButtons(el)[0]?.textContent).toContain('h3-e3');
+
+  c.destroy();
+  if (original) Object.defineProperty(window, 'localStorage', original);
+  else Reflect.deleteProperty(window, 'localStorage');
+});
+
+test('the study layout drops the scrubber and the ply counter', () => {
+  // The move list is the position indicator and it is clickable, so a slider
+  // and a "12 / 156" readout were a second, worse copy of it.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  expect(el.querySelector('.xq-replay-slider')).toBeNull();
+  expect(el.querySelector('.stepper-counter')).toBeNull();
+  c.destroy();
+
+  // The plain stepper keeps both.
+  const plain = mountXiangqiReplay(el, base);
+  expect(el.querySelector('.xq-replay-slider')).not.toBeNull();
+  expect(el.querySelector('.stepper-counter')).not.toBeNull();
+  plain.destroy();
+});
+
+test('a judged move carries its cost on the move, not in a card below', () => {
+  // There used to be a card under the list restating the glyph, pointing at a
+  // line already drawn beside it, and shifting the list as the reader stepped.
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: {
+      byPly: {
+        1: {
+          glyph: '?',
+          note: 'mistake: 12.6 win% given up, eval +0.10 after. The engine wanted the line in the sibling branch.',
+          line: 'h0g2 h9g7',
+        },
+      },
+    },
+  });
+  expect(el.querySelector('.xq-replay-line')).toBeNull();
+
+  const title = mainButtons(el)[0]?.getAttribute('title') ?? '';
+  expect(title).toContain('Mistake');
+  expect(title).toContain('12.6% win chance given up');
+  expect(title).toContain('eval +0.10');
+  expect(title).not.toContain('sibling branch');
+
+  // The sideline says what it is rather than where it came from.
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('better was');
+  c.destroy();
+});
+
+test('prose we did not generate reaches the reader intact', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: {
+      byPly: { 1: { glyph: '!!', note: 'Brilliant: the cannon cannot be taken.' } },
+    },
+  });
+  expect(mainButtons(el)[0]?.getAttribute('title')).toContain('the cannon cannot be taken');
+  c.destroy();
+});
+
+test('the control bar gives its four buttons equal width and identical icons', () => {
+  // Both halves of a real regression: the grid kept a five-column template from
+  // when a ply counter sat in the middle, so the next button landed in the
+  // `auto` column and rendered 13px wide against its 92px neighbours; and the
+  // labels were text glyphs (U+23EE/U+23ED vs U+2190/U+2192) that resolve from
+  // different fallback fonts and never match in weight or optical size.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const controls = el.querySelector('.stepper-controls');
+  const buttons = [...el.querySelectorAll('.stepper-button')];
+
+  // Three since jump-to-start and jump-to-end moved into the menu.
+  expect(buttons).toHaveLength(3);
+  expect(controls?.children).toHaveLength(3);
+  for (const button of buttons) {
+    expect(button.textContent?.trim()).toBe('');
+    const icon = button.querySelector('svg.stepper-icon');
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('viewBox')).toBe('0 0 16 16');
+    expect(icon?.getAttribute('width')).toBe('16');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    // The icon is decoration; the button carries the name.
+    expect(button.getAttribute('aria-label')).toBeTruthy();
+  }
+  c.destroy();
+});
+
+test('arrow keys keep working after clicking a move in the list', () => {
+  // The list is rebuilt on every render, so the clicked button is detached
+  // mid-render and focus falls to <body>. The arrow handler is on the widget,
+  // so the keyboard silently stopped working until the reader clicked one of
+  // the stepper controls, which are stable elements and keep focus.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const label = () =>
+    el.querySelector('.xq-replay-move-button.is-current')?.textContent?.trim() ?? '';
+
+  (mainButtons(el)[1] as HTMLButtonElement | undefined)?.click();
+  expect(label()).toBe(mainButtons(el)[1]?.textContent?.trim());
+
+  // Focus must still be inside the widget for the handler to receive the key.
+  expect(el.contains(document.activeElement)).toBe(true);
+
+  const after = label();
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(label()).not.toBe(after);
+
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  expect(label()).toBe(after);
+  c.destroy();
+});
+
+test('the study bar is back / menu / forward, and the menu keeps what it replaced', () => {
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const labels = [...el.querySelectorAll('.stepper-button')].map((b) =>
+    b.getAttribute('aria-label'),
+  );
+  expect(labels).toEqual(['Previous move', 'More', 'Next move']);
+
+  // Jump-to-start and jump-to-end left the bar, so they have to be in the menu.
+  const items = () => [...el.querySelectorAll('.xq-replay-menu-item')].map((i) => i.textContent);
+  expect(items()).toEqual(['Flip the board', 'Back to the start', 'Jump to the end']);
+  c.destroy();
+});
+
+test('flipping rebuilds the column in order instead of shuffling nodes past each other', () => {
+  // Swapping the two seat bars around each other left the control bar above the
+  // board, so the flip re-orders the whole column explicitly.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const order = () =>
+    [...(el.querySelector('.xq-replay-board-col')?.children ?? [])].map(
+      (child) => child.className.split(' ')[0],
+    );
+  const seats = () => [...el.querySelectorAll('.xq-replay-seat')].map((s) => s.textContent?.trim());
+
+  const startOrder = order();
+  const startSeats = seats();
+  const flip = () => {
+    (el.querySelector('.stepper-button-menu') as HTMLButtonElement).click();
+    const item = [...el.querySelectorAll('.xq-replay-menu-item')].find((i) =>
+      /Flip/.test(i.textContent ?? ''),
+    ) as HTMLButtonElement | undefined;
+    item?.click();
+  };
+
+  flip();
+  expect(order()).toEqual(startOrder);
+  expect(seats()).toEqual([...startSeats].reverse());
+
+  flip();
+  expect(order()).toEqual(startOrder);
+  expect(seats()).toEqual(startSeats);
+  c.destroy();
+});
+
+test('a judged move is badged on the board, and only on the mainline', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { glyph: '?!', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-marker--glyph')).toBeNull(); // ply 0, nothing played
+
+  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
+  const badge = el.querySelector('.xq-marker--glyph');
+  expect(badge?.getAttribute('class')).toContain('xq-marker--inaccuracy');
+  expect(badge?.querySelector('text')?.textContent).toBe('?!');
+
+  // A position inside an engine line is not a move anyone played.
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-marker--glyph')).toBeNull();
+  c.destroy();
+});
+
+test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
+  // The margin was once sized to clear the piece alone, which cropped the
+  // last-move ring on every edge move and cut the top off a badge on any piece
+  // reaching the back rank. A corner move exercises both axes at once.
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    // a1-a10: Red's chariot up the edge file to Black's back rank.
+    iccs: 'a0a4 h9g7 a4a9',
+    annotations: { byPly: { 3: { glyph: '?!' } } },
+  });
+  const buttons = mainButtons(el);
+  (buttons[buttons.length - 1] as HTMLButtonElement | undefined)?.click();
+
+  const svg = el.querySelector('svg');
+  const [, , vw, vh] = (svg?.getAttribute('viewBox') ?? '0 0 0 0').split(/\s+/).map(Number) as [
+    number,
+    number,
+    number,
+    number,
+  ];
+  // The board content sits inside a <g transform="translate(PAD PAD)">, so the
+  // circle coordinates below are already in the same space as the viewBox.
+  const circles = [...el.querySelectorAll('circle')];
+  expect(circles.length).toBeGreaterThan(0);
+  for (const circle of circles) {
+    const cx = Number(circle.getAttribute('cx'));
+    const cy = Number(circle.getAttribute('cy'));
+    const r = Number(circle.getAttribute('r'));
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) continue;
+    const label = circle.getAttribute('class') ?? 'circle';
+    expect(cx - r, `${label} crosses the left edge`).toBeGreaterThanOrEqual(-0.5);
+    expect(cy - r, `${label} crosses the top edge`).toBeGreaterThanOrEqual(-0.5);
+    expect(cx + r, `${label} crosses the right edge`).toBeLessThanOrEqual(vw + 0.5);
+    expect(cy + r, `${label} crosses the bottom edge`).toBeLessThanOrEqual(vh + 0.5);
+  }
   c.destroy();
 });

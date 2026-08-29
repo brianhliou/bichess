@@ -424,11 +424,16 @@ try {
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
         ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
       };
-      // FAQ blocks become a second FAQPage document rather than being folded into
-      // the Article one: they are different schema types and Google reads them
+      // Extra documents ride alongside the Article node, each in its own script
+      // tag so a malformed one cannot take the Article down with it. Two
+      // independent sources feed this list and both must survive: an article's
+      // own structuredData() (the champions ItemList), and FAQ blocks.
+      //
+      // FAQ blocks become a separate FAQPage rather than folding into the
+      // Article node, because they are a different schema type that Google reads
       // independently. Built from the SAME block the page renders, so the markup
-      // and the structured data cannot describe different questions. Localized
-      // article, so a zh or vi variant emits its own language's questions.
+      // and the structured data cannot describe different questions, and from the
+      // LOCALIZED article, so a zh or vi variant emits its own language's.
       const faqItems = [
         ...(localized.intro ?? []),
         ...(localized.sections ?? []).flatMap((sec) => sec.blocks ?? []),
@@ -448,7 +453,7 @@ try {
               })),
             }
           : null;
-      const ldScript = [jsonLd, ...(faqLd ? [faqLd] : [])]
+      const ldScript = [jsonLd, ...(article.structuredData?.() ?? []), ...(faqLd ? [faqLd] : [])]
         .map(
           (doc) =>
             `<script type="application/ld+json">${JSON.stringify(doc).replace(/</g, '\\u003c')}</script>`,

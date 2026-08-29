@@ -543,6 +543,19 @@ export async function serveStudyPage(params: {
       })
       .join('');
     html = html.replace('</head>', `${alternates}</head>`);
+    // oEmbed discovery. A consumer that speaks oEmbed (WordPress, Ghost,
+    // Discourse) finds the provider by reading this link off the page someone
+    // pasted; without it the endpoint exists but nothing knows to ask. Only on
+    // a chapter permalink, because a chapter is the embeddable unit: a whole
+    // study is a set, and there is no single board to put in a frame.
+    if (chapter) {
+      const permalink = `${params.publicHost}/study/${encodeURIComponent(params.studyId)}${pathSuffix}`;
+      const discovery =
+        `<link rel="alternate" type="application/json+oembed" ` +
+        `href="${params.publicHost}/api/oembed?url=${encodeURIComponent(permalink)}" ` +
+        `title="Mistboard study chapter">`;
+      html = html.replace('</head>', `${discovery}</head>`);
+    }
     // Bake the text into the shell so a crawler (and first paint) gets real
     // content instead of an empty #app. mountStudy() replaceChildren()s the root
     // on boot, so this markup never coexists with the client render.

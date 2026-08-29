@@ -333,6 +333,14 @@ export const riverbankCannonArticle: Article = {
           href: '/?play=computer&gameSpecId=dark-xiangqi',
           emphasis: 'secondary',
         },
+        // Renders only once the target publishes: an internal link to a draft
+        // is dropped from the page (see pointsAtHiddenArticle in articles.ts),
+        // so this can sit here through the companion's draft life.
+        {
+          label: 'Every xiangqi champion since 1956',
+          href: '/blog/xiangqi-champions',
+          emphasis: 'secondary',
+        },
       ],
     }),
   ],

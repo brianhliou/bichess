@@ -79,18 +79,20 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // Published 2026-08-29, a day after the cluster below, so it leads the
+      // index outright rather than tie-breaking into it.
+      '/blog/xiangqi-champions',
       // Both drafts. This assertion runs with DEV stubbed true, where the index
       // lists drafts so an author can preview them; in a production build they
-      // are absent from here and their routes 404 client-side.
+      // are absent from here and their routes 404 client-side. Same date, so
+      // ties break alphabetically by title: 'Chơi...' then 'Jieqi...'.
       '/blog/co-up',
       '/blog/jieqi-platform',
-      // Same 2026-08-28 date as the two above; the tie breaks alphabetically by
-      // title, and 'Cờ úp...' then 'Jieqi...' then 'Luật...' is that order.
+      // Same 2026-08-28 date, so ties break alphabetically by title:
+      // 'Cờ úp...', 'Jieqi...', 'Luật...', then 'The Xiangqi...'.
       '/blog/luat-co-up',
+      '/blog/xiangqi-world-championship',
       '/blog/titled-players',
-      // Same date as titled-players; ties break alphabetically by title and
-      // 'Titled...' sorts before 'Who Is...'. Draft, so dev-only.
-      '/blog/xiangqi-champions',
       // Same publish date as the mining explainer; ties break alphabetically
       // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
       '/blog/riverbank-cannon',
@@ -237,6 +239,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/xiangqi-champions',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -1022,14 +1025,18 @@ describe('rules variant sidebar', () => {
     expect(BANQI_SETUP_BOARD()).not.toContain('aria-label="red horse"');
   });
 
-  it('stops sample-game arrows before the destination center', () => {
+  it("marks the sample game's last move the way every other board does", () => {
+    // The replay used to draw its own green arrow, which made an article embed
+    // look like a different product from the game page. It now emits the shared
+    // origin-wash + destination-ring markers from board-lastmove.ts.
     const page = buildArticlePage('xiangqi');
     document.body.append(page);
     const controllers = mountPendingWidgets(page);
     try {
       page.querySelector<HTMLButtonElement>('.xq-replay .stepper-button-next')?.click();
-      const arrow = page.querySelector<SVGLineElement>('.xq-replay line[marker-end]');
-      expect(arrow?.getAttribute('x2')).toBe('152');
+      expect(page.querySelector('.xq-replay line[marker-end]')).toBeNull();
+      expect(page.querySelector('.xq-replay .xq-live-lastmove-from')).not.toBeNull();
+      expect(page.querySelector('.xq-replay .xq-live-lastmove-ring')).not.toBeNull();
     } finally {
       for (const controller of controllers) controller.destroy();
       page.remove();

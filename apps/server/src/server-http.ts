@@ -10,6 +10,7 @@ import type { DrainController } from './server-drain.js';
 import {
   clientIpForRateLimit,
   isClientRoute,
+  isEmbedRoute,
   isReviewShellRoute,
   legacyPageRedirect,
 } from './server-policy.js';
@@ -77,6 +78,26 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
   return function handleHttpRequest(request: IncomingMessage, response: ServerResponse): void {
     const url = request.url ?? '/';
     const pathname = url.split('?', 1)[0] ?? '/';
+
+    // Framing policy. Every route on this site was frameable by anyone, which
+    // is a clickjacking surface on every authenticated page: a hostile site
+    // could overlay /account/settings or a challenge accept and harvest the
+    // click. Same-origin is the default because the postgame sheet frames
+    // /room/:id and the review URLs from our own pages.
+    //
+    // /embed/study/:studyId/:chapterId is the deliberate exception: it exists
+    // to be rendered in someone else's page, so it opts out of both headers
+    // rather than being locked down and then quietly failing to embed.
+    //
+    // Both headers on purpose: frame-ancestors is the one modern browsers
+    // honour, X-Frame-Options is what older ones and some scanners read. The
+    // pair only disagrees where the older one has no ancestor list to express,
+    // which is why the allow case sends neither rather than a wildcard XFO
+    // (there is no such value; UAs treat a malformed XFO as DENY).
+    if (!isEmbedRoute(pathname)) {
+      response.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      response.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
+    }
 
     // The postgame review shell mounts an in-browser analysis engine that runs
     // WASM threads, which need SharedArrayBuffer and therefore cross-origin
