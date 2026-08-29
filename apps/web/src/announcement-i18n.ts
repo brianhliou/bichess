@@ -33,6 +33,25 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Find a game': '找一局棋',
+  // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Vocabulary taken from
+  // strings this site already publishes, per the rule above: 复盘 is
+  // watch.review, 妙手 is annotate.brilliantMove, 导入棋谱 is nav.import,
+  // 棋谱 is nav.games, 论坛 is nav.forum.
+  'Paste a game, get a board.': '粘贴一局棋，得到一张棋盘。',
+  'Import takes a xiangqi game in whatever notation you happen to have: PGN, coordinates, WXF, or Chinese move text. It works out which one you pasted by replaying it, then hands you a browsable board with engine analysis. Nothing is published, and the game travels in the link.':
+    '导入棋谱接受任何一种记谱法的象棋对局：PGN、坐标、WXF，或者「炮二平五」这样的中文着法。系统会把棋谱走一遍，据此判断你粘贴的是哪一种，然后给你一张可以逐着浏览、带引擎分析的棋盘。不会公开发布，整局棋都存在链接里。',
+  'Import a game': '导入棋谱',
+  'Brilliant moves are marked now.': '现在会标出妙手。',
+  'Xiangqi review adds !! and ! beside the mistake glyphs it already showed. A move earns !! when you give material up and the engine agrees it does not come back. Blunders were never the only thing worth seeing in your own game.':
+    '象棋复盘在原有的失误符号之外，新增了 !! 和 ! 。当你弃子而引擎认可这子确实收不回来时，这一着会被标为 !! 。自己的棋里值得看的，从来不只是漏着。',
+  'Who Is the Greatest Xiangqi Player?': '谁是最伟大的象棋棋手？',
+  'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
+    '象棋有九百年历史，全国冠军赛却只有六十九年。胡荣华，在头衔出现之前的那些人，以及被从记录中抹去的十年。',
+  'Mistboard has a Discord.': 'Mistboard 有 Discord 了。',
+  'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.':
+    '可以问规则、报告问题，或者找人下棋的地方。邀请链接在导航栏、页脚和论坛里。',
+
   // ── 2026-08-28 ── AWAITING A NATIVE READ. Vocabulary reused from strings the
   // site already publishes rather than translated in isolation: 视频库 is
   // videos.heading, 推荐 is the videos.sort.featured label.
@@ -204,7 +223,6 @@ const ZH_HANS: Record<string, string> = {
   'See the leaderboard': '查看排行榜',
   'Open volume one': '打开第一卷',
   'Browse the studies': '浏览研习',
-  'Find a game': '找一局棋',
   'Read the article': '阅读文章',
   'Open the board': '打开棋盘',
   'Browse studies': '浏览研习',
@@ -219,6 +237,24 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Same vocabulary rule:
+  // 復盤 is watch.review, 妙手 is annotate.brilliantMove, 匯入棋譜 is
+  // nav.import, 棋譜 is nav.games, 論壇 is nav.forum.
+  'Paste a game, get a board.': '貼上一局棋，得到一張棋盤。',
+  'Import takes a xiangqi game in whatever notation you happen to have: PGN, coordinates, WXF, or Chinese move text. It works out which one you pasted by replaying it, then hands you a browsable board with engine analysis. Nothing is published, and the game travels in the link.':
+    '匯入棋譜接受任何一種記譜法的象棋對局：PGN、座標、WXF，或者「炮二平五」這樣的中文著法。系統會把棋譜走一遍，據此判斷你貼上的是哪一種，然後給你一張可以逐著瀏覽、帶引擎分析的棋盤。不會公開發布，整局棋都存在連結裡。',
+  'Import a game': '匯入棋譜',
+  'Brilliant moves are marked now.': '現在會標出妙手。',
+  'Xiangqi review adds !! and ! beside the mistake glyphs it already showed. A move earns !! when you give material up and the engine agrees it does not come back. Blunders were never the only thing worth seeing in your own game.':
+    '象棋復盤在原有的失誤符號之外，新增了 !! 和 ! 。當你棄子而引擎認可這子確實收不回來時，這一著會被標為 !! 。自己的棋裡值得看的，從來不只是漏著。',
+  'Find a game': '找一局棋',
+  'Who Is the Greatest Xiangqi Player?': '誰是最偉大的象棋棋手？',
+  'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
+    '象棋有九百年歷史，全國冠軍賽卻只有六十九年。胡榮華，在頭銜出現之前的那些人，以及被從記錄中抹去的十年。',
+  'Mistboard has a Discord.': 'Mistboard 有 Discord 了。',
+  'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.':
+    '可以問規則、回報問題，或者找人下棋的地方。邀請連結在導覽列、頁尾和論壇裡。',
+
   // ── 2026-08-28 ── AWAITING A NATIVE READ. Same vocabulary rule: 影片庫 is
   // videos.heading, 推薦 is the videos.sort.featured label.
   'A bigger video library, and one that reads Chinese.': '影片庫更大了，也有了中文版。',
@@ -389,7 +425,6 @@ const ZH_HANT: Record<string, string> = {
   'See the leaderboard': '查看排行榜',
   'Open volume one': '開啟第一卷',
   'Browse the studies': '瀏覽研習',
-  'Find a game': '找一局棋',
   'Read the article': '閱讀文章',
   'Open the board': '開啟棋盤',
   'Browse studies': '瀏覽研習',

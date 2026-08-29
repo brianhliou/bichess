@@ -25,6 +25,36 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-08-28',
+    kind: 'release',
+    headline: 'Paste a game, get a board.',
+    body: 'Import takes a xiangqi game in whatever notation you happen to have: PGN, coordinates, WXF, or Chinese move text. It works out which one you pasted by replaying it, then hands you a browsable board with engine analysis. Nothing is published, and the game travels in the link.',
+    href: '/import',
+    cta: 'Import a game',
+  },
+  {
+    date: '2026-08-28',
+    kind: 'update',
+    headline: 'Brilliant moves are marked now.',
+    body: 'Xiangqi review adds !! and ! beside the mistake glyphs it already showed. A move earns !! when you give material up and the engine agrees it does not come back. Blunders were never the only thing worth seeing in your own game.',
+    href: '/games',
+    cta: 'Find a game',
+  },
+  {
+    date: '2026-08-27',
+    kind: 'article',
+    headline: 'Who Is the Greatest Xiangqi Player?',
+    body: 'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.',
+    href: '/blog/xiangqi-champions',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-08-27',
+    kind: 'update',
+    headline: 'Mistboard has a Discord.',
+    body: 'Somewhere to ask a rules question, say what broke, or find someone to play. The invite is in the nav, the footer, and the forum.',
+  },
+  {
+    date: '2026-08-28',
     kind: 'update',
     headline: 'A bigger video library, and one that reads Chinese.',
     body: 'The library is up to 61 hand-picked videos, ordered best first instead of by the date they were added, and it now opens in Chinese at its own address. Every entry has been checked against YouTube, so nothing on the shelf is a dead link.',
