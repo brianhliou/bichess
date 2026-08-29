@@ -42,6 +42,9 @@ const RETIRED_RULES_SLUGS = new Set([
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'xiangqi-world-championship',
+  // Published 2026-08-28 and pulled back the same evening. Reachable at
+  // /blog/<slug> for review, out of the sitemap and noindex until it goes back.
+  'jieqi-platform',
   // The two Vietnamese pages are written and wired but NOT published: neither has
   // had a native read, and rules copy that is subtly wrong is worse than none.
   // That is a reviewer, not a task, and it is the real blocker on the Vietnamese
