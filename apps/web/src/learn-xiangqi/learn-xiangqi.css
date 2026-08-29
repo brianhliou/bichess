@@ -301,6 +301,17 @@
   font-size: 0.92rem;
 }
 
+/* Sits where three stars would on a finished stage, so the two done states read
+   as the same badge at a glance. Counter-rotated out of the band's 45deg: stars
+   survive the tilt and progress text is meant to run along it, but a tilted
+   check reads as a stray tick rather than a mark. */
+.learn-xq-ribbon .learn-xq-check {
+  display: inline-block;
+  font-size: 1.15rem;
+  line-height: 1;
+  transform: rotate(-45deg);
+}
+
 .learn-xq-what-next-copy {
   text-align: center;
   color: var(--site-muted);
