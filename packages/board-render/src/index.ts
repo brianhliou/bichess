@@ -6,6 +6,7 @@ export {
   DRAFT960_OFFER_A,
   SERVER_FOG_TRIPTYCH,
 } from './article-positions.js';
+export { BOARD_CORNER_RATIO, boardCornerRadius } from './board-metrics.js';
 export type { PieceOnBoard } from './board-svg.js';
 export { fogPatternDefs, renderBoardSvg } from './board-svg.js';
 export type { BoardSpec, CompositionOptions } from './composition.js';

@@ -109,7 +109,9 @@
   aspect-ratio: 1 / 1;
   width: 100%;
   min-height: 0;
-  border-radius: 14px;
+  /* Was a fixed 14px, which read visibly rounder than every neighbouring board
+     and did not scale with board size. */
+  border-radius: var(--board-corner-radius);
   overflow: hidden;
   box-shadow: 0 18px 50px rgba(37, 31, 24, 0.16);
 }
