@@ -1049,6 +1049,19 @@ function nameEnChange(
   return { [key]: { before: before.nameEn ?? null, after: after.nameEn ?? null } };
 }
 
+// Player tags cache a second translation, the team affiliation. It needs its
+// own comparison: a row whose nameEn is already correct but whose federationEn
+// is missing would otherwise report no change and never be rewritten, which is
+// exactly the state of every board imported before team names were carried.
+function federationEnChange(
+  before: { federationEn?: string },
+  after: { federationEn?: string },
+  key: string,
+): Record<string, { before: string | null; after: string | null }> {
+  if ((before.federationEn ?? null) === (after.federationEn ?? null)) return {};
+  return { [key]: { before: before.federationEn ?? null, after: after.federationEn ?? null } };
+}
+
 // Recompute the cached English names for every stored tour, round, and board
 // without re-importing from the source. Existing rows predating translation
 // (or predating a glossary improvement) get their nameEn fields refreshed;
@@ -1090,6 +1103,8 @@ export async function backfillXiangqiBroadcastTranslations(
       const fields = {
         ...nameEnChange(row.payload.red, translated.red, 'red.nameEn'),
         ...nameEnChange(row.payload.black, translated.black, 'black.nameEn'),
+        ...federationEnChange(row.payload.red, translated.red, 'red.federationEn'),
+        ...federationEnChange(row.payload.black, translated.black, 'black.federationEn'),
       };
       if (Object.keys(fields).length === 0) continue;
       changes.push({ kind: 'board', id: row.id, fields });

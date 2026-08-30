@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { XiangqiBroadcastPlayerTag } from '@mistboard/game';
 import {
   romanizeXiangqiPlayerName,
+  translatedXiangqiBroadcastPlayerTag,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
   translateXiangqiBroadcastSnapshot,
   translateXiangqiEventName,
   translateXiangqiRoundLabel,
+  translateXiangqiTeamName,
 } from './xiangqi-broadcast-translate.js';
 
 // Every player name ingested with the 2026 national team championship tour.
@@ -189,4 +192,36 @@ test('translation is idempotent: retranslating a translated value is a no-op', (
   });
   const second = translateXiangqiBroadcastSnapshot(first);
   assert.equal(JSON.stringify(second), JSON.stringify(first));
+});
+
+test('team affiliations translate structure and romanize the proper nouns', () => {
+  // Real teams from the 2026 甲级联赛 qualifier. The place and the structural
+  // suffix are glossed; the sponsor stays a single pinyin token, which is the
+  // right treatment for a brand.
+  assert.equal(translateXiangqiTeamName('浙江民泰银行象棋队'), 'Zhejiang Mintai Bank Xiangqi Team');
+  assert.equal(translateXiangqiTeamName('杭州市棋类协会'), 'Hangzhou Chess Association');
+  assert.equal(
+    translateXiangqiTeamName('天津市滨海新区象棋协会'),
+    'Tianjin Binhai New Area Xiangqi Association',
+  );
+  assert.equal(translateXiangqiTeamName('香港象棋总会'), 'Hong Kong Xiangqi Federation');
+  assert.equal(translateXiangqiTeamName('龙江体彩队'), 'Longjiang Sports Lottery Team');
+});
+
+test('a player tag caches the English team beside the English name', () => {
+  const tag: XiangqiBroadcastPlayerTag = { name: '王家瑞', federation: '浙江民泰银行象棋队' };
+  const translated = translatedXiangqiBroadcastPlayerTag(tag);
+  assert.equal(translated.nameEn, 'Wang Jiarui');
+  assert.equal(translated.federationEn, 'Zhejiang Mintai Bank Xiangqi Team');
+  // Idempotent, and a stale cache self-heals rather than sticking.
+  const again = translatedXiangqiBroadcastPlayerTag({
+    ...translated,
+    federationEn: 'Stale Team',
+  } satisfies XiangqiBroadcastPlayerTag);
+  assert.equal(again.federationEn, 'Zhejiang Mintai Bank Xiangqi Team');
+});
+
+test('a player with no team gets no federationEn key at all', () => {
+  const tag: XiangqiBroadcastPlayerTag = { name: '王天一' };
+  assert.equal('federationEn' in translatedXiangqiBroadcastPlayerTag(tag), false);
 });

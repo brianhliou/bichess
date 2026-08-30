@@ -40,7 +40,7 @@ export const EN_SHELL = {
   'nav.register': 'Register',
   'nav.language': 'Language',
   'home.tagline': 'Chinese chess and the games around it. Free in your browser. About Mistboard...',
-  'home.supportTitle': 'Love Mistboard?',
+  'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',
   'home.storeSubtitle': 'Coming soon',

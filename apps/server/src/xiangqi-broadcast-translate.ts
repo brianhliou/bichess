@@ -87,6 +87,102 @@ const EVENT_GLOSSARY: Array<[string, string]> = [
   ['乙级', 'Division B'],
 ];
 
+// Team affiliations, which arrive whenever the source is a team competition
+// (甲级联赛 is one). Only the structural parts are glossed: the sponsor and the
+// place name are proper nouns and fall through to pinyin, which is the right
+// outcome for "浙江民泰银行象棋队" -> "Zhejiang Mintai Bank Xiangqi Team".
+// Places, so the residual pinyin does not weld a province onto the sponsor
+// that follows it ("浙江民泰" would otherwise render "Zhejiangmintai"). Only the
+// province/municipality and the cities that actually field xiangqi teams are
+// listed; anything else still falls through to pinyin as one token, which is
+// the right treatment for a brand name.
+const PLACE_GLOSSARY: Array<[string, string]> = [
+  ['黑龙江', 'Heilongjiang'],
+  ['内蒙古', 'Inner Mongolia'],
+  ['哈尔滨', 'Harbin'],
+  ['石家庄', 'Shijiazhuang'],
+  ['北京', 'Beijing'],
+  ['天津', 'Tianjin'],
+  ['上海', 'Shanghai'],
+  ['重庆', 'Chongqing'],
+  ['河北', 'Hebei'],
+  ['山西', 'Shanxi'],
+  ['辽宁', 'Liaoning'],
+  ['吉林', 'Jilin'],
+  ['龙江', 'Longjiang'],
+  ['江苏', 'Jiangsu'],
+  ['浙江', 'Zhejiang'],
+  ['安徽', 'Anhui'],
+  ['福建', 'Fujian'],
+  ['江西', 'Jiangxi'],
+  ['山东', 'Shandong'],
+  ['河南', 'Henan'],
+  ['湖北', 'Hubei'],
+  ['湖南', 'Hunan'],
+  ['广东', 'Guangdong'],
+  ['广西', 'Guangxi'],
+  ['海南', 'Hainan'],
+  ['四川', 'Sichuan'],
+  ['贵州', 'Guizhou'],
+  ['云南', 'Yunnan'],
+  ['陕西', 'Shaanxi'],
+  ['甘肃', 'Gansu'],
+  ['青海', 'Qinghai'],
+  ['宁夏', 'Ningxia'],
+  ['新疆', 'Xinjiang'],
+  ['西藏', 'Tibet'],
+  ['台湾', 'Taiwan'],
+  ['香港', 'Hong Kong'],
+  ['澳门', 'Macau'],
+  ['济南', 'Jinan'],
+  ['杭州', 'Hangzhou'],
+  ['深圳', 'Shenzhen'],
+  ['广州', 'Guangzhou'],
+  ['成都', 'Chengdu'],
+  ['武汉', 'Wuhan'],
+  ['南京', 'Nanjing'],
+  ['厦门', 'Xiamen'],
+  ['青岛', 'Qingdao'],
+  ['大连', 'Dalian'],
+  ['沈阳', 'Shenyang'],
+  ['长春', 'Changchun'],
+  ['郑州', 'Zhengzhou'],
+  ['西安', "Xi'an"],
+  ['苏州', 'Suzhou'],
+  ['无锡', 'Wuxi'],
+  ['温州', 'Wenzhou'],
+  ['宁波', 'Ningbo'],
+  ['嘉定', 'Jiading'],
+  ['滨海', 'Binhai'],
+];
+
+const TEAM_GLOSSARY: Array<[string, string]> = [
+  // 市 is an administrative suffix English drops: 杭州市 -> Hangzhou.
+  ['市', ''],
+  ['象棋俱乐部', 'Xiangqi Club'],
+  ['象棋协会', 'Xiangqi Association'],
+  ['棋类协会', 'Chess Association'],
+  ['象棋总会', 'Xiangqi Federation'],
+  ['象棋队', 'Xiangqi Team'],
+  ['实业队', 'Industrial Team'],
+  ['体彩队', 'Sports Lottery Team'],
+  ['棋牌中心', 'Chess and Card Centre'],
+  ['棋院', 'Chess Academy'],
+  ['俱乐部', 'Club'],
+  ['总会', 'Federation'],
+  ['协会', 'Association'],
+  ['体彩', 'Sports Lottery'],
+  ['新区', 'New Area'],
+  ['银行', 'Bank'],
+  ['磨料', 'Abrasives'],
+  ['实业', 'Industrial'],
+  ['香港', 'Hong Kong'],
+  ['广东', 'Guangdong'],
+  ['队', 'Team'],
+  ...PLACE_GLOSSARY,
+  ...EVENT_GLOSSARY,
+];
+
 const ROUND_GLOSSARY: Array<[string, string]> = [
   ['四分之一决赛', 'Quarterfinal'],
   ['四分一决赛', 'Quarterfinal'],
@@ -121,6 +217,7 @@ function byKeyLengthDesc(entries: Array<[string, string]>): Array<[string, strin
 }
 
 const EVENT_GLOSSARY_SORTED = byKeyLengthDesc(EVENT_GLOSSARY);
+const TEAM_GLOSSARY_SORTED = byKeyLengthDesc(TEAM_GLOSSARY);
 const ROUND_GLOSSARY_SORTED = byKeyLengthDesc(ROUND_GLOSSARY);
 
 function isFullyAscii(value: string): boolean {
@@ -358,6 +455,10 @@ export function translateXiangqiRoundLabel(zh: string): string | undefined {
   return translateGlossaryText(zh, ROUND_GLOSSARY_SORTED, ROUND_UNITS);
 }
 
+export function translateXiangqiTeamName(zh: string): string | undefined {
+  return translateGlossaryText(zh, TEAM_GLOSSARY_SORTED, EVENT_UNITS);
+}
+
 // Recompute `nameEn` from the current `name`. The existing nameEn (if any) is
 // dropped first so stale caches self-heal and repeated writes stay idempotent;
 // nameEn is always (re)appended last, keeping the JSON key order stable for
@@ -383,16 +484,26 @@ export function translatedXiangqiBroadcastRound<T extends { name: string; nameEn
   return withRecomputedNameEn(round, translateXiangqiRoundLabel);
 }
 
-export function translatedXiangqiBroadcastPlayerTag<T extends { name: string; nameEn?: string }>(
-  player: T,
+// Same self-healing contract as nameEn: drop the stale value, recompute from
+// the current Chinese, re-append last so the JSON key order stays stable.
+function withRecomputedFederationEn<T extends { federation?: string; federationEn?: string }>(
+  value: T,
 ): T {
-  return withRecomputedNameEn(player, romanizeXiangqiPlayerName);
+  const { federationEn: _stale, ...rest } = value;
+  const federationEn = value.federation ? translateXiangqiTeamName(value.federation) : undefined;
+  return (federationEn === undefined ? rest : { ...rest, federationEn }) as T;
+}
+
+export function translatedXiangqiBroadcastPlayerTag<
+  T extends { name: string; nameEn?: string; federation?: string; federationEn?: string },
+>(player: T): T {
+  return withRecomputedFederationEn(withRecomputedNameEn(player, romanizeXiangqiPlayerName));
 }
 
 export function translatedXiangqiBroadcastBoard<
   T extends {
-    red: { name: string; nameEn?: string };
-    black: { name: string; nameEn?: string };
+    red: { name: string; nameEn?: string; federation?: string; federationEn?: string };
+    black: { name: string; nameEn?: string; federation?: string; federationEn?: string };
   },
 >(board: T): T {
   return {

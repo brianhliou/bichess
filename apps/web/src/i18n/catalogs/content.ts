@@ -82,44 +82,46 @@ export const EN_CONTENT = {
   'news.subscribe': 'Subscribe by RSS',
   'news.empty': 'Nothing yet.',
   'news.readMore': 'Read more',
-  'patron.heading': 'Support Mistboard',
-  'patron.heroTitle': 'Help Mistboard keep growing.',
+  'patron.heading': 'Mistboard Patron',
+  'patron.heroTitle': 'Become a Mistboard Patron.',
   'patron.heroSubtitle':
-    'No ads, no pay-to-win. Just an independent project you can help keep alive.',
+    'An optional monthly subscription. No ads, no pay-to-win, and core play stays free.',
   'patron.frequencyMonthly': 'Monthly',
   'patron.frequencyLifetime': 'Lifetime',
   'patron.intro':
-    'Mistboard is an independent, ad-free project. Core play and learning stay free. If it is worth something to you, Patron support helps keep the servers running and the work going.',
-  'patron.perkTitle': 'What Patron support includes',
+    'Mistboard is an independent, ad-free site for xiangqi and its variants. Core play and learning are free for everyone and stay that way. Patron is an optional monthly subscription that adds a badge to your profile.',
+  'patron.perkTitle': 'What a Patron subscription includes',
   'patron.perk':
-    'Patrons get a small heart badge on their profile. Patron support does not unlock features or gameplay advantages.',
-  'patron.supportLine': 'Mistboard is a one-person project, so your support goes a long way.',
-  'patron.chooseTitle': 'Choose an amount',
+    'Patrons get a small heart badge on their profile. A subscription does not unlock features or gameplay advantages.',
+  'patron.supportLine': 'Mistboard is built and run by one person.',
+  'patron.chooseTitle': 'Choose a plan',
   'patron.monthlySuffix': '/ month',
   'patron.oneTime': 'One-time',
   'patron.lifetimeLabel': 'Lifetime',
-  'patron.donate': 'Support Mistboard',
-  'patron.manage': 'Manage your support',
-  'patron.alreadyPatron': 'You are a Patron. Thank you for keeping Mistboard running.',
-  'patron.signInFirst': 'Sign in to support Mistboard',
+  'patron.donate': 'Subscribe',
+  'patron.manage': 'Manage your subscription',
+  'patron.alreadyPatron': 'You are a Patron. Thank you.',
+  'patron.signInFirst': 'Sign in to subscribe',
   'patron.unavailable': 'Checkout is not open yet, so nothing is charged. Check back soon.',
   'patron.checkoutError': 'Something went wrong starting checkout. Please try again.',
-  'patron.transparencyTitle': 'Where the money goes',
-  // The dollar figure is measured, not estimated: it reconciles to the Railway
-  // invoice in docs-private/COSTS.md. Refresh both together when infra changes,
-  // because a stale number on a transparency page is worse than no number.
+  'patron.transparencyTitle': 'How Mistboard runs',
+  // Deliberately carries no itemised running cost. A page that names the monthly
+  // server bill and then asks readers to cover it reads as a fundraising appeal,
+  // which is what put the Stripe account into a Restricted Businesses review in
+  // 2026-08 (docs-private/patron-track.md). The measured figure still lives in
+  // docs-private/COSTS.md; keep it there, not here.
   'patron.transparency':
-    'Mistboard costs about $22 a month to run: servers, database, and bandwidth. Patron support covers that, plus the time to keep building. Mistboard is run by one person.',
+    'Mistboard is built and run by one person. There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
-    'Patron support comes with recognition, not product access. Core play and learning stay free. Separate paid tools or products may exist later.',
+    'A Patron subscription comes with a profile badge. Core play and learning stay free. Separate paid tools or products may exist later.',
   'patron.faqTaxQuestion': 'Is Patron support tax-deductible?',
   'patron.faqTaxAnswer':
     'No. Mistboard is not a registered charity, so Patron support is not tax-deductible.',
-  'patron.faqCancelQuestion': 'How do I cancel or change my support?',
+  'patron.faqCancelQuestion': 'How do I cancel or change my subscription?',
   'patron.faqCancelAnswer':
-    'Open the billing portal from this page anytime to change the amount or cancel. Recurring support stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
+    'Open the billing portal from this page anytime to change your plan or cancel. Recurring billing stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
   'patron.termsPrefix': 'Billing, cancellation, and refunds are covered in the ',
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',

@@ -23,6 +23,8 @@ export type XiangqiBroadcastPlayerTag = {
   /** Cached English/romanized form of `name`; recomputed at ingestion time. */
   nameEn?: string;
   federation?: string;
+  /** Cached English/romanized form of `federation`; recomputed at ingestion. */
+  federationEn?: string;
   title?: string;
   sourceId?: string;
 };
@@ -146,6 +148,7 @@ function validatePlayer(value: unknown, path: string, errors: string[]): Xiangqi
   if (!nonEmptyString(value.name)) errors.push(`${path}.name must be a non-empty string`);
   validateOptionalString(value, 'nameEn', path, errors);
   validateOptionalString(value, 'federation', path, errors);
+  validateOptionalString(value, 'federationEn', path, errors);
   validateOptionalString(value, 'title', path, errors);
   validateOptionalString(value, 'sourceId', path, errors);
   return value as XiangqiBroadcastPlayerTag;

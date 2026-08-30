@@ -106,7 +106,7 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/patron': {
     title: 'Become a Patron | Mistboard',
     description:
-      'Mistboard is independent and ad-free. Core play and learning stay free, and Patron support helps keep the servers running.',
+      'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
   },
   '/source': {
     title: 'Source Code | Mistboard',

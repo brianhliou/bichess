@@ -1053,9 +1053,18 @@ function zhSubline(text: string | null, className = 'xqb-name-zh'): HTMLElement 
   return span;
 }
 
+// Team affiliations get the same English-primary treatment as names: a team
+// event is most of top-level xiangqi, so an untranslated team beside a
+// romanized player would leave half of every label in Chinese.
+function primaryFederation(player: XiangqiBroadcastPlayerTag): string | undefined {
+  const en = player.federationEn?.trim();
+  return en && en.length > 0 ? en : player.federation;
+}
+
 function playerName(player: XiangqiBroadcastPlayerTag): string {
   const prefix = player.title ? `${player.title} ` : '';
-  const suffix = player.federation ? ` (${player.federation})` : '';
+  const federation = primaryFederation(player);
+  const suffix = federation ? ` (${federation})` : '';
   return `${prefix}${primaryName(player)}${suffix}`;
 }
 
