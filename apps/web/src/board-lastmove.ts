@@ -37,9 +37,12 @@ const CANONICAL_ORIGIN_STROKE = 2;
 
 /**
  * What `drawMarkerOnArrival` targets. `-to` is the square-grid layout's
- * destination rect; `-ring` is the intersection layout's halo.
+ * destination rect, `-ring` the intersection layout's halo, and
+ * `.banqi-lastmove-to` banqi's cell tint (it draws its own marks -- see the
+ * geometry note in live-banqi-render.ts -- but shares the arrival fade).
  */
-export const BOARD_LASTMOVE_MARKER_SELECTOR = '.xq-live-lastmove-to, .xq-live-lastmove-ring';
+export const BOARD_LASTMOVE_MARKER_SELECTOR =
+  '.xq-live-lastmove-to, .xq-live-lastmove-ring, .banqi-lastmove-to';
 
 export type BoardPoint = { x: number; y: number };
 
