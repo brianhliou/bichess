@@ -6,6 +6,7 @@ import {
   buildVideosPage,
   filterVideos,
   mountVideos,
+  orderHomeVideos,
   sortVideos,
   type VideoFilters,
   videoLanguageForLocale,
@@ -463,6 +464,49 @@ describe('buildHomeVideoCards', () => {
     const row = buildHomeVideoCards(8, 'en');
     for (const card of [...row!.querySelectorAll<HTMLAnchorElement>('.landing-video-card')]) {
       expect(known.has(`yt:${new URL(card.href).searchParams.get('v')}`)).toBe(true);
+    }
+  });
+
+  // Directly, so the invariant still holds the day there is more than one of
+  // ours: every first-party entry moves to the front, in curated order, no
+  // matter where it sat in the arc.
+  it('pins every promoted video ahead of the rest, in curated order', () => {
+    const ours = [...FIRST_PARTY_VIDEOS];
+    const arc = [VIDEOS[0], ...ours, VIDEOS[1], VIDEOS[2]];
+    const ordered = orderHomeVideos(arc);
+    expect(ordered.slice(0, ours.length)).toEqual(ours);
+    expect(new Set(ordered)).toEqual(new Set(arc));
+    expect(ordered.length).toBe(arc.length);
+  });
+
+  // The row shuffles everything that is not ours on every render, so these two
+  // assertions carry the whole contract: ours never loses the front slot, and
+  // the rest actually move. Run over many renders because a single render of a
+  // shuffled list can legally come out in curated order.
+  it('keeps ours pinned first across renders while the rest rotate', () => {
+    const tails = new Set<string>();
+    for (let i = 0; i < 40; i += 1) {
+      const hrefs = [
+        ...buildHomeVideoCards(8, 'en')!.querySelectorAll<HTMLAnchorElement>('.landing-video-card'),
+      ].map((card) => new URL(card.href).searchParams.get('v') ?? '');
+      expect(hrefs[0]).toBe('aWxafeWsncQ');
+      tails.add(hrefs.slice(1).join(','));
+    }
+    expect(tails.size).toBeGreaterThan(1);
+  });
+
+  // Shuffling must not drop, duplicate, or reorder-away an entry: the row is
+  // still exactly the curated arc, just in a different order.
+  it('renders the whole arc under any shuffle', () => {
+    const ids = (row: HTMLElement) =>
+      [...row.querySelectorAll<HTMLAnchorElement>('.landing-video-card')].map(
+        (card) => new URL(card.href).searchParams.get('v') ?? '',
+      );
+    const first = new Set(ids(buildHomeVideoCards(8, 'en')!));
+    for (let i = 0; i < 20; i += 1) {
+      const next = ids(buildHomeVideoCards(8, 'en')!);
+      expect(next.length).toBe(8);
+      expect(new Set(next)).toEqual(first);
     }
   });
 
