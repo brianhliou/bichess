@@ -24,7 +24,9 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
-    date: '2026-08-29',
+    // Matches the article's own date. A News item dated the 29th above a page
+    // dated the 30th is the two surfaces disagreeing about the same post.
+    date: '2026-08-30',
     kind: 'article',
     headline: 'The Xiangqi World Championship, and why it is not the senior title.',
     body: 'Nineteen editions since 1990, eleven winners, and a title that stayed in China until last September. Every champion, an annotated game for ten of them, and the reason the Chinese national championship is the harder one to win.',

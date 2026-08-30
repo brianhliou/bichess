@@ -79,13 +79,12 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Published 2026-08-29, a day after the cluster below, so it leads the
-      // index outright rather than tie-breaking into it.
-      '/blog/xiangqi-champions',
-      // Same 2026-08-29 date as the champions article, which is deliberate: the
-      // two are a pair. The tie breaks alphabetically by title, and 'Every...'
-      // sorts before 'The Xiangqi...'. Draft, so dev-only.
+      // The two champion articles lead the index, newest first. They shipped
+      // hours apart on 2026-08-29 and are deliberately dated a day apart: two
+      // halves of one argument landing on the same date read as a dump, and the
+      // world-title piece is the one that answers the other.
       '/blog/xiangqi-world-championship',
+      '/blog/xiangqi-champions',
       // Both drafts. This assertion runs with DEV stubbed true, where the index
       // lists drafts so an author can preview them; in a production build they
       // are absent from here and their routes 404 client-side. Same 2026-08-28
@@ -240,8 +239,8 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
-      '/blog/xiangqi-champions',
       '/blog/xiangqi-world-championship',
+      '/blog/xiangqi-champions',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',

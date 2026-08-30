@@ -566,7 +566,11 @@ export const xiangqiWorldChampionshipArticle: Article = {
   summary:
     'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.',
   status: 'published',
-  publishedAt: '2026-08-29',
+  // Dated the 30th, not the 29th. It went live late on the 29th, hours after
+  // the national-championship article it answers, and two pieces of one
+  // argument landing the same day read as a dump rather than as a pair. The
+  // date is what the reader and the feed see, so it carries the stagger.
+  publishedAt: '2026-08-30',
   audience:
     'Readers who have met the national champions and want to know what the international title is worth.',
   thumbnail: { kind: 'svg', svg: WORLD_TITLE_THUMBNAIL },
