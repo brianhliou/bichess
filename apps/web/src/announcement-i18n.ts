@@ -33,6 +33,15 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-08-30 ── AWAITING A NATIVE READ. Terms taken from the source the
+  // games came from and from strings this site already publishes: 甲级联赛 and
+  // 预选赛 are the event's own names, 台 is the board number inside a team
+  // match (dpxq writes 第01台), 逐着浏览 matches the import announcement above.
+  'Sixty-one games from the Division A qualifier.': '甲级联赛预选赛，六十一局。',
+  "China's top xiangqi league runs its qualifier in Hangzhou every August, and this year's three rounds are now here to replay in English, with the club names and the players romanized. Ten clubs, four boards a match, and an engine a click away on any position. The league itself starts in September.":
+    '中国象棋甲级联赛每年八月在杭州打预选赛，今年的三轮现在都可以在这里逐着浏览，队名和棋手名以英文呈现。十支队伍，每场四台，任意局面点一下就有引擎分析。联赛本身九月开赛。',
+  'Open the qualifier': '打开预选赛',
+
   // ── 2026-08-29 ── AWAITING A NATIVE READ. Terms match the article's own
   // dictionary: 世界象棋锦标赛, 全国个人赛, 头衔.
   'The Xiangqi World Championship, and why it is not the senior title.':
@@ -241,6 +250,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-08-30 ── AWAITING A NATIVE READ. Same terms as the Simplified
+  // entry above.
+  'Sixty-one games from the Division A qualifier.': '甲級聯賽預選賽，六十一局。',
+  "China's top xiangqi league runs its qualifier in Hangzhou every August, and this year's three rounds are now here to replay in English, with the club names and the players romanized. Ten clubs, four boards a match, and an engine a click away on any position. The league itself starts in September.":
+    '中國象棋甲級聯賽每年八月在杭州打預選賽，今年的三輪現在都可以在這裡逐著瀏覽，隊名和棋手名以英文呈現。十支隊伍，每場四台，任意局面點一下就有引擎分析。聯賽本身九月開賽。',
+  'Open the qualifier': '打開預選賽',
+
   // ── 2026-08-29 ── AWAITING A NATIVE READ. Same terms as the article's
   // Traditional dictionary.
   'The Xiangqi World Championship, and why it is not the senior title.':

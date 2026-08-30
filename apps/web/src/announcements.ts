@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-08-30',
+    kind: 'update',
+    headline: 'Sixty-one games from the Division A qualifier.',
+    body: "China's top xiangqi league runs its qualifier in Hangzhou every August, and this year's three rounds are now here to replay in English, with the club names and the players romanized. Ten clubs, four boards a match, and an engine a click away on any position. The league itself starts in September.",
+    href: '/broadcast/xiangqi/2026-league-qualifier',
+    cta: 'Open the qualifier',
+  },
+  {
     // Matches the article's own date. A News item dated the 29th above a page
     // dated the 30th is the two surfaces disagreeing about the same post.
     date: '2026-08-30',
