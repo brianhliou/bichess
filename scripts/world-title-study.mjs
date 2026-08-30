@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
 // The article module imports stylesheets and reads `window` at module scope.
@@ -176,7 +177,12 @@ const NAG = { '!': 1, '?': 2, '!!': 3, '??': 4, '!?': 5, '?!': 6 };
  * on the line's LAST node, which is where an opening book puts its verdict and
  * where the move tree's assessment slot already looks.
  */
-const ASSESS_NAG = {
+// Exported so a sibling script can reuse it rather than keep a third copy: the
+// last time this vocabulary lived in three places they drifted, and a study
+// showed the engine's verdict and an annotated one in different notations.
+// line-assessment-roundtrip.test.ts reads this literal out of the source text,
+// so it stays here rather than moving to a shared module.
+export const ASSESS_NAG = {
   '=': 10,
   '∞': 13,
   '⩲': 14,
@@ -536,7 +542,10 @@ async function main() {
   console.log(`\n${BASE}/study/${studyId}`);
 }
 
-main().catch((err) => {
-  console.error(String(err));
-  process.exit(1);
-});
+// Guarded: importing this module for ASSESS_NAG must not run a build.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  main().catch((err) => {
+    console.error(String(err));
+    process.exit(1);
+  });
+}

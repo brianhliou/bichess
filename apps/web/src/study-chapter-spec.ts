@@ -7,6 +7,7 @@
 // shows what the study says now. Both call the same logic here rather than
 // keeping a second copy that drifts.
 
+import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import type { XiangqiReplayAnnotation, XiangqiReplaySpec } from './xiangqi-replay.js';
 
 /** NAG codes as the study stores them, mapped to what the widget renders. */
@@ -78,16 +79,26 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
     if (glyph || note || siblings.length) {
       const line: string[] = [];
       let variation: StudyTreeNode | undefined = siblings[0];
+      // The verdict closes the line, so it sits on the line's LAST node. Walking
+      // past it and forgetting it is how a backfilled study still showed its
+      // sidelines ending on nothing: the NAGs were stored, and this hop dropped
+      // every code outside the 1-6 the GLYPH map above covers.
+      let lineEval: string | undefined;
       while (variation?.uci) {
         const step = uciToIccs(variation.uci);
         if (!step) break;
         line.push(step);
+        const assessed = (variation.annotations?.glyphs ?? []).find(
+          (code) => ASSESSMENT_GLYPH[code] !== undefined,
+        );
+        lineEval = assessed === undefined ? undefined : ASSESSMENT_GLYPH[assessed];
         variation = variation.children?.[0];
       }
       byPly[ply] = {
         ...(glyph ? { glyph } : {}),
         ...(note ? { note } : {}),
         ...(line.length ? { line: line.join(' ') } : {}),
+        ...(lineEval ? { lineEval } : {}),
       };
     }
     node = played;

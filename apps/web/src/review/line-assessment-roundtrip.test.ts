@@ -13,6 +13,10 @@ import { articles } from '../articles-data.js';
 // silently: the article still shows its verdict and the study line just ends
 // without one, which is exactly what happened before the study carried these at
 // all. This asserts the round trip is the identity.
+//
+// The decode now has ONE home, apps/web/src/assessment-glyphs.ts, which both the
+// review tree and the study->embed converter import. The encode is still its own
+// literal in the build script, which is why this test still exists.
 function read(...candidates: string[]): string {
   const path = candidates
     .map((candidate) => resolve(process.cwd(), candidate))
@@ -43,10 +47,10 @@ function mapLiteral(source: string, name: string): Record<string, string> {
 }
 
 const builder = read('../../scripts/world-title-study.mjs', 'scripts/world-title-study.mjs');
-const treeReview = read('src/review/tree-review.ts', 'apps/web/src/review/tree-review.ts');
+const glyphs = read('src/assessment-glyphs.ts', 'apps/web/src/assessment-glyphs.ts');
 
 const symbolToNag = mapLiteral(builder, 'ASSESS_NAG');
-const nagToSymbol = mapLiteral(treeReview, 'GLYPH_ASSESSMENT');
+const nagToSymbol = mapLiteral(glyphs, 'ASSESSMENT_GLYPH');
 
 describe('a line assessment survives the round trip', () => {
   it('turns every symbol into a NAG and back into the same symbol', () => {

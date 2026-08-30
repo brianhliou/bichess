@@ -19,6 +19,7 @@
 
 import './seat-labels.css';
 import { type MoveJudgment, winPercent } from '@mistboard/game';
+import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
@@ -102,25 +103,7 @@ const GLYPH_JUDGMENT: Record<number, string> = {
  * answer different questions. An engine line in a study ends with one of these
  * the way an opening book ends a line with its verdict.
  */
-// The literature's own glyphs, not their ASCII stand-ins: PLUS-MINUS for a clear
-// advantage and PLUS ABOVE EQUALS for a slight one, with a real MINUS SIGN in
-// the decisive pair. They are written as literal characters because
-// line-assessment-roundtrip.test.ts reads this map out of the source text.
-//
-// These are the SAME strings advantageSymbol() emits in engine/eval-format.ts,
-// and they have to be: both write the one assessment slot in the move tree, so
-// while this map said '+/-' a study showed the engine's line as ± and the
-// annotated line beside it as '+/-'.
-const GLYPH_ASSESSMENT: Record<number, string> = {
-  10: '=',
-  13: '∞',
-  14: '⩲',
-  15: '⩱',
-  16: '±',
-  17: '∓',
-  18: '+−',
-  19: '−+',
-};
+const GLYPH_ASSESSMENT = ASSESSMENT_GLYPH;
 
 /** The board handle the controller drives: render a view for a perspective, and
  *  swap the arrow / marker overlays. Arrow/Marker are OPAQUE to the controller —
