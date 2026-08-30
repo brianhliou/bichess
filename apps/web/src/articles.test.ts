@@ -85,21 +85,22 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The two champion articles lead the index, newest first. They shipped
-      // hours apart on 2026-08-29 and are deliberately dated a day apart: two
-      // halves of one argument landing on the same date read as a dump, and the
-      // world-title piece is the one that answers the other.
       // Draft, dated 2026-09-03, ahead of everything published. Out of the
       // sitemap and noindex until it actually publishes.
       '/blog/jieqi-openings',
-      '/blog/xiangqi-world-championship',
-      '/blog/xiangqi-champions',
-      // Both drafts. This assertion runs with DEV stubbed true, where the index
-      // lists drafts so an author can preview them; in a production build they
-      // are absent from here and their routes 404 client-side. Same 2026-08-28
-      // date, so ties break by title: 'Cờ úp...', 'Jieqi...', 'Luật...'.
+      // Both drafts, both dated 2026-09-01: co-up is DERIVED from the platform
+      // page, so it inherits that date, and the tie breaks by title ('Cờ úp...'
+      // before 'Jieqi...'). Moving the platform page's date moves this one too.
       '/blog/co-up',
       '/blog/jieqi-platform',
+      // The two champion articles, newest first. They shipped hours apart on
+      // 2026-08-29 and are deliberately dated a day apart: two halves of one
+      // argument landing on the same date read as a dump, and the world-title
+      // piece is the one that answers the other.
+      '/blog/xiangqi-world-championship',
+      '/blog/xiangqi-champions',
+      // Draft, still 2026-08-28: the Vietnamese rules page is not derived from
+      // the platform page and keeps its own date.
       '/blog/luat-co-up',
       '/blog/titled-players',
       // Same publish date as the mining explainer; ties break alphabetically
