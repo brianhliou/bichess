@@ -241,6 +241,7 @@ describe('article public listing gates', () => {
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
       '/blog/xiangqi-champions',
+      '/blog/xiangqi-world-championship',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
