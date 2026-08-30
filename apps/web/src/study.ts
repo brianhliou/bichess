@@ -12,7 +12,11 @@ import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { appendLinkedText } from './link-text.js';
-import { localizedStudyDescription, localizedStudyName } from './study-i18n.js';
+import {
+  localizedChapterTags,
+  localizedStudyDescription,
+  localizedStudyName,
+} from './study-i18n.js';
 import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './study.css';
@@ -701,13 +705,16 @@ function renderStudy(
       // the only place identity could live was the chapter title, which cannot
       // follow a board flip and reads as a spoiler.
       ...(chapter.tags?.red || chapter.tags?.black
-        ? {
-            seatLabels: true,
-            players: {
-              ...(chapter.tags.red ? { red: chapter.tags.red } : {}),
-              ...(chapter.tags.black ? { black: chapter.tags.black } : {}),
-            },
-          }
+        ? (() => {
+            const named = localizedChapterTags(chapter.tags ?? {}, chapter.i18n);
+            return {
+              seatLabels: true,
+              players: {
+                ...(named.red ? { red: named.red } : {}),
+                ...(named.black ? { black: named.black } : {}),
+              },
+            };
+          })()
         : {}),
       actions: rail(status),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
@@ -887,7 +894,7 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
 export function gameDetails(chapter: ChapterDto): HTMLElement {
   const list = document.createElement('dl');
   list.className = 'study-about__game';
-  const tags = chapter.tags ?? {};
+  const tags = localizedChapterTags(chapter.tags ?? {}, chapter.i18n);
   const rows: Array<[string, string]> = [
     [t('study.gameEvent'), tags.event ?? ''],
     [t('study.gameDate'), tags.date ?? ''],

@@ -48,6 +48,109 @@ globalThis.document ??= {
 };
 
 const DATA = 'scripts/data/world-title-annotations';
+
+/** Champion -> his name in Chinese. Every one of these nine is mainland, so the
+ *  same string serves both scripts (see chapterI18n). */
+const CHAMPION_ZH = {
+  'Lü Qin': '吕钦',
+  'Zhao Guorong': '赵国荣',
+  'Xu Yinchuan': '许银川',
+  'Zhao Xinxin': '赵鑫鑫',
+  'Jiang Chuan': '蒋川',
+  'Wang Tianyi': '王天一',
+  'Zheng Weitong': '郑惟桐',
+  'Xu Chao': '徐超',
+  'Meng Chen': '孟辰',
+};
+
+/**
+ * Everyone who appears as Red or Black on these boards, in Chinese.
+ *
+ * The champions are all mainland, so one string serves both scripts. Their
+ * OPPONENTS are not: Wu Guilin is from Chinese Taipei, Lei Kam Fun from Macau,
+ * Huang Xueqian from Hong Kong, and the Nguyens and Lai Ly Huynh are
+ * Vietnamese. A person's name is written in the script that person uses, which
+ * is why those carry two forms and the champions carry one. Same rule as the
+ * article's zh-Hant dictionary, and it has to be restated here because a study
+ * cannot import the web app's dictionaries.
+ */
+const PERSON_ZH = {
+  ...CHAMPION_ZH,
+  'Wu Guilin': { hans: '吴贵临', hant: '吳貴臨' },
+  'Lei Kam Fun': { hans: '李锦欢', hant: '李錦歡' },
+  'Huang Xueqian': { hans: '黄学谦', hant: '黃學謙' },
+  'Wang Kuo': '王廓',
+  'Nguyễn Vũ Quân': '阮武君',
+  'Nguyễn Thành Bảo': '阮成保',
+  'Lại Lý Huynh': { hans: '赖理兄', hant: '賴理兄' },
+};
+
+const zhName = (name, script) => {
+  const entry = PERSON_ZH[name];
+  if (!entry) return undefined;
+  return typeof entry === 'string' ? entry : entry[script];
+};
+
+/** "2019 16th World Xiangqi Championship" -> the Chinese name of that edition. */
+const ORDINAL_ZH = {
+  '2nd': '第二届',
+  '5th': '第五届',
+  '10th': '第十届',
+  '11th': '第十一届',
+  '12th': '第十二届',
+  '14th': '第十四届',
+  '16th': '第十六届',
+  '17th': '第十七届',
+  '18th': '第十八届',
+  '19th': '第十九届',
+};
+
+function zhEvent(event, script) {
+  const m = /^(\d{4})\s+(\S+)\s+World Xiangqi Championship$/.exec(String(event).trim());
+  const ordinal = m && ORDINAL_ZH[m[2]];
+  if (!ordinal) return undefined;
+  const hans = `${m[1]}年${ordinal}世界象棋锦标赛`;
+  return script === 'hans'
+    ? hans
+    : hans.replace('届', '屆').replace('世界象棋锦标赛', '世界象棋錦標賽');
+}
+
+/** Per-locale overrides for the tags that carry language. A date and a result
+ *  do not, so neither is translated. */
+function tagsI18nFor(spec) {
+  const out = {};
+  for (const [locale, script] of [
+    ['zh-Hans', 'hans'],
+    ['zh-Hant', 'hant'],
+  ]) {
+    const tags = {
+      ...(zhName(spec.red, script) ? { red: zhName(spec.red, script) } : {}),
+      ...(zhName(spec.black, script) ? { black: zhName(spec.black, script) } : {}),
+      ...(zhEvent(spec.event, script) ? { event: zhEvent(spec.event, script) } : {}),
+    };
+    if (Object.keys(tags).length) out[locale] = tags;
+  }
+  return out;
+}
+
+const STUDY_NAME = 'Every Xiangqi World Champion';
+const STUDY_DESCRIPTION =
+  'One world-championship game for each man who has won the title, from the edition he won it in. Engine annotations throughout; the losing lines are variations you can step into.';
+
+/** MACHINE-DRAFTED, NOT NATIVE-REVIEWED, same standing as the article's zh. */
+const STUDY_I18N = {
+  'zh-Hans': {
+    name: '世界象棋冠军谱',
+    description:
+      '每一位世界冠军各一局，选自他夺冠的那一届。全程由引擎注解；落败的一方走过的岔路，都做成可以走进去的变化分支。',
+  },
+  'zh-Hant': {
+    name: '世界象棋冠軍譜',
+    description:
+      '每一位世界冠軍各一局，選自他奪冠的那一屆。全程由引擎注解；落敗的一方走過的岔路，都做成可以走進去的變化分支。',
+  },
+};
+
 const args = process.argv.slice(2);
 const argOf = (k, d = '') => {
   const i = args.indexOf(`--${k}`);
@@ -150,14 +253,59 @@ function tagsFor(game, spec) {
   };
 }
 
+/**
+ * A chapter's name in both zh scripts.
+ *
+ * `year · champion`, and the champion is a person, so his name is written in
+ * the script he uses. All nine of these are mainland players, which is why
+ * Traditional and Simplified are the same string here rather than a conversion
+ * of one into the other. If a chapter for a Chinese Taipei, Hong Kong, Macau or
+ * Vietnamese champion is ever added, that one's name converts and this stops
+ * being a single value: see the article's zh-Hant dictionary note.
+ */
+function chapterI18n(game) {
+  const zh = CHAMPION_ZH[game.champion];
+  if (!zh) return undefined;
+  const name = `${game.year} · ${zh}`;
+  const tags = tagsI18nFor(game.spec);
+  return {
+    'zh-Hans': { name, ...(tags['zh-Hans'] ? { tags: tags['zh-Hans'] } : {}) },
+    'zh-Hant': { name, ...(tags['zh-Hant'] ? { tags: tags['zh-Hant'] } : {}) },
+  };
+}
+
 function chapterFor(game, spec) {
+  const i18n = chapterI18n(game);
   return {
     name: `${game.year} · ${game.champion}`,
     variant: 'xiangqi',
     orientation: 'red',
     root: buildTree(spec),
     tags: tagsFor(game, spec),
+    ...(i18n ? { i18n } : {}),
   };
+}
+
+/**
+ * Compare two JSON values without caring about key order.
+ *
+ * Postgres JSONB does not preserve the order keys were written in, so a tree
+ * read back comes out as {root, version} where it went up as {version, root}.
+ * A raw JSON.stringify comparison therefore NEVER matched, and every run
+ * rewrote all nine chapters and bumped all nine versions. That is not just
+ * wasted work: each rewrite is a version-guarded save, so a routine re-sync was
+ * one concurrent edit away from either clobbering someone's work or 409ing on
+ * it, for chapters that had not changed at all.
+ */
+function stable(value) {
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stable(value[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
 }
 
 async function send(method, path, body, cookie) {
@@ -191,9 +339,11 @@ async function update(studyId, games, cookie) {
     }
     const root = buildTree(game.spec);
     const tags = tagsFor(game, game.spec);
-    const treeStale = JSON.stringify(chapter.root) !== JSON.stringify(root);
+    const i18n = chapterI18n(game);
+    const treeStale = stable(chapter.root) !== stable(root);
     const tagsStale = Object.entries(tags).some(([k, v]) => (chapter.tags ?? {})[k] !== v);
-    if (!treeStale && !tagsStale) {
+    const i18nStale = !!i18n && stable(chapter.i18n ?? {}) !== stable(i18n);
+    if (!treeStale && !tagsStale && !i18nStale) {
       console.log(`  = ${name}`);
       continue;
     }
@@ -203,13 +353,28 @@ async function update(studyId, games, cookie) {
       {
         ...(treeStale ? { root, baseVersion: chapter.version } : {}),
         ...(tagsStale ? { tags } : {}),
+        // The rename path takes `name` and `i18n` together, and sending i18n
+        // without name would be a rename to nothing.
+        ...(i18nStale ? { name, i18n } : {}),
       },
       cookie,
     );
-    console.log(`  ~ ${name}${treeStale ? ' tree' : ''}${tagsStale ? ' tags' : ''}`);
+    const what = [treeStale && 'tree', tagsStale && 'tags', i18nStale && 'i18n'].filter(Boolean);
+    console.log(`  ~ ${name} ${what.join(' ')}`);
     changed += 1;
   }
-  console.log(`\n${changed} chapter(s) updated`);
+
+  // The study's own name and description are metadata on the study, not on any
+  // chapter, so they need their own call. Without this an existing study keeps
+  // whatever it was created with and the zh reader gets an English title over
+  // Chinese chapters.
+  const meta = current.study ?? {};
+  if (stable(meta.i18n ?? {}) !== stable(STUDY_I18N)) {
+    await send('PATCH', `/api/studies/${studyId}`, { i18n: STUDY_I18N }, cookie);
+    console.log('  ~ study name + description (zh)');
+    changed += 1;
+  }
+  console.log(`\n${changed} update(s)`);
   await verify(studyId, games);
 }
 
@@ -239,7 +404,13 @@ async function verify(studyId, games) {
     }
     const missing = ['red', 'black', 'result', 'event'].filter((k) => !(stored.tags ?? {})[k]);
     if (missing.length) bad.push(`${name}: no ${missing.join(', ')}`);
+    // Same read-back rule as the tags: the rename path is one where a partly
+    // ignored body still returns 200.
+    for (const lang of ['zh-Hans', 'zh-Hant']) {
+      if (!stored.i18n?.[lang]?.name) bad.push(`${name}: no ${lang} name`);
+    }
   }
+  if (!study.study?.i18n?.['zh-Hans']?.name) bad.push('the study itself has no zh-Hans name');
   if (bad.length) {
     console.error(`\ntags did not stick:\n  ${bad.join('\n  ')}`);
     process.exit(1);
@@ -342,9 +513,9 @@ async function main() {
   const study = await post(
     '/api/studies',
     {
-      name: 'Every Xiangqi World Champion',
-      description:
-        'One world-championship game for each man who has won the title, from the edition he won it in. Engine annotations throughout; the losing lines are variations you can step into.',
+      name: STUDY_NAME,
+      description: STUDY_DESCRIPTION,
+      i18n: STUDY_I18N,
       // Unlisted, not public. The article that frames these games is still a
       // draft, and a public study would put ten annotated world-championship
       // games on /study before the piece explaining them exists. Unlisted is

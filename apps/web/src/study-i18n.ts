@@ -17,7 +17,15 @@ import { currentLocale, type Locale } from './i18n/locale.js';
 /** Per-locale overrides for one record's authored strings. Keys are Locale
  *  codes; unknown keys are ignored rather than rejected, so a blob written by a
  *  newer client cannot break an older one. */
-export type StudyI18n = Partial<Record<Locale, { name?: string; description?: string }>>;
+export type StudyI18n = Partial<
+  Record<Locale, { name?: string; description?: string; tags?: StudyTagI18n }>
+>;
+
+/** Per-locale overrides for a chapter's game tags. Only the tags that carry
+ *  language: a player's name and the event's name. A date is a date and a
+ *  result is `1-0` in every locale, so neither is translatable and neither is
+ *  accepted here. */
+export type StudyTagI18n = { red?: string; black?: string; event?: string };
 
 /** Per-locale text for a single tree comment (stored inside the chapter blob). */
 export type CommentI18n = Partial<Record<Locale, string>>;
@@ -37,10 +45,48 @@ export function parseStudyI18n(raw: unknown): StudyI18n {
     const entry = value as Record<string, unknown>;
     const name = isNonEmpty(entry.name) ? entry.name : undefined;
     const description = isNonEmpty(entry.description) ? entry.description : undefined;
-    if (name === undefined && description === undefined) continue;
-    out[locale as Locale] = { ...(name && { name }), ...(description && { description }) };
+    const tags = parseTagI18n(entry.tags);
+    if (name === undefined && description === undefined && tags === undefined) continue;
+    out[locale as Locale] = {
+      ...(name && { name }),
+      ...(description && { description }),
+      ...(tags && { tags }),
+    };
   }
   return out;
+}
+
+function parseTagI18n(raw: unknown): StudyTagI18n | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const entry = raw as Record<string, unknown>;
+  const out: StudyTagI18n = {};
+  for (const key of ['red', 'black', 'event'] as const) {
+    if (isNonEmpty(entry[key])) out[key] = entry[key] as string;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * A chapter's game tags for a locale, each falling back to the base value.
+ *
+ * The players' names and the event sit beside a Chinese board and under Chinese
+ * prose, and until this existed they were the last English left on a localized
+ * study page: the chapter list, the description and the labels all translated
+ * around two names that did not.
+ */
+export function localizedChapterTags<T extends Record<string, string | undefined>>(
+  base: T,
+  i18n: unknown,
+  locale: Locale = currentLocale(),
+): T {
+  const overlay = parseStudyI18n(i18n)[locale]?.tags;
+  if (!overlay) return base;
+  return {
+    ...base,
+    ...(overlay.red && base.red ? { red: overlay.red } : {}),
+    ...(overlay.black && base.black ? { black: overlay.black } : {}),
+    ...(overlay.event && base.event ? { event: overlay.event } : {}),
+  };
 }
 
 /** The study/chapter name for a locale, falling back to the base name. */
