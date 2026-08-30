@@ -4,7 +4,7 @@
 // reveal toggle, and no captured-pool fill (the board itself carries the material).
 import './live-xiangqi.css';
 import type { JungleBoard, JunglePlayerView } from '@mistboard/game';
-import { renderJungleBoardSvg } from './jungle-render.js';
+import { animateJungleBoardMove, renderJungleBoardSvg } from './jungle-render.js';
 import {
   type JunglePostgameResponse,
   junglePostgameMaxPly,
@@ -49,6 +49,13 @@ export function mountJungleWatchReplay(
           perspective: orientation,
           lastMove: view.lastMove ?? null,
         }),
+      // One-ply steps glide: forward animates the newly rendered view's lastMove,
+      // a back step reverse-animates the move the previous ply carried.
+      animateMove: (boardEl, view, prevView, direction, orientation) => {
+        const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+        if (!move) return;
+        animateJungleBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+      },
       // Perfect-info board carries its own material; no captured-pool strips.
       fillCaptures: () => {},
     },

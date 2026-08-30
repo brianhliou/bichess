@@ -399,28 +399,32 @@ export const BANQI_BOARD_CSS = `
        flipped -- on a normal move the piece that landed already tells you, but a
        flip turns up a random tile whose colour means nothing about the mover.
        Gold is the fallback for the opening flip, before an ink is bound. */
-    .banqi-lastmove { pointer-events: none; fill: var(--board-highlight, #d6af4e); }
-    .banqi-lastmove-from { opacity: 0.24; }
-    .banqi-lastmove-to { opacity: 0.4; }
-    /* A gold fill barely reads on the tan board, which is why the ink is carried
+    /* EVERY alpha here lives in the rgba colour, never in \`opacity\`. The arrival
+       animation (drawMarkerOnArrival) fades element opacity 0 -> 1, so a mark
+       whose resting opacity is 0.36 ramps to fully solid and then snaps back
+       when the animation clears: it reads as a dark flash that settles lighter.
+       This is the same rule live-xiangqi.css states for the square-grid marks;
+       banqi shipped it wrong on 2026-08-30 and this is the fix.
+       A gold fill barely reads on the tan board, which is why the ink is carried
        by the FILL and not by a border: a saturated 3-unit stroke around a gold
        cell was measurably harder to read than this at the same board scale.
        Red and black are balanced by eye rather than sharing one alpha -- red
        keeps far more chroma than navy does when composited over #f0d6a4. */
-    .banqi-lastmove--red { fill: #c2201a; }
-    .banqi-lastmove--red.banqi-lastmove-from { opacity: 0.19; }
-    .banqi-lastmove--red.banqi-lastmove-to { opacity: 0.36; }
-    .banqi-lastmove--black { fill: #16283a; }
-    .banqi-lastmove--black.banqi-lastmove-from { opacity: 0.22; }
-    .banqi-lastmove--black.banqi-lastmove-to { opacity: 0.44; }
+    .banqi-lastmove { pointer-events: none; }
+    .banqi-lastmove-from { fill: rgba(214, 175, 78, 0.24); }
+    .banqi-lastmove-to { fill: rgba(214, 175, 78, 0.4); }
+    .banqi-lastmove--red.banqi-lastmove-from { fill: rgba(194, 32, 26, 0.19); }
+    .banqi-lastmove--red.banqi-lastmove-to { fill: rgba(194, 32, 26, 0.36); }
+    .banqi-lastmove--black.banqi-lastmove-from { fill: rgba(22, 40, 58, 0.22); }
+    .banqi-lastmove--black.banqi-lastmove-to { fill: rgba(22, 40, 58, 0.44); }
     /* One tinted cell already reads as a flip against a move's two; the border
        says so on a glance that catches only the one cell. */
     .banqi-lastmove-flip {
-      stroke: var(--board-highlight, #d6af4e);
+      stroke: rgba(214, 175, 78, 0.4);
       stroke-width: ${LAST_MOVE_FLIP_STROKE};
     }
-    .banqi-lastmove-flip.banqi-lastmove--red { stroke: #8f1a14; }
-    .banqi-lastmove-flip.banqi-lastmove--black { stroke: #0b1723; }
+    .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
+    .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
     .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
     .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
     .banqi-drag-source { opacity: 0.34; }

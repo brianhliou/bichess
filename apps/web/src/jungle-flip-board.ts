@@ -18,6 +18,7 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
+import { jungleFlipLastMoverInk } from '@mistboard/game';
 import {
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipBoardArrow,
@@ -68,6 +69,7 @@ export function createJungleFlipInteractiveBoard(
       : [];
     opts.board.innerHTML = renderJungleFlipBoardSvg(view.board, {
       lastMove: view.lastMove ?? null,
+      lastMoveInk: jungleFlipLastMoverInk(view),
       selected: selectedSquare,
       targets,
       draggingFrom,

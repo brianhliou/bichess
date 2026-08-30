@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderBanqiBoardSvg } from './live-banqi-render.js';
+import { BANQI_BOARD_CSS, renderBanqiBoardSvg } from './live-banqi-render.js';
 
 describe('renderBanqiBoardSvg', () => {
   const view = {
@@ -143,5 +143,24 @@ describe('renderBanqiBoardSvg', () => {
 
     expect(lastMoveRects(svg)).toHaveLength(1);
     expect(svg).not.toContain('banqi-lastmove--');
+  });
+
+  it('carries last-move alpha in the colour, never in opacity', () => {
+    // drawMarkerOnArrival fades the destination mark's element opacity 0 -> 1.
+    // A mark whose resting opacity is 0.36 therefore ramps to fully solid and
+    // snaps back down when the animation clears: a dark flash that settles
+    // lighter. Shipped exactly that on 2026-08-30. live-xiangqi.css states the
+    // same rule for the square-grid marks; this holds banqi to it.
+    const rules = BANQI_BOARD_CSS.split('}')
+      .map((chunk) => chunk.split('{'))
+      .filter((parts) => parts.length === 2 && parts[0].includes('banqi-lastmove'));
+
+    expect(rules.length).toBeGreaterThan(0);
+    for (const [selector, body] of rules) {
+      expect({ selector: selector.trim(), opacity: /(^|[^-])opacity\s*:/.test(body) }).toEqual({
+        selector: selector.trim(),
+        opacity: false,
+      });
+    }
   });
 });

@@ -4,8 +4,12 @@
 // Reveal/Hide control (and the `h` key) that swaps in the full-reveal overlay. The
 // deal has no sides, so orientation is ignored; captured material lives on the board.
 import './live-xiangqi.css';
-import type { JungleFlipPlayerView } from '@mistboard/game';
-import { type JungleFlipRenderBoard, renderJungleFlipBoardSvg } from './jungle-flip-render.js';
+import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
+import {
+  animateJungleFlipBoardMove,
+  type JungleFlipRenderBoard,
+  renderJungleFlipBoardSvg,
+} from './jungle-flip-render.js';
 import { jungleFlipResultLabel, jungleFlipSeatInkLabel } from './jungle-flip-result-label.js';
 import {
   type JungleFlipPostgameResponse,
@@ -42,7 +46,16 @@ export function mountJungleFlipWatchReplay(
     renderBoard: (view) =>
       renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
         lastMove: view.lastMove ?? null,
+        lastMoveInk: jungleFlipLastMoverInk(view),
       }),
+    // One-ply steps glide: forward animates the newly rendered view's lastMove,
+    // a back step reverse-animates the move the previous ply carried. A flip is a
+    // self-move and animateJungleFlipBoardMove no-ops on it.
+    animateMove: (boardEl, view, prevView, direction, orientation) => {
+      const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+      if (!move) return;
+      animateJungleFlipBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+    },
     fillCaptures: () => {},
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),
