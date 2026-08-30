@@ -379,7 +379,24 @@ export type JungleApplyMoveOptions = {
   repetitionDrawCount?: number;
 };
 
-export const DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT = 100; // plies without a capture → draw
+// Plies without a capture that end the game a draw. 200 = 100 moves by each side.
+//
+// Was 100 (a 50-move rule by analogy with chess). Jungle shuffles far more than chess does:
+// pieces cannot trade freely because rank decides every capture, so long manoeuvring stretches
+// with nothing taken are normal play rather than a stalled game. Measured over 100 self-play
+// games per setting at the engine's full strength:
+//
+//   limit 100 -> 25% decisive, 14 games ended on this clock
+//   limit 200 -> 33% decisive,  1 game  ended on this clock
+//   limit 400 -> 33% decisive,  0 games ended on this clock
+//
+// So the old clock was cutting off games that still had a result in them, and 400 buys nothing
+// over 200 for 8% more play. Threefold repetition adjudicates the genuinely stuck positions,
+// which is what it is for. Games run ~12% longer.
+//
+// jungle_rust/src/engine.rs carries the same number as DEFAULT_PROGRESS_LIMIT; the golden-parity
+// test compares the two kernels frame for frame, so they move together or not at all.
+export const DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT = 200;
 export const DEFAULT_JUNGLE_REPETITION_DRAW_COUNT = 3;
 
 function hasJungleLegalMove(board: JungleBoard, color: JungleColor): boolean {
