@@ -273,8 +273,13 @@ export function jungleFlipSeatToMove(state: JungleFlipGameState): JungleFlipSeat
   return state.ply % 2 === 0 ? 'red' : 'black';
 }
 
+/**
+ * Takes the binding field structurally so a JungleFlipPlayerView (which carries
+ * it) can ask too -- renderers need seat -> ink and must never re-derive it,
+ * because a seat is NOT the ink it plays.
+ */
 export function jungleFlipInkForSeat(
-  state: JungleFlipGameState,
+  state: Pick<JungleFlipGameState, 'firstColor'>,
   seat: JungleFlipSeat,
 ): JungleFlipColor | null {
   if (state.firstColor === null) return null;
@@ -283,6 +288,22 @@ export function jungleFlipInkForSeat(
 
 export function jungleFlipMoverInk(state: JungleFlipGameState): JungleFlipColor | null {
   return jungleFlipInkForSeat(state, jungleFlipSeatToMove(state));
+}
+
+/**
+ * The ink of the side that made the LAST action, or null before anything has
+ * been played. Derived from ply parity (the red SEAT acts on even ply, so the
+ * action at ply - 1 was its when ply is odd).
+ *
+ * Never read this off the board. A flip turns up a RANDOM tile, so the revealed
+ * piece's colour is independent of who flipped it -- the same trap as banqi's
+ * banqiLastMoverInk, and the reason a raw seat must never reach a colour call.
+ */
+export function jungleFlipLastMoverInk(
+  state: Pick<JungleFlipGameState, 'ply' | 'firstColor'>,
+): JungleFlipColor | null {
+  if (state.ply <= 0) return null;
+  return jungleFlipInkForSeat(state, state.ply % 2 === 1 ? 'red' : 'black');
 }
 
 // ── Move generation ───────────────────────────────────────────────────────────

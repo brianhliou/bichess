@@ -179,6 +179,29 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'a phone, so keep it if your layout is fluid.',
     ]),
 
+    proseSubheading('Background'),
+    proseParagraph([
+      'The frame is transparent. Whatever your page has behind the iframe shows ' +
+        'through around the board, so the embed sits on your surface rather than ' +
+        'stamping a coloured card onto it. The board and move list carry their own ' +
+        'panel, so they stay legible either way.',
+    ]),
+
+    proseSubheading('Theme'),
+    proseParagraph([
+      'By default the embed follows the READER: it renders light or dark to match ' +
+        'their system setting, the same as the rest of Mistboard. That is right for a ' +
+        'site that also has both themes, and wrong for one that does not, because a ' +
+        'light-only page ends up showing a dark board to every dark-mode visitor.',
+    ]),
+    proseParagraph([
+      'Add theme=light or theme=dark to pin it. Nothing on your side can do this for ' +
+        'you: prefers-color-scheme inside the frame is the browser\u2019s, not your ' +
+        'page\u2019s, and a color-scheme property on the iframe element does not reach ' +
+        'the document inside it.',
+    ]),
+    codeBlock(`${exampleEmbedUrl(origin)}?theme=light`),
+
     proseSubheading('oEmbed'),
     proseParagraph([
       'If your platform speaks oEmbed, you do not need any of the above: paste a study ' +

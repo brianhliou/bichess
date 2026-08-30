@@ -12,6 +12,7 @@ import {
   type JungleFlipGameState,
   type JungleFlipPiece,
   type JungleFlipPieceRole,
+  jungleFlipLastMoverInk,
   jungleFlipResolveCapture,
   STANDARD_JUNGLE_FLIP_DEAL,
 } from './variants-jungle-flip.js';
@@ -143,4 +144,23 @@ test('a 同归于尽 trade that removes BOTH last pieces is a DRAW, not a win fo
   assert.equal(next.board.a1, undefined);
   assert.equal(next.board.a2, undefined);
   assert.deepEqual(next.status, { type: 'finished', winner: null, reason: 'stalemate' });
+});
+
+test('jungleFlipLastMoverInk is null before anything has been played', () => {
+  assert.equal(jungleFlipLastMoverInk({ ply: 0, firstColor: null }), null);
+  assert.equal(jungleFlipLastMoverInk({ ply: 0, firstColor: 'red' }), null);
+});
+
+test('jungleFlipLastMoverInk alternates with ply, one behind the side to move', () => {
+  // The red SEAT acts on even ply, so the action at ply - 1 was its when ply is odd.
+  assert.equal(jungleFlipLastMoverInk({ ply: 1, firstColor: 'red' }), 'red');
+  assert.equal(jungleFlipLastMoverInk({ ply: 2, firstColor: 'red' }), 'black');
+  assert.equal(jungleFlipLastMoverInk({ ply: 3, firstColor: 'red' }), 'red');
+});
+
+test('jungleFlipLastMoverInk follows the bound ink, not the seat name', () => {
+  // firstColor 'black' means the red SEAT plays BLACK ink. A renderer comparing a
+  // seat to a piece colour would tint every mark backwards.
+  assert.equal(jungleFlipLastMoverInk({ ply: 1, firstColor: 'black' }), 'black');
+  assert.equal(jungleFlipLastMoverInk({ ply: 2, firstColor: 'black' }), 'red');
 });

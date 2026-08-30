@@ -1,13 +1,30 @@
 #!/usr/bin/env node
 /**
- * Evaluate the END of every engine sideline in every article, and write a
- * chess-style assessment symbol next to each one.
+ * Score every engine sideline in every article, and write a chess-style
+ * assessment symbol next to each one.
  *
  * Why this exists as a script rather than a pipeline stage: the annotations
- * carry `line` (what the engine wanted instead) but no eval for where that line
- * ARRIVES. The eval they do carry describes the played move. So a symbol at the
- * end of a sideline cannot be derived from the data we have; it has to be
- * measured, which means replaying the line and asking Pikafish.
+ * carry `line` (what the engine wanted instead) but no eval for it. The eval
+ * they do carry describes the played move, which is the move the line exists to
+ * replace. So the symbol has to be measured.
+ *
+ * WHERE it is measured is the whole correctness question, and the first version
+ * of this got it wrong. It replayed the line and searched the position at the
+ * END of it. A principal variation's tail is the least reliable part of a
+ * search: those moves come out of the transposition table and are never
+ * re-verified the way the root is, so the last move of a stored line is often
+ * not a move the engine would actually play. Searching after it scores a
+ * position the line never reaches. Measured over the 183 lines these articles
+ * ship, 18 ended on a non-engine move that swung 150cp or more against the side
+ * that played it, and three flipped the verdict outright: one line offered to
+ * Black as an improvement was labelled `+−`, Red winning, because its final
+ * stored move hung a piece.
+ *
+ * A line is the engine's best play from the position it starts in, so the value
+ * of the line IS the score of that position. That is a root score, which the
+ * engine reports exactly, and it cannot disagree with the judgment sitting
+ * beside it: a line offered because a move lost ground must come out at least as
+ * good for the mover as the move they played. So this searches the ROOT.
  *
  * Reads the article's own specs, so it cannot drift from what the page renders.
  * Writes JSON keyed by "<boardIndex>:<ply>"; a separate step bakes it in, which
@@ -238,15 +255,26 @@ async function main() {
       for (const [plyKey, a] of Object.entries(block.spec.annotations?.byPly ?? {})) {
         if (!a.line) continue;
         const ply = Number(plyKey);
-        // The line replaces the played move, so the prefix is everything BEFORE it.
-        const prefix = mainline.slice(0, ply - 1);
-        const moves = [...prefix, ...a.line.trim().split(/\s+/)].map(toEngineMove);
-        jobs.push({ key: `${slug}:${boardIndex}:${ply}`, moves });
+        // The line replaces the played move, so it starts from the position
+        // BEFORE that move. Scoring that position scores the line.
+        const root = mainline.slice(0, ply - 1).map(toEngineMove);
+        const leaf = [...mainline.slice(0, ply - 1), ...a.line.trim().split(/\s+/)].map(
+          toEngineMove,
+        );
+        jobs.push({ key: `${slug}:${boardIndex}:${ply}`, moves: root, leaf });
       }
     });
   }
+  const only = flag('only', '');
+  const limit = Number(flag('limit', '0'));
+  const selected = jobs.filter((j) => !only || j.key.includes(only)).slice(0, limit || jobs.length);
+  // --leaf-check also searches the end of each line, which is what the broken
+  // version used. It is a diagnostic, never the answer: the gap between the two
+  // is the size of the bug, so a run that reports zero disagreements is a run
+  // that could have used either.
+  const leafCheck = args.includes('--leaf-check');
   console.log(
-    `${found.map((f) => `${f.slug} (${f.lines})`).join(', ')} -> ${jobs.length} sidelines, ${NODES} nodes each`,
+    `${found.map((f) => `${f.slug} (${f.lines})`).join(', ')} -> ${selected.length} of ${jobs.length} sidelines, ${NODES} nodes each${leafCheck ? ', with leaf cross-check' : ''}`,
   );
 
   const { proc, send, until } = openEngine();
@@ -258,8 +286,9 @@ async function main() {
   await until((l) => l === 'readyok');
 
   const out = {};
+  const disagreed = [];
   let done = 0;
-  for (const job of jobs) {
+  for (const job of selected) {
     send('ucinewgame');
     send('isready');
     await until((l) => l === 'readyok');
@@ -290,12 +319,62 @@ async function main() {
     // checkmate is the one line with no assessment on it.
     const redMate =
       mate == null ? null : mate === 0 ? (redToMove ? -1 : 1) : redToMove ? mate : -mate;
-    out[job.key] = { cp: redCp, mate: redMate, symbol: symbolFor({ cp: redCp, mate: redMate }) };
+    const symbol = symbolFor({ cp: redCp, mate: redMate });
+    out[job.key] = { cp: redCp, mate: redMate, symbol };
+
+    if (leafCheck) {
+      send('ucinewgame');
+      send('isready');
+      await until((l) => l === 'readyok');
+      send(`position startpos moves ${job.leaf.join(' ')}`);
+      let lcp = null;
+      let lmate = null;
+      send(`go nodes ${NODES}`);
+      await until(
+        (l) => l.startsWith('bestmove'),
+        (l) => {
+          const m = /score (cp|mate) (-?\d+)/.exec(l);
+          if (!m) return;
+          if (m[1] === 'cp') {
+            lcp = Number(m[2]);
+            lmate = null;
+          } else {
+            lmate = Number(m[2]);
+            lcp = null;
+          }
+        },
+      );
+      const leafRed = job.leaf.length % 2 === 0;
+      const leafCp = lcp == null ? null : leafRed ? lcp : -lcp;
+      const leafMate =
+        lmate == null ? null : lmate === 0 ? (leafRed ? -1 : 1) : leafRed ? lmate : -lmate;
+      const leafSymbol = symbolFor({ cp: leafCp, mate: leafMate });
+      if (leafSymbol !== symbol) {
+        disagreed.push({ key: job.key, root: symbol, leaf: leafSymbol, rootCp: redCp, leafCp });
+      }
+    }
+
     done += 1;
-    if (done % 20 === 0 || done === jobs.length) console.log(`  ${done}/${jobs.length}`);
+    if (done % 20 === 0 || done === selected.length) console.log(`  ${done}/${selected.length}`);
   }
   proc.kill();
 
+  if (leafCheck) {
+    console.log(`\nroot vs leaf: ${disagreed.length} of ${selected.length} disagree`);
+    for (const d of disagreed.slice(0, 20)) {
+      console.log(`  ${d.key}: root ${d.root} (${d.rootCp}cp)  leaf ${d.leaf} (${d.leafCp}cp)`);
+    }
+  }
+
+  // A filtered run measures a SUBSET, so writing the file would delete every
+  // line it did not look at, and the bake step would then drop those symbols
+  // from the articles. Filtering is for checking a threshold or a single line;
+  // only a full run owns the file.
+  const partial = selected.length !== jobs.length;
+  if (partial) {
+    console.log(`\npartial run (${selected.length} of ${jobs.length}): ${OUT} left untouched`);
+    return;
+  }
   writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
   const tally = {};
   for (const v of Object.values(out)) tally[v.symbol] = (tally[v.symbol] ?? 0) + 1;

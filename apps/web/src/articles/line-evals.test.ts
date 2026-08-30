@@ -19,7 +19,7 @@ const measuredPath = ['scripts/data/article-line-evals.json', '../../scripts/dat
   .map((candidate) => resolve(process.cwd(), candidate))
   .find((candidate) => existsSync(candidate));
 
-type Annotation = { line?: string; lineEval?: string };
+type Annotation = { line?: string; lineEval?: string; note?: string };
 type Board = { spec: { iccs: string; annotations?: { byPly: Record<string, Annotation> } } };
 
 const annotated = articles
@@ -71,6 +71,65 @@ describe('sideline assessments', () => {
       });
     }
     expect(wrong, `assessments on the wrong line:\n${wrong.slice(0, 10).join('\n')}`).toEqual([]);
+    expect(compared, 'nothing was compared').toBeGreaterThan(100);
+  });
+
+  // The check that matters, and the one that was missing while the symbols were
+  // measured in the wrong place.
+  //
+  // A sideline exists because the move actually played gave something up, so the
+  // line is the better alternative BY CONSTRUCTION. Its score therefore cannot be
+  // worse for the side that plays it than the score after the move they chose.
+  // Best play is not worse than the move you played.
+  //
+  // The first version of article-line-evals.mjs searched the position at the END
+  // of the stored line instead of the position the line starts from. A principal
+  // variation's tail is the least verified part of a search, so lines routinely
+  // ended on a move the engine would never play, and the score after it described
+  // a position the line never reaches. Under that measurement 16 of these 168
+  // lines came out worse for the mover than the move they replaced, one by 191cp
+  // — including a line offered to Black that was labelled `+−`, Red winning.
+  // Measuring the root drops that to zero above the tolerance.
+  //
+  // The tolerance absorbs the fact that the two numbers come from different
+  // engine runs: `note` is written by the annotation sweep and `cp` by the
+  // line-eval script, at different budgets and with threads, so they disagree by
+  // a few tens of centipawns on the same position. It is nowhere near wide enough
+  // to hide the class of bug above.
+  it('never score a line worse for the mover than the move it replaces', () => {
+    const TOLERANCE_CP = 75;
+    expect(measuredPath, 'the measurement file is gone').toBeTruthy();
+    const measured = JSON.parse(readFileSync(measuredPath as string, 'utf8')) as Record<
+      string,
+      { cp: number | null }
+    >;
+    const impossible: string[] = [];
+    let compared = 0;
+    for (const { slug, boards } of annotated) {
+      boards.forEach((board, index) => {
+        for (const [ply, a] of Object.entries(board.spec.annotations?.byPly ?? {})) {
+          if (!a.line || !a.note) continue;
+          const evalAfter = /eval ([+-]?[\d.]+) after/.exec(a.note);
+          if (!evalAfter) continue;
+          const line = measured[`${slug}:${index}:${ply}`]?.cp;
+          if (line == null) continue;
+          compared += 1;
+          const played = Number(evalAfter[1]) * 100;
+          // Both numbers are Red POV, so "better for the mover" flips with turn.
+          const redToMove = Number(ply) % 2 === 1;
+          const worseBy = redToMove ? played - line : line - played;
+          if (worseBy > TOLERANCE_CP) {
+            impossible.push(
+              `${slug} board ${index} ply ${ply}: line ${line}cp, played ${played}cp, worse by ${Math.round(worseBy)}cp`,
+            );
+          }
+        }
+      });
+    }
+    expect(
+      impossible,
+      `lines scored worse than the move they replace:\n${impossible.slice(0, 10).join('\n')}`,
+    ).toEqual([]);
     expect(compared, 'nothing was compared').toBeGreaterThan(100);
   });
 

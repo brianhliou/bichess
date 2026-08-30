@@ -795,6 +795,11 @@ export function mountXiangqiReplay(
     // meant entering a line from ply 0 left prev disabled, and stepping back
     // out is one of only two ways to leave a line.
     const line = variation;
+    // Disabling the control the reader is CURRENTLY on hands focus back to the
+    // document, and the arrow keys are bound to `host`, so they go dead exactly
+    // when someone clicks their way to the last move and then wants to step
+    // back. Remember what was focused, and catch it below if it just went away.
+    const wasFocused = document.activeElement;
     if (line) {
       first.disabled = false;
       prev.disabled = false;
@@ -805,6 +810,15 @@ export function mountXiangqiReplay(
       prev.disabled = index === 0;
       next.disabled = index === total;
       last.disabled = index === total;
+    }
+    if (
+      wasFocused instanceof HTMLButtonElement &&
+      wasFocused.disabled &&
+      host.contains(wasFocused)
+    ) {
+      // preventScroll: the widget can be taller than the viewport, and yanking
+      // the page to it on every step at the end of a game is worse than the bug.
+      host.focus({ preventScroll: true });
     }
     if (slider.isConnected) slider.value = String(index);
     if (variation) {

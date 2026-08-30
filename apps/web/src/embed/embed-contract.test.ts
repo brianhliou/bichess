@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { EMBED_DEFAULT_HEIGHT, EMBED_DEFAULT_WIDTH } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { embedThemeFromSearch } from './embed-route.js';
 
 // The default size is not a taste question, it is a claim about a layout that
 // lives in a stylesheet, and the two drifted apart: the replay stacks its move
@@ -42,5 +43,28 @@ describe('the embed default size', () => {
     const ratio = EMBED_DEFAULT_HEIGHT / EMBED_DEFAULT_WIDTH;
     expect(ratio).toBeGreaterThan(0.8);
     expect(ratio).toBeLessThan(1.05);
+  });
+});
+
+describe('embedThemeFromSearch', () => {
+  // An embed inherits the READER's OS theme by default, which is wrong for a
+  // host page that has only one theme: a light-only blog framing this showed a
+  // dark board to every dark-mode reader, and nothing on the embedder's side can
+  // fix it (prefers-color-scheme inside the frame is the browser's, and
+  // color-scheme on the <iframe> does not reach the framed document).
+  it('reads a pinned theme off the query string', () => {
+    expect(embedThemeFromSearch('?theme=light')).toBe('light');
+    expect(embedThemeFromSearch('?theme=dark')).toBe('dark');
+    expect(embedThemeFromSearch('?ply=12&theme=light')).toBe('light');
+  });
+
+  it('follows the reader when the embedder says nothing, or says nonsense', () => {
+    expect(embedThemeFromSearch('')).toBeNull();
+    expect(embedThemeFromSearch('?ply=12')).toBeNull();
+    expect(embedThemeFromSearch('?theme=')).toBeNull();
+    expect(embedThemeFromSearch('?theme=系统')).toBeNull();
+    // 'system' is the default already; naming it must not pin anything, or the
+    // OS-change listener would stop updating a document that asked to follow.
+    expect(embedThemeFromSearch('?theme=system')).toBeNull();
   });
 });

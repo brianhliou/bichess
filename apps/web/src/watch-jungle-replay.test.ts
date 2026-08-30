@@ -1,5 +1,6 @@
 import type { JungleBoard, JungleMove, JunglePlayerView } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { JUNGLE_LAST_MOVE } from './jungle-art.js';
 import type { JunglePostgameResponse } from './live-jungle-postgame.js';
 import { mountJungleWatchReplay } from './watch-jungle-replay.js';
 
@@ -47,16 +48,20 @@ describe('Jungle watch replay', () => {
     // Ply 0: no move played yet, so no last-move marks on the board.
     const boardSvg = () => root.querySelector('svg.jungle-live-svg');
     expect(boardSvg()).not.toBeNull();
-    expect(boardSvg()!.outerHTML).not.toContain('stroke="#e3b34d"');
-    expect(boardSvg()!.outerHTML).not.toContain('fill="rgba(58,44,32,0.36)"');
+    expect(boardSvg()!.querySelector('[class^="jungle-last-move"]')).toBeNull();
 
-    // Ply 1: the a3-a4 move renders the origin shadow disc on a3 and ONE thin
-    // gold destination halo on a4 (shared JUNGLE_LAST_MOVE grammar).
+    // Ply 1: the a3-a4 move tints a3 and a4 in the mover's ink (shared
+    // JUNGLE_LAST_MOVE grammar).
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
-    expect(boardSvg()!.outerHTML.match(/fill="rgba\(58,44,32,0\.36\)"/g)).toHaveLength(1);
-    expect(boardSvg()!.outerHTML.match(/stroke="#e3b34d"/g)).toHaveLength(1);
-    expect(boardSvg()!.querySelector('circle.jungle-last-move-from')).not.toBeNull();
-    expect(boardSvg()!.querySelector('circle.jungle-last-move-ring')).not.toBeNull();
+    const marks = [...boardSvg()!.querySelectorAll('[class^="jungle-last-move"]')];
+    expect(marks.map((m) => m.getAttribute('class'))).toEqual([
+      'jungle-last-move-from',
+      'jungle-last-move-to',
+    ]);
+    expect(marks.map((m) => m.getAttribute('fill'))).toEqual([
+      JUNGLE_LAST_MOVE.fill.red.from,
+      JUNGLE_LAST_MOVE.fill.red.to,
+    ]);
 
     handle.destroy();
   });

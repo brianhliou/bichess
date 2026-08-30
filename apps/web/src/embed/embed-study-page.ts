@@ -32,6 +32,10 @@ function note(root: HTMLElement, message: string): void {
 
 export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute): Promise<void> {
   document.body.classList.add('embed-body');
+  // A hook on the ROOT, not just the body. :root in app-base.css paints the page
+  // colour and a gradient, and it outranks a bare `html` selector, so the frame
+  // kept its cream ground however body was styled.
+  document.documentElement.dataset.embed = 'study';
   root.className = 'embed-root';
   note(root, 'Loading…');
 

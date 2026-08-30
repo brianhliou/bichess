@@ -33,7 +33,7 @@ const C_Ue0EgpS7: XiangqiReplaySpec = {
         glyph: "??",
         note: "blunder: 18.7 win% given up, eval +3.49 after. The engine wanted the line in the sibling branch.",
         line: "e4c5 c4d4 d7b7 b9d9 e9e8 e1d2 c5b3 d4b4 b3c1 e0d0 c1a2 b4b6 a2b0 e2c0 b0c2 d0d1 c2b4 d5b4 b7b6 d9d4 e8e9 d1e1 b6b5 d4e4 a0b0 c0e2 f9e8 b4c2",
-        "lineEval": "="
+        "lineEval": "±"
       },
       "99": {
         glyph: "!",
@@ -81,7 +81,7 @@ const C_0BM6N4j4: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 10.9 win% given up, eval -1.59 after. The engine wanted the line in the sibling branch.",
         line: "g3f1 b4b5 e2g4 b3i3 b2b5 c3b5 a3a4 b5d4 c6b6 d9e8 h9h1 i6i5 h1i1 i3d3 f1h2 e5e4 g4i2 d3e3 e1f2 e4f4 i1i5 d4b3 i5i4 b3d2 e0e1 e3e5 e1d1 d2b1 b6c6",
-        "lineEval": "="
+        "lineEval": "⩱"
       },
       "46": {
         glyph: "!",
@@ -95,13 +95,13 @@ const C_0BM6N4j4: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 14.1 win% given up, eval -0.81 after. The engine wanted the line in the sibling branch.",
         line: "c1b3 g3f1 e3e2 d1d3 b3c1 d3d1 c1a2 g0i2 g4g2 f1e3 g2i2 e3d5 i2i3 d1a1 e2e1 f0e1 i3i0 e1f0 i0i2 a1d1 i2i3 d1f1 i3a3 f1a1 i6i5 f0e1 a3a5 e0f0",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "67": {
         glyph: "?",
         note: "mistake: 13.6 win% given up, eval -2.43 after. The engine wanted the line in the sibling branch.",
         line: "d1a1 a2c3 a1c1 c3b5 c1c5 b5a3 c5c3 a3c4 g0e2 e3e2 g3e2 c4d6 c3c6 d6e4 c6a6 g4g2 a6a2 e4g5 e2c1 g2g3 a2i2 g3a3 i3i4 e8f7 i4i5",
-        "lineEval": "∓"
+        "lineEval": "⩱"
       },
       "93": {
         glyph: "?!",
@@ -124,25 +124,25 @@ const C_0BM6N4j4: XiangqiReplaySpec = {
       "105": {
         glyph: "?!",
         note: "inaccuracy: 5.2 win% given up, eval -2.20 after. The engine wanted the line in the sibling branch.",
-        line: "g5g9 e8f9 g9g2 a6d6 g2i2 d9e8 d0d1 e8f7 i2f2 d6d3 f2f7 d3a3 f7f6 a3a1 d1d0 a1i1 f6a6 i1i5 d0d1 f9e8 a6a9 e8d9 a9a6 i5i1 d1d0 i1i0 d0d1 i0i5 a6e6 d9e8 d1e1 i5i2",
-        "lineEval": "="
+        line: "g5g9 e8f9 g9g2 a6d6 g2i2 d9e8 d0d1 e8f7 i2f2 d6d3 f2f7 d3a3 f7f6 a3a1 d1d0 a1i1 f6a6 i1i5 d0d1 f9e8 a6a9 e8d9 a9a6 i5i1 d1d0 i1i0 d0d1 i0i5 a6e6 d9e8 d1e1",
+        "lineEval": "∓"
       },
       "130": {
         glyph: "?!",
         note: "inaccuracy: 7 win% given up, eval -2.60 after. The engine wanted the line in the sibling branch.",
-        line: "f3e3 e2f2 d3d5 a5a6 e3d3 d2e1 e8f9 e1f0 f7e8 f0e1 d3e3 e1d2 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9 d1e1",
+        line: "f3e3 e2f2 d3d5 a5a6 e3d3 d2e1 e8f9 e1f0 f7e8 f0e1 d3e3 e1d2 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9",
         "lineEval": "−+"
       },
       "131": {
         glyph: "?!",
         note: "inaccuracy: 6.2 win% given up, eval -3.51 after. The engine wanted the line in the sibling branch.",
-        line: "a5a6 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9 e2h2 f3e3 a9b9 d9b9 h2h9 e8f9 h9h3 b9b3 h3h4 e3d3 h4e4 f9e8 e4h4",
-        "lineEval": "−+"
+        line: "a5a6 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9 e2h2 f3e3 a9b9 d9b9 h2h9 e8f9 h9h3 b9b3 h3h4 e3d3 h4e4 f9e8",
+        "lineEval": "∓"
       },
       "151": {
         glyph: "??",
         note: "blunder: 15.3 win% given up, eval mate in 7 after. The engine wanted the line in the sibling branch.",
-        line: "f7f3 a1a7 d0d1 a7b7 f3e3 b7f7 e3c3 f7d7 c3e3 d7d6 e3a3 e9d9 a3a9 d9d8 a9a2",
+        line: "f7f3 a1a7 d0d1 a7b7 f3e3 b7f7 e3c3 f7d7 c3e3 d7d6 e3a3 e9d9 a3a9 d9d8",
         "lineEval": "−+"
       },
     },
@@ -173,8 +173,8 @@ const C_kkN9Bwhq: XiangqiReplaySpec = {
       "33": {
         glyph: "?!",
         note: "inaccuracy: 9.6 win% given up, eval +0.75 after. The engine wanted the line in the sibling branch.",
-        line: "b9b6 e6d4 c4d4 f5d4 g2e3 g7g0 f0e1 g0g1 c1d3 h9h0 e1f0 e7c9 d3e1 h0h2 e1g0 h2d2 c3c1 d2d3",
-        "lineEval": "+−"
+        line: "b9b6 e6d4 c4d4 f5d4 g2e3 g7g0 f0e1 g0g1 c1d3 h9h0 e1f0 e7c9 d3e1 h0h2 e1g0 h2d2 c3c1",
+        "lineEval": "±"
       },
       "80": {
         glyph: "?!",
@@ -195,14 +195,14 @@ const C_kkN9Bwhq: XiangqiReplaySpec = {
       "122": {
         glyph: "?!",
         note: "inaccuracy: 5.4 win% given up, eval +1.83 after. The engine wanted the line in the sibling branch.",
-        line: "i7g9 e5b5 e9d9 b5b9 d9d8 b9b6 d8d9 e1e0 g9i7 b6d6 d9e9 d6a6 e9d9 a6a9 d9d8 a9a3 d8d9 a3d3 d9e9 d3d7 e9f9 d7b7 e8d9 b7b6 f8e8 g0e2 e8e7 b6f6 f9e9 g7f7 e7b7",
-        "lineEval": "+−"
+        line: "i7g9 e5b5 e9d9 b5b9 d9d8 b9b6 d8d9 e1e0 g9i7 b6d6 d9e9 d6a6 e9d9 a6a9 d9d8 a9a3 d8d9 a3d3 d9e9 d3d7 e9f9 d7b7 e8d9 b7b6 f8e8 g0e2 e8e7 b6f6 f9e9 g7f7",
+        "lineEval": "±"
       },
       "129": {
         glyph: "?!",
         note: "inaccuracy: 5.4 win% given up, eval +1.65 after. The engine wanted the line in the sibling branch.",
-        line: "e1e0 f8h8 i2g0 h8f8 b5b9 d9d8 b9b8 d8d9 b8b5 g9i7 b5d5 d9e9 d5d7 e9f9 d7a7 e8d9 a7a9 f8d8 a9a5 d8e8 g0e2 e8e3",
-        "lineEval": "+−"
+        line: "e1e0 f8h8 i2g0 h8f8 b5b9 d9d8 b9b8 d8d9 b8b5 g9i7 b5d5 d9e9 d5d7 e9f9 d7a7 e8d9 a7a9 f8d8 a9a5 d8e8 g0e2",
+        "lineEval": "±"
       },
       "130": {
         glyph: "?!",
@@ -213,8 +213,8 @@ const C_kkN9Bwhq: XiangqiReplaySpec = {
       "146": {
         glyph: "?!",
         note: "inaccuracy: 8.6 win% given up, eval +4.82 after. The engine wanted the line in the sibling branch.",
-        line: "e9f9 d7a7 e8d9 a7a5 f8e8 g0e2 e8e7 a5f5 f9e9 g7f7 e7e6 f5b5 d9e8 b5b9 e8d9 b9b8 e6e8 b8b5 e8g8 b5e5 d9e8",
-        "lineEval": "+−"
+        line: "e9f9 d7a7 e8d9 a7a5 f8e8 g0e2 e8e7 a5f5 f9e9 g7f7 e7e6 f5b5 d9e8 b5b9 e8d9 b9b8 e6e8 b8b5 e8g8 b5e5",
+        "lineEval": "±"
       },
     },
   },
@@ -240,7 +240,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 8.6 win% given up, eval -3.41 after. The engine wanted the line in the sibling branch.",
         line: "i4g4 h5g5 g4g3 c7d5 d0e1 f9e8 d6b7 d5b4 f3b3 g5g4 b7a9 h0h8 g0i2 g4e4 g3g2 e4d4 b3h3 h8g8 h3h9 e8f9 a9c8 g8d8 h9h8 e9d9 g2d2 b4a2 d2b2 d4b4 h8h9 d9e9 h9h8 b4b2",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "54": {
         glyph: "?",
@@ -252,7 +252,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 5.1 win% given up, eval -2.79 after. The engine wanted the line in the sibling branch.",
         line: "d0e1 c7d5 e4e5 g5e5 g4g8 e5e3 g3e3 d5e3 a3a4 f9e8 g8i8 h0h4 i8i6 e3g4 d6b5 e6e5 b5d6 g4h2 i6a6 h2g0 e0d0 g0h2 a6a9 c9a7",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "58": {
         glyph: "?!",
@@ -264,7 +264,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 11.3 win% given up, eval -0.99 after. The engine wanted the line in the sibling branch.",
         line: "i0f0 e0f0 g5d5 f0e0 d5d6 h1h3 d6d4 h3e3 c7d5 g0e2 d4b4 e3d3 d5f6 g1e1 f6e4 e1e4 b4e4 e0e1 e6e5 d3h3 e4f4 e1e0 e5e4 e2c0 d7e8",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "71": {
         glyph: "?!",
@@ -276,7 +276,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 7.9 win% given up, eval -0.21 after. The engine wanted the line in the sibling branch.",
         line: "g5g0 e4e5 d5c3 i6i9 g0g9 i9h9 c3e2 f0e1 e2d4 e1d2 i1c1 d0e1 c1c8 h6h8 c8e8 a3a4 e9d9 e5d5 e8e9 h9f9 g9f9",
-        "lineEval": "="
+        "lineEval": "∓"
       },
       "73": {
         glyph: "?",
@@ -288,7 +288,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 8 win% given up, eval -2.24 after. The engine wanted the line in the sibling branch.",
         line: "e1d2 g3i3 d6c4 i0g0 e4e5 g0g9 h6a6 i3i0 e0e1 i0i1 e1e0 f9e8 a6i6 i1i4 c4d6 i4i0 e0e1 i0d0 d6e4 d0i0 e5e6 e9d9 e6d6 i0i1 e1e0 i1i4 e4f6 i4d4 d6d7 e8d7 i6i5 d4d2",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "88": {
         glyph: "?!",
@@ -300,7 +300,7 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 11.7 win% given up, eval -0.48 after. The engine wanted the line in the sibling branch.",
         line: "d9e9 b5c7 h3c3 c7b5 c3e3 e6d6 e3d3 i3i4 a6a5 i5h5 a5a4 i4i5 a4a3 i5i6 a3b3 i6i7 b3b2 i7h7 d3g3 b5d4 b2b1 h7h8 e8f7 d6d7 g3g0 e1f0 g0f0 e0e1 f0f1 e1e2 f1f2 e2e1",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "103": {
         glyph: "?",
@@ -311,8 +311,8 @@ const C_H4ovjgj7: XiangqiReplaySpec = {
       "115": {
         glyph: "?",
         note: "mistake: 10.5 win% given up, eval -2.99 after. The engine wanted the line in the sibling branch.",
-        line: "d6c8 d3d8 c8b6 a4a3 i5i6 d8b8 i3i4 a3b3 d1e1 b3c3 e1e0 c3c2 d2e1 c2c1 e1f0 f9f8 f0e1 e7c5 i4i5 e8d9 i6e6 f8e8 e0f0 b8b9",
-        "lineEval": "="
+        line: "d6c8 d3d8 c8b6 a4a3 i5i6 d8b8 i3i4 a3b3 d1e1 b3c3 e1e0 c3c2 d2e1 c2c1 e1f0 f9f8 f0e1 e7c5 i4i5 e8d9 i6e6 f8e8 e0f0",
+        "lineEval": "∓"
       },
     },
   },
@@ -337,8 +337,8 @@ const C_nj9VX8BK: XiangqiReplaySpec = {
       "18": {
         glyph: "?!",
         note: "inaccuracy: 6.5 win% given up, eval +0.04 after. The engine wanted the line in the sibling branch.",
-        line: "g9e7 e3e4 d8d3 b0b7 g7h5 e4e5 e6e5 b7b5 c6c5 b5c5 e5e4 c5e5 d3c3 e5e4 f9e8 c2e3 c3c0 e4e7 c9e7 e2e7 e8f7 e7e5 g5g4 f1f7 h5g7 f7f8",
-        "lineEval": "−+"
+        line: "g9e7 e3e4 d8d3 b0b7 g7h5 e4e5 e6e5 b7b5 c6c5 b5c5 e5e4 c5e5 d3c3 e5e4 f9e8 c2e3 c3c0 e4e7 c9e7 e2e7 e8f7 e7e5 g5g4 f1f7 h5g7",
+        "lineEval": "⩱"
       },
       "22": {
         glyph: "?!",
@@ -356,25 +356,25 @@ const C_nj9VX8BK: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 8.7 win% given up, eval +1.00 after. The engine wanted the line in the sibling branch.",
         line: "i7i3 b0b7 i3i4 h4g2 i4d4 b7c7 g9e7 a2a6 f9e8 a6a9 d4d7 f4h4 h9h4 g2h4 d1b1 h4g6 b1b9 a9a8 b9b3 c7c6 b3d3",
-        "lineEval": "⩲"
+        "lineEval": "="
       },
       "27": {
         glyph: "?!",
         note: "inaccuracy: 9.1 win% given up, eval +0.00 after. The engine wanted the line in the sibling branch.",
         line: "e2g2 g7h5 g2g3 g5g4 f4g4 d3e3 d4f5 e3f3 g4g6 f3d3 b0b2 h5f4 b2b8 f9e8 a2h2 i7h7 h2h7 h0h7 g6g4",
-        "lineEval": "="
+        "lineEval": "⩲"
       },
       "32": {
         glyph: "?!",
         note: "inaccuracy: 6.5 win% given up, eval +0.71 after. The engine wanted the line in the sibling branch.",
         line: "h0i0 c4c5 d3e3 c5c6 e3h3 c6c7 c9e7 e1f2 h3h0 e0e1 h0h1 e1e0 i7c7 c0a2 h1h0 e0e1 h0h1 e1e0 h9h6 d4b5 h1h0 e0e1 h0h1 e1e0",
-        "lineEval": "∓"
+        "lineEval": "="
       },
       "33": {
         glyph: "??",
         note: "blunder: 20.9 win% given up, eval -1.61 after. The engine wanted the line in the sibling branch.",
         line: "c2c6 i7f7 g2f2 h9g9 f2f7 g5g4 f4g4 g9g4 i2g4 d3d4 b8d8 e8d7 h4g2 h0h2 d8g8 d4c4 c6i6 h5i3 g4e2 c4i4 i6i3 i4i3 g8h8 i3f3 f7d7 h2i2 d7d3 f3f6 h8h9 e9e8",
-        "lineEval": "±"
+        "lineEval": "⩲"
       },
       "41": {
         glyph: "?",
@@ -434,7 +434,7 @@ const C_DCNGV4UV: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 9.3 win% given up, eval +0.08 after. The engine wanted the line in the sibling branch.",
         line: "d1d7 f9f8 d7d8 f8f9 f4f6 g7h5 e5f5 f9e9 f5f7 e8f7 c3e4 h9h8 f6i6 h5g7 i6c6 h8d8 c6c7 c2a2 c7e7 d9e8 e7c7 d8b8 c7c9 e8d9 e0d0 f7e8 g2h4 g5g4 h4g6 a2g2 g6e7 b8b0",
-        "lineEval": "⩲"
+        "lineEval": "±"
       },
       "41": {
         glyph: "!!",
@@ -456,7 +456,7 @@ const C_DCNGV4UV: XiangqiReplaySpec = {
         glyph: "??",
         note: "blunder: 18 win% given up, eval +0.07 after. The engine wanted the line in the sibling branch.",
         line: "f5g3 c2f2 g4f4 f2f7 e8f7 i2g0 f8e8 d5d7 f4g4 h2g2 e8e9 c3d5 h6d6 d7f7 d9e8 f7f1 d6c6 f1g1 h3a3 g1g3",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "64": {
         glyph: "!!",
@@ -466,7 +466,7 @@ const C_DCNGV4UV: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 6.4 win% given up, eval +1.39 after. The engine wanted the line in the sibling branch.",
         line: "g5i7 e3d5 e9f9 d6g6 i7g9 g6g4 e8f7 d5f4 a3c2 f5f6 d9e8 g4a4 c2d4 e2g0 f9e9 a4a6 d4c6 e0d0 f3h2 g0i2 h2f3 f6f7 e8f7 a6i6 c6d4 i6i9 e9e8 i3i4",
-        "lineEval": "±"
+        "lineEval": "⩲"
       },
       "104": {
         glyph: "?!",
@@ -478,7 +478,7 @@ const C_DCNGV4UV: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 8.3 win% given up, eval +1.47 after. The engine wanted the line in the sibling branch.",
         line: "d5b4 f8h7 d4e4 e9f9 f6g6 g5e7 g6h6 h7f6 e4h4 f6e4 e0d0 e4g5 h4h5 g5h3 h5h4 e8d7 h6i6 h3f4 e2g4 f4g6 h4h9 b2c4 b4c2 d9e8 h9i9 g6e5 g4e2 c4d6 c2e3 e5g6 i6h6 g6h4",
-        "lineEval": "+−"
+        "lineEval": "±"
       },
       "111": {
         glyph: "?!",
@@ -508,8 +508,8 @@ const C_oyo2kgtC: XiangqiReplaySpec = {
       "20": {
         glyph: "?!",
         note: "inaccuracy: 7.7 win% given up, eval +0.70 after. The engine wanted the line in the sibling branch.",
-        line: "c7c8 i1f1 h9h5 a4a5 f9e8 b2b5 f5f1 b1f1 h5h4 g3g4 h4g4 g2f4 g4g0 b5b8 g0g4 f4d5 c6c5 c4c5 g4a4 b8a8 a4a5 e2c2 c8c2 f1f8 c2i2",
-        "lineEval": "+−"
+        line: "c7c8 i1f1 h9h5 a4a5 f9e8 b2b5 f5f1 b1f1 h5h4 g3g4 h4g4 g2f4 g4g0 b5b8 g0g4 f4d5 c6c5 c4c5 g4a4 b8a8 a4a5 e2c2 c8c2 f1f8",
+        "lineEval": "="
       },
       "58": {
         glyph: "??",
@@ -543,8 +543,8 @@ const C_rhF5YH7d: XiangqiReplaySpec = {
       "33": {
         glyph: "?!",
         note: "inaccuracy: 8.2 win% given up, eval +0.32 after. The engine wanted the line in the sibling branch.",
-        line: "g1h1 h7f8 g4g5 f8e6 c4c5 e6d4 c5b5 d4b5 h1h5 c6c5 c2d4 c5c4 d4c6 i8c8 i2i6 b5d4 g5g6 d4c6 h5b5 c8b8 g6g7 c6b4 i6i9 e7g9 b5d5 c4c3",
-        "lineEval": "+−"
+        line: "g1h1 h7f8 g4g5 f8e6 c4c5 e6d4 c5b5 d4b5 h1h5 c6c5 c2d4 c5c4 d4c6 i8c8 i2i6 b5d4 g5g6 d4c6 h5b5 c8b8 g6g7 c6b4 i6i9 e7g9 b5d5",
+        "lineEval": "±"
       },
       "34": {
         glyph: "?!",
@@ -581,7 +581,7 @@ const C_z88B1zTk: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 7.2 win% given up, eval -0.44 after. The engine wanted the line in the sibling branch.",
         line: "c3c4 g3h5 h3f3 c5c4 b4c4 g5g4 f3f5 h5g7 f5f8 c7d5 c4g4 g7h5 e2e6 b9b6 g4d4 d5f6 d4b4 b6e6 b4b5 e6c6 c0e2 c6c2 b5b9 e8d9 c1d1 f9e8",
-        "lineEval": "⩲"
+        "lineEval": "="
       },
       "34": {
         glyph: "?!",
@@ -593,13 +593,13 @@ const C_z88B1zTk: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 7.4 win% given up, eval -1.51 after. The engine wanted the line in the sibling branch.",
         line: "e1f2 e6e5 c1b1 b5c5 b1c1 c5b5 c3c4 e5e4 b4e4 b5f5 f4h3 f5d5 c1f1 d5d3 f1f3 d3e3 g0e2 e3e4 f2e1 g5g4 f3f6 e4e6 f6i6 e6e3 i6a6 g4g3 h3i1 h9h7 a2b4",
-        "lineEval": "="
+        "lineEval": "⩱"
       },
       "38": {
         glyph: "??",
         note: "blunder: 17.5 win% given up, eval +0.43 after. The engine wanted the line in the sibling branch.",
         line: "b5e5 e3e4 e5d5 g0e2 d5d1 e1f2 d1i1 d0e1 i1i0 e1f0 i0i2 f2e1 i2h2 f4h3 h9h7 b4b7 e8d7 b7b2 h2h0 a2b4 h7h8 b4c6 h6c6 h5h8 c6c1 b2b6",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "44": {
         glyph: "?!",
@@ -610,20 +610,20 @@ const C_z88B1zTk: XiangqiReplaySpec = {
       "48": {
         glyph: "?",
         note: "mistake: 10.4 win% given up, eval +1.85 after. The engine wanted the line in the sibling branch.",
-        line: "e3b3 e6c7 f3e5 c7d5 e4e3 h6b6 h7h5 b6b3 h5h0 d5e3 h0g0 e1f0 e5d3 f2e1 g0g3 e1d2 g3g1 b3c3 g1b1 f0e1 b1b2 e0d0",
-        "lineEval": "⩱"
+        line: "e3b3 e6c7 f3e5 c7d5 e4e3 h6b6 h7h5 b6b3 h5h0 d5e3 h0g0 e1f0 e5d3 f2e1 g0g3 e1d2 g3g1 b3c3 g1b1 f0e1 b1b2",
+        "lineEval": "⩲"
       },
       "49": {
         glyph: "?",
         note: "mistake: 13.5 win% given up, eval +0.31 after. The engine wanted the line in the sibling branch.",
-        line: "b4b9 a6a5 b9a9 e7c5 e6c5 e9d9 a2b4 d3d6 b4a6 d6b6 a4a5 e4e3 g0i2 h7a7",
+        line: "b4b9 a6a5 b9a9 e7c5 e6c5 e9d9 a2b4 d3d6 b4a6 d6b6 a4a5",
         "lineEval": "±"
       },
       "50": {
         glyph: "?",
         note: "mistake: 11.8 win% given up, eval +1.64 after. The engine wanted the line in the sibling branch.",
-        line: "f3d2 e0f0 h7f7 e6c5 e9d9 c5a6 d9e9 a6b8 f7f4 h5h3 d3d6 e4e2 d2c0 a2c1 c0e1 c1d3 e1g2 e2g2 f4c4 g0e2 c4c3 g2g0 c3d3 h3d3 d6d3 h6e6 g9i7 f0f1",
-        "lineEval": "−+"
+        line: "f3d2 e0f0 h7f7 e6c5 e9d9 c5a6 d9e9 a6b8 f7f4 h5h3 d3d6 e4e2 d2c0 a2c1 c0e1 c1d3 e1g2 e2g2 f4c4 g0e2 c4c3 g2g0 c3d3 h3d3 d6d3 h6e6 g9i7",
+        "lineEval": "="
       },
       "63": {
         glyph: "?!",
@@ -640,32 +640,32 @@ const C_z88B1zTk: XiangqiReplaySpec = {
       "68": {
         glyph: "?",
         note: "mistake: 10.8 win% given up, eval +1.57 after. The engine wanted the line in the sibling branch.",
-        line: "e5e6 c5c6 e6e3 c3a2 a6a5 a4a5 e3a3 d5d2 a3a5 d6e6 f9e8 c6d6 e9f9 e6h6 f3e3 a2c1 a5h5 h6g6 h5h6 c7b9",
-        "lineEval": "−+"
+        line: "e5e6 c5c6 e6e3 c3a2 a6a5 a4a5 e3a3 d5d2 a3a5 d6e6 f9e8 c6d6 e9f9 e6h6 f3e3 a2c1 a5h5 h6g6 h5h6",
+        "lineEval": "⩲"
       },
       "70": {
         glyph: "?!",
         note: "inaccuracy: 6 win% given up, eval +2.14 after. The engine wanted the line in the sibling branch.",
         line: "e5e3 d6c6 e7c5 a6b4 c5e7 d5d3 e3e4 b4d5 e7c5 d3d2 e4e6 c6d6 c2a3 d2d0 g9e7 i3i4 e6e5 d6b6 a3c4 b6b3",
-        "lineEval": "⩲"
+        "lineEval": "±"
       },
       "93": {
         glyph: "?!",
         note: "inaccuracy: 5.9 win% given up, eval +1.47 after. The engine wanted the line in the sibling branch.",
         line: "d5c5 i3i0 c7d5 c1e2 d5f6 e2d4 c5d5 d4c2 f0e0 e9f9 b5c5 c2d0 d6d0 e7c5 d5c5 i0h0 d0b0 f3e3 c5d5 g9i7 d5d6",
-        "lineEval": "+−"
+        "lineEval": "±"
       },
       "113": {
         glyph: "?",
         note: "mistake: 11.9 win% given up, eval +0.30 after. The engine wanted the line in the sibling branch.",
         line: "f6e6 g3g2 c3e4 f3f2 e1f2 h4f4 d0d4 f4f3 d4d2 f3f4 f5g7 c1d3 f0f1 g5i7 g7h5 i7g5 h5g3 e9f9 e5f5 g5i7",
-        "lineEval": "+−"
+        "lineEval": "±"
       },
       "118": {
         glyph: "?",
         note: "mistake: 13.8 win% given up, eval +1.94 after. The engine wanted the line in the sibling branch.",
         line: "e7c9 d5c5 c1d3 e6e7 f3f2 e7d7 e8d7 d6f7 e9e8 c5c6 b4b1 f7g9 e8e9 f6h6 f2f1 f0f1 b1e1 f1f0 e1h1 g9f7 e9e8 h6f6 d3c1 f7g9 e8e9 d0d4",
-        "lineEval": "="
+        "lineEval": "⩲"
       },
       "121": {
         glyph: "?!",
@@ -676,8 +676,8 @@ const C_z88B1zTk: XiangqiReplaySpec = {
       "124": {
         glyph: "?",
         note: "mistake: 12 win% given up, eval +3.54 after. The engine wanted the line in the sibling branch.",
-        line: "b4b0 d0e0 b0b1 f5e3 g2f2 e2c0 e9d9 d6f5 b1b2 e0d0 d9e9 c0e2 b2b0 d0c0 f2e2 g0e2 d3c1 f0f1 b0b6 f6f9",
-        "lineEval": "−+"
+        line: "b4b0 d0e0 b0b1 f5e3 g2f2 e2c0 e9d9 d6f5 b1b2 e0d0 d9e9 c0e2 b2b0 d0c0 f2e2 g0e2 d3c1 f0f1 b0b6",
+        "lineEval": "±"
       },
     },
   },
@@ -789,7 +789,7 @@ const C_HFq9qzB8: XiangqiReplaySpec = {
         glyph: "??",
         note: "blunder: 20.2 win% given up, eval -2.88 after. The engine wanted the line in the sibling branch.",
         line: "e1f2 g4f4 c8e7 e8e7 h8f8 c9b9 f8g8 b9b3 g8g7 e7e8 g7c7 b3b0 e0e1 f4f3 c7g7 g3f5 g7g8 e8e9 f1f3 f5d4 f3f4 c2c3 g8d8 d4c2 e1e0 c3e3 d8d2 e3c3",
-        "lineEval": "⩲"
+        "lineEval": "⩱"
       },
       "50": {
         glyph: "??",
@@ -801,7 +801,7 @@ const C_HFq9qzB8: XiangqiReplaySpec = {
         glyph: "??",
         note: "blunder: 25.4 win% given up, eval -3.04 after. The engine wanted the line in the sibling branch.",
         line: "e1f2 g4f4 f2e1 f4g4",
-        "lineEval": "⩱"
+        "lineEval": "="
       },
       "54": {
         glyph: "!",
@@ -817,7 +817,7 @@ const C_HFq9qzB8: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 13.6 win% given up, eval -1.06 after. The engine wanted the line in the sibling branch.",
         line: "b0d0 c4c5 d5e3 h8f8 f2f8 c8d6 e8d8 g6f8 e3d1 f0e0 d0d6 c5d5 d6b6 f8e6 d1c3 e6c7 b6c6 d5d6 c6c0 c7a6 e4e3 a6b4 d8e8 f1i1 c3b1 i1i6 b1d2 e0d0 e3e2 i6e6 e8f8",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "69": {
         glyph: "?!",
@@ -829,13 +829,13 @@ const C_HFq9qzB8: XiangqiReplaySpec = {
         glyph: "?",
         note: "mistake: 12.7 win% given up, eval -0.57 after. The engine wanted the line in the sibling branch.",
         line: "e6e5 i3i4 e7g5 e1f2 e4f4 f2e1 f4e4 a3a4 f9e8 e2c0 d7d8 e1f2 e4f4 f2e1 f4e4 c0e2 e8d7 e1f2 e4f4 c5c6 d8d6 c6d6 g5e7 e2c0 e5e4 f2e1 f8e8 f1f2 g2h4 f2a2 h4f5 a2a6",
-        "lineEval": "−+"
+        "lineEval": "∓"
       },
       "83": {
         glyph: "??",
         note: "blunder: 18 win% given up, eval -2.73 after. The engine wanted the line in the sibling branch.",
         line: "e1f2 e3f3 f1f3 d7a7 c5d5 a7a3 i3i4 d9e8 d6b5 a3e3 e0d0 e8d7 f3g3 e3d3 b5a7 f9e8 a7c6 f8f9 e2g4 d3d2 g4i2 f9e9 d0e0 d2d1 e0e1 d1b1 c6b4 g2h0",
-        "lineEval": "="
+        "lineEval": "⩱"
       },
       "96": {
         glyph: "?",
@@ -919,14 +919,14 @@ const C_aHRbltmz: XiangqiReplaySpec = {
       "24": {
         glyph: "?!",
         note: "inaccuracy: 5.1 win% given up, eval -0.02 after. The engine wanted the line in the sibling branch.",
-        line: "i9i8 b2e2 i8d8 b0b5 a7b5 d1b2 c7a7 f0e1 b5c3 f4e6 c3e2 g0e2 g7e6 e2g4 d8b8 b2c0 g6g5 g4e2 b8b3 h0h3 b3d3 c0d2 a7a3 d2b1 e6f4",
-        "lineEval": "="
+        line: "i9i8 b2e2 i8d8 b0b5 a7b5 d1b2 c7a7 f0e1 b5c3 f4e6 c3e2 g0e2 g7e6 e2g4 d8b8 b2c0 g6g5 g4e2 b8b3 h0h3 b3d3 c0d2 a7a3 d2b1",
+        "lineEval": "⩱"
       },
       "62": {
         glyph: "??",
         note: "blunder: 17.4 win% given up, eval +2.52 after. The engine wanted the line in the sibling branch.",
         line: "i3i0 e2g0 g3g8 f6h6 c2d4 d0e1 e8f7 h6h8 g8g7 i9i4 f8e8 c0e2 g7h7 e4e5 h7h4 e5e6 i0i1 e6f6 i1f1 f4g6",
-        "lineEval": "="
+        "lineEval": "⩲"
       },
       "63": {
         glyph: "!",
@@ -960,13 +960,13 @@ const C_aHRbltmz: XiangqiReplaySpec = {
         glyph: "?!",
         note: "inaccuracy: 9.6 win% given up, eval +0.54 after. The engine wanted the line in the sibling branch.",
         line: "g5h7 f4h3 i8i7 h3i5 h7g9 g7g8 i7d7 f8f9 g9i8 h6h8 i8h6 i5h7 h6g4 h7g5 f6g6 g5e4 g4h6 g8e8 e5f5 e4f2 e0f0 f2h3 g6f6 e8d8 d7d1 d9e8 f5e5 f9e9 e5e6 e7c5 f6f5",
-        "lineEval": "⩲"
+        "lineEval": "±"
       },
       "99": {
         glyph: "?!",
         note: "inaccuracy: 7.5 win% given up, eval +0.54 after. The engine wanted the line in the sibling branch.",
         line: "d0e1 e8e9 e5e6 e7c9 f5e5 d9e8 f6f5 g7i7 e4c5 h9h7 e6f6 c9e7 e5e4 h3g1 e0d0 g1f3 c5b7 i7i0 b7c9 i0i9 c9a8 i9i6 a8c7 i6i5 f5f4 i5a5 f6e6 a5a0 c0a2",
-        "lineEval": "+−"
+        "lineEval": "±"
       },
       "119": {
         glyph: "?!",
@@ -995,8 +995,8 @@ const C_aHRbltmz: XiangqiReplaySpec = {
       "156": {
         glyph: "?!",
         note: "inaccuracy: 6.5 win% given up, eval +4.53 after. The engine wanted the line in the sibling branch.",
-        line: "d2e2 e4g3 e2f2 c4e2 f2e2 a4d4 e2e1 e0d0 d8e8 d4e4 e6e4 g3e4 e5e7 e4d2",
-        "lineEval": "="
+        line: "d2e2 e4g3 e2f2 c4e2 f2e2 a4d4 e2e1 e0d0 d8e8 d4e4 e6e4 g3e4 e5e7",
+        "lineEval": "+−"
       },
     },
   },
