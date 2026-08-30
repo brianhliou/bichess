@@ -298,11 +298,25 @@ async function upsertTour(client: Queryable, tour: XiangqiBroadcastTour): Promis
      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
      ON CONFLICT (slug) DO UPDATE SET
        name = EXCLUDED.name,
-       location = EXCLUDED.location,
+       -- Scheduling and venue are CURATED: they are seeded before the event so
+       -- the calendar can show it and the discovery adapter can resolve each
+       -- poll's round. A converted game page states none of them, so a plain
+       -- EXCLUDED nulls them on the first successful import -- which then
+       -- leaves every later poll with no active round to resolve, and the
+       -- event silently stops importing. Keep what is there unless the source
+       -- actually says otherwise.
+       location = COALESCE(EXCLUDED.location, xiangqi_broadcast_tours.location),
        source_url = EXCLUDED.source_url,
-       starts_at = EXCLUDED.starts_at,
-       ends_at = EXCLUDED.ends_at,
-       payload = EXCLUDED.payload,
+       starts_at = COALESCE(EXCLUDED.starts_at, xiangqi_broadcast_tours.starts_at),
+       ends_at = COALESCE(EXCLUDED.ends_at, xiangqi_broadcast_tours.ends_at),
+       -- Readers reconstruct a tour from the payload, not from the columns,
+       -- so the same fields have to be preserved in both or the column keeps
+       -- a date nothing reads.
+       payload = EXCLUDED.payload || jsonb_strip_nulls(jsonb_build_object(
+         'startsAt', COALESCE(EXCLUDED.payload->'startsAt', xiangqi_broadcast_tours.payload->'startsAt'),
+         'endsAt', COALESCE(EXCLUDED.payload->'endsAt', xiangqi_broadcast_tours.payload->'endsAt'),
+         'location', COALESCE(EXCLUDED.payload->'location', xiangqi_broadcast_tours.payload->'location')
+       )),
        updated_at = now()`,
     [
       tour.slug,
@@ -324,9 +338,15 @@ async function upsertRound(client: Queryable, round: XiangqiBroadcastRound): Pro
      ON CONFLICT (id) DO UPDATE SET
        tour_slug = EXCLUDED.tour_slug,
        name = EXCLUDED.name,
-       starts_at = EXCLUDED.starts_at,
+       -- The seeded round schedule is what resolveScheduledRound reads; a game
+       -- page never states it. See the tour upsert above.
+       starts_at = COALESCE(EXCLUDED.starts_at, xiangqi_broadcast_rounds.starts_at),
        source_url = EXCLUDED.source_url,
-       payload = EXCLUDED.payload,
+       -- roundFromRow spreads the payload, so this is the copy that actually
+       -- reaches resolveScheduledRound.
+       payload = EXCLUDED.payload || jsonb_strip_nulls(jsonb_build_object(
+         'startsAt', COALESCE(EXCLUDED.payload->'startsAt', xiangqi_broadcast_rounds.payload->'startsAt')
+       )),
        updated_at = now()`,
     [
       round.id,
