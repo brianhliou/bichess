@@ -237,10 +237,9 @@ function lastMoveLayer(
   // Origin: a darkened "the piece came from here" shadow disc. Destination: a
   // gold ring around the moved piece (this layer sits under the pieces, so only
   // the halo outside the piece radius shows). Markup + styling are shared with
-  // every other token board (board-lastmove.ts); this board is the one the
-  // proportions were tuned on, so it passes its own PIECE_SIZE and gets the
-  // canonical r=27 / r=26 back. The fog board (live-dark-xiangqi.ts) still
-  // renders plain -cell circles on both endpoints and keeps its lighter wash.
+  // every other token board (board-lastmove.ts), the fog board included since
+  // 2026-08-30; this board is the one the proportions were tuned on, so it
+  // passes its own PIECE_SIZE and gets the canonical radii straight back.
   return boardLastMoveMarkersSvg({ from: fromCenter, to: toCenter }, PIECE_SIZE);
 }
 

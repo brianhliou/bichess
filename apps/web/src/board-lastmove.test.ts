@@ -4,52 +4,50 @@ import { TOKEN_PIECE_RATIO, tokenPieceSize } from './board-metrics.js';
 
 // A move between adjacent intersections puts the origin wash one cell from the
 // destination halo. The two used to need 63 units where a cell gives 60, so the
-// pair visibly collided on every one-step move on every token board.
+// pair visibly collided on every one-step move on every token board. Sizing both
+// to half a cell fixed the collision and left them exactly tangent, which reads
+// as one merged lozenge rather than two marks -- so the origin now stops at the
+// piece radius and the daylight is asserted, not just the absence of overlap.
 describe('the shared last-move marks', () => {
   const radiusOf = (svg: string, cls: string) => {
     const m = svg.match(new RegExp(`class="[^"]*${cls}[^"]*"[^>]*r="([\\d.]+)"`));
     return m ? Number(m[1]) : Number.NaN;
   };
-
-  for (const cell of [60, 44, 31]) {
+  // Stroke is centred on the circle, so each mark reaches half a stroke past its
+  // radius. Stroke widths scale with the piece (see boardLastMoveStyleAttr).
+  const outerEdges = (cell: number) => {
     const pieceSize = tokenPieceSize(cell);
+    const scale = pieceSize / tokenPieceSize(60);
+    const svg = boardLastMoveMarkersSvg({ from: { x: 0, y: 0 }, to: { x: cell, y: 0 } }, pieceSize);
+    return {
+      pieceSize,
+      scale,
+      origin: radiusOf(svg, 'xq-live-lastmove-from') + (2 * scale) / 2,
+      ring: radiusOf(svg, 'xq-live-lastmove-ring') + (4 * scale) / 2,
+    };
+  };
 
-    it(`clears itself on a one-step move at cell ${cell}`, () => {
-      const svg = boardLastMoveMarkersSvg(
-        { from: { x: 0, y: 0 }, to: { x: cell, y: 0 } },
-        pieceSize,
-      );
-      // Stroke is centred on the circle, so each mark reaches half a stroke past
-      // its radius. Stroke widths scale with the piece.
-      const scale = pieceSize / tokenPieceSize(60);
-      const originOuter = radiusOf(svg, 'xq-live-lastmove-from') + (2 * scale) / 2;
-      const ringOuter = radiusOf(svg, 'xq-live-lastmove-ring') + (4 * scale) / 2;
-      // tokenPieceSize rounds, so deriving the cell back from the piece is
-      // lossy by up to 0.5 units, which reaches the outer edge as ~0.3 per
-      // mark. Sub-pixel at every board size we ship, against the 3 units of
-      // real overlap this replaced.
-      expect(originOuter + ringOuter).toBeLessThanOrEqual(cell + 0.6);
+  for (const cell of [72, 60, 44, 31]) {
+    it(`leaves daylight on a one-step move at cell ${cell}`, () => {
+      const { origin, ring, scale } = outerEdges(cell);
+      // Touching is not clearing: assert a real gap, in canonical units so the
+      // claim means the same thing on every board size we ship. 3 units by
+      // construction, less up to ~0.6 wherever tokenPieceSize rounds the piece
+      // UP and the cell derived back out of it comes up short (cell 44).
+      expect((cell - origin - ring) / scale).toBeGreaterThanOrEqual(2.4);
     });
 
-    it(`ends both marks on the same radius at cell ${cell}`, () => {
-      const svg = boardLastMoveMarkersSvg(
-        { from: { x: 0, y: 0 }, to: { x: cell, y: 0 } },
-        pieceSize,
-      );
-      const scale = pieceSize / tokenPieceSize(60);
-      const originOuter = radiusOf(svg, 'xq-live-lastmove-from') + (2 * scale) / 2;
-      const ringOuter = radiusOf(svg, 'xq-live-lastmove-ring') + (4 * scale) / 2;
-      expect(Math.abs(originOuter - ringOuter)).toBeLessThan(0.05);
-      expect(originOuter).toBeCloseTo(boardLastMoveOuterRadius(pieceSize), 1);
+    it(`stops the origin wash at the piece that left, at cell ${cell}`, () => {
+      const { origin, pieceSize, scale } = outerEdges(cell);
+      expect(origin).toBeCloseTo(pieceSize / 2, Math.abs(scale - 1) < 0.01 ? 5 : 0);
     });
 
     it(`still clears the piece it sits under at cell ${cell}`, () => {
       // A halo entirely under the piece is not a marker; this is the regression
-      // that hid for six weeks when the ring went from 29 to 26.
-      const svg = boardLastMoveMarkersSvg({ to: { x: 0, y: 0 } }, pieceSize);
-      const scale = pieceSize / tokenPieceSize(60);
-      const ringOuter = radiusOf(svg, 'xq-live-lastmove-ring') + (4 * scale) / 2;
-      expect(ringOuter - pieceSize / 2).toBeGreaterThanOrEqual(2 * scale);
+      // that hid for six weeks when the ring went from 29 to 26. The origin
+      // shrinking must not be taken out of the halo as well.
+      const { ring, pieceSize, scale } = outerEdges(cell);
+      expect(ring - pieceSize / 2).toBeGreaterThanOrEqual(2 * scale);
     });
   }
 
