@@ -674,7 +674,9 @@ function buildLandingStage(
 
   // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
   // cards (six per view), an announcement can take a slot, newest first. ──
-  const articleCards = buildHomeArticleCards(8, locale);
+  // Six, not eight: the row is one screen-width strip of "what's new", and the
+  // curated list keeps growing while the strip does not.
+  const articleCards = buildHomeArticleCards(6, locale);
   articleCards?.classList.add('landing-articles-row');
 
   // ── Band 4 (grid-area: videos): a parallel video strip beneath the blog row —

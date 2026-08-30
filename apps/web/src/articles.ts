@@ -395,9 +395,36 @@ type HomeCardItem =
       article: Article;
     };
 
+/**
+ * How far back the homepage row reaches, and how short it is allowed to get.
+ *
+ * The row is a "what's new" strip, and with the curated list at eight entries it
+ * was showing articles from June beside ones from yesterday: the oldest card was
+ * roughly eighty days old, which reads as an archive rather than as news.
+ *
+ * The floor is the part that matters. A pure age cut empties the row during any
+ * quiet stretch, and an empty strip on the homepage is a worse failure than a
+ * stale one: it looks broken, where an old article merely looks old. So age
+ * trims the row while there is enough fresh material, and below the floor the
+ * newest cards are kept whatever their age.
+ */
+const HOME_CARD_MAX_AGE_DAYS = 60;
+const HOME_CARD_MIN = 4;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type HomeArticleCardOptions = {
+  /** Reference point for the age cut. Injected so tests are not time-dependent. */
+  now?: Date;
+  /** Days of history the row reaches back over. Infinity disables the cut. */
+  maxAgeDays?: number;
+  /** Cards kept regardless of age, so a quiet month cannot empty the row. */
+  minCards?: number;
+};
+
 export function buildHomeArticleCards(
   limit = 8,
   locale: Locale = currentLocale(),
+  options: HomeArticleCardOptions = {},
 ): HTMLElement | null {
   const eligible = new Map(
     articles.filter(isArticleListedInThisEnv).map((article) => [article.slug, article]),
@@ -420,8 +447,21 @@ export function buildHomeArticleCards(
         },
       ]
     : [];
-  const cards = [...announcementItems, ...articleItems]
-    .sort(compareHomeCardItems)
+  const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
+
+  const maxAgeDays = options.maxAgeDays ?? HOME_CARD_MAX_AGE_DAYS;
+  const minCards = options.minCards ?? HOME_CARD_MIN;
+  const now = options.now ?? new Date();
+  // A card with an unparseable date counts as fresh rather than being dropped:
+  // failing to read a date is not evidence that the article is old.
+  const fresh = ordered.filter((item) => {
+    const published = Date.parse(item.date);
+    if (!Number.isFinite(published)) return true;
+    return (now.getTime() - published) / DAY_MS <= maxAgeDays;
+  });
+  const kept = fresh.length >= minCards ? fresh : ordered.slice(0, minCards);
+
+  const cards = kept
     .map((item) =>
       item.kind === 'announcement'
         ? landingAnnouncementCard(item.announcement, locale)

@@ -29,6 +29,12 @@ import { boardAppearanceChangedEvent } from './theme.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
 
+// These assertions are about which slugs are curated, how they order, and what
+// each card renders. None is about recency, and several name articles from June
+// on purpose, so they opt out of the homepage row's age cut rather than being
+// rewritten every time the calendar moves past one of them.
+const NO_AGE_CUT = { maxAgeDays: Number.POSITIVE_INFINITY };
+
 describe('article public listing gates', () => {
   afterEach(() => {
     document.body.replaceChildren();
@@ -177,7 +183,7 @@ describe('article public listing gates', () => {
   it('localizes Traditional Chinese article chrome and content links', () => {
     vi.stubEnv('DEV', false);
 
-    const home = buildHomeArticleCards(50, 'zh-Hant');
+    const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
     expect(home?.getAttribute('aria-label')).toBe('文章');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
       '上一篇文章',
@@ -231,7 +237,7 @@ describe('article public listing gates', () => {
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
 
     const hrefs = [
-      ...(buildHomeArticleCards(50)?.querySelectorAll<HTMLAnchorElement>(
+      ...(buildHomeArticleCards(50, undefined, NO_AGE_CUT)?.querySelectorAll<HTMLAnchorElement>(
         '.landing-article-card[data-card-kind="article"]',
       ) ?? []),
     ].map((link) => link.getAttribute('href'));
@@ -253,7 +259,7 @@ describe('article public listing gates', () => {
   it('keeps parked chess variant rules out of the homepage widget and rules rail', () => {
     vi.stubEnv('DEV', false);
 
-    const home = buildHomeArticleCards(50);
+    const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     const landing = buildRulesIndex();
     const darkChess = buildArticlePage('dark-chess');
     const darkCrossroads = buildArticlePage('dark-crossroads-chess');
@@ -295,21 +301,21 @@ describe('article public listing gates', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
 
-    const cards = buildHomeArticleCards(50);
+    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
     expect(cards?.textContent).not.toContain('Kriegspiel is open for alpha play.');
   });
 
   it('keeps the rated xiangqi announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50);
+    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.textContent).not.toContain('Rated xiangqi is live.');
     expect(cards?.querySelector('.landing-announcement-card[href="/leaderboard"]')).toBeNull();
   });
 
   it('keeps the Secret in the Tangerine announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50);
+    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
     expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
@@ -318,7 +324,7 @@ describe('article public listing gates', () => {
   it('does not show the Drop Mini Xiangqi launch announcement in the homepage article widget', () => {
     vi.stubEnv('DEV', false);
 
-    const cards = buildHomeArticleCards(50);
+    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     const announcement = cards?.querySelector<HTMLAnchorElement>(
       '.landing-announcement-card[href="/rules/drop-mini-xiangqi"]',
     );
@@ -331,7 +337,7 @@ describe('article public listing gates', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_BANQI_ENABLED', 'true');
 
-    const cards = buildHomeArticleCards(50);
+    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.querySelector('.landing-announcement-card[href="/rules/banqi"]')).toBeNull();
     expect(cards?.textContent).not.toContain('Banqi (半棋) is open for alpha play.');
@@ -367,7 +373,7 @@ describe('article public listing gates', () => {
 
     // ...while the MistyBanqi editorial card keeps the full-board thumbnail in
     // the homepage row.
-    const home = buildHomeArticleCards(50);
+    const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     expect(
       home?.querySelector(
         '.landing-article-card[href="/blog/mistybanqi"] svg g[data-banqi-thumbnail-layout="engine-full-board"]',
@@ -385,7 +391,7 @@ describe('article public listing gates', () => {
     );
     expect(card?.querySelector('.articles-index-card-author')?.textContent).toBe('★');
 
-    const home = buildHomeArticleCards(50);
+    const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     expect(
       home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
     ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
@@ -405,7 +411,7 @@ describe('article public listing gates', () => {
         ?.getAttribute('alt'),
     ).toBe('A foggy visible board layer floating above a hidden golden truth layer.');
 
-    const home = buildHomeArticleCards(50);
+    const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     expect(
       home?.querySelector(
         '.landing-article-card[href="/blog/server-enforced-fog"] img[src="/article-thumbs/server-fog-cutaway-truth-20260708.jpg"]',
