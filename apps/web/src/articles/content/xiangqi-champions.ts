@@ -130,7 +130,7 @@ const C_0BM6N4j4: XiangqiReplaySpec = {
       "130": {
         glyph: "?!",
         note: "inaccuracy: 7 win% given up, eval -2.60 after. The engine wanted the line in the sibling branch.",
-        line: "f3e3 e2f2 d3d5 a5a6 e3d3 d2e1 e8f9 e1f0 f7e8 f0e1 d3e3 e1d2 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9 d1e1",
+        line: "f3e3 e2f2 d3d5 a5a6 e3d3 d2e1 e8f9 e1f0 f7e8 f0e1 d3e3 e1d2 d5d6 a6a7 d6d7 a7a8 d7d8 a8a9 d8d9",
         "lineEval": "−+"
       },
       "131": {
