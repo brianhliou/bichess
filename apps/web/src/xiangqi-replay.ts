@@ -91,8 +91,8 @@ export type XiangqiReplayAnnotation = {
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
   /**
-   * Assessment at the END of `line`, in the chess-literature symbols (+-, +/-,
-   * +=, =, =+, -/+, -+). Deliberately not derived from `cp`: that eval is the
+   * Assessment at the END of `line`, in the chess-literature symbols (+−, ±, ⩲,
+   * =, ⩱, ∓, −+). Deliberately not derived from `cp`: that eval is the
    * position after the move actually PLAYED, one ply deep, while this is the
    * line's destination with best play from both sides. They answer different
    * questions and routinely disagree. Measured by scripts/champions-line-evals.mjs.

@@ -33,9 +33,11 @@ function mapLiteral(source: string, name: string): Record<string, string> {
   // Both halves are matched either way rather than writing the parser twice.
   const cell = "'((?:[^'\\\\]|\\\\.)*)'|(\\d+)";
   const pattern = new RegExp(`(?:${cell})\\s*:\\s*(?:${cell})\\s*,`, 'g');
-  const decode = (value: string) => value.replace(/\\u221e/g, '∞');
+  // Both maps must spell their symbols as literal characters. This parser reads
+  // them out of the source text, so a '\\u2a72' escape would be compared as the
+  // six characters of the escape and never match its opposite number.
   for (const m of body.matchAll(pattern)) {
-    out[decode(m[1] ?? m[2])] = decode(m[3] ?? m[4]);
+    out[m[1] ?? m[2]] = m[3] ?? m[4];
   }
   return out;
 }

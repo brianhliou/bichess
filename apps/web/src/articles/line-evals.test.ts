@@ -74,8 +74,11 @@ describe('sideline assessments', () => {
     expect(compared, 'nothing was compared').toBeGreaterThan(100);
   });
 
+  // The literature's glyphs, not ASCII stand-ins for them, and the same strings
+  // advantageSymbol() emits so an engine line and an annotated one agree. Note
+  // the decisive pair uses MINUS SIGN (U+2212), not a hyphen.
   it('only use symbols a reader of chess literature knows', () => {
-    const allowed = new Set(['+-', '+/-', '+=', '=', '=+', '-/+', '-+']);
+    const allowed = new Set(['+−', '±', '⩲', '=', '⩱', '∓', '−+']);
     const odd = new Set<string>();
     for (const { boards } of annotated) {
       for (const board of boards) {

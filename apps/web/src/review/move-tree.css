@@ -238,6 +238,20 @@
 .review-move-list__assessment {
   flex: none;
   margin-left: 4px;
+  /* ⩲ U+2A72 and ⩱ U+2A71 are Supplemental Mathematical Operators, which the
+     self-hosted Noto Sans Latin subset does not carry, so they fall through to
+     whatever the platform offers. Name the math faces rather than trusting the
+     last-resort font: macOS and Windows resolve them, a bare Linux or Android
+     container is where they turn into tofu. ± ∓ − are safe everywhere and are
+     listed nowhere special. Noto Sans stays first so per-character fallback only
+     reaches the math faces for the glyphs it actually lacks, and the list ends in
+     sans-serif rather than `inherit`: a CSS-wide keyword inside a font-family
+     LIST invalidates the whole declaration, which is how the first version of
+     this silently did nothing. */
+  font-family:
+    "Noto Sans", "Noto Sans Math", "Noto Sans Symbols 2", "Cambria Math", "Segoe UI Symbol",
+    "Apple Symbols", STIXGeneral, sans-serif;
+
   color: var(--site-muted, #777);
   font-weight: 700;
   font-variant-numeric: tabular-nums;

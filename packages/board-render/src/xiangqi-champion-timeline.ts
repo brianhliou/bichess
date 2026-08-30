@@ -473,7 +473,15 @@ export function xiangqiChampionTimelineSvg(options: ChampionTimelineOptions = {}
           `<rect x="${lx}" y="${ly - 9}" width="16" height="12" fill="url(#${HATCH_ID})"/>`,
         );
       } else {
-        parts.push(`<rect x="${lx}" y="${ly - 8}" width="16" height="10" rx="2" class="${cls}"/>`);
+        // The swatches take the palette the same way the bars do. They used to
+        // carry a class unconditionally, so a palette rendition (the only kind
+        // that leaves this stylesheet behind) drew three black boxes.
+        const swatchPaint = palette
+          ? item.style === 'outline'
+            ? `fill="none" stroke="${palette.bar}" stroke-width="1.5"`
+            : `fill="${item.style === 'banned' ? palette.barBanned : palette.bar}"`
+          : `class="${cls}"`;
+        parts.push(`<rect x="${lx}" y="${ly - 8}" width="16" height="10" rx="2" ${swatchPaint}/>`);
       }
       parts.push(
         `<text x="${(lx + SWATCH_W + SWATCH_GAP).toFixed(1)}" y="${ly + 1}" font-size="11" ` +

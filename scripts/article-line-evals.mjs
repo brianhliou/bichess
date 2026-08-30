@@ -91,14 +91,14 @@ function toEngineMove(token) {
  * about what a chess pawn is to these engines, so the scale carries over.
  */
 function symbolFor({ cp, mate }) {
-  if (mate != null && mate !== 0) return mate > 0 ? '+-' : '-+';
+  if (mate != null && mate !== 0) return mate > 0 ? '+−' : '−+';
   if (cp == null) return null;
   const a = Math.abs(cp);
   if (a < 30) return '=';
   const sign = cp > 0;
-  if (a < 90) return sign ? '+=' : '=+';
-  if (a < 250) return sign ? '+/-' : '-/+';
-  return sign ? '+-' : '-+';
+  if (a < 90) return sign ? '⩲' : '⩱';
+  if (a < 250) return sign ? '±' : '∓';
+  return sign ? '+−' : '−+';
 }
 
 function openEngine() {

@@ -102,15 +102,24 @@ const GLYPH_JUDGMENT: Record<number, string> = {
  * answer different questions. An engine line in a study ends with one of these
  * the way an opening book ends a line with its verdict.
  */
+// The literature's own glyphs, not their ASCII stand-ins: PLUS-MINUS for a clear
+// advantage and PLUS ABOVE EQUALS for a slight one, with a real MINUS SIGN in
+// the decisive pair. They are written as literal characters because
+// line-assessment-roundtrip.test.ts reads this map out of the source text.
+//
+// These are the SAME strings advantageSymbol() emits in engine/eval-format.ts,
+// and they have to be: both write the one assessment slot in the move tree, so
+// while this map said '+/-' a study showed the engine's line as ± and the
+// annotated line beside it as '+/-'.
 const GLYPH_ASSESSMENT: Record<number, string> = {
   10: '=',
-  13: '\u221e',
-  14: '+=',
-  15: '=+',
-  16: '+/-',
-  17: '-/+',
-  18: '+-',
-  19: '-+',
+  13: '∞',
+  14: '⩲',
+  15: '⩱',
+  16: '±',
+  17: '∓',
+  18: '+−',
+  19: '−+',
 };
 
 /** The board handle the controller drives: render a view for a perspective, and
