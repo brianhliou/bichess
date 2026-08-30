@@ -17,7 +17,12 @@ import {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleEnabled } from './feature-flags.js';
-import { JUNGLE_BOARD_VIEW, junglePieceGhostSvg, renderJungleBoardSvg } from './jungle-render.js';
+import {
+  animateJungleBoardMove,
+  JUNGLE_BOARD_VIEW,
+  junglePieceGhostSvg,
+  renderJungleBoardSvg,
+} from './jungle-render.js';
 import {
   maybePlayJungleSnapshotSound,
   resetJungleSoundState,
@@ -152,6 +157,29 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
     pveEngineId = null;
   },
   renderBoard,
+  // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
+  // move already re-rendered synchronously at input time, so animating the server
+  // echo would double-play it. Scrubs glide the stepped-into move forward and
+  // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
+  // drag ghost. Mirrors live-banqi.ts; this room had no hook at all until then,
+  // so jungle glided everywhere EXCEPT the one surface people actually play on.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view || draggingFrom) return;
+    const pending = takePendingAnimation();
+    if (!pending) return;
+    const perspective = core?.orientation() ?? view.perspective;
+    if (pending.kind === 'live') {
+      if (pending.color === core?.state.seat) return;
+      animateJungleBoardMove(liveRefs.board, pending.move, perspective);
+      return;
+    }
+    if (pending.direction === 'forward') {
+      if (view.lastMove) animateJungleBoardMove(liveRefs.board, view.lastMove, perspective);
+      return;
+    }
+    const undone = pending.prevView?.lastMove;
+    if (undone) animateJungleBoardMove(liveRefs.board, undone, perspective, { reverse: true });
+  },
   onDisabled: () => {
     selectedSquare = null;
   },
