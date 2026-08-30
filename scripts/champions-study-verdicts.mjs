@@ -156,6 +156,7 @@ async function main() {
 
     let attached = 0;
     let drifted = 0;
+    let trimmedNodes = 0;
     for (const [plyKey, annotation] of Object.entries(spec.annotations?.byPly ?? {})) {
       if (!annotation.line || !annotation.lineEval) continue;
       const nag = ASSESS_NAG[annotation.lineEval];
@@ -164,13 +165,27 @@ async function main() {
       }
       const parent = chain[Number(plyKey) - 1];
       const want = annotation.line.trim().split(/\s+/).map(toStudyUci);
+      // The article's line is the TRIMMED one (trim-sideline-tails.mjs drops
+      // trailing moves the engine would not play), so the study's branch is
+      // allowed to be longer: same line, untrimmed tail still attached. Anything
+      // that is not a prefix match is real drift and gets left alone.
       const branch = (parent?.children ?? []).slice(1).find((sib) => {
         const got = branchLine(sib);
-        return got.length === want.length && got.every((t, i) => t === want[i]);
+        return got.length >= want.length && want.every((t, i) => t === got[i]);
       });
       if (!branch) {
         drifted += 1;
         continue;
+      }
+      // Cut the branch back to what the article publishes, so a reader stepping
+      // through it stops where the analysis is still sound instead of on a move
+      // the engine would never play.
+      let cursor = branch;
+      for (let step = 1; step < want.length; step += 1) cursor = (cursor.children ?? [])[0];
+      const overrun = branchLine(branch).length - want.length;
+      if (overrun > 0) {
+        cursor.children = [];
+        trimmedNodes += overrun;
       }
       const last = terminalOf(branch);
       // Keep any judgment glyph already on the node and add the verdict beside
@@ -184,6 +199,7 @@ async function main() {
     const changed = stable((chapter.root ?? {}).root ?? {}) !== stable(root);
     console.log(
       `  ${changed ? '~' : '='} ${chapter.name}: ${attached} verdict(s)` +
+        `${trimmedNodes ? `, ${trimmedNodes} stale tail move(s) cut` : ''}` +
         `${drifted ? `, ${drifted} branch(es) no longer match the article` : ''}`,
     );
     if (changed) pending.push({ chapter, root });
