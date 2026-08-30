@@ -190,6 +190,21 @@ export function currentBoardFamily(): BoardFamily {
     : defaultBoardFamily;
 }
 
+// Set when a document pins its own theme (the embed's ?theme=). It is NOT
+// persisted: the pin belongs to that URL, not to the reader, so it must not
+// leak into the preference every other Mistboard page reads.
+let siteThemeOverride: 'light' | 'dark' | null = null;
+
+/**
+ * Pin the site theme for this document, ignoring both the stored preference and
+ * the OS. Used by the embed so a host page with a single theme can ask for a
+ * board that matches it.
+ */
+export function pinSiteTheme(theme: 'light' | 'dark'): void {
+  siteThemeOverride = theme;
+  applySiteTheme(theme);
+}
+
 function applySiteTheme(theme: SiteTheme): void {
   const resolved = resolveSiteTheme(theme);
   document.documentElement.dataset.siteTheme = theme;
@@ -752,6 +767,8 @@ function watchForSystemThemeChanges(): void {
   systemThemeWatcherBound = true;
   const query = window.matchMedia('(prefers-color-scheme: dark)');
   query.addEventListener('change', () => {
+    // A pinned document does not follow the OS, which is the whole point of it.
+    if (siteThemeOverride) return;
     if (readStoredSiteTheme() !== 'system') return;
     applySiteTheme('system');
     syncThemeControls();

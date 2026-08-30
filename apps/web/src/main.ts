@@ -1,5 +1,5 @@
 import './app-base.css';
-import { embedStudyRouteFromPath } from './embed/embed-route.js';
+import { embedStudyRouteFromPath, embedThemeFromSearch } from './embed/embed-route.js';
 import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
@@ -30,7 +30,7 @@ import {
 } from './notification-nav.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { mountRestartBanner, setRestartBanner } from './restart-banner.js';
-import { initializeThemeSettings } from './theme.js';
+import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
   type WebVariantTenant,
   webVariantTenantForRoomId,
@@ -73,6 +73,13 @@ if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSo
 // import-free so this question can be answered before any of that runs.
 const isEmbedDocument =
   embedStudyRouteFromPath(window.location.pathname.replace(/\/+$/, '') || '/') !== null;
+
+// An embedder with one theme can pin the board to it. Applied after the theme
+// bootstrap above, so it overrides what that resolved from the reader's OS.
+if (isEmbedDocument) {
+  const pinned = embedThemeFromSearch(window.location.search);
+  if (pinned) pinSiteTheme(pinned);
+}
 
 // The account nav renders localized labels, so it waits for the locale chunk
 // like the route mounts do (mountOrReport). The restart banner is English-only.
