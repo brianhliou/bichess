@@ -471,6 +471,19 @@ const EVENT_NAMES: [RegExp, string][] = [
   [/全国象棋个人赛|全国象棋个人锦标赛/, 'National Individual Championship'],
 ];
 
+/** The event name in Taiwan/Hong Kong characters. Targeted replacements in the
+ *  same style as the provenance line above, rather than a general converter: the
+ *  vocabulary is four words and a general conversion would also reach the player
+ *  names sitting beside them. */
+function traditionalEvent(raw: string): string {
+  return raw
+    .replaceAll('锦标赛', '錦標賽')
+    .replaceAll('个人', '個人')
+    .replaceAll('国', '國')
+    .replaceAll('届', '屆')
+    .replaceAll('团体', '團體');
+}
+
 function englishEvent(raw: string): string {
   const year = raw.match(/^(\d{4})年/)?.[1];
   for (const [pattern, name] of EVENT_NAMES) {
@@ -664,16 +677,26 @@ function chapterFor(
     parent = node;
   });
 
+  // Tag translations ride alongside the chapter name. Without them a localized
+  // study page translated its title, its description and its chapter list and
+  // then labelled the two seats in English; the study seeded before chapter
+  // i18n could carry tags at all, and scripts/study-tag-i18n.mjs backfilled the
+  // live one. This keeps a re-seed from putting it back.
+  //
+  // The players are NOT converted for the Traditional reader (redZh/blackZh go
+  // in verbatim) for the same reason the provenance line does not convert them:
+  // a person's name is written in the script that person uses, and these are
+  // mainland players.
+  const tagsI18n = {
+    'zh-Hans': { red: redZh, black: blackZh, event: game.event },
+    'zh-Hant': { red: redZh, black: blackZh, event: traditionalEvent(game.event) },
+  };
   return {
     name: meta.name,
-    ...(zh
-      ? {
-          i18n: {
-            'zh-Hans': { name: zh.name['zh-Hans'] },
-            'zh-Hant': { name: zh.name['zh-Hant'] },
-          },
-        }
-      : {}),
+    i18n: {
+      'zh-Hans': { ...(zh ? { name: zh.name['zh-Hans'] } : {}), tags: tagsI18n['zh-Hans'] },
+      'zh-Hant': { ...(zh ? { name: zh.name['zh-Hant'] } : {}), tags: tagsI18n['zh-Hant'] },
+    },
     variant: 'xiangqi' as const,
     orientation: meta.orientation,
     root: { version: 1 as const, root },

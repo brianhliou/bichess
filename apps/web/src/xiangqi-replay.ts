@@ -758,26 +758,25 @@ export function mountXiangqiReplay(
   const MACHINE_NOTE =
     /^(blunder|mistake|inaccuracy):\s*([\d.]+)\s*win% given up, eval\s*(\S+?)\s*after\.\s*The engine wanted the line in the sibling branch\.?$/i;
 
-  const GLYPH_LABEL: Record<string, string> = {
-    '??': 'Blunder',
-    '?': 'Mistake',
-    '?!': 'Inaccuracy',
-    '!!': 'Brilliant',
-    '!': 'Great',
-  };
-
   /** Hover text for a judged move: the judgment, the cost, and the eval. */
   function judgmentTitle(a: XiangqiReplayAnnotation | undefined): string | undefined {
     if (!a?.glyph) return undefined;
-    const label = GLYPH_LABEL[a.glyph] ?? '';
+    const label = copy.judgment[a.glyph as keyof typeof copy.judgment] ?? '';
     const machine = a.note?.match(MACHINE_NOTE);
     if (!machine) {
       // Prose we did not generate (the positive classifier writes its own).
+      // It is English and stays English: it is authored text with no
+      // translation, and a Chinese label in front of an English sentence reads
+      // worse than leaving the pair alone.
       const note = a.note?.replace(/^(great|brilliant):\s*/i, '');
       return [label, note].filter(Boolean).join(': ');
     }
     const evaluation = evalText(a) || machine[3];
-    return [label, `${machine[2]}% win chance given up`, evaluation ? `eval ${evaluation}` : '']
+    return [
+      label,
+      copy.winChanceGivenUp(machine[2]),
+      evaluation ? `${copy.evalPrefix} ${evaluation}` : '',
+    ]
       .filter(Boolean)
       .join(' \u00b7 ');
   }

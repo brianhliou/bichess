@@ -19,6 +19,20 @@ export type ReplayStepperCopy = {
   movePrefix: (moveNumber: number) => string;
   /** Labels the engine's preferred line under a move it faulted. */
   betterWas: string;
+  /**
+   * Hover text for a judged move: the verdict, then what it cost.
+   *
+   * This is generated from the stored note by a regex rather than held as
+   * prose, so the article translation-coverage gate structurally cannot see it
+   * missing. It read 100% while every board on a Chinese page said "Blunder"
+   * and "win chance given up" in English, which is the same shape as the
+   * seoTitle gap: a checker measuring the wrong surface reports green.
+   */
+  judgment: Record<'??' | '?' | '?!' | '!!' | '!' | '!?', string>;
+  /** "23.7% win chance given up" — the cost half of that hover text. */
+  winChanceGivenUp: (percent: string) => string;
+  /** Prefix on the numeric evaluation in the same hover text. */
+  evalPrefix: string;
   first: string;
   second: string;
   /** Suffix for the hand/reserve strip label ("Red reserve", "Sente hand"). */
@@ -42,6 +56,16 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `Move ${moveNumber}`,
     noPieces: 'No pieces',
     betterWas: 'better was',
+    judgment: {
+      '??': 'Blunder',
+      '?': 'Mistake',
+      '?!': 'Inaccuracy',
+      '!!': 'Brilliant',
+      '!': 'Great',
+      '!?': 'Speculative',
+    },
+    winChanceGivenUp: (percent) => `${percent}% win chance given up`,
+    evalPrefix: 'eval',
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -53,6 +77,16 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '无持子',
     betterWas: '更好的走法',
+    judgment: {
+      '??': '漏着',
+      '?': '错着',
+      '?!': '不精确',
+      '!!': '妙手',
+      '!': '好棋',
+      '!?': '有趣之着',
+    },
+    winChanceGivenUp: (percent) => `胜率损失 ${percent}%`,
+    evalPrefix: '评估',
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -64,6 +98,16 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '無持子',
     betterWas: '更好的走法',
+    judgment: {
+      '??': '漏著',
+      '?': '錯著',
+      '?!': '不精確',
+      '!!': '妙手',
+      '!': '好棋',
+      '!?': '有趣之著',
+    },
+    winChanceGivenUp: (percent) => `勝率損失 ${percent}%`,
+    evalPrefix: '評估',
   },
 };
 
