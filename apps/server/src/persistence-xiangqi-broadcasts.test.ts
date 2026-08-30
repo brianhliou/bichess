@@ -20,6 +20,7 @@ import {
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastScheduledTours,
   listXiangqiBroadcastSyncLogs,
+  listXiangqiBroadcastTours,
   queryCompletedXiangqiBroadcastBoards,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
@@ -122,6 +123,56 @@ function timeoutFetch(): XiangqiBroadcastSourceFetch {
 }
 
 definePersistenceTests('xiangqi broadcasts', () => {
+  test('a source that states no schedule does not erase the seeded one', async () => {
+    // The seeded tour/round dates are what the calendar shows and what
+    // resolveScheduledRound reads to pick a poll's round. A converted game page
+    // states neither, so a plain upsert nulled them on the FIRST successful
+    // import: the event imported one round, lost its schedule, and every later
+    // poll then found no active round and quietly imported nothing.
+    // The fixture pack is deliberately `unknown`-typed (validation happens at
+    // import), so shape it here.
+    const pack = await fixturePack();
+    const baseTour = pack.tour as Record<string, unknown>;
+    const baseRounds = pack.rounds as Record<string, unknown>[];
+    const slug = baseTour.slug as string;
+
+    const seededTour = {
+      ...baseTour,
+      location: 'Shanghai',
+      startsAt: '2026-09-09T13:30:00+08:00',
+      endsAt: '2026-09-13T23:59:59+08:00',
+    };
+    const seededRounds = baseRounds.map((round) => ({
+      ...round,
+      startsAt: '2026-09-09T13:30:00+08:00',
+    }));
+    await importXiangqiBroadcastPack({ tour: seededTour, rounds: seededRounds, boards: [] });
+
+    // Re-import the same tour and rounds as a poll would rebuild them: no
+    // location, no dates, and the source's own event name.
+    const { startsAt: _s, endsAt: _e, location: _l, ...tourNoDates } = seededTour;
+    await importXiangqiBroadcastPack({
+      tour: { ...tourNoDates, name: '2026年全国象棋男子甲级联赛' },
+      rounds: seededRounds.map(({ startsAt: _r, ...round }) => round),
+      boards: [],
+    });
+
+    const tours = await listXiangqiBroadcastTours();
+    const tour = tours.find((row) => row.slug === slug);
+    assert.ok(tour, 'tour survives the re-import');
+    assert.equal(tour.startsAt, '2026-09-09T13:30:00+08:00');
+    assert.equal(tour.endsAt, '2026-09-13T23:59:59+08:00');
+    assert.equal(tour.location, 'Shanghai');
+    // The name is not curated the same way: a re-poll is allowed to correct it.
+    assert.equal(tour.name, '2026年全国象棋男子甲级联赛');
+
+    const rounds = await listXiangqiBroadcastRounds(slug);
+    assert.ok(rounds.length > 0);
+    for (const round of rounds) {
+      assert.equal(round.startsAt, '2026-09-09T13:30:00+08:00');
+    }
+  });
+
   test('imports the M0 fixture pack into tour, round, and board rows', async () => {
     const result = await importXiangqiBroadcastPack(await fixturePack());
 
