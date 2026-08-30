@@ -475,13 +475,30 @@ const EVENT_NAMES: [RegExp, string][] = [
  *  same style as the provenance line above, rather than a general converter: the
  *  vocabulary is four words and a general conversion would also reach the player
  *  names sitting beside them. */
-function traditionalEvent(raw: string): string {
-  return raw
-    .replaceAll('锦标赛', '錦標賽')
-    .replaceAll('个人', '個人')
-    .replaceAll('国', '國')
-    .replaceAll('届', '屆')
-    .replaceAll('团体', '團體');
+export function traditionalEvent(raw: string): string {
+  return (
+    raw
+      .replaceAll('锦标赛', '錦標賽')
+      .replaceAll('个人', '個人')
+      .replaceAll('国', '國')
+      .replaceAll('届', '屆')
+      .replaceAll('赛', '賽')
+      .replaceAll('团体', '團體')
+      // Sponsor and place names in the event title: 华能杯, 农行杯, 民生实业杯,
+      // 吴县市杯. These are companies and places, not people, so they DO convert
+      // for a Traditional reader; the name rule is about persons.
+      //
+      // 华 is the character that makes this only safe here: it is also in 胡荣华,
+      // 柳大华 and 于幼华, three champions whose names must not convert. This
+      // function is called on an event field and nothing else, which is what
+      // keeps those apart.
+      .replaceAll('华', '華')
+      .replaceAll('农', '農')
+      .replaceAll('实', '實')
+      .replaceAll('业', '業')
+      .replaceAll('吴', '吳')
+      .replaceAll('县', '縣')
+  );
 }
 
 function englishEvent(raw: string): string {
@@ -580,7 +597,14 @@ function chapterFor(
   const provenanceZh = (locale: keyof Localized): string => {
     const won =
       game.result === '1-0' ? `${redZh}胜` : game.result === '0-1' ? `${blackZh}胜` : '和棋';
-    const line = `${redZh}（红）对${blackZh}（黑）· ${game.event} · ${game.date.slice(0, 10)} · ${won}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
+    // The EVENT is converted before it goes into the line, not by the
+    // replacements below. Those run over the whole sentence, and the sentence
+    // contains the players' names: adding 国 -> 國 to that chain to fix
+    // "全国象棋个人赛" would also rewrite 赵国荣, whose name is not supposed to
+    // convert. Narrowing the conversion to the one field that needs it is the
+    // only version that does not corrupt a name.
+    const event = locale === 'zh-Hans' ? game.event : traditionalEvent(game.event);
+    const line = `${redZh}（红）对${blackZh}（黑）· ${event} · ${game.date.slice(0, 10)} · ${won}。引擎注解为 Pikafish，每步一百万节点，与复盘页所用相同。准确率：红 ${anno.accuracy.first.toFixed(1)}，黑 ${anno.accuracy.second.toFixed(1)}。`;
     return locale === 'zh-Hans'
       ? line
       : line
@@ -821,7 +845,13 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Guarded like every other script module here. Unguarded, merely IMPORTING this
+// file ran the seeder: a test that wanted one exported helper got an argument
+// check, a usage message on stderr, and process.exitCode = 1, which failed the
+// whole test file while every test in it passed.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
