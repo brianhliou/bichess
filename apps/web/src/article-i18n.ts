@@ -964,6 +964,11 @@ const ZH_HANS: Record<string, string> = {
   'the +37 flip': '+37 的那次翻子',
   'Red better': '红优',
   'Black better': '黑优',
+  // The left column is also the identifier in the formula below, so it keeps the
+  // English word and gains a gloss rather than being replaced.
+  played: 'played（所走）',
+  best: 'best（最佳）',
+  realized: 'realized（实际）',
   'the average value of the flip you chose': '你所选翻子的平均价值',
   'the same average for the best move available': '当前最佳着法的同一种平均',
   'what your actual tile produced': '实际翻出的棋子带来的结果',
@@ -1682,6 +1687,111 @@ const ZH_HANS: Record<string, string> = {
   'What it carries': '所载内容',
   'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
     '本页有几处依据较薄，正文中已在相应位置注明：六项刑期中有五项源自检方而非已公开的判决书；柳大华的全部证言与许银川那句引述均为单一来源；录音流入网络的经过出自一家媒体的调查；官员去职并未被官方与本案相联系；而没有成绩被取消这一点，是从无人提及推出的，并非哪份处罚写明。',
+  // The three tables. Every cell is its own key, because deepTranslate matches
+  // whole strings; the roster's player column drops the romanisation and keeps
+  // the Chinese name, which is what the champion tables already do.
+  '~2012 onward': '2012年前后起',
+  'Liu Dahua privately alleges engine cheating': '柳大华私下指认软件作弊',
+  'April 2023': '2023年4月',
+  'The Hao Jichao and Wang Yuefei recordings appear online': '郝继超与王跃飞的通话录音在网上流出',
+  'July 2023': '2023年7月',
+  'The association opens a formal investigation and forms a task force':
+    '中国象棋协会立案调查并成立专案组',
+  'August 2023': '2023年8月',
+  'Wang Tianyi withdraws from the Hangzhou Asian Games, citing health':
+    '王天一以身体原因退出杭州亚运会',
+  '17 October 2023': '2023年10月17日',
+  'Liu Dahua makes a real-name accusation against a sport-administration official':
+    '柳大华实名举报体育总局一名官员',
+  '24 July 2024': '2024年7月24日',
+  'The date the April 2026 bans run from; the January notice publishes none':
+    '2026年4月处罚的起算日；1月的通报未公布日期',
+  '19 September 2024': '2024年9月19日',
+  'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批处罚：王天一、王跃飞终身禁赛',
+  '12 January 2025': '2025年1月12日',
+  'Second batch: 41 people': '第二批：41人',
+  '24 September 2025': '2025年9月24日',
+  'Six grandmasters convicted in Hangzhou': '六名特级大师在杭州被判有罪',
+  '13 April 2026': '2026年4月13日',
+  'Third batch: 6 people': '第三批：6人',
+  Life: '终身禁赛',
+  'Wang Yuefei 王跃飞': '王跃飞',
+  'Shen Peng 申鹏': '申鹏',
+  '8 years': '8年',
+  '7 years 6 months': '7年6个月',
+  'Sun Yiyang 孙逸阳': '孙逸阳',
+  '7 years': '7年',
+  'Zhao Jincheng 赵金成': '赵金成',
+  '6 years': '6年',
+  '5 years': '5年',
+  'Zhang Shenhong 张申宏': '张申宏',
+  '4 years 6 months': '4年6个月',
+  '4 years 3 months': '4年3个月',
+  'Hao Jichao 郝继超': '郝继超',
+  'Liu Junda 刘俊达': '刘俊达',
+  'Yu Yixiao 俞易肖': '俞易肖',
+  'Cheng Ming 程鸣': '程鸣',
+  'Zheng Yihong 郑一泓': '郑一泓',
+  '4 years': '4年',
+  'Dang Fei 党斐': '党斐',
+  '3 years': '3年',
+  'Li Shaogeng 李少庚': '李少庚',
+  'Zhao Dianyu 赵殿宇': '赵殿宇',
+  'Nie Tiewen 聂铁文': '聂铁文',
+  'Wu Junqiang 武俊强': '武俊强',
+  'Miao Liming 苗利明': '苗利明',
+  '2 years': '2年',
+  'Huang Zhufeng 黄竹风': '黄竹风',
+  'Sun Xinhao 孙昕昊': '孙昕昊',
+  'Yang Ming 杨铭': '杨铭',
+  'Xu Chongfeng 徐崇峰': '徐崇峰',
+  'Zhao Wei 赵玮': '赵玮',
+  '1 year': '1年',
+  'Lu Weitao 陆伟韬': '陆伟韬',
+  'Yang Hui 杨辉': '杨辉',
+  'Li Xiaolong 李小龙': '李小龙',
+  'Zheng Yuhang 郑宇航': '郑宇航',
+  'Ma Tianyue 马天越': '马天越',
+  'Li Aidong 李艾东': '李艾东',
+  'Wang Yuhang 王宇航': '王宇航',
+  '6 months': '6个月',
+  'Zhao Yanghe 赵旸鹤': '赵旸鹤',
+  'Cui Ge 崔革': '崔革',
+  'Xie Kui 谢岿': '谢岿',
+  'Zhao Ziyu 赵子雨': '赵子雨',
+  'Cao Yanlei 曹岩磊': '曹岩磊',
+  Reprimand: '通报批评',
+  'Huang Wenjun 黄文俊': '黄文俊',
+  'Cai Youguang 蔡佑广': '蔡佑广',
+  'Liang Yunlong 梁运龙': '梁运龙',
+  '4 years 9 months': '4年9个月',
+  '2 years 9 months': '2年9个月',
+  '2 years 7 months': '2年7个月',
+  '2 years 6 months': '2年6个月',
+  '[Xinhua](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html), [Caixin](https://china.caixin.com/2026-04-13/102433594.html)':
+    '[新华社](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html)、[财新](https://china.caixin.com/2026-04-13/102433594.html)',
+  'The April 2026 rulings': '2026年4月的处罚',
+  '[China News Service](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml), [China Daily](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)':
+    '[中新网](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml)、[中国日报](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)',
+  'The 41-person batch, January 2025': '2025年1月的41人处罚',
+  '[National Business Daily](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)':
+    '[每日经济新闻](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)',
+  'Wang Tianyi’s life ban, September 2024': '2024年9月王天一被终身禁赛',
+  '[Yangtse Evening Post](https://www.yzwb.net/news/ty/202509/t20250924_268789.html), [Sina Sports](https://sports.sina.cn/others/qipai/2025-09-25/detail-infrsnht5787840.d.html)':
+    '[扬子晚报](https://www.yzwb.net/news/ty/202509/t20250924_268789.html)、[新浪体育](https://sports.sina.cn/others/qipai/2025-09-25/detail-infrsnht5787840.d.html)',
+  'The verdict and the six sentences': '宣判与六人刑期',
+  '[Tencent News](https://news.qq.com/rain/a/20250924A04LFX00)':
+    '[腾讯新闻](https://news.qq.com/rain/a/20250924A04LFX00)',
+  'Hong Zhi’s refusal to plead guilty, via his counsel': '洪智不认罪，经其辩护人确认',
+  '[CCTV](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)':
+    '[央视新闻](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)',
+  'The appearance-fee figures and the four motives': '出场费数字与各项动机',
+  '[Jiemian](https://m.jiemian.com/article/12366112.html)':
+    '[界面新闻](https://m.jiemian.com/article/12366112.html)',
+  'Liu Dahua’s account, and how the recordings spread': '柳大华的说法，以及录音如何流传',
+  '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
+    '[观察者网](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
+  'The fullest timeline of the affair': '事件最完整的时间线',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2591,6 +2701,9 @@ const ZH_HANT: Record<string, string> = {
   'the +37 flip': '+37 的那次翻子',
   'Red better': '紅優',
   'Black better': '黑優',
+  played: 'played（所走）',
+  best: 'best（最佳）',
+  realized: 'realized（實際）',
   'the average value of the flip you chose': '你所選翻子的平均價值',
   'the same average for the best move available': '當前最佳著法的同一種平均',
   'what your actual tile produced': '實際翻出的棋子帶來的結果',
@@ -3141,6 +3254,55 @@ const ZH_HANT: Record<string, string> = {
   '2022 17th World Xiangqi Championship': '2022年第十七屆世界象棋錦標賽',
   '2023 18th World Xiangqi Championship': '2023年第十八屆世界象棋錦標賽',
   '2025 19th World Xiangqi Championship': '2025年第十九屆世界象棋錦標賽',
+  // The three tables, Traditional forks only. Player names and the all-digit
+  // cells inherit from the Simplified spread above.
+  '~2012 onward': '2012年前後起',
+  'Liu Dahua privately alleges engine cheating': '柳大华私下指認軟件作弊',
+  'The Hao Jichao and Wang Yuefei recordings appear online': '郝继超與王跃飞的通話錄音在網上流出',
+  'The association opens a formal investigation and forms a task force':
+    '中國象棋協會立案調查並成立專案組',
+  'Wang Tianyi withdraws from the Hangzhou Asian Games, citing health':
+    '王天一以身體原因退出杭州亞運會',
+  'Liu Dahua makes a real-name accusation against a sport-administration official':
+    '柳大华實名舉報體育總局一名官員',
+  'The date the April 2026 bans run from; the January notice publishes none':
+    '2026年4月處罰的起算日；1月的通報未公布日期',
+  'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批處罰：王天一、王跃飞終身禁賽',
+  'Six grandmasters convicted in Hangzhou': '六名特級大師在杭州被判有罪',
+  Life: '終身禁賽',
+  '7 years 6 months': '7年6個月',
+  '4 years 6 months': '4年6個月',
+  '4 years 3 months': '4年3個月',
+  '6 months': '6個月',
+  Reprimand: '通報批評',
+  '4 years 9 months': '4年9個月',
+  '2 years 9 months': '2年9個月',
+  '2 years 7 months': '2年7個月',
+  '2 years 6 months': '2年6個月',
+  '[Xinhua](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html), [Caixin](https://china.caixin.com/2026-04-13/102433594.html)':
+    '[新華社](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html)、[財新](https://china.caixin.com/2026-04-13/102433594.html)',
+  'The April 2026 rulings': '2026年4月的處罰',
+  '[China News Service](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml), [China Daily](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)':
+    '[中新網](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml)、[中國日報](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)',
+  'The 41-person batch, January 2025': '2025年1月的41人處罰',
+  '[National Business Daily](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)':
+    '[每日經濟新聞](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)',
+  'Wang Tianyi’s life ban, September 2024': '2024年9月王天一被終身禁賽',
+  '[Yangtse Evening Post](https://www.yzwb.net/news/ty/202509/t20250924_268789.html), [Sina Sports](https://sports.sina.cn/others/qipai/2025-09-25/detail-infrsnht5787840.d.html)':
+    '[揚子晚報](https://www.yzwb.net/news/ty/202509/t20250924_268789.html)、[新浪體育](https://sports.sina.cn/others/qipai/2025-09-25/detail-infrsnht5787840.d.html)',
+  'The verdict and the six sentences': '宣判與六人刑期',
+  '[Tencent News](https://news.qq.com/rain/a/20250924A04LFX00)':
+    '[騰訊新聞](https://news.qq.com/rain/a/20250924A04LFX00)',
+  'Hong Zhi’s refusal to plead guilty, via his counsel': '洪智不認罪，經其辯護人確認',
+  '[CCTV](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)':
+    '[央視新聞](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)',
+  'The appearance-fee figures and the four motives': '出場費數字與各項動機',
+  '[Jiemian](https://m.jiemian.com/article/12366112.html)':
+    '[界面新聞](https://m.jiemian.com/article/12366112.html)',
+  'Liu Dahua’s account, and how the recordings spread': '柳大华的說法，以及錄音如何流傳',
+  '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
+    '[觀察者網](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
+  'The fullest timeline of the affair': '事件最完整的時間線',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

@@ -93,9 +93,18 @@ const BLOCK_PROSE: {
   'jungle-replay': caption,
   'jungle-flip-replay': caption,
   code: caption,
-  // Headers and caption are prose; cells are data and mostly numbers, so they
-  // are not sent for translation.
-  table: (block) => [...((block as { headers?: string[] }).headers ?? []), ...caption(block)],
+  // Headers, caption, and any cell carrying Latin script. Cells were once treated as
+  // data because most of them are numbers, and the match-fixing article then
+  // shipped three tables of English prose that the gate read as fully covered:
+  // a coverage check that skips a surface reports 100% on it.
+  table: (block) => {
+    const b = block as { headers?: string[]; rows?: string[][] };
+    return [
+      ...(b.headers ?? []),
+      ...(b.rows ?? []).flat().filter((cell) => /\p{Script=Latin}/u.test(cell)),
+      ...caption(block),
+    ];
+  },
   // Both halves of every pair: an FAQ is translatable copy, and an answer that
   // ships untranslated beside a translated question is worse than either.
   faq: (block) =>
