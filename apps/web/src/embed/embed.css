@@ -57,9 +57,15 @@
 html,
 body.embed-body {
   height: 100%;
-  /* The root too: a colour-schemed document otherwise gets an opaque UA canvas
-     and the frame stays a white rectangle no matter what body says. */
-  background: transparent;
+}
+
+/* The root has to be cleared with at least :root's own specificity, and its
+   background-IMAGE named separately: app-base.css paints `:root` with both a
+   colour and a page gradient, so `html { background: transparent }` lost twice
+   over. data-embed is set by mountEmbedStudy. */
+:root[data-embed] {
+  background-color: transparent;
+  background-image: none;
 }
 
 body.embed-body {
