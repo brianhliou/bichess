@@ -8,8 +8,12 @@
 //
 // Repetition is disabled (huge repetitionDrawCount) so terminals are only den-entry /
 // capture-all / stalemate / no-progress — matching the engine, which handles repetition via
-// search-time cycle detection, not state-encoded rep counts. progressClockLimit is pinned to
-// 100 to match the engine's hardcoded no-progress threshold.
+// search-time cycle detection, not state-encoded rep counts.
+//
+// The no-progress limit is TAKEN FROM THE KERNEL, not restated here. It used to be pinned to a
+// literal 100 "to match the engine's hardcoded threshold", which meant raising the rule left
+// this emitter quietly generating fixtures under the old one, and the parity gate then failed
+// against goldens that no kernel actually produces.
 //
 // Run:  cd ~/projects/mistboard && node_modules/.bin/tsx scripts/emit-jungle-golden.ts \
 //          > ~/projects/mistboard-engine/tests/fixtures/jungle_golden.json
@@ -17,6 +21,7 @@
 import {
   applyJungleMove,
   createInitialJungleState,
+  DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT,
   getJungleLegalMoves,
   JUNGLE_ROLE_LETTER,
   type JungleColor,
@@ -73,8 +78,15 @@ function statusTag(state: JungleGameState): string {
   return 'aborted';
 }
 
-const APPLY_OPTS = { progressClockLimit: 100, repetitionDrawCount: 1_000_000 };
-const MAX_PLIES = 600;
+const APPLY_OPTS = {
+  progressClockLimit: DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT,
+  repetitionDrawCount: 1_000_000,
+};
+// Playouts are random, so the no-progress clock is what ends most of them. The cap has to
+// leave room for a game to reach that clock and emit its terminal frame; at 600 against a
+// 200-ply clock some games were still running when the cap hit, and the fixture then held a
+// final frame with no successor, which the parity test reads as a malformed game.
+const MAX_PLIES = DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT * 8;
 
 function playGame(seed: number) {
   let state = createInitialJungleState(`g${seed}`);
@@ -102,4 +114,10 @@ function playGame(seed: number) {
 
 const SEEDS = [1, 2, 3, 7, 13, 42, 99, 123, 777, 2026, 31337, 55555];
 const games = SEEDS.map(playGame);
-process.stdout.write(JSON.stringify({ version: 1, progressLimit: 100, games }, null, 0));
+process.stdout.write(
+  JSON.stringify(
+    { version: 1, progressLimit: DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT, games },
+    null,
+    0,
+  ),
+);
