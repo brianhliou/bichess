@@ -98,6 +98,30 @@ test('clicking into the line steps the board, and arrows walk the line not the g
   c.destroy();
 });
 
+// The exit above clicks a DIFFERENT mainline move than the one the line belongs
+// to, which is the one case that always worked: the repaint was gated on the
+// mainline cursor moving. Opening a line leaves that cursor on the owning move,
+// so clicking it did nothing and a reader deep in a sideline was stuck.
+test('clicking the move the line hangs off returns to the game', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 3: { glyph: '??', cp: -420, line: 'b0c2 c9e7 a0b0' } } },
+  });
+  // The flow that breaks: step onto the judged move first (which is how a
+  // reader notices the ?? at all), then walk into the line beneath it.
+  (mainButtons(el)[2] as HTMLButtonElement).click();
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
+  expect(branchButtons(el)[2]?.className).toContain('is-current');
+
+  // Ply 3 is both the current mainline ply and the move the branch belongs to.
+  (mainButtons(el)[2] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+  expect(mainButtons(el)[2]?.className).toContain('is-current');
+  c.destroy();
+});
+
 // A line that does not replay legally (a stale annotation against a corrected
 // record) must truncate rather than throw or notate a move that cannot be made.
 test('an illegal continuation truncates the branch', () => {

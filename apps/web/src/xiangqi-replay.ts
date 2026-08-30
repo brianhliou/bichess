@@ -478,14 +478,8 @@ export function mountXiangqiReplay(
       );
       render();
     });
-    menuItem('Back to the start', () => {
-      variation = null;
-      goto(0);
-    });
-    menuItem('Jump to the end', () => {
-      variation = null;
-      goto(total);
-    });
+    menuItem('Back to the start', () => gotoMainline(0));
+    menuItem('Jump to the end', () => gotoMainline(total));
     const moveCol = document.createElement('div');
     moveCol.className = 'xq-replay-move-col';
     // The move panel is taken out of flow (see the CSS) so a 180-ply list
@@ -688,10 +682,7 @@ export function mountXiangqiReplay(
           current: !variation && ply === index,
           glyph: a?.glyph,
           title: judgmentTitle(a),
-          onClick: () => {
-            variation = null;
-            goto(ply);
-          },
+          onClick: () => gotoMainline(ply),
         }),
       );
 
@@ -901,6 +892,28 @@ export function mountXiangqiReplay(
       render();
     }
   }
+  /**
+   * Put the board on a mainline ply, leaving any line that is open.
+   *
+   * Not `variation = null; goto(target)`, which is what the exits used to do:
+   * goto repaints only when `index` moves, and opening a line leaves `index`
+   * sitting on the move the line hangs off. Clicking that move to get back to
+   * the game therefore cleared the variation and painted nothing, so the board
+   * stayed in the sideline and the move read as a dead button. The two exits a
+   * reader has are stepping off the head of the line and clicking a mainline
+   * move; the second has to work for the move that owns the line too, which is
+   * the one they are most likely to click.
+   */
+  function gotoMainline(target: number): void {
+    reportEngagement();
+    const wasInLine = variation !== null;
+    variation = null;
+    const clamped = Math.max(0, Math.min(total, target));
+    const moved = clamped !== index;
+    index = clamped;
+    if (moved || wasInLine) render();
+  }
+
   const onFirst = () => goto(0);
   const onPrev = () => goto(index - 1);
   const onNext = () => goto(index + 1);
