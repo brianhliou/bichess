@@ -246,3 +246,49 @@ test('an explicit boardNumber numbers one-game-per-page sources in order', () =>
   });
   assert.deepEqual(numbers, [1, 2, 3]);
 });
+
+test('team events keep the team beside the player', () => {
+  // The archive fixture is a 甲级联赛 game, so its title carries both sides'
+  // teams: "江苏体彩 王斌 和 吉林天兴棋牌 陶汉明". Dropping them turned a team
+  // league into a list of anonymous pairings.
+  const normalized = normalizeDpxqPageToFrameHtml(ARCHIVE_HTML);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const board = converted.snapshot.boards[0]!;
+  assert.equal(board.red.name, '王斌');
+  assert.equal(board.black.name, '陶汉明');
+  assert.equal(board.red.federation, '江苏体彩');
+  assert.equal(board.black.federation, '吉林天兴棋牌');
+});
+
+test('a live board takes the team from the combined red/black tag', () => {
+  const page = liveBoardPage({
+    red: '浙江民泰银行象棋队 王家瑞',
+    black: '杭州市棋类协会 戴晨',
+    plies: 8,
+  });
+  const normalized = normalizeDpxqPageToFrameHtml(page);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const board = converted.snapshot.boards[0]!;
+  assert.equal(board.red.name, '王家瑞');
+  assert.equal(board.red.federation, '浙江民泰银行象棋队');
+  assert.equal(board.black.name, '戴晨');
+  assert.equal(board.black.federation, '杭州市棋类协会');
+});
+
+test('an individual game gets no invented affiliation', () => {
+  const page = liveBoardPage({ red: '王天一', black: '郑惟桐', plies: 8 });
+  const normalized = normalizeDpxqPageToFrameHtml(page);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const board = converted.snapshot.boards[0]!;
+  assert.equal(board.red.name, '王天一');
+  assert.equal(board.red.federation, undefined);
+  assert.equal(board.black.federation, undefined);
+});
