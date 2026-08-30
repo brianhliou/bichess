@@ -179,6 +179,14 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'a phone, so keep it if your layout is fluid.',
     ]),
 
+    proseSubheading('Background'),
+    proseParagraph([
+      'The frame is transparent. Whatever your page has behind the iframe shows ' +
+        'through around the board, so the embed sits on your surface rather than ' +
+        'stamping a coloured card onto it. The board and move list carry their own ' +
+        'panel, so they stay legible either way.',
+    ]),
+
     proseSubheading('Theme'),
     proseParagraph([
       'By default the embed follows the READER: it renders light or dark to match ' +

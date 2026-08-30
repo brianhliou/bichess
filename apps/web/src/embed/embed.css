@@ -1,9 +1,21 @@
-/* The embed runs inside a page we do not control, so it paints its own ground
-   and claims no more room than the widget needs. */
+/* The embed runs inside a page we do not control, and it does NOT paint that
+   page's ground for it.
+
+   It used to fill itself with --site-bg, Mistboard's own page colour. Inside a
+   Mistboard article the same widget is transparent and only .xq-replay-grid
+   paints a panel, so the embed looked different from the thing it is an embed
+   of: on a white host the cream ground read as a grey card the host never asked
+   for. Transparent composites over whatever the host has, which is what the
+   article does and what an embed should do.
+
+   The panel keeps its own background and text colours, so the widget stays
+   legible on any host. What sits outside the panel (the chapter title and the
+   credit line) takes the host's ground, which is why ?theme= exists: an
+   embedder on a dark page pins dark and both halves agree. */
 .embed-body {
   margin: 0;
   padding: 0;
-  background: var(--site-bg);
+  background: transparent;
 }
 
 .embed-root {
@@ -45,6 +57,9 @@
 html,
 body.embed-body {
   height: 100%;
+  /* The root too: a colour-schemed document otherwise gets an opaque UA canvas
+     and the frame stays a white rectangle no matter what body says. */
+  background: transparent;
 }
 
 body.embed-body {
