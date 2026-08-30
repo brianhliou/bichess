@@ -2694,6 +2694,117 @@ export const JIEQI_REVEALED_FREEDOMS = (labels?: { advisor?: string; elephant?: 
   ].join(''),
 );
 
+// The start position at the same scale as the paired boards below it. The
+// rules page uses JIEQI_START_BOARD, which is a full-width hero; in an article
+// that also carries two-board figures, a hero board reads as a different
+// diagram system. Same canvas width as a pair, one board centred in it.
+export const JIEQI_START_ROW = (labels?: { start?: string }) => xqSvg(
+  JIEQI_PAIR_W,
+  XQ_BOARD_H + 52,
+  xqBoardSvg({
+    state: XQ_START,
+    view: JIEQI_START_VIEW,
+    x: JIEQI_PAIR_CENTER_X,
+    y: 0,
+    label: labels?.start ?? 'SHUFFLED START',
+    perspective: 'red',
+    shroudedStyle: 'back',
+  }),
+);
+
+// ---- Jieqi openings article (slug: jieqi-openings) ----
+// The openings are named in xiangqi file notation, which the chess-side
+// audience cannot locate on a board. These two boards carry the geography so
+// the tables can carry the argument.
+
+// Left: the four openings that spend one move. Read left to right as Red sees
+// them: edge pawn (a4), the 3-/7-file pawn push (c4), central pawn (e4), and
+// the cannon point crossing the river (h3 to h7). Right: taking both horses
+// with both cannons, which needs the black cannons on b8/h8 as screens.
+export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }) => xqSvg(
+  JIEQI_PAIR_W,
+  XQ_BOARD_H + 52,
+  [
+    xqBoardSvg({
+      state: XQ_START,
+      view: JIEQI_START_VIEW,
+      x: 0,
+      y: 0,
+      label: labels?.moves ?? 'FOUR OPENINGS, ONE MOVE EACH',
+      perspective: 'red',
+      shroudedStyle: 'back',
+      arrows: [
+        { from: 'a4' as XiangqiSquare, to: 'a5' as XiangqiSquare },
+        { from: 'c4' as XiangqiSquare, to: 'c5' as XiangqiSquare },
+        { from: 'e4' as XiangqiSquare, to: 'e5' as XiangqiSquare },
+        { from: 'h3' as XiangqiSquare, to: 'h7' as XiangqiSquare },
+      ],
+    }),
+    xqBoardSvg({
+      state: XQ_START,
+      view: JIEQI_START_VIEW,
+      x: XQ_BOARD_W + 28,
+      y: 0,
+      label: labels?.gamble ?? 'BOTH CANNONS TAKE BOTH HORSES',
+      perspective: 'red',
+      shroudedStyle: 'back',
+      arrows: [
+        { from: 'b3' as XiangqiSquare, to: 'b10' as XiangqiSquare },
+        { from: 'h3' as XiangqiSquare, to: 'h10' as XiangqiSquare },
+      ],
+    }),
+  ].join(''),
+);
+
+// What a face-down piece on a cannon point is worth before you spend it, and
+// what you are left holding if it turns out to be a soldier. The black cannon
+// on h8 is the screen that makes the capture on h10 legal.
+export const JIEQI_OPTION_BEFORE_BOARD: XiangqiPlayerView['board'] = {
+  h3: { piece: { color: 'red', role: 'cannon' }, shrouded: true },
+  h8: { piece: { color: 'black', role: 'cannon' }, shrouded: false },
+  h10: { piece: { color: 'black', role: 'horse' }, shrouded: false },
+};
+export const JIEQI_OPTION_BEFORE_STATE = xqVisionDemoState('jieqi-option-before', {
+  h3: { color: 'red', role: 'cannon' },
+  h8: { color: 'black', role: 'cannon' },
+  h10: { color: 'black', role: 'horse' },
+});
+export const JIEQI_OPTION_BEFORE_VIEW = xqStaticView(
+  'jieqi-option-before-view',
+  JIEQI_OPTION_BEFORE_BOARD,
+);
+export const JIEQI_OPTION_AFTER_STATE = xqVisionDemoState('jieqi-option-after', {
+  h10: { color: 'red', role: 'soldier' },
+  h8: { color: 'black', role: 'cannon' },
+});
+export const JIEQI_OPTION_SPENT = (labels?: { before?: string; after?: string }) => xqSvg(
+  JIEQI_PAIR_W,
+  XQ_BOARD_H + 52,
+  [
+    xqBoardSvg({
+      state: JIEQI_OPTION_BEFORE_STATE,
+      view: JIEQI_OPTION_BEFORE_VIEW,
+      x: 0,
+      y: 0,
+      label: labels?.before ?? 'FACE-DOWN ON A CANNON POINT',
+      perspective: 'red',
+      shroudedStyle: 'back',
+      dots: [
+        ...xqDots(['h4', 'h5', 'h6', 'h7']),
+        { square: 'h10' as XiangqiSquare, capture: true },
+      ],
+    }),
+    xqBoardSvg({
+      state: JIEQI_OPTION_AFTER_STATE,
+      x: XQ_BOARD_W + 28,
+      y: 0,
+      label: labels?.after ?? 'SPENT: A SOLDIER TOOK THE HORSE',
+      perspective: 'red',
+      dots: xqDots(['g10', 'i10']),
+    }),
+  ].join(''),
+);
+
 export function jieqiCaptureTray(x: number, y: number, label: string, detail: string, shrouded: boolean): string {
   const pieceSize = 46;
   const cardW = (JIEQI_PAIR_W - 28) / 2;

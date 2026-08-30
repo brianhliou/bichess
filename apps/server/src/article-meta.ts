@@ -51,6 +51,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'co-up',
   'luat-co-up',
   'fog-openings',
+  'jieqi-openings',
   'fog-chess-concepts',
   'shogi',
   'how-puzzle-mining-works',
@@ -119,6 +120,12 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.',
+  },
+  'jieqi-openings': {
+    title: 'What Strong Jieqi Players Believe About the Opening',
+    kind: 'article',
+    description:
+      'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

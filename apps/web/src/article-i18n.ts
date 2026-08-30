@@ -1586,6 +1586,102 @@ const ZH_HANS: Record<string, string> = {
   '2022 17th World Xiangqi Championship': '2022年第十七届世界象棋锦标赛',
   '2023 18th World Xiangqi Championship': '2023年第十八届世界象棋锦标赛',
   '2025 19th World Xiangqi Championship': '2025年第十九届世界象棋锦标赛',
+  // ---- jieqi-openings (machine-drafted 2026-08-30, not native-reviewed) ----
+  'Jieqi on Mistboard': 'Mistboard 上的揭棋',
+  'Jieqi and xiangqi players who want to know what the first move is worth, and English speakers who have never seen this material because it has only ever existed in Chinese.':
+    '想知道第一步值多少的揭棋和象棋棋手，以及从未接触过这些内容的英文读者：这些材料此前只存在于中文之中。',
+  'What Strong Jieqi Players Believe About the Opening': '高手眼中的揭棋开局',
+  'Jieqi Opening Theory: The First Move, Ranked': '揭棋开局：第一步怎么走，附排序',
+  'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.':
+    '揭棋没有开局谱。它有的是一场关于第一步的争论，在中文论坛上持续多年，参与者都是对局上千盘的棋手，却从未有人用英文写下来。为什么一枚暗子是只能用一次的权利、五种开局的排序，以及仙人指路与过河炮在六种翻出结果下的逐一比较。',
+  'Jieqi has no opening book. No catalog of variations, no agreed piece-value table, nothing to memorize. One of the strongest players who writes about the game, a level-two Chinese xiangqi player claiming 90% over three thousand games, started the missing book and got one chapter in.':
+    '揭棋没有开局谱。没有变例目录，没有公认的子力价值表，没有需要背的东西。写这个游戏写得最好的棋手之一，一位自称三千盘胜率九成的中国象棋二级棋士，动手写了那本缺失的书，写完第一章就停了。',
+  'What exists is an argument about the first move, running on Chinese forums for years, never written down in English. Here it is, with the sources at the bottom. Treat it as what strong players believe: none of it has been measured.':
+    '真正存在的是一场关于第一步的争论，在中文论坛上持续多年，从未有人用英文写下来。以下就是这场争论，出处列在文末。请把它当作高手们的看法：其中没有一条经过实测。',
+  'Every piece but the two generals starts face-down and shuffled. Neither player knows their own.':
+    '除双方将帅外，所有棋子开局时都是打乱后反扣的。双方都不知道自己的棋子是什么。',
+  'A dark piece moves as the point it stands on': '暗子按它所在的位置行棋',
+  'A face-down piece moves, attacks, and captures as the piece belonging to the point it sits on, not as whatever it turns out to be. A dark piece on a cannon point moves like a cannon and captures like a cannon. Then it flips and plays as itself. The [rules page](/rules/jieqi) has the rest.':
+    '暗子的走法、攻击和吃子，都按它所在起始位置那枚棋子来算，而不是按它翻开后的真实身份。炮位上的暗子走起来像炮，吃子也像炮。走完这一步它就翻开，之后按真实身份行棋。其余规则见[规则页](/rules/jieqi)。',
+  'So a face-down piece holds one use of its square’s power. A dark piece on a chariot point is a chariot for exactly one move, and then it is whatever it actually is, which might be a pawn. That single move is the most valuable thing about it, and you get to spend it once.':
+    '所以一枚暗子握着它所在位置那种棋力的一次使用权。车位上的暗子就是一步之内的车，走完之后它是什么就是什么，也许只是一个兵。那一步是它身上最值钱的东西，而你只能花掉一次。',
+  'Flipping costs two things. The square’s power goes, and so does the concealment: your opponent does not know what the piece is either, so while it stays down it threatens as its point in their reading of the position too. What you buy is that the piece plays as itself from then on, which is often a downgrade. The common mistake is spending an expensive option on a cheap job, and it costs nothing you can see on the board.':
+    '翻子要付两样代价。位置带来的棋力没了，隐蔽也没了：对手同样不知道这枚子是什么，所以只要它还扣着，在对手眼里它就按所在位置构成威胁。你换来的是这枚子此后按真实身份行棋，而这往往是降级。最常见的错误，是把一份昂贵的权利花在一件廉价的差事上，而且棋盘上看不出你亏了什么。',
+  'The same move, before and after. Face-down on a cannon point it slides the file and takes the horse behind the screen. Play that capture and you have spent a cannon’s only shot to win a horse, and what stands on the point is a soldier. Strong players call that trade a loss.':
+    '同一步棋的前后。扣着的时候，炮位上的暗子能沿直线滑动，隔着炮架吃掉那只马。真走了这一吃，你就用掉了炮仅有的一发，换来一只马，而落点上站着的是一个兵。高手把这笔交易算作亏。',
+  'The first move is therefore two decisions. You choose which option to spend, and you take a lottery ticket on what stands up.':
+    '所以第一步是两个决定。你选择花掉哪一份权利，同时抽一张关于翻出什么的彩票。',
+  'Five first moves, ranked': '五种第一步的排序',
+  'From the largest jieqi thread on Zhihu, ranked by a player with more than four hundred games.':
+    '出自知乎上最大的揭棋讨论，排序者有四百多盘对局。',
+  'Where they are, from Red’s side. Left board, left to right: the edge pawn, the 3- or 7-file pawn push, the central pawn, and the cannon point crossing the river. Right board: both cannons firing over the black cannons to take both horses.':
+    '它们在棋盘上的位置，以红方视角。左图从左到右：边兵、三路或七路的仙人指路、中兵，以及过河的炮位。右图：双炮隔着黑方的炮打掉双马。',
+  'Option cost explains both ends of that list. The pawn push is first because a pawn point’s one move is the cheapest thing in the game to spend. Taking two horses with two cannons is last because it spends the two most expensive options on the board for two horses.':
+    '权利的成本解释了这份名单的两头。仙人指路排第一，因为兵位的那一步是全盘最便宜的花费。双炮打双马排最后，因为它用掉了盘上最贵的两份权利，只换来两只马。',
+  'The middle two rank on position. The central pawn is the sensitive one: turn over a chariot there and a revealed cannon can kill it, but turn over a cannon and you can probe the centre and both edges for chariots, and those follow-ups are settled enough that players call them 定式, set patterns. The edge pawn is just as cheap and buys much less. It opens a path for the edge horse and announces that it is doing so, and a horse turned over on the edge is stuck where it stands.':
+    '中间两种靠局面排序。中兵是敏感的一手：这里翻出车，对方翻出的炮就能打死它；翻出炮，你却可以试探中路和两翼找车，而这些后续走法成熟到棋手称之为定式。边兵一样便宜，买到的却少得多。它给边马让出一条路，同时把这个意图明说出来，而边上翻出的马会卡死在原地。',
+  'Our own games disagree with the list. Across fifty jieqi games here that ran past ten moves, humans playing Red opened with the central pawn in fourteen of twenty-five, and with the recommended pawn push in three. Whatever the forums say, players open in the middle.':
+    '我们自己的对局和这份名单并不一致。在 Mistboard 上五十盘走过十回合的揭棋里，执红的人类棋手二十五盘中有十四盘走中兵，走推荐的仙人指路只有三盘。不管论坛怎么说，棋手们从中路开局。',
+  'PikaJieQi, our build of Pikafish’s jieqi branch, declines the list altogether. In twenty of its twenty-five games as Red it opened from a back-rank horse point, h1 to g3 or b1 to c3, a development move none of the five covers. Read that carefully before treating it as a verdict. It is one engine at two settings repeating itself, not twenty independent opinions. The humans lost almost every game, so nothing here settles which opening is better. And PikaJieQi runs a hand-written evaluation with no neural network, so its opening preference reflects the heuristics someone wrote into it rather than anything it learned. What it does suggest is that the list answers a narrower question than it appears to.':
+    'PikaJieQi 是我们基于 Pikafish 揭棋分支的构建，它干脆不用这份名单。它执红的二十五盘里有二十盘从底线马位起手，h1 到 g3 或 b1 到 c3，这是五种开局都没有涵盖的一种出子走法。把它当成结论之前请读仔细。那是同一个引擎在两档强度下重复自己，不是二十个独立意见。人类几乎盘盘皆输，所以这些数据判定不了哪种开局更好。而且 PikaJieQi 用的是手写评估函数，没有神经网络，所以它的开局偏好反映的是有人写进去的启发式规则，而不是它自己学到的东西。它提示的是，这份名单回答的问题比看上去要窄。',
+  'The pawn push beats the crossed cannon on 13 of 15': '十五种翻出里，仙人指路有十三种胜过过河炮',
+  'A player rated 揭7 on two accounts weighed the top two against each other: the pawn push against the cannon point crossing the river. Whichever you pick, the piece you move is your own and you do not know what it is until it lands. Fifteen sit face-down on your side, five pawns and two each of chariot, horse, cannon, advisor and elephant, so the odds on what stands up are countable.':
+    '一位在两个账号上都打到揭7的棋手，把排在前面的两种开局逐一比较：仙人指路对过河的炮位。无论选哪一种，你动的都是自己的暗子，落子之前你不知道它是什么。你这边有十五枚暗子：五个兵，车马炮士象各两枚，所以翻出什么的概率是可以算的。',
+  'On a pawn, the crossed cannon eats once and gives up two or three reveals in exchange. On a chariot, holding a dark cannon in reserve beats holding a dark pawn. The rest it simply plays less efficiently, and the advisor is the one case it wins, slightly.':
+    '翻出兵时，过河炮吃到一子，却让对方翻出两三枚作为代价。翻出车时，手里留一枚暗炮胜过留一枚暗兵。其余几种它只是走得效率更低，而士是它唯一略占上风的一种。',
+  'Thirteen of the fifteen favour the pawn push, about 87%, and the count understates it: the crossed cannon’s one win is slight while several of the pawn push’s are decisive. The verdicts are theirs, the weights are mine from the piece counts, and nobody has run that comparison past an engine.':
+    '十五枚里有十三枚站在仙人指路一边，约百分之八十七，而这个数字还说低了：过河炮唯一的那次胜出只是略胜，仙人指路的几次却是决定性的。判断出自那位棋手，权重是我按棋子数算的，而这场比较从来没有引擎跑过。',
+  'Those odds hold on move one. The deck does not refill, so every reveal narrows what is left, and a player counting what has already turned over is working from better numbers later in the game.':
+    '这些概率只在第一步成立。这副牌不会补充，所以每翻开一枚，剩下的范围就窄一分，而记住已经翻出过什么的棋手，到后面用的是比这张表更准的数字。',
+  'A chariot is worth about two cannons': '一车约值两炮',
+  'In xiangqi a chariot trades roughly for a horse and a cannon. In jieqi the same players put it higher, closer to two cannons, and arguably above a horse, cannon and advisor together. The general has no fixed guard here: any piece can be anything, so the wall in front of a jieqi general is whatever happened to land there, and a chariot walks through it.':
+    '在象棋里，一车大致换一马一炮。在揭棋里，同样这批棋手把它抬得更高，接近两炮，甚至高于马炮士三子之和。这里的将帅没有固定的护卫：任何一枚子都可能是任何东西，所以揭棋里将帅面前的那道墙，只是碰巧落在那里的棋子，而车会直接穿过去。',
+  'Protect yours. Holding one chariot against two, refuse the trade, even with both of theirs still face-down. This is also why the two dark pieces on the back chariot points usually stay down: they defend, and they are the most expensive unspent options either player holds.':
+    '护住自己的车。手里一车对人家两车时，不要兑，哪怕对方两车都还扣着。这也是为什么底线两个车位上的暗子通常一直不翻：它们既是防守，也是双方手里最贵的、尚未动用的权利。',
+  'With a chariot: the river bank, then the file': '有车之后：先控河沿，再占肋道',
+  'One sequence in jieqi behaves like a line. With a chariot out, take the opponent’s river bank, occupy a file, and prepare the attack that comes with exposing your own general. Experienced opponents know the answer: fly an elephant and jump a horse quickly, so the back chariot point covers the approach.':
+    '揭棋里只有一条路数像定式。车出来之后，控制对方的河沿，占住一路，再准备那种亮帅助攻的进攻。有经验的对手知道怎么应：赶紧飞象跳马，让底线的车位守住通路。',
+  'A chariot-led file attack against a fast elephant-and-horse screen is as close as this opening gets to established theory.':
+    '车领衔的肋道进攻，对上快速成型的象马屏障，这是揭棋开局最接近成型理论的东西。',
+  'Black races for a chariot of their own': '黑方要抢自己的车',
+  'Everything above is Red’s choice. Red’s edge is larger here than in xiangqi, because chariots can sit face-down and arrive in the middlegame.':
+    '上面说的都是红方的选择。红方的先手优势在揭棋里比象棋更大，因为车可以一直扣着，留到中局才出现。',
+  'When Red’s pawn push turns over a chariot, develop a horse and race for a chariot of your own. There is no better answer, and strong players do not pretend there is one.':
+    '红方仙人指路翻出车时，跳正马，去抢自己的车。没有更好的应法，高手也不假装有。',
+  'When your chariots arrive late anyway, drop the development order. Pawn, then horse, then advisor is a peacetime plan. Get both horses out instead, so your pieces defend each other.':
+    '如果你的车终究来得晚，就别守出子次序了。先兵后马再上士是太平时候的计划。把双马都跳出来，让各子互相生根。',
+  'Stop flipping once three major pieces are out': '三个大子出来之后就别再翻了',
+  'Once three major pieces are revealed and active, attack with them. Flipping past that point hands the initiative to whoever is already developed, because a flip is a move that threatens nothing while your opponent uses theirs. On Tiantian Xiangqi the rated jieqi clock is tighter than the xiangqi one and carries no per-move increment, so the player still turning pieces over in a sharp position tends to lose on time as well.':
+    '三个大子翻开并投入战斗之后，就用它们进攻。过了这个点还在翻子，等于把主动权交给已经出好子的一方，因为翻一步什么也威胁不到，而对手那一步是有用的。天天象棋的揭棋定级赛用时比象棋更紧，而且没有每步加秒，所以在尖锐局面里还在翻子的一方，往往还会超时告负。',
+  Sources: '出处',
+  'Three Chinese-language posts. Titles are given in English, with the original after, so you can search for them.':
+    '三篇中文帖子。下面同时给出英文译名和原标题，方便检索。',
+  '[Notes on Jieqi, Part 1](https://zhuanlan.zhihu.com/p/347466882) (揭棋心得 Part.1). The closest thing to a jieqi book that exists, and it is one chapter. Source for the piece values, the chariot, and what spending an option costs.':
+    '[揭棋心得 Part.1](https://zhuanlan.zhihu.com/p/347466882)。目前最接近一本揭棋书的东西，只有一章。子力价值、车的分量，以及花掉一份权利的代价都出自这里。',
+  '[What do you make of Tiantian Xiangqi’s jieqi mode?](https://www.zhihu.com/question/53501615) (如何看待天天象棋推出的“揭棋”玩法？). The largest jieqi discussion anywhere. Source for the ranking, the reveal-by-reveal case, and the chariot plan.':
+    '[如何看待天天象棋推出的“揭棋”玩法？](https://www.zhihu.com/question/53501615)。目前最大的揭棋讨论。排序、逐一翻出的比较，以及有车之后的路数都出自这里。',
+  '[A notation for jieqi and banqi](https://zhuanlan.zhihu.com/p/638758588) (《天天象棋》揭棋和翻翻棋的记谱法). Proposes a way to record these games, which does not otherwise exist. Background only.':
+    '[《天天象棋》揭棋和翻翻棋的记谱法](https://zhuanlan.zhihu.com/p/638758588)。提出了一套记谱方式，此前并不存在。仅作背景参考。',
+  'There is no jieqi opening database and no published statistics. The fifty games cited above are our own, they are mostly humans losing to Pikafish, and they are nowhere near enough to settle whether the pawn push really outperforms the crossed cannon. They are enough to say what people here actually play.':
+    '揭棋没有开局数据库，也没有公开的统计。上面引用的五十盘是我们自己的对局，大多是人类输给 Pikafish，远不足以判定仙人指路是否真的胜过过河炮。它们只够说明这里的人实际在下什么。',
+  Opening: '开局',
+  Verdict: '评价',
+  'Pawn push (仙人指路)': '仙人指路',
+  'Crossed cannon (炮二进四)': '过河炮（炮二进四）',
+  'Central pawn (冲中兵)': '冲中兵',
+  'Edge pawn (九尾龟)': '边兵（九尾龟）',
+  'Both cannons take horses': '双炮打双马',
+  'Standard. No bad reveal.': '标准着法。翻出什么都不算坏。',
+  'Good on a pawn, bad on a horse.': '翻出兵好，翻出马差。',
+  'Risky. Exposed in the middle.': '有风险，中路容易受攻。',
+  'Poor. An edge horse is stuck.': '差。边上翻出的马会卡死。',
+  'Losing. A weak player’s gamble against a strong one.': '亏。是弱手对强手的赌博。',
+  'What flips up': '翻出什么',
+  Odds: '概率',
+  'Better opening': '更优的开局',
+  Pawn: '兵',
+  'Pawn push': '仙人指路',
+  'Crossed cannon': '过河炮',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2955,6 +3051,102 @@ const ZH_HANT: Record<string, string> = {
   '2022 17th World Xiangqi Championship': '2022年第十七屆世界象棋錦標賽',
   '2023 18th World Xiangqi Championship': '2023年第十八屆世界象棋錦標賽',
   '2025 19th World Xiangqi Championship': '2025年第十九屆世界象棋錦標賽',
+  // ---- jieqi-openings (machine-drafted 2026-08-30, not native-reviewed) ----
+  'Jieqi on Mistboard': 'Mistboard 上的揭棋',
+  'Jieqi and xiangqi players who want to know what the first move is worth, and English speakers who have never seen this material because it has only ever existed in Chinese.':
+    '想知道第一步值多少的揭棋和象棋棋手，以及從未接觸過這些內容的英文讀者：這些材料此前只存在於中文之中。',
+  'What Strong Jieqi Players Believe About the Opening': '高手眼中的揭棋開局',
+  'Jieqi Opening Theory: The First Move, Ranked': '揭棋開局：第一步怎麼走，附排序',
+  'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.':
+    '揭棋沒有開局譜。它有的是一場關於第一步的爭論，在中文論壇上持續多年，參與者都是對局上千盤的棋手，卻從未有人用英文寫下來。為什麼一枚暗子是隻能用一次的權利、五種開局的排序，以及仙人指路與過河炮在六種翻出結果下的逐一比較。',
+  'Jieqi has no opening book. No catalog of variations, no agreed piece-value table, nothing to memorize. One of the strongest players who writes about the game, a level-two Chinese xiangqi player claiming 90% over three thousand games, started the missing book and got one chapter in.':
+    '揭棋沒有開局譜。沒有變例目錄，沒有公認的子力價值表，沒有需要背的東西。寫這個遊戲寫得最好的棋手之一，一位自稱三千盤勝率九成的中國象棋二級棋士，動手寫了那本缺失的書，寫完第一章就停了。',
+  'What exists is an argument about the first move, running on Chinese forums for years, never written down in English. Here it is, with the sources at the bottom. Treat it as what strong players believe: none of it has been measured.':
+    '真正存在的是一場關於第一步的爭論，在中文論壇上持續多年，從未有人用英文寫下來。以下就是這場爭論，出處列在文末。請把它當作高手們的看法：其中沒有一條經過實測。',
+  'Every piece but the two generals starts face-down and shuffled. Neither player knows their own.':
+    '除雙方將帥外，所有棋子開局時都是打亂後反扣的。雙方都不知道自己的棋子是什麼。',
+  'A dark piece moves as the point it stands on': '暗子按它所在的位置行棋',
+  'A face-down piece moves, attacks, and captures as the piece belonging to the point it sits on, not as whatever it turns out to be. A dark piece on a cannon point moves like a cannon and captures like a cannon. Then it flips and plays as itself. The [rules page](/rules/jieqi) has the rest.':
+    '暗子的走法、攻擊和吃子，都按它所在起始位置那枚棋子來算，而不是按它翻開後的真實身份。炮位上的暗子走起來像炮，吃子也像炮。走完這一步它就翻開，之後按真實身份行棋。其餘規則見[規則頁](/rules/jieqi)。',
+  'So a face-down piece holds one use of its square’s power. A dark piece on a chariot point is a chariot for exactly one move, and then it is whatever it actually is, which might be a pawn. That single move is the most valuable thing about it, and you get to spend it once.':
+    '所以一枚暗子握著它所在位置那種棋力的一次使用權。車位上的暗子就是一步之內的車，走完之後它是什麼就是什麼，也許只是一個兵。那一步是它身上最值錢的東西，而你只能花掉一次。',
+  'Flipping costs two things. The square’s power goes, and so does the concealment: your opponent does not know what the piece is either, so while it stays down it threatens as its point in their reading of the position too. What you buy is that the piece plays as itself from then on, which is often a downgrade. The common mistake is spending an expensive option on a cheap job, and it costs nothing you can see on the board.':
+    '翻子要付兩樣代價。位置帶來的棋力沒了，隱蔽也沒了：對手同樣不知道這枚子是什麼，所以只要它還扣著，在對手眼裡它就按所在位置構成威脅。你換來的是這枚子此後按真實身份行棋，而這往往是降級。最常見的錯誤，是把一份昂貴的權利花在一件廉價的差事上，而且棋盤上看不出你虧了什麼。',
+  'The same move, before and after. Face-down on a cannon point it slides the file and takes the horse behind the screen. Play that capture and you have spent a cannon’s only shot to win a horse, and what stands on the point is a soldier. Strong players call that trade a loss.':
+    '同一步棋的前後。扣著的時候，炮位上的暗子能沿直線滑動，隔著炮架吃掉那隻馬。真走了這一吃，你就用掉了炮僅有的一發，換來一隻馬，而落點上站著的是一個兵。高手把這筆交易算作虧。',
+  'The first move is therefore two decisions. You choose which option to spend, and you take a lottery ticket on what stands up.':
+    '所以第一步是兩個決定。你選擇花掉哪一份權利，同時抽一張關於翻出什麼的彩票。',
+  'Five first moves, ranked': '五種第一步的排序',
+  'From the largest jieqi thread on Zhihu, ranked by a player with more than four hundred games.':
+    '出自知乎上最大的揭棋討論，排序者有四百多盤對局。',
+  'Where they are, from Red’s side. Left board, left to right: the edge pawn, the 3- or 7-file pawn push, the central pawn, and the cannon point crossing the river. Right board: both cannons firing over the black cannons to take both horses.':
+    '它們在棋盤上的位置，以紅方視角。左圖從左到右：邊兵、三路或七路的仙人指路、中兵，以及過河的炮位。右圖：雙炮隔著黑方的炮打掉雙馬。',
+  'Option cost explains both ends of that list. The pawn push is first because a pawn point’s one move is the cheapest thing in the game to spend. Taking two horses with two cannons is last because it spends the two most expensive options on the board for two horses.':
+    '權利的成本解釋了這份名單的兩頭。仙人指路排第一，因為兵位的那一步是全盤最便宜的花費。雙炮打雙馬排最後，因為它用掉了盤上最貴的兩份權利，只換來兩隻馬。',
+  'The middle two rank on position. The central pawn is the sensitive one: turn over a chariot there and a revealed cannon can kill it, but turn over a cannon and you can probe the centre and both edges for chariots, and those follow-ups are settled enough that players call them 定式, set patterns. The edge pawn is just as cheap and buys much less. It opens a path for the edge horse and announces that it is doing so, and a horse turned over on the edge is stuck where it stands.':
+    '中間兩種靠局面排序。中兵是敏感的一手：這裡翻出車，對方翻出的炮就能打死它；翻出炮，你卻可以試探中路和兩翼找車，而這些後續走法成熟到棋手稱之為定式。邊兵一樣便宜，買到的卻少得多。它給邊馬讓出一條路，同時把這個意圖明說出來，而邊上翻出的馬會卡死在原地。',
+  'Our own games disagree with the list. Across fifty jieqi games here that ran past ten moves, humans playing Red opened with the central pawn in fourteen of twenty-five, and with the recommended pawn push in three. Whatever the forums say, players open in the middle.':
+    '我們自己的對局和這份名單並不一致。在 Mistboard 上五十盤走過十回合的揭棋裡，執紅的人類棋手二十五盤中有十四盤走中兵，走推薦的仙人指路只有三盤。不管論壇怎麼說，棋手們從中路開局。',
+  'PikaJieQi, our build of Pikafish’s jieqi branch, declines the list altogether. In twenty of its twenty-five games as Red it opened from a back-rank horse point, h1 to g3 or b1 to c3, a development move none of the five covers. Read that carefully before treating it as a verdict. It is one engine at two settings repeating itself, not twenty independent opinions. The humans lost almost every game, so nothing here settles which opening is better. And PikaJieQi runs a hand-written evaluation with no neural network, so its opening preference reflects the heuristics someone wrote into it rather than anything it learned. What it does suggest is that the list answers a narrower question than it appears to.':
+    'PikaJieQi 是我們基於 Pikafish 揭棋分支的構建，它乾脆不用這份名單。它執紅的二十五盤裡有二十盤從底線馬位起手，h1 到 g3 或 b1 到 c3，這是五種開局都沒有涵蓋的一種出子走法。把它當成結論之前請讀仔細。那是同一個引擎在兩檔強度下重複自己，不是二十個獨立意見。人類幾乎盤盤皆輸，所以這些資料判定不了哪種開局更好。而且 PikaJieQi 用的是手寫評估函式，沒有神經網路，所以它的開局偏好反映的是有人寫進去的啟發式規則，而不是它自己學到的東西。它提示的是，這份名單回答的問題比看上去要窄。',
+  'The pawn push beats the crossed cannon on 13 of 15': '十五種翻出裡，仙人指路有十三種勝過過河炮',
+  'A player rated 揭7 on two accounts weighed the top two against each other: the pawn push against the cannon point crossing the river. Whichever you pick, the piece you move is your own and you do not know what it is until it lands. Fifteen sit face-down on your side, five pawns and two each of chariot, horse, cannon, advisor and elephant, so the odds on what stands up are countable.':
+    '一位在兩個賬號上都打到揭7的棋手，把排在前面的兩種開局逐一比較：仙人指路對過河的炮位。無論選哪一種，你動的都是自己的暗子，落子之前你不知道它是什麼。你這邊有十五枚暗子：五個兵，車馬炮士象各兩枚，所以翻出什麼的機率是可以算的。',
+  'On a pawn, the crossed cannon eats once and gives up two or three reveals in exchange. On a chariot, holding a dark cannon in reserve beats holding a dark pawn. The rest it simply plays less efficiently, and the advisor is the one case it wins, slightly.':
+    '翻出兵時，過河炮吃到一子，卻讓對方翻出兩三枚作為代價。翻出車時，手裡留一枚暗炮勝過留一枚暗兵。其餘幾種它只是走得效率更低，而士是它唯一略佔上風的一種。',
+  'Thirteen of the fifteen favour the pawn push, about 87%, and the count understates it: the crossed cannon’s one win is slight while several of the pawn push’s are decisive. The verdicts are theirs, the weights are mine from the piece counts, and nobody has run that comparison past an engine.':
+    '十五枚裡有十三枚站在仙人指路一邊，約百分之八十七，而這個數字還說低了：過河炮唯一的那次勝出只是略勝，仙人指路的幾次卻是決定性的。判斷出自那位棋手，權重是我按棋子數算的，而這場比較從來沒有引擎跑過。',
+  'Those odds hold on move one. The deck does not refill, so every reveal narrows what is left, and a player counting what has already turned over is working from better numbers later in the game.':
+    '這些機率只在第一步成立。這副牌不會補充，所以每翻開一枚，剩下的範圍就窄一分，而記住已經翻出過什麼的棋手，到後面用的是比這張表更準的數字。',
+  'A chariot is worth about two cannons': '一車約值兩炮',
+  'In xiangqi a chariot trades roughly for a horse and a cannon. In jieqi the same players put it higher, closer to two cannons, and arguably above a horse, cannon and advisor together. The general has no fixed guard here: any piece can be anything, so the wall in front of a jieqi general is whatever happened to land there, and a chariot walks through it.':
+    '在象棋裡，一車大致換一馬一炮。在揭棋裡，同樣這批棋手把它抬得更高，接近兩炮，甚至高於馬炮士三子之和。這裡的將帥沒有固定的護衛：任何一枚子都可能是任何東西，所以揭棋裡將帥面前的那道牆，只是碰巧落在那裡的棋子，而車會直接穿過去。',
+  'Protect yours. Holding one chariot against two, refuse the trade, even with both of theirs still face-down. This is also why the two dark pieces on the back chariot points usually stay down: they defend, and they are the most expensive unspent options either player holds.':
+    '護住自己的車。手裡一車對人家兩車時，不要兌，哪怕對方兩車都還扣著。這也是為什麼底線兩個車位上的暗子通常一直不翻：它們既是防守，也是雙方手裡最貴的、尚未動用的權利。',
+  'With a chariot: the river bank, then the file': '有車之後：先控河沿，再佔肋道',
+  'One sequence in jieqi behaves like a line. With a chariot out, take the opponent’s river bank, occupy a file, and prepare the attack that comes with exposing your own general. Experienced opponents know the answer: fly an elephant and jump a horse quickly, so the back chariot point covers the approach.':
+    '揭棋裡只有一條路數像定式。車出來之後，控制對方的河沿，佔住一路，再準備那種亮帥助攻的進攻。有經驗的對手知道怎麼應：趕緊飛象跳馬，讓底線的車位守住通路。',
+  'A chariot-led file attack against a fast elephant-and-horse screen is as close as this opening gets to established theory.':
+    '車領銜的肋道進攻，對上快速成型的象馬屏障，這是揭棋開局最接近成型理論的東西。',
+  'Black races for a chariot of their own': '黑方要搶自己的車',
+  'Everything above is Red’s choice. Red’s edge is larger here than in xiangqi, because chariots can sit face-down and arrive in the middlegame.':
+    '上面說的都是紅方的選擇。紅方的先手優勢在揭棋裡比象棋更大，因為車可以一直扣著，留到中局才出現。',
+  'When Red’s pawn push turns over a chariot, develop a horse and race for a chariot of your own. There is no better answer, and strong players do not pretend there is one.':
+    '紅方仙人指路翻出車時，跳正馬，去搶自己的車。沒有更好的應法，高手也不假裝有。',
+  'When your chariots arrive late anyway, drop the development order. Pawn, then horse, then advisor is a peacetime plan. Get both horses out instead, so your pieces defend each other.':
+    '如果你的車終究來得晚，就別守出子次序了。先兵後馬再上士是太平時候的計劃。把雙馬都跳出來，讓各子互相生根。',
+  'Stop flipping once three major pieces are out': '三個大子出來之後就別再翻了',
+  'Once three major pieces are revealed and active, attack with them. Flipping past that point hands the initiative to whoever is already developed, because a flip is a move that threatens nothing while your opponent uses theirs. On Tiantian Xiangqi the rated jieqi clock is tighter than the xiangqi one and carries no per-move increment, so the player still turning pieces over in a sharp position tends to lose on time as well.':
+    '三個大子翻開並投入戰鬥之後，就用它們進攻。過了這個點還在翻子，等於把主動權交給已經出好子的一方，因為翻一步什麼也威脅不到，而對手那一步是有用的。天天象棋的揭棋定級賽用時比象棋更緊，而且沒有每步加秒，所以在尖銳局面裡還在翻子的一方，往往還會超時告負。',
+  Sources: '出處',
+  'Three Chinese-language posts. Titles are given in English, with the original after, so you can search for them.':
+    '三篇中文帖子。下面同時給出英文譯名和原標題，方便檢索。',
+  '[Notes on Jieqi, Part 1](https://zhuanlan.zhihu.com/p/347466882) (揭棋心得 Part.1). The closest thing to a jieqi book that exists, and it is one chapter. Source for the piece values, the chariot, and what spending an option costs.':
+    '[揭棋心得 Part.1](https://zhuanlan.zhihu.com/p/347466882)。目前最接近一本揭棋書的東西，只有一章。子力價值、車的分量，以及花掉一份權利的代價都出自這裡。',
+  '[What do you make of Tiantian Xiangqi’s jieqi mode?](https://www.zhihu.com/question/53501615) (如何看待天天象棋推出的“揭棋”玩法？). The largest jieqi discussion anywhere. Source for the ranking, the reveal-by-reveal case, and the chariot plan.':
+    '[如何看待天天象棋推出的“揭棋”玩法？](https://www.zhihu.com/question/53501615)。目前最大的揭棋討論。排序、逐一翻出的比較，以及有車之後的路數都出自這裡。',
+  '[A notation for jieqi and banqi](https://zhuanlan.zhihu.com/p/638758588) (《天天象棋》揭棋和翻翻棋的记谱法). Proposes a way to record these games, which does not otherwise exist. Background only.':
+    '[《天天象棋》揭棋和翻翻棋的記譜法](https://zhuanlan.zhihu.com/p/638758588)。提出了一套記譜方式，此前並不存在。僅作背景參考。',
+  'There is no jieqi opening database and no published statistics. The fifty games cited above are our own, they are mostly humans losing to Pikafish, and they are nowhere near enough to settle whether the pawn push really outperforms the crossed cannon. They are enough to say what people here actually play.':
+    '揭棋沒有開局資料庫，也沒有公開的統計。上面引用的五十盤是我們自己的對局，大多是人類輸給 Pikafish，遠不足以判定仙人指路是否真的勝過過河炮。它們只夠說明這裡的人實際在下什麼。',
+  Opening: '開局',
+  Verdict: '評價',
+  'Pawn push (仙人指路)': '仙人指路',
+  'Crossed cannon (炮二进四)': '過河炮（炮二進四）',
+  'Central pawn (冲中兵)': '衝中兵',
+  'Edge pawn (九尾龟)': '邊兵（九尾龜）',
+  'Both cannons take horses': '雙炮打雙馬',
+  'Standard. No bad reveal.': '標準著法。翻出什麼都不算壞。',
+  'Good on a pawn, bad on a horse.': '翻出兵好，翻出馬差。',
+  'Risky. Exposed in the middle.': '有風險，中路容易受攻。',
+  'Poor. An edge horse is stuck.': '差。邊上翻出的馬會卡死。',
+  'Losing. A weak player’s gamble against a strong one.': '虧。是弱手對強手的賭博。',
+  'What flips up': '翻出什麼',
+  Odds: '機率',
+  'Better opening': '更優的開局',
+  Pawn: '兵',
+  'Pawn push': '仙人指路',
+  'Crossed cannon': '過河炮',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

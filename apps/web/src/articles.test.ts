@@ -89,6 +89,9 @@ describe('article public listing gates', () => {
       // hours apart on 2026-08-29 and are deliberately dated a day apart: two
       // halves of one argument landing on the same date read as a dump, and the
       // world-title piece is the one that answers the other.
+      // Draft, dated 2026-09-03, ahead of everything published. Out of the
+      // sitemap and noindex until it actually publishes.
+      '/blog/jieqi-openings',
       '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
       // Both drafts. This assertion runs with DEV stubbed true, where the index

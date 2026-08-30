@@ -46,7 +46,7 @@ export const jieqiPlatformArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players.',
+        'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).',
     },
     {
       // A reader who arrived from a "play jieqi" search wants a board, not an
