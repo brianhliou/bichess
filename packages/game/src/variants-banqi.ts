@@ -346,8 +346,16 @@ export function banqiSeatToMove(state: BanqiGameState): BanqiSeat {
   return state.ply % 2 === 0 ? 'red' : 'black';
 }
 
-/** The ink a seat owns, or null before the first flip binds it. */
-export function banqiInkForSeat(state: BanqiGameState, seat: BanqiSeat): BanqiColor | null {
+/**
+ * The ink a seat owns, or null before the first flip binds it. Takes the binding
+ * fields structurally so a BanqiPlayerView (which carries them) can ask too --
+ * renderers need the seat -> ink mapping and must not re-derive it, because a
+ * seat is NOT the ink it plays.
+ */
+export function banqiInkForSeat(
+  state: Pick<BanqiGameState, 'firstColor'>,
+  seat: BanqiSeat,
+): BanqiColor | null {
   if (state.firstColor === null) return null;
   return seat === 'red' ? state.firstColor : oppositeBanqiColor(state.firstColor);
 }
@@ -355,6 +363,22 @@ export function banqiInkForSeat(state: BanqiGameState, seat: BanqiSeat): BanqiCo
 /** The ink of the side to move, or null before the first flip binds it. */
 export function banqiMoverInk(state: BanqiGameState): BanqiColor | null {
   return banqiInkForSeat(state, banqiSeatToMove(state));
+}
+
+/**
+ * The ink of the side that made the LAST action, or null before anything has
+ * been played. Derived from ply parity (red acts on even ply, so the action at
+ * ply - 1 was red's when ply is odd).
+ *
+ * Never read this off the board. A flip turns up a RANDOM tile, so the revealed
+ * piece's colour is independent of who flipped it and the two disagree about
+ * half the time -- exactly the case where a viewer needs to be told.
+ */
+export function banqiLastMoverInk(
+  state: Pick<BanqiGameState, 'ply' | 'firstColor'>,
+): BanqiColor | null {
+  if (state.ply <= 0) return null;
+  return banqiInkForSeat(state, state.ply % 2 === 1 ? 'red' : 'black');
 }
 
 // ── Move generation ──────────────────────────────────────────────────────────

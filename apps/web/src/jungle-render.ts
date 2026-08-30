@@ -32,7 +32,7 @@ import {
   jungleCoordOf,
   jungleTrapOwner,
 } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { TOKEN_PIECE_RATIO } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
@@ -40,8 +40,7 @@ import {
   framedTokenSvg,
   jungleBoardAssetHref,
   jungleCoverImage,
-  jungleLastMoveFromSvg,
-  jungleLastMoveToSvg,
+  jungleLastMoveCellSvg,
   jungleShadowFilterDef,
 } from './jungle-art.js';
 import {
@@ -160,6 +159,7 @@ function defs(gid: string): string {
 // UNDER renderPieces, so the grass would otherwise hide it).
 function furniture(
   geom: GridGeometry,
+  board: JungleBoard,
   lastMove: { from: JungleSquare; to: JungleSquare } | null,
   boardSkin: JungleBoardSkin,
 ): string {
@@ -233,16 +233,21 @@ function furniture(
     );
   }
 
-  // Last-move marks over the terrain (shared JUNGLE_LAST_MOVE spec, same circular
-  // grammar as the xiangqi boards): a darker shadow disc at the origin and a thin
-  // gold halo (with a slim dark under-edge for busy tiles) at the destination.
+  // Last-move marks over the terrain (shared JUNGLE_LAST_MOVE spec): the origin
+  // and destination CELLS tinted in the ink of the side that moved.
+  //
+  // Jungle reads that ink straight off the destination piece, which is sound
+  // ONLY here: sides are fixed and there are no flips, so whatever sits on `to`
+  // after the move belongs to the mover. Flip Jungle cannot do this and derives
+  // the ink from ply parity instead (jungleFlipLastMoverInk).
   if (lastMove) {
-    const from = jungleCoordOf(lastMove.from);
-    const fromTopLeft = geom.topLeft(from.file, from.rank);
-    parts.push(jungleLastMoveFromSvg(fromTopLeft.x, fromTopLeft.y, c));
     const to = jungleCoordOf(lastMove.to);
     const toTopLeft = geom.topLeft(to.file, to.rank);
-    parts.push(jungleLastMoveToSvg(toTopLeft.x, toTopLeft.y, c));
+    const ink = board[lastMove.to]?.color ?? null;
+    const from = jungleCoordOf(lastMove.from);
+    const fromTopLeft = geom.topLeft(from.file, from.rank);
+    parts.push(jungleLastMoveCellSvg(fromTopLeft.x, fromTopLeft.y, c, 'from', ink));
+    parts.push(jungleLastMoveCellSvg(toTopLeft.x, toTopLeft.y, c, 'to', ink));
   }
   return parts.join('');
 }
@@ -306,6 +311,12 @@ export function animateJungleBoardMove(
   const from = geom.center(origin.file, origin.rank);
   const to = geom.center(settle.file, settle.rank);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Fade the destination tint in as the piece lands, the way the banqi and
+  // xiangqi boards do. A reverse step renders the PRIOR move's mark on a
+  // different cell, so fading it would not track the reverse glide.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector('.jungle-last-move-to'), duration);
+  }
 }
 
 // The floating ghost piece shown while dragging (a framed token in a one-cell SVG box),
@@ -337,7 +348,7 @@ export function renderJungleBoardSvg(
     extraDefs: shadow ? defs(gid) : '',
     coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
-      furniture(geom, options.lastMove ?? null, boardSkin) +
+      furniture(geom, board, options.lastMove ?? null, boardSkin) +
       pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
       `<g class="jungle-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jungleMarkerSvg(marker, geom)).join('')}</g>` +
       `<g class="jungle-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleArrowLayer(options.arrows ?? [], geom)}</g>`,

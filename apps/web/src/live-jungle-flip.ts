@@ -22,6 +22,7 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
+import { jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
 import {
@@ -199,6 +200,7 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
       JSON.stringify({
         board: view.board,
         lastMove: view.lastMove ?? null,
+        lastMoveInk: jungleFlipLastMoverInk(view),
         status: view.status,
         ply: view.ply,
         firstColor: view.firstColor,
@@ -255,6 +257,7 @@ function renderBoard(liveRefs: LiveRefs, view: JungleFlipWireView | null): void 
     targets,
     draggingFrom,
     lastMove: view.lastMove ?? null,
+    lastMoveInk: jungleFlipLastMoverInk(view),
   });
 }
 

@@ -12,6 +12,7 @@ import {
   type BanqiPiece,
   type BanqiPieceRole,
   banqiInkForSeat,
+  banqiLastMoverInk,
   banqiMoverInk,
   banqiSeatToMove,
   banqiSquareFromIndex,
@@ -24,6 +25,7 @@ import {
   getBanqiPlayerView,
   isBanqiLegalMove,
   oppositeBanqiColor,
+  STANDARD_BANQI_DEAL,
 } from './variants-banqi.js';
 
 function up(color: BanqiColor, role: BanqiPieceRole): BanqiPiece {
@@ -366,6 +368,47 @@ test('square indexing matches the engine convention (a1=0 … h4=31)', () => {
   assert.equal(banqiSquareFromIndex(7), 'h1');
   assert.equal(banqiSquareFromIndex(8), 'a2');
   assert.equal(banqiSquareFromIndex(31), 'h4');
+});
+
+test('banqiLastMoverInk is null before anything has been played', () => {
+  assert.equal(banqiLastMoverInk({ ply: 0, firstColor: null }), null);
+  assert.equal(banqiLastMoverInk({ ply: 0, firstColor: 'red' }), null);
+});
+
+test('banqiLastMoverInk alternates with ply, one behind the side to move', () => {
+  // The red SEAT acts on even ply, so the action at ply - 1 was red's when ply is odd.
+  assert.equal(banqiLastMoverInk({ ply: 1, firstColor: 'red' }), 'red');
+  assert.equal(banqiLastMoverInk({ ply: 2, firstColor: 'red' }), 'black');
+  assert.equal(banqiLastMoverInk({ ply: 3, firstColor: 'red' }), 'red');
+});
+
+test('banqiLastMoverInk follows the bound ink, not the seat name', () => {
+  // firstColor 'black' means the red SEAT plays BLACK ink. A caller that compared
+  // the seat to a piece colour would get every answer backwards.
+  assert.equal(banqiLastMoverInk({ ply: 1, firstColor: 'black' }), 'black');
+  assert.equal(banqiLastMoverInk({ ply: 2, firstColor: 'black' }), 'red');
+});
+
+test('banqiLastMoverInk reports the flipper, not the ink the flip revealed', () => {
+  let state = createInitialBanqiState('ink', STANDARD_BANQI_DEAL);
+  state = applyBanqiMove(state, { from: 'a1', to: 'a1' });
+  // The opening flip BINDS the seat to what it turned up, so the two agree here.
+  assert.equal(banqiLastMoverInk(state), state.board.a1?.color);
+
+  // Later flips are where they part company: a flip reveals a random tile, so the
+  // revealed colour says nothing about who acted. Walk until one disagrees.
+  let disagreed = false;
+  for (const square of ALL_BANQI_SQUARES) {
+    if (state.board[square]?.faceDown !== true) continue;
+    const next = applyBanqiMove(state, { from: square, to: square });
+    if (next === state) continue;
+    const mover = banqiLastMoverInk(next);
+    assert.equal(mover, banqiInkForSeat(next, next.ply % 2 === 1 ? 'red' : 'black'));
+    if (mover !== next.board[square]?.color) disagreed = true;
+    state = next;
+    if (disagreed) break;
+  }
+  assert.ok(disagreed, 'expected a flip whose revealed ink differs from the flipper');
 });
 
 void isBanqiLegalMove; // exercised via applyBanqiMove; exported for the server
