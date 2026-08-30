@@ -297,7 +297,7 @@ function installJieqiBoardInteraction(liveRefs: LiveRefs): void {
     ghostHtml: (square) => {
       const entry = core?.state.view?.board[square as JieqiSquare];
       if (!entry) return null;
-      return jieqiPieceGhostSvg(entry);
+      return jieqiPieceGhostSvg(entry, undefined, square as JieqiSquare);
     },
     onDragStart: (from) => {
       selectedSquare = from as JieqiSquare;

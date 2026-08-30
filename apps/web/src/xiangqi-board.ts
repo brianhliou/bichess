@@ -46,6 +46,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
@@ -482,11 +483,14 @@ export const XIANGQI_PIECE_SIZE = PIECE_SIZE;
 
 // The standalone piece SVG for the floating drag ghost (board-drag.ts mounts it
 // in a sized <div>).
-export function xiangqiPieceGhostSvg(piece: XiangqiPiece): string {
+// `crossed` is the drag origin's river state: without it a promoted soldier
+// reverts to recruit art the moment it is picked up.
+export function xiangqiPieceGhostSvg(piece: XiangqiPiece, crossed = false): string {
   return renderXiangqiPiece(piece, {
     ariaLabel: `${piece.color} ${piece.role}`,
     className: 'xq-piece',
     size: PIECE_SIZE,
+    crossed,
   });
 }
 
@@ -677,7 +681,11 @@ export function createXiangqiInteractiveBoard(
     canDragFrom: (square) => canDrag(square as XiangqiSquare),
     ghostHtml: (square) => {
       const piece = opts.getInteractionView()?.board[square as XiangqiSquare];
-      return piece ? xiangqiPieceGhostSvg(piece) : null;
+      if (!piece) return null;
+      return xiangqiPieceGhostSvg(
+        piece,
+        drawsCrossedSoldier(piece, coordOf(square as XiangqiSquare).rank),
+      );
     },
     onDragStart: (from) => {
       selectedSquare = from as XiangqiSquare;

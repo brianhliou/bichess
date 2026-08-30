@@ -70,6 +70,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
@@ -286,8 +287,8 @@ export function renderDarkXiangqiInteractiveBoardSvg(
 
 // The floating drag ghost (a single visible piece). Exported for the review
 // interactive board's installBoardDrag wiring.
-export function darkXiangqiInteractivePieceGhostSvg(piece: XiangqiPiece): string {
-  return darkXiangqiPieceGhostSvg(piece);
+export function darkXiangqiInteractivePieceGhostSvg(piece: XiangqiPiece, crossed = false): string {
+  return darkXiangqiPieceGhostSvg(piece, crossed);
 }
 
 function renderBoard(liveRefs: LiveRefs, view: DarkXiangqiWireView | null): void {
@@ -491,6 +492,9 @@ function pieceLayer(
         y: center.y - PIECE_SIZE / 2,
         size: PIECE_SIZE,
         shrouded: entry.shrouded,
+        // A shrouded entry is a soldier-shaped placeholder for an unknown role,
+        // so promoting its art would assert a piece the viewer has not seen.
+        crossed: !entry.shrouded && drawsCrossedSoldier(piece, coord.rank),
         className: dragSource ? 'xq-piece xq-piece--drag-source' : 'xq-piece',
       }),
     );
@@ -556,11 +560,12 @@ function handleSquareClick(view: DarkXiangqiWireView, square: XiangqiSquare): vo
 // The standalone piece SVG for the floating drag ghost (board-drag.ts mounts it
 // in a sized <div>). Only your own VISIBLE pieces are draggable, so the entry is
 // always a known piece — never shrouded.
-function darkXiangqiPieceGhostSvg(piece: XiangqiPiece): string {
+function darkXiangqiPieceGhostSvg(piece: XiangqiPiece, crossed = false): string {
   return renderXiangqiPiece(piece, {
     ariaLabel: `${piece.color} ${piece.role}`,
     className: 'xq-piece',
     size: PIECE_SIZE,
+    crossed,
   });
 }
 
@@ -589,7 +594,10 @@ function installDarkXiangqiBoardInteraction(liveRefs: LiveRefs): void {
     ghostHtml: (square) => {
       const entry = core?.state.view?.board[square as XiangqiSquare];
       if (!entry || entry.shrouded) return null;
-      return darkXiangqiPieceGhostSvg(entry.piece);
+      return darkXiangqiPieceGhostSvg(
+        entry.piece,
+        drawsCrossedSoldier(entry.piece, coordOf(square as XiangqiSquare).rank),
+      );
     },
     onDragStart: (from) => {
       selectedSquare = from as XiangqiSquare;

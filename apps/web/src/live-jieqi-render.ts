@@ -34,6 +34,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
@@ -240,6 +241,10 @@ export const JIEQI_PIECE_PX = PIECE_SIZE;
 export function jieqiPieceGhostSvg(
   entry: JieqiPlayerView['board'][JieqiSquare],
   pieceSet?: XiangqiPieceSet,
+  // The square the drag started from, so a soldier past the river keeps its
+  // promoted art while it floats. Face-down entries ignore it: their soldier
+  // role is a placeholder for an identity nobody has seen.
+  originSquare?: JieqiSquare,
 ): string {
   if (!entry) return '';
   const set = pieceSet ?? readStoredXiangqiPieceSet();
@@ -257,6 +262,7 @@ export function jieqiPieceGhostSvg(
         ariaLabel: `${entry.color} ${entry.role}`,
         className: 'jieqi-piece',
         shrouded: false,
+        crossed: originSquare ? drawsCrossedSoldier(entry, jieqiCoordOf(originSquare).rank) : false,
         x: 0,
         y: 0,
         size: PIECE_SIZE,
@@ -298,7 +304,7 @@ function pieceLayer(
             x: x - PIECE_SIZE / 2,
             y: y - PIECE_SIZE / 2,
             size: PIECE_SIZE,
-            crossed: entry.role === 'soldier' && (entry.color === 'red' ? rank >= 6 : rank <= 5),
+            crossed: drawsCrossedSoldier(entry, rank),
           });
       return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
     })

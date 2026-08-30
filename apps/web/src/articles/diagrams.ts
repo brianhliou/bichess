@@ -55,6 +55,7 @@ import {
   xiangqiBoardPoint,
 } from '../xiangqi-board-geometry.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
   renderXiangqiPieceGlyphed,
@@ -1587,6 +1588,7 @@ export function xqPiecesLayer(
         size,
         shrouded,
         shroudedStyle,
+        crossed: !shrouded && drawsCrossedSoldier(piece as XiangqiPiece, rank),
       });
     })
     .join('');

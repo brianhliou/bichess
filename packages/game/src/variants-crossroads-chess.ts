@@ -238,7 +238,7 @@ function farRank(color: CrossroadsChessColor): number {
 
 // The river runs between ranks 4 and 5. A Soldier gains sideways movement once it
 // has crossed into the enemy half.
-function soldierCrossedRiver(color: CrossroadsChessColor, rank: number): boolean {
+export function soldierCrossedRiver(color: CrossroadsChessColor, rank: number): boolean {
   return color === 'white' ? rank >= 5 : rank <= 4;
 }
 

@@ -22,6 +22,7 @@ import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastm
 import { tokenPieceSize } from './board-metrics.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
@@ -202,6 +203,7 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
         x: x - PIECE / 2,
         y: y - PIECE / 2,
         size: PIECE,
+        crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
       });
     })
     .join('');

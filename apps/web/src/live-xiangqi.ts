@@ -14,6 +14,7 @@
 
 import {
   applyStandardXiangqiMove,
+  coordOf,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -62,6 +63,8 @@ export {
   type XiangqiClickResult,
   xiangqiClickResult,
 } from './xiangqi-board.js';
+
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 
 type XiangqiMoveEvent = TenantMovePlayed<XiangqiColor, XiangqiMove>;
 
@@ -293,7 +296,10 @@ function installXiangqiBoardInteraction(liveRefs: LiveRefs): void {
     ghostHtml: (square) => {
       const piece = core?.state.view?.board[square as XiangqiSquare];
       if (!piece) return null;
-      return xiangqiPieceGhostSvg(piece);
+      return xiangqiPieceGhostSvg(
+        piece,
+        drawsCrossedSoldier(piece, coordOf(square as XiangqiSquare).rank),
+      );
     },
     onDragStart: (from) => {
       selectedSquare = from as XiangqiSquare;

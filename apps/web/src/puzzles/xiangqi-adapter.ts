@@ -14,6 +14,7 @@
 
 import {
   applyStandardXiangqiMove,
+  coordOf,
   fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -37,6 +38,7 @@ import {
   xiangqiClickResult,
   xiangqiPieceGhostSvg,
 } from '../xiangqi-board.js';
+import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   activeTurn,
   isReplayLive,
@@ -74,7 +76,11 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     canDragFrom: (square) => canDragXiangqiPiece(session, square as XiangqiSquare),
     ghostHtml: (square) => {
       const piece = view.board[square as XiangqiSquare];
-      return piece ? xiangqiPieceGhostSvg(piece) : null;
+      if (!piece) return null;
+      return xiangqiPieceGhostSvg(
+        piece,
+        drawsCrossedSoldier(piece, coordOf(square as XiangqiSquare).rank),
+      );
     },
     onDragStart: (from) => {
       session.selectedSquare = from as XiangqiSquare;

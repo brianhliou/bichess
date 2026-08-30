@@ -14,7 +14,7 @@
 // layer produces full cutouts and shows no fog — the same renderer masks the POV
 // secondaries because their views carry a limited visibleSquares set.
 
-import type { XiangqiColor, XiangqiMove, XiangqiSquare } from '@mistboard/game';
+import { coordOf, type XiangqiColor, type XiangqiMove, type XiangqiSquare } from '@mistboard/game';
 import {
   type DarkXiangqiWireView,
   darkXiangqiClickResult,
@@ -23,6 +23,7 @@ import {
 } from './live-dark-xiangqi.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 
 // 9 files; used only to size the drag ghost to the currently rendered cell width.
 const XIANGQI_FILES = 9;
@@ -133,7 +134,11 @@ export function createDarkXiangqiInteractiveBoard(
     canDragFrom: (square) => canDrag(square as XiangqiSquare),
     ghostHtml: (square) => {
       const entry = opts.getInteractionView()?.board[square as XiangqiSquare];
-      return entry && !entry.shrouded ? darkXiangqiInteractivePieceGhostSvg(entry.piece) : null;
+      if (!entry || entry.shrouded) return null;
+      return darkXiangqiInteractivePieceGhostSvg(
+        entry.piece,
+        drawsCrossedSoldier(entry.piece, coordOf(square as XiangqiSquare).rank),
+      );
     },
     onDragStart: (from) => {
       selectedSquare = from as XiangqiSquare;

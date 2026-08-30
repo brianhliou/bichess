@@ -142,7 +142,7 @@ export function createJieqiInteractiveBoard(
     canDragFrom: (square) => canDrag(square as JieqiSquare),
     ghostHtml: (square) => {
       const entry = opts.getInteractionView()?.board[square as JieqiSquare];
-      return entry ? jieqiPieceGhostSvg(entry) : null;
+      return entry ? jieqiPieceGhostSvg(entry, undefined, square as JieqiSquare) : null;
     },
     onDragStart: (from) => {
       selectedSquare = from as JieqiSquare;

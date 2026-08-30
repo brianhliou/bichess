@@ -28,6 +28,7 @@ import type {
   XiangqiColor,
   XiangqiPieceRole,
 } from '@mistboard/game';
+import { soldierCrossedRiver } from '@mistboard/game';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type GridBoardOverlayOptions, gridBoardOverlays } from './grid-board-overlays.js';
 import { type PieceSet, readStoredPieceSet } from './theme.js';
@@ -217,7 +218,9 @@ function pieceLayer(
       parts.push(silhouette(entry.color, x, y, appearance.xiangqiPieceSet));
       continue;
     }
-    parts.push(fusionPiece(entry.piece, x, y, id, appearance));
+    parts.push(
+      fusionPiece(entry.piece, x, y, id, appearance, soldierCrossedRiver(entry.piece.color, rank)),
+    );
   }
   return parts.join('');
 }
@@ -231,6 +234,10 @@ function fusionPiece(
   y: number,
   id: string,
   appearance: { chessPieceSet: PieceSet; xiangqiPieceSet: XiangqiPieceSet },
+  // True once a Soldier has crossed the river, so it draws with the
+  // promoted-soldier art the xiangqi boards use. The drag ghost has no square,
+  // so it stays false there and the disk reverts for the length of the drag.
+  crossed = false,
 ): string {
   if (CHESS_ROLES.has(piece.role)) {
     const size = CELL * 0.86;
@@ -255,6 +262,7 @@ function fusionPiece(
       y + inset,
       size,
       appearance.xiangqiPieceSet,
+      crossed,
     );
   }
   return '';
@@ -366,6 +374,7 @@ function diskPiece(
   y: number,
   size: number,
   pieceSet: XiangqiPieceSet,
+  crossed = false,
 ): string {
   return renderXiangqiPieceGlyphed(
     { color: xiangqiColorForCrossroads(color), role: role as XiangqiPieceRole },
@@ -376,6 +385,7 @@ function diskPiece(
       x,
       y,
       size,
+      crossed: crossed && role === 'soldier',
     },
   );
 }
