@@ -547,12 +547,15 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
 }
 
 // ── Homepage video strip (band 3, beneath the blog row) ─────────────────────
-// A curated front-door set, hand-picked like articles' HOME_ARTICLE_SLUGS. Order
-// IS the editorial arc, and the carousel reveals it three cards at a time:
-// ours -> 60-second hook -> full rules primer -> first tactics -> openings ->
-// a famous sacrifice -> a title game -> culture. One slot per role: the earlier
-// draft spent five of eight slots on near-duplicate "how to play" videos, which
-// read as one repeated promise and hid the depth of the catalog behind it.
+// A curated front-door set, hand-picked like articles' HOME_ARTICLE_SLUGS. The
+// order below is the editorial arc as authored -- ours -> 60-second hook -> full
+// rules primer -> first tactics -> openings -> a famous sacrifice -> a title
+// game -> culture -- and it is what the roles are chosen against. It is NOT the
+// render order: orderHomeVideos pins ours to the front and shuffles the rest per
+// render, so the arc reads as coverage (one slot per role) rather than sequence.
+// One slot per role: the earlier draft spent five of eight slots on
+// near-duplicate "how to play" videos, which read as one repeated promise and
+// hid the depth of the catalog behind it.
 //
 // This is NOT the catalogue ranking. videos-data.ts is ordered best-first and
 // /videos opens on that; here the roles come first, so a lower-ranked video can
@@ -607,6 +610,41 @@ const HOME_VIDEO_KEYS: Record<VideoLanguage, readonly string[]> = {
 // before it displaces English; below that the row reads as a stub.
 const MIN_HOME_VIDEOS_PER_LANGUAGE = 4;
 
+// Ours lead, pinned and in curated order; everything after them is another
+// channel's video and gets shuffled on every render. The curation still decides
+// WHICH eight videos the row may show (one per editorial role, see above); what
+// it no longer decides is which of them a given visitor sees first. Two reasons:
+// the row is a carousel, so the tail slots are only reached by clicking, and a
+// fixed order means the same three cards greet every repeat visitor while the
+// rest of the arc is never seen. It matters more as `limit` drops below the arc
+// length, where a fixed order would cut the tail off entirely.
+//
+// Promoted = ours: first-party episodes. They are the one thing on this row that
+// converts a visitor into a subscriber rather than sending them to a competitor,
+// so they never take a random slot.
+export function orderHomeVideos(arc: readonly VideoEntry[]): VideoEntry[] {
+  const promoted = arc.filter(isPromotedVideo);
+  const rest = arc.filter((video) => !isPromotedVideo(video));
+  return [...promoted, ...shuffle(rest)];
+}
+
+function isPromotedVideo(video: VideoEntry): boolean {
+  return video.firstParty === true || video.source === 'mistboard';
+}
+
+// Fisher-Yates on a copy: the caller's array (a module-level curated list once
+// resolved) is never reordered in place.
+function shuffle<T>(items: readonly T[]): T[] {
+  const list = [...items];
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const swap = list[i];
+    list[i] = list[j];
+    list[j] = swap;
+  }
+  return list;
+}
+
 // Builds the homepage video carousel: the same `.landing-carousel` structure the
 // blog strip uses (so initLandingCarousel drives it), filled with compact video
 // cards. Returns null when none of the curated keys resolve (row is omitted).
@@ -629,7 +667,7 @@ export function buildHomeVideoCards(
   const preferred = resolve(HOME_VIDEO_KEYS[videoLanguageForLocale(locale)]);
   const arc =
     preferred.length >= MIN_HOME_VIDEOS_PER_LANGUAGE ? preferred : resolve(HOME_VIDEO_KEYS.en);
-  const picks = arc.slice(0, limit);
+  const picks = orderHomeVideos(arc).slice(0, limit);
   if (picks.length === 0) return null;
 
   const section = document.createElement('section');
