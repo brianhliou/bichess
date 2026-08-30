@@ -52,10 +52,26 @@ function extractTitle(text: string): string | undefined {
 type TitleParts = {
   red?: string;
   black?: string;
+  redTeam?: string;
+  blackTeam?: string;
   result?: string;
   event?: string;
   round?: string;
 };
+
+// "浙江民泰银行象棋队 王家瑞" -> team "浙江民泰银行象棋队", player "王家瑞".
+// Team competitions are the norm at the top of Chinese xiangqi (甲级联赛 is a
+// team league), and individual events still prefix the player's province, so
+// the leading segment is worth keeping in both cases. A bare name yields no
+// team rather than a wrong one.
+function splitTeamAndPlayer(raw: string | undefined): { team?: string; player?: string } {
+  const value = raw?.trim();
+  if (!value) return {};
+  const tokens = value.split(/\s+/);
+  const player = tokens.pop();
+  const team = tokens.join(' ').trim();
+  return { ...(team ? { team } : {}), ...(player ? { player } : {}) };
+}
 
 // dpxq archive titles read
 //   "RedTeam RedName <和|胜|负> BlackTeam BlackName - Event - Round - Opening - Site".
@@ -72,9 +88,12 @@ function parseDpxqTitle(title: string): TitleParts {
   if (markerMatch) {
     const marker = markerMatch[1]!;
     const [leftRaw, rightRaw] = head.split(markerMatch[0]);
-    const lastToken = (value: string | undefined) => value?.trim().split(/\s+/).pop() || undefined;
-    parts.red = lastToken(leftRaw) ?? leftRaw?.trim() ?? undefined;
-    parts.black = lastToken(rightRaw) ?? rightRaw?.trim() ?? undefined;
+    const left = splitTeamAndPlayer(leftRaw);
+    const right = splitTeamAndPlayer(rightRaw);
+    parts.red = left.player ?? leftRaw?.trim() ?? undefined;
+    parts.black = right.player ?? rightRaw?.trim() ?? undefined;
+    parts.redTeam = left.team;
+    parts.blackTeam = right.team;
     // Map red-relative marker to the 红胜/黑胜/和 tokens resultFromWxf understands.
     parts.result = marker.includes('和') ? '和' : marker.includes('胜') ? '红胜' : '黑胜';
   }
@@ -99,11 +118,35 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
 
   // Prefer the clean player name (redname/blackname) over the team+name form
   // (red/black); fall back to the <title> for archive pages that omit the tags.
-  const red = tags.get('redname') || tags.get('red') || titleParts.red || '';
-  const black = tags.get('blackname') || tags.get('black') || titleParts.black || '';
+  // Three surfaces, in order of how clean they are: the dedicated name tag,
+  // the combined "team name" tag, then the <title>. The combined form has to be
+  // split rather than used whole, or the team ends up inside the player's name.
+  // Losing the team entirely turns a team league (which 甲级联赛 is) into a
+  // list of anonymous pairings, so it is kept beside the name, not discarded.
+  const side = (
+    nameTag: string,
+    combinedTag: string,
+    titleName: string | undefined,
+    titleTeam: string | undefined,
+  ): { player: string; team?: string } => {
+    const combined = splitTeamAndPlayer(tags.get(combinedTag));
+    const clean = tags.get(nameTag)?.trim();
+    const player = clean || combined.player || titleName || '';
+    // Only trust the combined tag's team when it agrees on the player, so a
+    // mismatched pair of tags yields no affiliation rather than a wrong one.
+    const team = combined.team && (!clean || clean === combined.player) ? combined.team : titleTeam;
+    return { player, ...(team ? { team } : {}) };
+  };
+
+  const redSide = side('redname', 'red', titleParts.red, titleParts.redTeam);
+  const blackSide = side('blackname', 'black', titleParts.black, titleParts.blackTeam);
+  const red = redSide.player;
+  const black = blackSide.player;
   if (!red || !black) {
     return { ok: false, reason: 'dpxq page is missing both tag and title player names' };
   }
+  const redTeam = redSide.team;
+  const blackTeam = blackSide.team;
 
   // Preserve a real non-standard start if the page carries one; an empty/absent
   // binit is dpxq's shorthand for the standard opening position.
@@ -126,6 +169,8 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
     `[DhtmlXQ_round]${escapeFrameValue(round)}[/DhtmlXQ_round]`,
     `[DhtmlXQ_red]${escapeFrameValue(red)}[/DhtmlXQ_red]`,
     `[DhtmlXQ_black]${escapeFrameValue(black)}[/DhtmlXQ_black]`,
+    ...(redTeam ? [`[DhtmlXQ_redteam]${escapeFrameValue(redTeam)}[/DhtmlXQ_redteam]`] : []),
+    ...(blackTeam ? [`[DhtmlXQ_blackteam]${escapeFrameValue(blackTeam)}[/DhtmlXQ_blackteam]`] : []),
     `[DhtmlXQ_result]${escapeFrameValue(result)}[/DhtmlXQ_result]`,
     `[DhtmlXQ_movelist]${movelist}[/DhtmlXQ_movelist]`,
     '[/DhtmlXQiFrame]',

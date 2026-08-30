@@ -21,7 +21,13 @@ export type DiscoveredBoard = {
   event?: string;
   red?: string;
   black?: string;
-  plies: number;
+  /**
+   * Round the board belongs to, when the source states it (dpxq's tour game
+   * list labels every row 第NN轮). Boards discovered by viewer count carry no
+   * round, so this stays optional.
+   */
+  roundNumber?: number;
+  plies?: number;
 };
 
 export type DiscoveryProviderInput = {
@@ -218,14 +224,47 @@ export type DiscoveryManifestBuild =
  * whole league onto one round and a derived board number would make every board
  * "Board 1".
  */
+/**
+ * Round number out of a seeded round id.
+ *
+ * scripts/seed-broadcast-rounds.mjs emits `<tourSlug>-r<NN>`, which is what
+ * makes a source-stated round (第07轮) comparable to the scheduled one.
+ */
+export function roundNumberFromRoundId(roundId: string): number | undefined {
+  const match = roundId.match(/-r0*(\d+)$/i);
+  const parsed = Number(match?.[1]);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export function buildDiscoveryManifestSources(input: {
   source: DiscoverySource;
   boards: readonly DiscoveredBoard[];
   round: { roundId: string; roundName?: string };
 }): DiscoveryManifestBuild {
-  const matching = input.source.event
+  const byEvent = input.source.event
     ? input.boards.filter((board) => (board.event ?? '').includes(input.source.event as string))
     : [...input.boards];
+
+  // A source that states its own round is authoritative about which games
+  // belong to the active one, so honour it rather than importing a whole
+  // tournament's game list into whichever round happens to be open. Failing
+  // closed here matches resolveScheduledRound: filing round 8 under round 7 is
+  // worse than importing nothing.
+  const stated = byEvent.filter((board) => board.roundNumber !== undefined);
+  let matching = byEvent;
+  if (stated.length > 0) {
+    const active = roundNumberFromRoundId(input.round.roundId);
+    if (active === undefined) {
+      return {
+        ok: false,
+        message: `boards state their round but the scheduled round id "${input.round.roundId}" carries no round number`,
+      };
+    }
+    matching = byEvent.filter((board) => board.roundNumber === active);
+    if (matching.length === 0) {
+      return { ok: false, message: `no discovered boards belong to round ${active}` };
+    }
+  }
 
   if (matching.length === 0) {
     return {

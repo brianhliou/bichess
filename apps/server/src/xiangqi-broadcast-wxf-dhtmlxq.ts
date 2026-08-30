@@ -179,6 +179,11 @@ function boardNumberFromSourceId(
   return index + 1;
 }
 
+function playerTeam(tags: Map<string, string>, key: string): string | undefined {
+  const value = tags.get(key)?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
+
 function cleanPlayerName(name: string): string {
   return name.replace(/\*+$/g, '').trim();
 }
@@ -343,8 +348,17 @@ export function convertWxfDhtmlXqPageToSnapshot(
       roundId,
       sourceBoardId,
       boardNumber: boardNumberFromSourceId(sourceBoardId, index, options.boardNumber),
-      red: { name: cleanPlayerName(red.value) },
-      black: { name: cleanPlayerName(black.value) },
+      // The optional team tags are what the dpxq adapter recovers for team
+      // events; `federation` is the schema's existing slot for the affiliation
+      // shown beside a player.
+      red: {
+        name: cleanPlayerName(red.value),
+        ...(playerTeam(tags, 'redteam') ? { federation: playerTeam(tags, 'redteam') } : {}),
+      },
+      black: {
+        name: cleanPlayerName(black.value),
+        ...(playerTeam(tags, 'blackteam') ? { federation: playerTeam(tags, 'blackteam') } : {}),
+      },
       status,
       result,
       moves: moves.moves,

@@ -1,9 +1,12 @@
 // dpxq live-board discovery.
 //
 // dpxq publishes no index of live games. /hldcg/chess/ is a viewer *builder*
-// (type comma-separated game numbers, get live.htm?id=A-B-C), and the
-// tournament pages (tour_/round_/player_/movelist_) carry regulations,
-// pairings, rosters and standings but never link a game record.
+// (type comma-separated game numbers, get live.htm?id=A-B-C).
+//
+// A tour that HAS uploaded records links them from movelist_<tour>.html, which
+// the dpxq-tour provider reads and which is the better source when it is
+// populated (stated rounds, clean tags). This provider covers the case that one
+// cannot: a board being watched live before any record exists.
 //
 // The join is /hldcg/search/s_online.asp, the online-user list, which shows the
 // board each logged-in viewer is sitting on. Counting board ids there ranks
@@ -17,6 +20,7 @@ import {
   type DiscoveryProviderInput,
   registerXiangqiBroadcastDiscoveryProvider,
 } from './xiangqi-broadcast-discovery.js';
+import { dpxqTourDiscoveryProvider } from './xiangqi-broadcast-discovery-dpxq-tour.js';
 
 const DPXQ_ORIGIN = 'http://www.dpxq.com';
 const ONLINE_PATH = '/hldcg/search/s_online.asp';
@@ -117,4 +121,5 @@ export const dpxqLiveDiscoveryProvider: DiscoveryProvider = {
  */
 export function registerDefaultXiangqiBroadcastDiscoveryProviders(): void {
   registerXiangqiBroadcastDiscoveryProvider(dpxqLiveDiscoveryProvider);
+  registerXiangqiBroadcastDiscoveryProvider(dpxqTourDiscoveryProvider);
 }
