@@ -18,9 +18,10 @@ import type { Locale } from './i18n/locale.js';
 
 export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 
-// AWAITING A NATIVE READ: the 2026-08-22 batch (both bots / four times as many
-// puzzles / move badges / skill from luck) shipped without one, by decision, to
-// avoid holding the English feed.
+// No native read stands behind any of this, and none is coming. Decided
+// 2026-08-29: machine translation is the standard here, not a provisional state
+// awaiting review, because a queue nobody can clear is not a queue. Ship the
+// Chinese with the English rather than holding either.
 //
 // A consistency pass against the strings this site already publishes caught three
 // of its own errors, all from translating in isolation instead of reusing the
@@ -33,7 +34,7 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
-  // ── 2026-08-30 ── AWAITING A NATIVE READ. Terms taken from the source the
+  // ── 2026-08-30 ── Terms taken from the source the
   // games came from and from strings this site already publishes: 甲级联赛 and
   // 预选赛 are the event's own names, 台 is the board number inside a team
   // match (dpxq writes 第01台), 逐着浏览 matches the import announcement above.
@@ -42,7 +43,7 @@ const ZH_HANS: Record<string, string> = {
     '中国象棋甲级联赛每年八月在杭州打预选赛，今年的三轮现在都可以在这里逐着浏览，队名和棋手名以英文呈现。十支队伍，每场四台，任意局面点一下就有引擎分析。联赛本身九月开赛。',
   'Open the qualifier': '打开预选赛',
 
-  // ── 2026-08-29 ── AWAITING A NATIVE READ. Terms match the article's own
+  // ── 2026-08-29 ── Terms match the article's own
   // dictionary: 世界象棋锦标赛, 全国个人赛, 头衔.
   'The Xiangqi World Championship, and why it is not the senior title.':
     '世界象棋锦标赛，以及它为何不是最高头衔。',
@@ -50,7 +51,7 @@ const ZH_HANS: Record<string, string> = {
     '1990年以来十九届，十一位冠军，而这个头衔直到去年九月都留在中国。每一位冠军，其中十位各配一局讲解棋谱，以及中国全国个人赛为什么更难拿。',
 
   'Find a game': '找一局棋',
-  // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Vocabulary taken from
+  // ── 2026-08-28 batch two ── Vocabulary taken from
   // strings this site already publishes, per the rule above: 复盘 is
   // watch.review, 妙手 is annotate.brilliantMove, 导入棋谱 is nav.import,
   // 棋谱 is nav.games, 论坛 is nav.forum.
@@ -65,7 +66,7 @@ const ZH_HANS: Record<string, string> = {
   'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
     '象棋有九百年历史，全国冠军赛却只有六十九年。胡荣华，在头衔出现之前的那些人，以及被从记录中抹去的十年。',
 
-  // ── 2026-08-28 ── AWAITING A NATIVE READ. Vocabulary reused from strings the
+  // ── 2026-08-28 ── Vocabulary reused from strings the
   // site already publishes rather than translated in isolation: 视频库 is
   // videos.heading, 推荐 is the videos.sort.featured label.
   'A bigger video library, and one that reads Chinese.': '视频库更大了，也有了中文版。',
@@ -250,21 +251,21 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // ── 2026-08-30 ── AWAITING A NATIVE READ. Same terms as the Simplified
+  // ── 2026-08-30 ── Same terms as the Simplified
   // entry above.
   'Sixty-one games from the Division A qualifier.': '甲級聯賽預選賽，六十一局。',
   "China's top xiangqi league runs its qualifier in Hangzhou every August, and this year's three rounds are now here to replay in English, with the club names and the players romanized. Ten clubs, four boards a match, and an engine a click away on any position. The league itself starts in September.":
     '中國象棋甲級聯賽每年八月在杭州打預選賽，今年的三輪現在都可以在這裡逐著瀏覽，隊名和棋手名以英文呈現。十支隊伍，每場四台，任意局面點一下就有引擎分析。聯賽本身九月開賽。',
   'Open the qualifier': '打開預選賽',
 
-  // ── 2026-08-29 ── AWAITING A NATIVE READ. Same terms as the article's
+  // ── 2026-08-29 ── Same terms as the article's
   // Traditional dictionary.
   'The Xiangqi World Championship, and why it is not the senior title.':
     '世界象棋錦標賽，以及它為何不是最高頭銜。',
   'Nineteen editions since 1990, eleven winners, and a title that stayed in China until last September. Every champion, an annotated game for ten of them, and the reason the Chinese national championship is the harder one to win.':
     '1990年以來十九屆，十一位冠軍，而這個頭銜直到去年九月都留在中國。每一位冠軍，其中十位各配一局講解棋譜，以及中國全國個人賽為什麼更難拿。',
 
-  // ── 2026-08-28 batch two ── AWAITING A NATIVE READ. Same vocabulary rule:
+  // ── 2026-08-28 batch two ── Same vocabulary rule:
   // 復盤 is watch.review, 妙手 is annotate.brilliantMove, 匯入棋譜 is
   // nav.import, 棋譜 is nav.games, 論壇 is nav.forum.
   'Paste a game, get a board.': '貼上一局棋，得到一張棋盤。',
@@ -279,7 +280,7 @@ const ZH_HANT: Record<string, string> = {
   'Nine hundred years of Chinese chess, and a championship only sixty-nine years old. Hu Ronghua, the men who came before the title existed, and the decade that was struck from the record.':
     '象棋有九百年歷史，全國冠軍賽卻只有六十九年。胡榮華，在頭銜出現之前的那些人，以及被從記錄中抹去的十年。',
 
-  // ── 2026-08-28 ── AWAITING A NATIVE READ. Same vocabulary rule: 影片庫 is
+  // ── 2026-08-28 ── Same vocabulary rule: 影片庫 is
   // videos.heading, 推薦 is the videos.sort.featured label.
   'A bigger video library, and one that reads Chinese.': '影片庫更大了，也有了中文版。',
   'The library is up to 61 hand-picked videos, ordered best first instead of by the date they were added, and it now opens in Chinese at its own address. Every entry has been checked against YouTube, so nothing on the shelf is a dead link.':
