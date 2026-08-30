@@ -31,6 +31,11 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-08-30, not native-reviewed, shipped on Brian's explicit
+  // call after the risk was raised. This page carries more of that risk than the
+  // others: it names living people with criminal convictions, and the readers
+  // best placed to catch an error in the Chinese are the ones reading it.
+  'xiangqi-match-fixing',
   // Machine-drafted, not native-reviewed (2026-08-27). Opted in anyway because
   // most titled xiangqi players read Chinese, so English-only was the wrong
   // default for THIS page specifically. Re-review when a reader is available.
@@ -40,6 +45,7 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // person's name is written in the script that person uses and all twenty-two
   // are mainland players; champion-name-script.test.ts enforces that.
   'xiangqi-champions',
+
   // Machine-drafted, not native-reviewed (2026-08-29). Same standing as the
   // page above, and the same name rule, except that this page's champions are
   // not all mainland: see the zh-Hant block's note.
@@ -1352,8 +1358,8 @@ const ZH_HANS: Record<string, string> = {
   'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
     '王禹博对苏奕霖，2025年12月6日，他夺冠那届的首轮。第32回合是引擎标出的那步跃马。',
   'The decade that was struck': '被抹去的十年',
-  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.':
-    '图表里的红条就是这份名单需要加注的原因。2024到2026年间，中国象棋协会处理了一起中文媒体称为录音门的假棋案。2025年1月12日，它一次处罚四十一人，其中三人终身禁赛。同年9月，杭州一家法院判决六名特级大师有罪。2026年4月的第三批处罚又增加了三个终身禁赛。',
+  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate, and it has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources.':
+    '图表里的红条就是这份名单需要加注的原因。2024到2026年间，中国象棋协会处理了一起中文媒体称为录音门的假棋案，它另有[专页](/blog/xiangqi-match-fixing)：调查经过、全部受罚者、来龙去脉与资料来源。',
   'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
     '把这些对照上面的表格，损害看得见，反而说不清楚。2005年以来共有十三人夺得全国冠军，其中十人身上有处罚决定，包括2010到2023年间的每一位冠军。没有处罚的三人是许银川、赵国荣和王禹博。',
   'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport’s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.':
@@ -1540,8 +1546,8 @@ const ZH_HANS: Record<string, string> = {
   'The decade with a ruling on it': '被处罚覆盖的那十年',
   'Every edition from 2009 to 2023 was won by a man who now has a published ruling against him. That is eight championships and six men: three banned for life, one convicted in court, one given five years, and one given six months.':
     '从2009年到2023年，每一届的冠军如今都背着一份已公布的处罚决定。这是八届比赛、六个人：三人终身禁赛，一人被法院判罪，一人五年禁赛，一人六个月禁赛。',
-  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. They are findings by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
-    '这些处罚出自中国媒体称为录音门的假棋案，中国象棋协会在2024年到2026年间陆续处理完毕。它们是这项运动自己的管理机构作出的认定，不是指控；针对的是这些棋手的职业生涯，而不是某一局具体的世锦赛对局。',
+  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. It has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources. The findings are by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
+    '这些处罚出自中国媒体称为录音门的假棋案，中国象棋协会在2024年到2026年间陆续处理完毕。它另有[专页](/blog/xiangqi-match-fixing)：调查经过、全部受罚者、来龙去脉与资料来源。这些认定是这项运动自己的管理机构作出的，不是指控；针对的是这些棋手的职业生涯，而不是某一局具体的世锦赛对局。',
   'The names stay in the table and the sections stay on the page. A list that quietly dropped them would be a worse record of what happened, and what the rulings do not tell you is which games were fixed. The [national championship list](/blog/xiangqi-champions) tells the same decade from the other side, where ten of the thirteen men who have won since 2005 carry a ruling.':
     '名字留在表里，章节留在页面上。悄悄把他们删掉的名单，是一份更差的历史记录；而这些处罚并没有告诉你哪些棋是假的。[全国冠军名单](/blog/xiangqi-champions)从另一侧讲述同样的十年，那里2005年以来夺冠的十三人中有十人背着处罚。',
   'Shanghai, September 2025': '上海，2025年9月',
@@ -1586,6 +1592,96 @@ const ZH_HANS: Record<string, string> = {
   '2022 17th World Xiangqi Championship': '2022年第十七届世界象棋锦标赛',
   '2023 18th World Xiangqi Championship': '2023年第十八届世界象棋锦标赛',
   '2025 19th World Xiangqi Championship': '2025年第十九届世界象棋锦标赛',
+  // -- The xiangqi match-fixing case --
+  // Machine-drafted 2026-08-30, not native-reviewed, same standing as the two
+  'The Xiangqi Match-Fixing Case': '象棋假棋案',
+  'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：录音门、禁赛与判决',
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
+    '2024到2026年间，中国象棋协会因买棋卖棋处罚了49人，杭州一家法院以行贿受贿判决六名特级大师有罪。事情经过、为何有利可图、谁作出认定，以及哪些至今未获证实。',
+  'Ten of the thirteen men who have won the Chinese national xiangqi championship since 2005 carry a published ruling against them, including every winner from 2010 to 2023. The man who was China’s top-rated player from 2014 to 2023 was banned for life and then convicted in court. This is how that happened, and what it does and does not establish.':
+    '2005年以来夺得全国象棋个人赛冠军的十三人中，有十人已被公开处罚，其中包括2010到2023年间的每一位冠军。2014到2023年间等级分居全国第一的棋手先被终身禁赛，随后被法院判决有罪。以下是事情的经过，以及哪些已被认定、哪些没有。',
+  'It is assembled from Chinese-language reporting, which carries far more of it than the English coverage does. Where something is alleged rather than found, or charged rather than decided, this page says so.':
+    '本页取材于中文报道，中文报道所载远比英文详尽。凡属指称而非认定、属指控而非判决者，本页都会写明。',
+  'Players paid each other to lose': '棋手互相出钱买输赢',
+  'The January 2025 and April 2026 rulings use the same formula: those sanctioned took part in 买棋 and 卖棋, buying and selling games, by way of 行贿 and 受贿, giving and taking bribes. The first notice, in September 2024, says only 买棋卖棋 and 操纵比赛, manipulating competition. Money moved from player to player, in cash, sometimes through intermediaries.':
+    '2025年1月和2026年4月的两份处罚用的是同一套措辞：受罚者以行贿、受贿等方式，不同程度参与买棋、卖棋。2024年9月的第一份通报只写买棋卖棋和操纵比赛。钱在棋手之间流动，多为现金，有时经中间人转手。',
+  'It was not a gambling case, though English write-ups often reach for the word. The charges are offering and accepting bribes as a non-state functionary, and no ruling or indictment describes betting.':
+    '这不是赌博案，尽管英文报道常用这个词。指控的罪名是对非国家工作人员行贿罪和非国家工作人员受贿罪，没有任何处罚或起诉书提到下注。',
+  'Why buying a game paid for itself': '买一盘棋为什么划算',
+  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating system was abolished on 30 January 2026 and replaced with a rolling 52-week ranking.':
+    '等级分不只是排名。在当时施行的制度下，它关系到出场费与对局费，也就成了职业棋手实际拿钱的依据。这带来一种不对称：等级分高的棋手赢下低分对手几乎没有收益，掉分却损失惨重；低分棋手所得本就微薄，输棋换来的报酬反而胜过战绩本身。棋手才溢在央视节目中举例说，有赞助的团体赛里，名将一盘或可得两万元，普通大师约四千元。该等级分制度已于2026年1月30日废止，改为按52周滚动计算的排名。',
+  'The sport administration’s chess and card centre gave three motives in all: promotion through the grade titles, private division of prize money, and inflating the rating itself. Results were arranged to hit the norms for 特级大师, grandmaster, with players negotiating prices across a national individual championship, and in team events the same trade bought qualification as 运动健将, Master of Sport, which the coverage calls 搭便车, free-riding.':
+    '国家体育总局棋牌运动管理中心共列出三项动机：晋升技术等级称号、私分奖金，以及提升等级分本身。为达到特级大师的标准，棋手在全国个人赛期间与多名对手谈价钱安排结果；在团体赛中，同样的交易被用来换取运动健将资格，报道称之为搭便车。',
+  'Which is why paying to win a game you would probably have won anyway is not irrational. You are not buying the point. You are buying the rating that sets next season’s fee and the title that outlasts any single event, and against those, tens of thousands of yuan for one game is cheap.':
+    '所以，为一盘本来多半也能赢下的棋付钱，并非不理智。买的不是这一分，而是决定下个赛季酬劳的等级分，以及比任何一届赛事都长久的称号。相较之下，一盘棋几万元并不算贵。',
+  'A recording, and a whistleblower nobody could dismiss': '一段录音，和一位无法被忽视的举报人',
+  'In April 2023 recordings of phone calls between two grandmasters, Hao Jichao 郝继超 and Wang Yuefei 王跃飞, appeared online. On them the two discuss buying and selling games, engine cheating, and manipulating rating points. Wang Tianyi is named on the tapes but was not on the calls. The Chinese press named the affair after them: 录音门, the recording gate.':
+    '2023年4月，两名特级大师郝继超与王跃飞的通话录音在网上流出。录音中两人谈及买棋卖棋、软件作弊与操纵等级分。王天一在录音里被提到，但并非通话当事人。中文媒体因此把这起事件称为录音门。',
+  'Liu Dahua 柳大华, then 73 and the holder of a one-against-nineteen blindfold record, had been saying for years that opponents’ moves were 相当的精准，和软件一模一样, uncannily precise, identical to the software. On 17 October 2023 he and Dang Fei 党斐 made a 实名举报, a real-name accusation, against Guo Liping 郭莉萍, a deputy director at the sport administration’s chess and card centre. That turned a leaked tape into a governance scandal. Liu was attacked online for it and brought two private criminal prosecutions, one for criminal insult and one for defamation, winning both. Dang Fei is on the list below, at three years.':
+    '柳大华当时73岁，保持着一对十九的盲棋纪录。多年来他一直说，对手的着法相当的精准，和软件一模一样。2023年10月17日，他与党斐实名举报国家体育总局棋牌运动管理中心副主任郭莉萍。一段外流录音由此变成了治理层面的风波。柳大华为此在网上遭到攻击，他提起两起刑事自诉，一起以侮辱罪、一起以诽谤罪，均获胜诉。党斐本人也在下面的名单里，被禁赛三年。',
+  'How the recordings reached the internet is reported by one outlet and confirmed by none: that Hao Jichao made them himself, gave them to Hong Zhi 洪智 after a suspension he considered unjust, and that Hong passed them on. Hong Zhi was himself convicted in 2025 and banned for life the following April.':
+    '录音如何流到网上，只有一家媒体报道过，无人证实：郝继超自己录下这些通话，在一次他认为不公的停赛处理之后交给洪智，再由洪智转出。洪智本人于2025年被判决有罪，次年4月被终身禁赛。',
+  Date: '日期',
+  'What happened': '事件',
+  'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
+    '本案的主线。柳大华更早的私下反映出自他本人的说法，并无确切日期可考。',
+  'Two processes, one case': '两条并行的程序，同一起案件',
+  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '纪律处理与刑事追诉是两条独立的程序，时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
+  'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
+    '第三条线在公开层面没有下文。案件进行期间，棋牌运动管理中心有三名官员去职：主任朱国平与纪检书记郭玉军于2024年11月，郭莉萍于同年12月。没有一份免职通知提到本案，也没有任何官员被报道因此被追究或处罚。',
+  'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
+    '中国象棋协会分三批处罚了49人：2024年9月两人，2025年1月四十一人，2026年4月六人。其中终身禁赛8人、限期禁赛37人、通报批评4人。45项禁赛中有19项同时撤销技术等级称号，并非全部。只有2026年4月通报里的三项限期禁赛公布了起止日期，均自2024年7月24日起算；1月的通报完全没有公布日期，因此其中多数禁赛何时期满并无公开记录。',
+  'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
+    '协会公布了几乎每一个名字。若该棋手同时出现在冠军名单上，其全国冠军年份列在最后一栏。',
+  Player: '棋手',
+  Penalty: '处罚',
+  'National title': '全国冠军',
+  'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
+    '协会具名公布的47人。另外两人因涉案时未满18周岁而未公布姓名。45项禁赛中有19项同时撤销技术等级称号，并非全部。',
+  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. Xu Chongfeng’s two-year ban ran out on 23 July 2026, and the shorter bans from the January batch will have ended before it.':
+    '录音出自郝继超之手，他被禁赛四年三个月，且从未被刑事追诉，所受的只有体育处罚。徐崇峰的两年禁赛已于2026年7月23日期满，而1月那批中更短的禁赛应当更早结束。',
+  'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
+    '另一条线上，杭州市上城区人民法院于2025年9月24日以对非国家工作人员行贿罪、非国家工作人员受贿罪判决六名特级大师有罪，依据刑法第163条与第164条。中文媒体称之为中国象棋反腐第一案。',
+  Convicted: '被判刑者',
+  Sentence: '刑期',
+  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '据2025年9月24日宣判的报道整理。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
+  'The strongest player in the world was buying': '最强的棋手是买家',
+  'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
+    '王天一在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
+  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them. He pleaded guilty, was banned for life a year before the verdict, and apologised publicly in October 2025.':
+    '每收一元，付出八元。他不是卖掉本就要输的棋的弱手，而是最强的棋手在买棋。他当庭认罪认罚，在宣判前一年已被终身禁赛，并于2025年10月公开致歉。',
+  'Hong Zhi was the only one of the six who contested the charge. His appeal was rejected on 10 February 2026, and because he was taken into custody on sentencing day, roughly a year after Wang Tianyi, he will be released considerably later despite the shorter term.':
+    '六人中只有洪智不认罪。他的上诉于2026年2月10日被驳回；由于他在宣判当日才被收押，比王天一晚约一年，尽管刑期较短，出狱时间反而晚得多。',
+  'The cheating nobody charged': '无人指控的作弊',
+  'Engine cheating runs through every account of this affair and appears in no ruling. It is the substance of the recordings, of Liu Dahua’s accusation, and of the press investigations, while the findings cite only bribery and the buying and selling of games. Nothing published resolves it either way.':
+    '软件作弊贯穿这起事件的每一种叙述，却不见于任何处罚。它是录音的内容，是柳大华举报的内容，也是媒体调查的内容；而官方认定只提行贿受贿与买棋卖棋。已公开的材料无法证实，也无法证伪。',
+  'What exists is testimony. Liu Dahua says that at a league match in Ordos in October 2018 he was standing beside Hao Jichao’s game against a teammate of his own when he twice heard a voice call a move, 卒5平4, pawn five to the fourth file, and that Hao then played it. He suspected smartwatches as the capture device, and says that at an earlier fixture where watches were collected before play, Hao lost two games. This is his account, and no finding confirms any of it.':
+    '现有的只是证言。柳大华说，2018年10月鄂尔多斯的一场联赛中，他站在郝继超对阵自己队友的棋边，两次听到有人报出卒5平4，随后郝继超便走了这步棋。他怀疑智能手表被用作采集工具，并说在更早一场赛前收走手表的比赛中，郝继超输了两盘。这是他本人的说法，没有任何认定加以证实。',
+  'Xu Yinchuan, who won six national titles and three world titles and is named in none of the three notices, is quoted as saying 有了软件以后，就感觉自己的棋跟软件比就根本没法下, that once the software existed his own play felt unplayable measured against it. He is describing what engines did to a professional’s confidence in preparation rather than accusing anyone, which is worth keeping distinct.':
+    '六获全国冠军、三夺世界冠军的许银川，未出现在三份通报中的任何一份里。据引述，他说有了软件以后，就感觉自己的棋跟软件比就根本没法下。他讲的是引擎对一名职业棋手备战时信心的冲击，而不是在指控谁，这两件事应当分开。',
+  'Tao Hanming, the 1994 champion, spoke out against software cheating in January 2016 and retracted the next day, saying he had spoken out of turn after drinking. A friend later told Jiemian the drink was cover for pressure. Which version to believe is the kind of thing a disciplinary finding settles, and none did.':
+    '1994年的冠军陶汉明在2016年1月公开抨击软件作弊，次日又收回，称自己酒后失言。后来一位友人对界面新闻表示，酒是压力之下的托词。该信哪一种说法，本该由纪律认定来解决，而始终没有。',
+  'No result has been struck from the record': '没有一项成绩被从记录中抹去',
+  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the whole rating system was abolished on 30 January 2026 and replaced.':
+    '没有任何处罚指明具体哪一盘棋被买。被撤销的是个人的技术等级称号，即特级大师或大师，那是授予棋手个人的头衔，而非赛事成绩。看不到任何冠军或团体名次被取消，本站的冠军名单也未作改动。等级分是个特例：并无个别分数被抹去，但整套等级分制度已于2026年1月30日废止并被取代。',
+  'So the names stay on those pages with the finding beside them. Dropping them would assert something the rulings do not: that the games themselves were not real.':
+    '因此这些名字仍留在那些页面上，旁边附着相应的认定。删掉他们，等于断言处罚并未认定的事：那些对局本身是假的。',
+  'Where the sport is now': '这项运动如今的处境',
+  'The league came back. The 2025 national men’s league ran its preliminary from 30 July 2025 and opened the main stage in Harbin on 3 August, with revised eligibility rules and a reformed format: 25 teams, ten advancing to a double round-robin, four boards played in two waves of two, and a blitz tiebreak deciding drawn matches. Whether the format was designed against collusion is not stated anywhere official, but a match that cannot end level is harder to arrange.':
+    '联赛回来了。2025年全国象棋男子甲级联赛自2025年7月30日起进行预赛，8月3日在哈尔滨开始正赛，参赛资格经过修订，赛制也作了改革：25支队伍，十支晋级双循环，四台棋分两轮各两台进行，平局由超快棋决胜。这一赛制是否为防串通而设，官方并无说明；但一场不可能打平的比赛，确实更难安排。',
+  'Thirty-seven of the bans expire. Eight do not. The 2025 national championship was won by Wang Yubo 王禹博, the first title since Xu Yinchuan’s in 2009 that comes with no asterisk on it, and the 2025 world title left China for the first time.':
+    '三十七项禁赛有期满之日，八项没有。2025年全国个人赛冠军是王禹博，这是自2009年许银川之后第一个无需加注的冠军；同年的世界冠军也首次离开中国。',
+  'Every national champion since 1956': '1956年以来的每一位全国冠军',
+  'Every world champion since 1990': '1990年以来的每一位世界冠军',
+  Sources: '资料来源',
+  'All of it is Chinese-language reporting, listed so a reader who reads Chinese can check it rather than take our word for it.':
+    '全部取自中文报道，在此列出，以便读得懂中文的读者自行核对，而不必只听我们的说法。',
+  Source: '来源',
+  'What it carries': '所载内容',
+  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
+    '本页有几处依据较薄，正文中已在相应位置注明：六项刑期中有五项源自检方而非已公开的判决书；柳大华的全部证言与许银川那句引述均为单一来源；录音流入网络的经过出自一家媒体的调查；官员去职并未被官方与本案相联系；而没有成绩被取消这一点，是从无人提及推出的，并非哪份处罚写明。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -1593,6 +1689,96 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // -- The xiangqi match-fixing case --
+  // champion pages. Player names stay in SIMPLIFIED for the Traditional reader:
+  'The Xiangqi Match-Fixing Case': '象棋假棋案',
+  'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：錄音門、禁賽與判決',
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
+    '2024到2026年間，中國象棋協會因買棋賣棋處罰了49人，杭州一家法院以行賄受賄判決六名特級大師有罪。事情經過、為何有利可圖、誰作出認定，以及哪些至今未獲證實。',
+  'Ten of the thirteen men who have won the Chinese national xiangqi championship since 2005 carry a published ruling against them, including every winner from 2010 to 2023. The man who was China’s top-rated player from 2014 to 2023 was banned for life and then convicted in court. This is how that happened, and what it does and does not establish.':
+    '2005年以來奪得全國象棋個人賽冠軍的十三人中，有十人已被公開處罰，其中包括2010到2023年間的每一位冠軍。2014到2023年間等級分居全國第一的棋手先被終身禁賽，隨後被法院判決有罪。以下是事情的經過，以及哪些已被認定、哪些沒有。',
+  'It is assembled from Chinese-language reporting, which carries far more of it than the English coverage does. Where something is alleged rather than found, or charged rather than decided, this page says so.':
+    '本頁取材於中文報道，中文報道所載遠比英文詳盡。凡屬指稱而非認定、屬指控而非判決者，本頁都會寫明。',
+  'Players paid each other to lose': '棋手互相出錢買輸贏',
+  'The January 2025 and April 2026 rulings use the same formula: those sanctioned took part in 买棋 and 卖棋, buying and selling games, by way of 行贿 and 受贿, giving and taking bribes. The first notice, in September 2024, says only 买棋卖棋 and 操纵比赛, manipulating competition. Money moved from player to player, in cash, sometimes through intermediaries.':
+    '2025年1月和2026年4月的兩份處罰用的是同一套措辭：受罰者以行賄、受賄等方式，不同程度參與買棋、賣棋。2024年9月的第一份通報只寫買棋賣棋和操縱比賽。錢在棋手之間流動，多為現金，有時經中間人轉手。',
+  'It was not a gambling case, though English write-ups often reach for the word. The charges are offering and accepting bribes as a non-state functionary, and no ruling or indictment describes betting.':
+    '這不是賭博案，儘管英文報道常用這個詞。指控的罪名是對非國家工作人員行賄罪和非國家工作人員受賄罪，沒有任何處罰或起訴書提到下注。',
+  'Why buying a game paid for itself': '買一盤棋為什麼划算',
+  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating system was abolished on 30 January 2026 and replaced with a rolling 52-week ranking.':
+    '等級分不只是排名。在當時施行的制度下，它關係到出場費與對局費，也就成了職業棋手實際拿錢的依據。這帶來一種不對稱：等級分高的棋手贏下低分對手幾乎沒有收益，掉分卻損失慘重；低分棋手所得本就微薄，輸棋換來的報酬反而勝過戰績本身。棋手才溢在央視節目中舉例說，有贊助的團體賽裡，名將一盤或可得兩萬元，普通大師約四千元。該等級分制度已於2026年1月30日廢止，改為按52週滾動計算的排名。',
+  'The sport administration’s chess and card centre gave three motives in all: promotion through the grade titles, private division of prize money, and inflating the rating itself. Results were arranged to hit the norms for 特级大师, grandmaster, with players negotiating prices across a national individual championship, and in team events the same trade bought qualification as 运动健将, Master of Sport, which the coverage calls 搭便车, free-riding.':
+    '國家體育總局棋牌運動管理中心共列出三項動機：晉升技術等級稱號、私分獎金，以及提升等級分本身。為達到特級大師的標準，棋手在全國個人賽期間與多名對手談價錢安排結果；在團體賽中，同樣的交易被用來換取運動健將資格，報道稱之為搭便車。',
+  'Which is why paying to win a game you would probably have won anyway is not irrational. You are not buying the point. You are buying the rating that sets next season’s fee and the title that outlasts any single event, and against those, tens of thousands of yuan for one game is cheap.':
+    '所以，為一盤本來多半也能贏下的棋付錢，並非不理智。買的不是這一分，而是決定下個賽季酬勞的等級分，以及比任何一屆賽事都長久的稱號。相較之下，一盤棋幾萬元並不算貴。',
+  'A recording, and a whistleblower nobody could dismiss': '一段錄音，和一位無法被忽視的舉報人',
+  'In April 2023 recordings of phone calls between two grandmasters, Hao Jichao 郝继超 and Wang Yuefei 王跃飞, appeared online. On them the two discuss buying and selling games, engine cheating, and manipulating rating points. Wang Tianyi is named on the tapes but was not on the calls. The Chinese press named the affair after them: 录音门, the recording gate.':
+    '2023年4月，兩名特級大師郝继超與王跃飞的通話錄音在網上流出。錄音中兩人談及買棋賣棋、軟件作弊與操縱等級分。王天一在錄音裡被提到，但並非通話當事人。中文媒體因此把這起事件稱為錄音門。',
+  'Liu Dahua 柳大华, then 73 and the holder of a one-against-nineteen blindfold record, had been saying for years that opponents’ moves were 相当的精准，和软件一模一样, uncannily precise, identical to the software. On 17 October 2023 he and Dang Fei 党斐 made a 实名举报, a real-name accusation, against Guo Liping 郭莉萍, a deputy director at the sport administration’s chess and card centre. That turned a leaked tape into a governance scandal. Liu was attacked online for it and brought two private criminal prosecutions, one for criminal insult and one for defamation, winning both. Dang Fei is on the list below, at three years.':
+    '柳大华當時73歲，保持著一對十九的盲棋紀錄。多年來他一直說，對手的著法相當的精準，和軟件一模一樣。2023年10月17日，他與党斐實名舉報國家體育總局棋牌運動管理中心副主任郭莉萍。一段外流錄音由此變成了治理層面的風波。柳大华為此在網上遭到攻擊，他提起兩起刑事自訴，一起以侮辱罪、一起以誹謗罪，均獲勝訴。党斐本人也在下面的名單裡，被禁賽三年。',
+  'How the recordings reached the internet is reported by one outlet and confirmed by none: that Hao Jichao made them himself, gave them to Hong Zhi 洪智 after a suspension he considered unjust, and that Hong passed them on. Hong Zhi was himself convicted in 2025 and banned for life the following April.':
+    '錄音如何流到網上，只有一家媒體報道過，無人證實：郝继超自己錄下這些通話，在一次他認為不公的停賽處理之後交給洪智，再由洪智轉出。洪智本人於2025年被判決有罪，次年4月被終身禁賽。',
+  Date: '日期',
+  'What happened': '事件',
+  'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
+    '本案的主線。柳大华更早的私下反映出自他本人的說法，並無確切日期可考。',
+  'Two processes, one case': '兩條並行的程序，同一起案件',
+  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '紀律處理與刑事追訴是兩條獨立的程序，時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
+  'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
+    '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱国平與紀檢書記郭玉军於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
+  'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
+    '中國象棋協會分三批處罰了49人：2024年9月兩人，2025年1月四十一人，2026年4月六人。其中終身禁賽8人、限期禁賽37人、通報批評4人。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。只有2026年4月通報裡的三項限期禁賽公布了起止日期，均自2024年7月24日起算；1月的通報完全沒有公布日期，因此其中多數禁賽何時期滿並無公開記錄。',
+  'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
+    '協會公布了幾乎每一個名字。若該棋手同時出現在冠軍名單上，其全國冠軍年份列在最後一欄。',
+  Player: '棋手',
+  Penalty: '處罰',
+  'National title': '全國冠軍',
+  'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
+    '協會具名公布的47人。另外兩人因涉案時未滿18周歲而未公布姓名。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。',
+  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. Xu Chongfeng’s two-year ban ran out on 23 July 2026, and the shorter bans from the January batch will have ended before it.':
+    '錄音出自郝继超之手，他被禁賽四年三個月，且從未被刑事追訴，所受的只有體育處罰。徐崇峰的兩年禁賽已於2026年7月23日期滿，而1月那批中更短的禁賽應當更早結束。',
+  'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
+    '另一條線上，杭州市上城區人民法院於2025年9月24日以對非國家工作人員行賄罪、非國家工作人員受賄罪判決六名特級大師有罪，依據刑法第163條與第164條。中文媒體稱之為中國象棋反腐第一案。',
+  Convicted: '被判刑者',
+  Sentence: '刑期',
+  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '據2025年9月24日宣判的報道整理。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報道。王天一與赵鑫鑫另被併處罰金，金額從未公布。',
+  'The strongest player in the world was buying': '最強的棋手是買家',
+  'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
+    '王天一在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
+  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them. He pleaded guilty, was banned for life a year before the verdict, and apologised publicly in October 2025.':
+    '每收一元，付出八元。他不是賣掉本就要輸的棋的弱手，而是最強的棋手在買棋。他當庭認罪認罰，在宣判前一年已被終身禁賽，並於2025年10月公開致歉。',
+  'Hong Zhi was the only one of the six who contested the charge. His appeal was rejected on 10 February 2026, and because he was taken into custody on sentencing day, roughly a year after Wang Tianyi, he will be released considerably later despite the shorter term.':
+    '六人中只有洪智不認罪。他的上訴於2026年2月10日被駁回；由於他在宣判當日才被收押，比王天一晚約一年，儘管刑期較短，出獄時間反而晚得多。',
+  'The cheating nobody charged': '無人指控的作弊',
+  'Engine cheating runs through every account of this affair and appears in no ruling. It is the substance of the recordings, of Liu Dahua’s accusation, and of the press investigations, while the findings cite only bribery and the buying and selling of games. Nothing published resolves it either way.':
+    '軟件作弊貫穿這起事件的每一種敘述，卻不見於任何處罰。它是錄音的內容，是柳大华舉報的內容，也是媒體調查的內容；而官方認定只提行賄受賄與買棋賣棋。已公開的材料無法證實，也無法證偽。',
+  'What exists is testimony. Liu Dahua says that at a league match in Ordos in October 2018 he was standing beside Hao Jichao’s game against a teammate of his own when he twice heard a voice call a move, 卒5平4, pawn five to the fourth file, and that Hao then played it. He suspected smartwatches as the capture device, and says that at an earlier fixture where watches were collected before play, Hao lost two games. This is his account, and no finding confirms any of it.':
+    '現有的只是證言。柳大华說，2018年10月鄂爾多斯的一場聯賽中，他站在郝继超對陣自己隊友的棋邊，兩次聽到有人報出卒5平4，隨後郝继超便走了這步棋。他懷疑智能手錶被用作採集工具，並說在更早一場賽前收走手錶的比賽中，郝继超輸了兩盤。這是他本人的說法，沒有任何認定加以證實。',
+  'Xu Yinchuan, who won six national titles and three world titles and is named in none of the three notices, is quoted as saying 有了软件以后，就感觉自己的棋跟软件比就根本没法下, that once the software existed his own play felt unplayable measured against it. He is describing what engines did to a professional’s confidence in preparation rather than accusing anyone, which is worth keeping distinct.':
+    '六獲全國冠軍、三奪世界冠軍的许银川，未出現在三份通報中的任何一份裡。據引述，他說有了軟件以後，就感覺自己的棋跟軟件比就根本沒法下。他講的是引擎對一名職業棋手備戰時信心的衝擊，而不是在指控誰，這兩件事應當分開。',
+  'Tao Hanming, the 1994 champion, spoke out against software cheating in January 2016 and retracted the next day, saying he had spoken out of turn after drinking. A friend later told Jiemian the drink was cover for pressure. Which version to believe is the kind of thing a disciplinary finding settles, and none did.':
+    '1994年的冠軍陶汉明在2016年1月公開抨擊軟件作弊，次日又收回，稱自己酒後失言。後來一位友人對界面新聞表示，酒是壓力之下的託詞。該信哪一種說法，本該由紀律認定來解決，而始終沒有。',
+  'No result has been struck from the record': '沒有一項成績被從記錄中抹去',
+  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the whole rating system was abolished on 30 January 2026 and replaced.':
+    '沒有任何處罰指明具體哪一盤棋被買。被撤銷的是個人的技術等級稱號，即特級大師或大師，那是授予棋手個人的頭銜，而非賽事成績。看不到任何冠軍或團體名次被取消，本站的冠軍名單也未作改動。等級分是個特例：並無個別分數被抹去，但整套等級分制度已於2026年1月30日廢止並被取代。',
+  'So the names stay on those pages with the finding beside them. Dropping them would assert something the rulings do not: that the games themselves were not real.':
+    '因此這些名字仍留在那些頁面上，旁邊附著相應的認定。刪掉他們，等於斷言處罰並未認定的事：那些對局本身是假的。',
+  'Where the sport is now': '這項運動如今的處境',
+  'The league came back. The 2025 national men’s league ran its preliminary from 30 July 2025 and opened the main stage in Harbin on 3 August, with revised eligibility rules and a reformed format: 25 teams, ten advancing to a double round-robin, four boards played in two waves of two, and a blitz tiebreak deciding drawn matches. Whether the format was designed against collusion is not stated anywhere official, but a match that cannot end level is harder to arrange.':
+    '聯賽回來了。2025年全國象棋男子甲級聯賽自2025年7月30日起進行預賽，8月3日在哈爾濱開始正賽，參賽資格經過修訂，賽制也作了改革：25支隊伍，十支晉級雙循環，四台棋分兩輪各兩台進行，平局由超快棋決勝。這一賽制是否為防串通而設，官方並無說明；但一場不可能打平的比賽，確實更難安排。',
+  'Thirty-seven of the bans expire. Eight do not. The 2025 national championship was won by Wang Yubo 王禹博, the first title since Xu Yinchuan’s in 2009 that comes with no asterisk on it, and the 2025 world title left China for the first time.':
+    '三十七項禁賽有期滿之日，八項沒有。2025年全國個人賽冠軍是王禹博，這是自2009年许银川之後第一個無需加註的冠軍；同年的世界冠軍也首次離開中國。',
+  'Every national champion since 1956': '1956年以來的每一位全國冠軍',
+  'Every world champion since 1990': '1990年以來的每一位世界冠軍',
+  Sources: '資料來源',
+  'All of it is Chinese-language reporting, listed so a reader who reads Chinese can check it rather than take our word for it.':
+    '全部取自中文報道，在此列出，以便讀得懂中文的讀者自行核對，而不必只聽我們的說法。',
+  Source: '來源',
+  'What it carries': '所載內容',
+  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
+    '本頁有幾處依據較薄，正文中已在相應位置註明：六項刑期中有五項源自檢方而非已公開的判決書；柳大华的全部證言與许银川那句引述均為單一來源；錄音流入網絡的經過出自一家媒體的調查；官員去職並未被官方與本案相聯繫；而沒有成績被取消這一點，是從無人提及推出的，並非哪份處罰寫明。',
   // -- Titled players (recruitment page) --
   // MACHINE-DRAFTED 2026-08-27, NOT NATIVE-REVIEWED. See the Simplified block.
   // Taiwan lexical forks applied, not a glyph conversion: 影片庫 not 视频库,
@@ -2779,8 +2965,8 @@ const ZH_HANT: Record<string, string> = {
     '第二十二位奪冠者，2025年12月在濟南奪冠，是北京棋手第一次拿到這個頭銜，他的教練是特級大師张强。下面這局是唯一一局對手在別處再未出現的棋，這是上一節所述情況的後果，不是編排上的選擇。',
   'Wang Yubo vs Su Yilin, 6 December 2025, the opening round of the championship he won. Move 32 is the horse advance the engine marks.':
     '王禹博對苏奕霖，2025年12月6日，他奪冠那屆的首輪。第32回合是引擎標出的那步躍馬。',
-  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.':
-    '圖表裡的紅條就是這份名單需要加註的原因。2024到2026年間，中國象棋協會處理了一起中文媒體稱為錄音門的假棋案。2025年1月12日，它一次處罰四十一人，其中三人終身禁賽。同年9月，杭州一家法院判決六名特級大師有罪。2026年4月的第三批處罰又增加了三個終身禁賽。',
+  'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate, and it has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources.':
+    '圖表裡的紅條就是這份名單需要加註的原因。2024到2026年間，中國象棋協會處理了一起中文媒體稱為錄音門的假棋案，它另有[專頁](/blog/xiangqi-match-fixing)：調查經過、全部受罰者、來龍去脈與資料來源。',
   'Set that against the table above and the damage is easier to see than to state. Thirteen men have won the national championship since 2005 and ten of them have a ruling against them, including every single winner from 2010 to 2023. Xu Yinchuan, Zhao Guorong and Wang Yubo are the three who do not.':
     '把這些對照上面的表格，損害看得見，反而說不清楚。2005年以來共有十三人奪得全國冠軍，其中十人身上有處罰決定，包括2010到2023年間的每一位冠軍。沒有處罰的三人是许银川、赵国荣和王禹博。',
   'The names stay in the table. A list that quietly dropped them would be a worse record of what happened, and these are published findings from the sport’s own governing body rather than allegations. What the rulings do not tell you is which games were fixed, or how a player at that level is supposed to be caught, and that is a longer story than a list of champions can hold.':
@@ -2921,8 +3107,8 @@ const ZH_HANT: Record<string, string> = {
   'The decade with a ruling on it': '被處罰覆蓋的那十年',
   'Every edition from 2009 to 2023 was won by a man who now has a published ruling against him. That is eight championships and six men: three banned for life, one convicted in court, one given five years, and one given six months.':
     '從2009年到2023年，每一屆的冠軍如今都揹著一份已公佈的處罰決定。這是八屆比賽、六個人：三人終身禁賽，一人被法院判罪，一人五年禁賽，一人六個月禁賽。',
-  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. They are findings by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
-    '這些處罰出自中國媒體稱為錄音門的假棋案，中國象棋協會在2024年到2026年間陸續處理完畢。它們是這項運動自己的管理機構作出的認定，不是指控；針對的是這些棋手的職業生涯，而不是某一局具體的世錦賽對局。',
+  'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. It has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources. The findings are by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.':
+    '這些處罰出自中國媒體稱為錄音門的假棋案，中國象棋協會在2024年到2026年間陸續處理完畢。它另有[專頁](/blog/xiangqi-match-fixing)：調查經過、全部受罰者、來龍去脈與資料來源。這些認定是這項運動自己的管理機構作出的，不是指控；針對的是這些棋手的職業生涯，而不是某一局具體的世錦賽對局。',
   'The names stay in the table and the sections stay on the page. A list that quietly dropped them would be a worse record of what happened, and what the rulings do not tell you is which games were fixed. The [national championship list](/blog/xiangqi-champions) tells the same decade from the other side, where ten of the thirteen men who have won since 2005 carry a ruling.':
     '名字留在表裡，章節留在頁面上。悄悄把他們刪掉的名單，是一份更差的歷史記錄；而這些處罰並沒有告訴你哪些棋是假的。[全國冠軍名單](/blog/xiangqi-champions)從另一側講述同樣的十年，那裡2005年以來奪冠的十三人中有十人揹著處罰。',
   'The 2025 championship was played in Shanghai in September, and won by Lại Lý Huynh of Vietnam, who beat Yin Sheng of China in the final on the twenty-seventh. He is the first man from outside China to take the standard title in the thirty-five years the event has existed.':

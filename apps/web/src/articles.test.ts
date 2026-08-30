@@ -85,6 +85,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // A draft, dated a day past the champion pages so it sits above them once
+      // it ships: it is the long version of the ruling column those two carry.
+      '/blog/xiangqi-match-fixing',
       // The two champion articles lead the index, newest first. They shipped
       // hours apart on 2026-08-29 and are deliberately dated a day apart: two
       // halves of one argument landing on the same date read as a dump, and the
@@ -245,6 +248,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
       '/blog/titled-players',
