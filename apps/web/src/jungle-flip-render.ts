@@ -23,7 +23,7 @@ import {
   type JungleFlipSquare,
   jungleFlipCoordOf,
 } from '@mistboard/game';
-import { TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { boardCornerRadius, TOKEN_PIECE_RATIO } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
@@ -50,8 +50,9 @@ const FILES = 4;
 const RANKS = 4;
 const CELL = 64;
 // Board corner radius, shared by the descriptor's internal clip-path AND the drawn
-// border below so the two can never disagree about the curve.
-const BOARD_RADIUS = 5;
+// border below so the two can never disagree about the curve. Derived from the shared
+// ratio rather than hand-computed, which is what let it sit at 5 against a 4.86 target.
+const BOARD_RADIUS = boardCornerRadius(FILES * CELL);
 // Flip tokens back off the canonical ratio so they sit INSIDE the last-move
 // ring (its inner clear is ~0.83·cell).
 const FLIP_TOKEN_RATIO = TOKEN_PIECE_RATIO - 0.03;
@@ -89,8 +90,7 @@ const DESCRIPTOR: GridBoardDescriptor = {
   palette: PALETTE,
   pad: 0,
   // Full-bleed <image> terrain (like jungle) isn't clipped by the outer CSS
-  // border-radius, so round the internal clip-path (~1.9% of the 256u board
-  // width = the shared --board-corner-radius token) to clip the corner images.
+  // border-radius, so round the internal clip-path to clip the corner images.
   boardRadius: BOARD_RADIUS,
   svgClass: 'jungle-flip-live-svg',
 };

@@ -16,7 +16,7 @@ import {
   boardLastMoveStyleAttr,
   boardLastMoveUnit,
 } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -300,7 +300,7 @@ export function renderBanqiBoardSvg(
     : [];
   return `
     <svg class="banqi-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
-      <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="6"/>
+      <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
       <g class="banqi-grid">${gridLines()}</g>
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}

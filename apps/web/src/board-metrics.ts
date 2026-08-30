@@ -14,19 +14,10 @@ export function tokenPieceSize(cell: number): number {
   return Math.round(cell * TOKEN_PIECE_RATIO);
 }
 
-/**
- * Board corner rounding, as a fraction of board WIDTH. Mirrors the
- * --board-corner-radius token (app-base.css) so an SVG that rounds its own
- * background rect lands on the same curve as the CSS boxes that clip it.
- * Unified 2026-08-27 from a spread of rx=10 (in three different viewBox scales)
- * and a fixed 16px, which made two boards side by side round differently.
- */
-export const BOARD_CORNER_RATIO = 0.019;
-
-/** The `rx` an SVG board background should carry for a board this wide. */
-export function boardCornerRadius(boardWidth: number): number {
-  return Math.round(boardWidth * BOARD_CORNER_RATIO * 100) / 100;
-}
+// Board corner rounding is defined once in @mistboard/board-render (board-svg and
+// grid-board need it, and a package cannot import from an app). Re-exported here so the
+// existing import sites keep working and there is still one number.
+export { BOARD_CORNER_RATIO, boardCornerRadius } from '@mistboard/board-render';
 
 export type RectangularGridMetrics = {
   cell: number;

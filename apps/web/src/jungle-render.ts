@@ -33,7 +33,7 @@ import {
   jungleTrapOwner,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { boardCornerRadius, TOKEN_PIECE_RATIO } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
@@ -102,9 +102,9 @@ const DESCRIPTOR: GridBoardDescriptor = {
   pad: 0,
   // Jungle paints terrain as full-bleed SVG <image> layers, which the outer
   // [data-board="grid"] CSS border-radius/overflow:hidden does NOT clip. Round
-  // the internal clip-path instead (~1.9% of the 336u board width = the shared
-  // --board-corner-radius token) so the corner images are clipped too.
-  boardRadius: 6,
+  // the internal clip-path instead, off the shared ratio so it cannot drift from
+  // --board-corner-radius the way a hand-computed literal did.
+  boardRadius: boardCornerRadius(FILES * CELL),
   svgClass: 'jungle-live-svg',
 };
 
