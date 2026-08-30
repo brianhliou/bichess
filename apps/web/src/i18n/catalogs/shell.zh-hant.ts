@@ -51,7 +51,7 @@ export const ZH_HANT_SHELL = {
   'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',
   'home.gameInPlay': '局進行中',
   'home.gamesInPlay': '局進行中',
-  'home.supportTitle': '喜歡 Mistboard 嗎？',
+  'home.supportTitle': 'Mistboard 贊助會員',
   'home.supportSubtitle': '成為贊助者',
   'home.storeTitle': '商店',
   'home.storeSubtitle': '即將推出',

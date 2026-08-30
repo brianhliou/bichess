@@ -69,7 +69,7 @@ describe('about page platform activity', () => {
       'Mistboard updates',
       'FAQ',
       'Contact',
-      'Support Mistboard',
+      'Mistboard Patron',
       'Terms of Use',
       'Privacy',
       'Title verification',
