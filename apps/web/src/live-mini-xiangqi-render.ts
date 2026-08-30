@@ -518,7 +518,7 @@ export function installMiniXiangqiBoardStyles(): void {
       aspect-ratio: 1 / 1;
       width: 100%;
       min-height: 0;
-      border-radius: 10px;
+      border-radius: var(--board-corner-radius);
       box-shadow: 0 18px 50px rgba(37, 31, 24, 0.16);
     }
     .mini-xiangqi-live-board--disabled {

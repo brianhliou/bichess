@@ -17,6 +17,7 @@ import {
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
+import { animateBanqiBoardMove } from '../live-banqi-render.js';
 import { makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
 import {
   bestMoveArrowWithParser,
@@ -107,8 +108,10 @@ function makeBanqiPresentation(
     // Review plays BOTH sides: the interactive seat is the side to move.
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
     createBoard: (opts) => createBanqiInteractiveBoard(opts),
-    // No glide animation for banqi (a flip has no travel; board re-renders on nav).
-    animateMove: () => {},
+    // Banqi is symmetric, so there is no perspective to pass; the presentation
+    // contract takes one anyway for the fog variants, and it is dropped here.
+    // A flip needs no special case: it is a self-move, and the glide no-ops.
+    animateMove: (boardEl, move, _perspective, opts) => animateBanqiBoardMove(boardEl, move, opts),
     shapeToArrow: (s: NodeShape): BanqiBoardArrow => ({
       from: s.orig as BanqiBoardArrow['from'],
       to: (s.dest ?? s.orig) as BanqiBoardArrow['to'],

@@ -1,3 +1,4 @@
+import { boardCornerRadius } from './board-metrics.js';
 // Generic descriptor-driven renderer for cell-based ("checkered square") boards.
 //
 // This is the Layer-2 platform down-payment: chess (8x8) and Crossroads Chess (6x8 +
@@ -156,7 +157,9 @@ export function renderGridBoardSvg(
   const { boardW, boardH, pad } = layout(descriptor);
   const geom = createGridGeometry(descriptor, layers.flip);
   const id = layers.id;
-  const boardRadius = descriptor.boardRadius ?? 5;
+  // Default off the shared ratio rather than a magic 5, so a descriptor that says nothing
+  // rounds like every other board at its own width.
+  const boardRadius = descriptor.boardRadius ?? boardCornerRadius(boardW);
 
   // ── Furniture + interaction layers (in crossroads-chess draw order) ──────────────
 

@@ -119,6 +119,55 @@ describe('Dark Xiangqi click-to-move decisions', () => {
   });
 });
 
+describe('Dark Xiangqi last-move marks', () => {
+  // The fog board drew a symmetric pair of plain amber discs while every other
+  // token board drew an origin wash plus a gold destination halo. Same grammar
+  // now. The visibility cases below are a client-side guard rather than the
+  // live-room mechanism -- the server strips an opponent's lastMove outright,
+  // stricter than per-square visibility (see dark-xiangqi-tenant.ts) -- but the
+  // widened reveals (postgame, /watch) render through this same function, and a
+  // mark on a square the view cannot see is the one thing this layer must never
+  // emit.
+  const withLastMove = (from: 'b3' | 'b8', to: 'b4' | 'b7'): DarkXiangqiWireView => ({
+    ...viewFixture(),
+    lastMove: { from, to },
+  });
+
+  it('draws the same origin wash and destination halo as the open board', () => {
+    const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
+
+    expect(svg).toContain('xq-live-lastmove-cell xq-live-lastmove-from');
+    expect(svg).toContain('xq-live-lastmove-ring');
+    // The old treatment: two bare -cell circles, no -from, no ring.
+    expect(svg).not.toMatch(/class="xq-live-lastmove-cell"/);
+  });
+
+  it('marks only the endpoints this viewer can see', () => {
+    // b8 is visible, b7 is not: the piece left somewhere we can see and landed
+    // in the fog. Marking the destination would leak where it went.
+    const half = renderDarkXiangqiBoardSvg(withLastMove('b8', 'b7'));
+    expect(half).toContain('xq-live-lastmove-from');
+    expect(half).not.toContain('xq-live-lastmove-ring');
+
+    // And the reverse: arriving on a visible square from a hidden one.
+    const arriving = renderDarkXiangqiBoardSvg({
+      ...viewFixture(),
+      lastMove: { from: 'i1', to: 'b4' },
+    });
+    expect(arriving).toContain('xq-live-lastmove-ring');
+    expect(arriving).not.toContain('xq-live-lastmove-from');
+  });
+
+  it('marks nothing when the whole move happened in the fog', () => {
+    const svg = renderDarkXiangqiBoardSvg({
+      ...viewFixture(),
+      lastMove: { from: 'i1', to: 'i2' },
+    });
+    expect(svg).not.toContain('xq-live-lastmove-cell');
+    expect(svg).not.toContain('xq-live-lastmove-ring');
+  });
+});
+
 function viewFixture(): DarkXiangqiWireView {
   return {
     id: 'xq-test',

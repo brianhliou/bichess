@@ -84,16 +84,24 @@
   align-items: flex-start;
 }
 
-/* Analysis and completed-game review boards share one perimeter: gently rounded
-   on the page edge, sharp on the tools edge. The sharp right edge is ready to sit
-   flush against the eval gauge even for fog variants that do not mount one yet.
-   Studies remain a document surface with their own presentation. */
-:is(.review-shell--analysis, .review-shell--game) {
+/* Every review board shares one perimeter: gently rounded on the page edge, sharp
+   on the tools edge. The sharp right edge is ready to sit flush against the eval
+   gauge even for fog variants that do not mount one yet.
+
+   Studies were carved out of this originally, on the reading that a study is a
+   document rather than a tool. In practice a study board sat beside the same
+   sharp-cornered furniture as the others and read as the odd one out, and the two
+   patches that followed (a gauge-only rule above 800px, a :has(pocketbox) rule
+   further down) covered the cases someone happened to look at rather than the
+   surface. Studies take the shared perimeter now. */
+:is(.review-shell--analysis, .review-shell--game, .review-shell--study) {
   --review-board-left-radius: 10px;
 }
 
-:is(.review-shell--analysis, .review-shell--game) .review-stage__slot--primary > :first-child,
-:is(.review-shell--analysis, .review-shell--game)
+:is(.review-shell--analysis, .review-shell--game, .review-shell--study)
+  .review-stage__slot--primary
+  > :first-child,
+:is(.review-shell--analysis, .review-shell--game, .review-shell--study)
   .review-stage__slot--primary
   > :first-child
   > svg {
@@ -101,10 +109,11 @@
   overflow: hidden;
 }
 
-/* Some SVG renderers round their painted background internally. Remove that
-   inner four-corner clip and let the shared outer perimeter above supply the
-   left-only rounding. */
-:is(.review-shell--analysis, .review-shell--game)
+/* Some SVG renderers round their painted background internally, and jungle and
+   jungle-flip paint full-bleed terrain images that a container border-radius does
+   not clip at all. Remove the inner four-corner clip and let the shared outer
+   perimeter above supply the left-only rounding. */
+:is(.review-shell--analysis, .review-shell--game, .review-shell--study)
   .review-stage__slot--primary
   > :first-child
   > svg
@@ -259,29 +268,6 @@
       color-mix(in srgb, var(--xq-live-board-bg, #f5dca8) 84%, var(--xq-live-ink, #5a3a14)) 50% 100%
     );
   }
-  /* Studies get the same board perimeter as analysis/game WHEN the eval bar is
-     beside them. They are excluded from the shared rule above because a study is a
-     document surface, but a rounded board edge against a sharp-cornered bar is a
-     gap rather than a style choice.
-     The jieqi and banqi boards paint their own rounded <rect> INSIDE the svg, so
-     squaring the container is not enough on its own: the container already reads
-     0px here while the corners still look round, because the curve belongs to the
-     rect. Drop the rect's radius and let the container supply left-only rounding,
-     which leaves the left corners as they were and squares the two the bar meets. */
-  .review-shell--study .review-shell__cluster--gauge .review-stage__slot--primary > :first-child {
-    border-radius: var(--review-board-left-radius, 10px) 0 0 var(--review-board-left-radius, 10px);
-    overflow: hidden;
-  }
-
-  .review-shell--study
-    .review-shell__cluster--gauge
-    .review-stage__slot--primary
-    > :first-child
-    > svg
-    :is(clipPath[id$="-clip"] > rect, .banqi-board-bg, .jieqi-board-bg) {
-    rx: 0;
-  }
-
   /* Mirror on the rail side: the analyse table butts flush against the
      (sharp-cornered) eval bar, so its LEFT corners are squared too — bar and
      box read as one continuous edge (lichess). Right corners keep the shared
@@ -1430,10 +1416,10 @@
    each other across a gap. The board keeps its rounded LEFT (page) edge and the
    pockets keep their rounded RIGHT (page) edge; only the facing corners change.
 
-   Scoped with :has() to surfaces that actually mount a pocket. Analysis and
-   completed-game boards already square their right edge for the eval gauge
-   (--review-board-left-radius above), so this is what brings a STUDY board into
-   the same alignment without disturbing a study that has no pocket beside it. */
+   Scoped with :has() to surfaces that actually mount a pocket. Every review
+   surface now squares its right edge on the shared perimeter above, so this rule
+   is a belt-and-braces for any surface that mounts a pocket without picking up
+   one of those three classes. */
 .review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child,
 .review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child > svg {
   border-start-end-radius: 0;
