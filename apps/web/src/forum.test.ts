@@ -186,6 +186,34 @@ describe('forum pages', () => {
     expect(reports?.getAttribute('href')).toBe('/forum/reports');
   });
 
+  // The forum home is the only surface that still hands out the Discord invite
+  // (it left the top nav 2026-08-28 and the homepage footer 2026-08-31), so the
+  // country gate that keeps a hanging link away from mainland China is now
+  // observable here and nowhere else.
+  it('gates the Discord invite on the forum home by viewer country', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const { mountForum } = await import('./forum.js');
+
+    document.cookie = 'mb_cc=CN; Path=/';
+    const blocked = document.createElement('div');
+    await mountForum(blocked);
+    expect(blocked.querySelector('.forum-discord-link')).toBeNull();
+
+    document.cookie = 'mb_cc=US; Path=/';
+    const allowed = document.createElement('div');
+    await mountForum(allowed);
+    const invite = allowed.querySelector<HTMLAnchorElement>('.forum-discord-link');
+    expect(invite?.getAttribute('href')).toMatch(/^https:\/\/discord\.gg\//);
+    expect(invite?.target).toBe('_blank');
+
+    document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+  });
+
   it('renders a selected category as a focused topic view', async () => {
     const fetchedUrls: string[] = [];
     window.history.pushState(null, '', '/forum/general-discussion');

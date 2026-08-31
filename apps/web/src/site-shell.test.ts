@@ -180,9 +180,9 @@ describe('site shell nav', () => {
     // bare href under a zh locale.
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
-    const footerDiscord = footer.querySelector<HTMLAnchorElement>('a[href^="https://discord.gg/"]');
-    expect(footerDiscord?.textContent).toBe('Discord');
-    expect(footerDiscord?.target).toBe('_blank');
+    // The Discord invite left the footer on 2026-08-31 (see nav-items.ts): the
+    // room is not ready to be promoted, and the forum home still hands it out.
+    expect(footer.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
   });
 });
@@ -193,17 +193,18 @@ describe('site shell geo-blocked links', () => {
     document.body.innerHTML = '';
   });
 
-  // The nav no longer carries the invite at all, so the country gate is now
-  // observable only on the footer. Still worth holding: the gate is the reason
-  // a third of visitors do not get a link that hangs, and it would otherwise
-  // have no test left after the nav entry came out.
-  it('hides the Discord invite for viewers in mainland China, keeps it elsewhere', () => {
-    document.cookie = 'mb_cc=CN; Path=/';
-    expect(buildNav().querySelector('a[href="/forum"]')).not.toBeNull();
-    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
-
-    document.cookie = 'mb_cc=US; Path=/';
-    expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).not.toBeNull();
+  // Neither the nav nor the footer carries the Discord invite any more, so the
+  // shell has no country-gated link left to observe. The gate itself still
+  // matters (the forum home is the one surface that hands the invite out); it
+  // is covered at its remaining call site in forum.test.ts and at the primitive
+  // in viewer-geo.test.ts.
+  it('offers no off-site invite from the shell, in China or anywhere else', () => {
+    for (const country of ['CN', 'US']) {
+      document.cookie = `mb_cc=${country}; Path=/`;
+      expect(buildNav().querySelector('a[href="/forum"]')).not.toBeNull();
+      expect(buildNav().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+      expect(buildHomeFooter().querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+    }
   });
 });
 

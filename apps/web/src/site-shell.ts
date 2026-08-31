@@ -5,8 +5,6 @@ import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './
 import {
   adminNavItems,
   communityNavItems,
-  DISCORD_BLOCKED_IN,
-  DISCORD_INVITE_URL,
   donateNavItem,
   learnNavItems,
   type NavItem,
@@ -445,6 +443,10 @@ export function buildNotice(titleText: string, bodyText: string): HTMLElement {
 // has an assent surface. One quiet row, deliberately NOT a lichess-style grouped
 // fat footer: with our route count the columns read busier than the site is
 // (Brian, 2026-06-10).
+//
+// Every entry is currently an on-site page. `external`/`blockedIn` stay wired
+// for the next off-site link: the Discord invite used them until 2026-08-31,
+// when it came out of the footer (see nav-items.ts).
 const HOME_FOOTER_LINKS: ReadonlyArray<{
   href: string;
   labelKey: I18nKey;
@@ -456,12 +458,6 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   { href: '/faq', labelKey: 'footer.faq' },
   { href: '/patron', labelKey: 'footer.patron' },
   { href: '/contact', labelKey: 'footer.contact' },
-  {
-    href: DISCORD_INVITE_URL,
-    labelKey: 'footer.discord',
-    external: true,
-    blockedIn: DISCORD_BLOCKED_IN,
-  },
   { href: '/source', labelKey: 'footer.source' },
   { href: '/developers', labelKey: 'footer.developers' },
   { href: '/terms', labelKey: 'footer.terms' },

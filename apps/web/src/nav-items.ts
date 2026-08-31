@@ -43,10 +43,11 @@ export function primaryNavItems(): NavItem[] {
 // from communityRailItems(): the dropdown is the wide social entry, the rail is
 // the leaderboard/bots sub-nav.
 //
-// The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28: not
-// a defect, a decision to stop promoting it from the top nav for now. It is
-// still linked from the footer and the forum home, which is why the invite
-// constants below are still exported and the blockedIn machinery still runs.
+// The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28, and
+// out of the homepage footer on 2026-08-31: not defects, a decision to stop
+// promoting the Discord while it is still empty. The forum home is the one
+// surface that still hands out the invite, which is why the constants below are
+// still exported and the blockedIn machinery still runs.
 export function communityNavItems(): NavItem[] {
   return [
     { label: 'Players', labelKey: 'nav.players', href: '/player' },
