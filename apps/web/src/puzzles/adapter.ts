@@ -15,6 +15,7 @@
  * types at the boundary, exactly like the live tenants do.
  */
 
+import { deepCloneJson } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import type { PuzzleVariant } from './variant-ids.js';
@@ -221,7 +222,7 @@ export function isPuzzleComplete(session: PuzzleSession): boolean {
 }
 
 export function clonePuzzleState<State extends PuzzleState>(state: State): State {
-  return structuredClone(state);
+  return deepCloneJson(state);
 }
 
 export function oppositePuzzleColor(color: PuzzleColor): PuzzleColor {

@@ -18,6 +18,7 @@
 import {
   DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  hasOwnKey,
   JUNGLE_SPEC_ID,
   MINI_XIANGQI_SPEC_ID,
   XIANGQI_SPEC_ID,
@@ -40,7 +41,7 @@ const PUZZLE_BOARD_ADAPTERS: Record<PuzzleVariant, PuzzleBoardAdapter> = {
 };
 
 export function isPuzzleVariant(value: string): value is PuzzleVariant {
-  return Object.hasOwn(PUZZLE_BOARD_ADAPTERS, value);
+  return hasOwnKey(PUZZLE_BOARD_ADAPTERS, value);
 }
 
 export function puzzleBoardAdapter(variant: string): PuzzleBoardAdapter {

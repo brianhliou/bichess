@@ -11,6 +11,7 @@
 // Dictionaries are authored from docs-private/translation-experiment-dark-chess-zh.md
 // (head term 迷雾国际象棋 / 迷霧國際象棋 validated against the zh chess-variant
 // community; Traditional carries the Taiwan lexical forks, not a glyph conversion).
+import { hasOwnKey } from '@mistboard/game';
 import type { Article } from './articles-data.js';
 import { contentLocalePrefix, type Locale, localizedHref } from './i18n/locale.js';
 
@@ -3337,7 +3338,7 @@ export function translateArticleText(lang: ArticleLang | undefined, text: string
 // article resolves in both zh scripts, so an English edit that orphans a
 // dictionary key fails the build instead of silently rendering English.
 export function hasTranslation(lang: ArticleLang, text: string): boolean {
-  return Object.hasOwn(ARTICLE_DICTS[lang], text);
+  return hasOwnKey(ARTICLE_DICTS[lang], text);
 }
 
 // Every authored dictionary key for `lang`. The coverage reporter uses this to

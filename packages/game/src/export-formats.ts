@@ -13,6 +13,8 @@
 // Deliberately an explicit map with no fallback: a variant absent here exports
 // nothing, and adding one is a conscious decision about its notation.
 
+import { hasOwnKey } from './js-compat.js';
+
 export type GameExportFormat = 'pgn' | 'json';
 
 export const GAME_EXPORT_FORMATS = {
@@ -29,7 +31,7 @@ export const GAME_EXPORT_FORMATS = {
 export type GameExportVariant = keyof typeof GAME_EXPORT_FORMATS;
 
 export function isGameExportVariant(variant: string): variant is GameExportVariant {
-  return Object.hasOwn(GAME_EXPORT_FORMATS, variant);
+  return hasOwnKey(GAME_EXPORT_FORMATS, variant);
 }
 
 /** The formats a variant exports, or an empty list when it exports nothing. */

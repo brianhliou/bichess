@@ -20,6 +20,8 @@
 // Nominal drawn board, in cells across x cells down. Xiangqi-family boards vary
 // a few percent with the user's intersection-vs-cell layout preference; the
 // nominal point grid is close enough for a placeholder.
+import { hasOwnKey } from '@mistboard/game';
+
 const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   // Xiangqi family: 9 files x 10 ranks.
   xiangqi: 9 / 10,
@@ -66,5 +68,5 @@ export function boardAspectRatioCss(specId: string | null | undefined): string {
 }
 
 export function hasBoardAspect(specId: string): boolean {
-  return Object.hasOwn(BOARD_ASPECT_BY_SPEC_ID, specId);
+  return hasOwnKey(BOARD_ASPECT_BY_SPEC_ID, specId);
 }
