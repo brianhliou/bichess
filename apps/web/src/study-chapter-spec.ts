@@ -4,9 +4,15 @@
 // which bakes constants into an article at authoring time. That is the right
 // shape for a published article (a page should not depend on a study still
 // existing), and the wrong shape for an embed, whose whole promise is that it
-// shows what the study says now. Both call the same logic here rather than
-// keeping a second copy that drifts.
+// shows what the study says now.
+//
+// The two are SEPARATE implementations, not one shared with two callers: the
+// script is a plain .mjs with no build step and does not import this module. An
+// earlier version of this comment claimed they shared logic, and they had
+// already drifted -- both dropped the chapter's rootFen, and fixing it here in
+// 2026-08 meant fixing it there too. Change one, check the other.
 
+import { createInitialXiangqiState, standardXiangqiFen } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import type { XiangqiReplayAnnotation, XiangqiReplaySpec } from './xiangqi-replay.js';
 
@@ -34,8 +40,22 @@ export type StudyChapterPayload = {
   variant?: string;
   orientation?: 'red' | 'black' | string;
   tags?: Record<string, string | undefined>;
-  root?: { root?: StudyTreeNode };
+  root?: { root?: StudyTreeNode; rootFen?: string };
 };
+
+/**
+ * Placement plus side to move, which is what decides whether a chapter starts
+ * somewhere the widget has to be told about. The clocks in fields 5 and 6 are
+ * bookkeeping and differ between an authored root and the canonical spelling.
+ */
+function positionKey(fen: string): string {
+  return fen.trim().split(/\s+/).slice(0, 2).join(' ');
+}
+
+/** `initialStartFen('xiangqi')` is deliberately null (it answers "what must a
+ *  NEW document store", and a deterministic variant stores nothing), so the
+ *  opening has to be spelled from the kernel's own initial state. */
+const OPENING_KEY = positionKey(standardXiangqiFen(createInitialXiangqiState('opening')));
 
 /**
  * UCI here uses ranks 1-10; ICCS, which the widget parses, uses 0-9. Returns
@@ -106,8 +126,20 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
 
   if (!mainline.length) return null;
   const tags = chapter.tags ?? {};
+  // A chapter rooted at the opening is every game record, and the widget's
+  // default already is the opening, so leave startFen off rather than routing
+  // those through the FEN parser: it returns a state with empty positionCounts,
+  // which would change when a long game's threefold fires.
+  //
+  // Anything else has to travel. Before this the rootFen was read by nobody, so
+  // all 32 chapters of an endgame study rendered the opening position under
+  // their own moves, and the notation fell out to raw coordinates because the
+  // first move was illegal from there.
+  const rootFen = chapter.root?.rootFen;
+  const startFen = rootFen && positionKey(rootFen) !== OPENING_KEY ? rootFen : undefined;
   return {
     iccs: mainline.join(' '),
+    ...(startFen ? { startFen } : {}),
     red: tags.red ?? 'Red',
     black: tags.black ?? 'Black',
     event: tags.event ?? chapter.name ?? '',

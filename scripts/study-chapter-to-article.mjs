@@ -28,6 +28,13 @@ if (!studyId) {
   process.exit(1);
 }
 
+// Placement plus side to move. A chapter rooted anywhere else has to carry its
+// FEN into the baked spec: the widget's default is the opening, so without this
+// an endgame article renders 32 pieces under a line that cannot be played from
+// there, and every move label degrades to raw coordinates.
+const OPENING = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r';
+const positionKey = (fen) => fen.trim().split(/\s+/).slice(0, 2).join(' ');
+
 /** NAG -> the glyph the replay widget renders. Positive codes ride along. */
 const GLYPH = { 1: '!', 2: '?', 3: '!!', 4: '??', 5: '!?', 6: '?!' };
 function uciToIccs(uci) {
@@ -78,11 +85,14 @@ function convert(chapter) {
   }
 
   const tags = chapter.tags ?? {};
+  const rootFen = chapter.root?.rootFen;
+  const startFen = rootFen && positionKey(rootFen) !== OPENING ? rootFen : undefined;
   return {
     chapterId: chapter.id,
     name: chapter.name,
     spec: {
       iccs: mainline.join(' '),
+      ...(startFen ? { startFen } : {}),
       red: tags.red ?? 'Red',
       black: tags.black ?? 'Black',
       event: tags.event ?? '',

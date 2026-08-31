@@ -227,3 +227,29 @@ test('every formatted token parses back to the same move at its own position', (
     }
   }
 });
+
+// A study chapter, an endgame, or a composed problem does not begin at the
+// opening. Replaying its line from a board of 32 pieces makes move 1 illegal, so
+// every label fell out to the coordinate branch below -- output that looks like
+// working notation and carries none of the piece information notation is for.
+const ENDGAME_FEN = '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1';
+
+test('formatXiangqiMoves notates a line that starts away from the opening', () => {
+  const moves: XiangqiMove[] = [
+    { from: 'a5', to: 'a9' },
+    { from: 'f9', to: 'f8' },
+  ];
+  const start = stateFromFen(ENDGAME_FEN);
+
+  assert.deepEqual(formatXiangqiMoves(moves, 'wxf', start), ['R9+4', 'K6+1']);
+  assert.deepEqual(formatXiangqiMoves(moves, 'chinese-traditional', start), ['車九進四', '將6進1']);
+
+  // Without the start position the same line is illegal from ply 1.
+  assert.deepEqual(formatXiangqiMoves(moves, 'wxf'), ['a5-a9', 'f9-f8']);
+});
+
+test('formatXiangqiMoves notates a line whose start position has Black to move', () => {
+  const start = stateFromFen(ENDGAME_FEN.replace(' r ', ' b '));
+  const labels = formatXiangqiMoves([{ from: 'f9', to: 'f8' }], 'wxf', start);
+  assert.deepEqual(labels, ['K6+1']);
+});

@@ -115,3 +115,33 @@ describe('studyChapterToReplaySpec', () => {
     expect(spec?.iccs).toBe('h2e2');
   });
 });
+
+describe('studyChapterToReplaySpec start position', () => {
+  const withRoot = (rootFen: string | undefined): StudyChapterPayload => ({
+    id: 'c1',
+    name: 'Test chapter',
+    root: { root: { children: [{ uci: 'a6a10' }] }, ...(rootFen ? { rootFen } : {}) },
+  });
+
+  it('carries a chapter rooted away from the opening', () => {
+    // Every chapter of the basic-endgames study is set from a FEN. Dropping it
+    // rendered all 32 under the opening position, with their own moves listed
+    // beneath a board those moves cannot be played on.
+    const fen = '5c3/5k3/9/3n5/9/R8/9/9/9/4K4 r - - 0 1';
+    expect(studyChapterToReplaySpec(withRoot(fen))?.startFen).toBe(fen);
+  });
+
+  it('leaves a chapter rooted at the opening alone', () => {
+    // The widget already starts there, and routing it through the FEN parser
+    // would hand back a state with empty positionCounts, changing when a long
+    // game's threefold fires.
+    const opening = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1';
+    expect(studyChapterToReplaySpec(withRoot(opening))?.startFen).toBeUndefined();
+    expect(studyChapterToReplaySpec(withRoot(undefined))?.startFen).toBeUndefined();
+  });
+
+  it('ignores the clocks when deciding, so an authored root still matches', () => {
+    const opening = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 12 7';
+    expect(studyChapterToReplaySpec(withRoot(opening))?.startFen).toBeUndefined();
+  });
+});

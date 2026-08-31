@@ -8,6 +8,7 @@ import {
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
+  parseStandardXiangqiFen,
   type XiangqiBoard,
   type XiangqiColor,
   type XiangqiGameState,
@@ -109,6 +110,16 @@ export type XiangqiReplaySpec = {
   // Space-separated ICCS coordinate tokens (e.g. "h2e2 h9g7 ..."). ICCS ranks
   // are 0-9 with 0 = Red's back rank; engine ranks are 1-10, so rank + 1.
   iccs: string;
+  /**
+   * Position the line starts from, as a standard xiangqi FEN. Omitted means the
+   * opening, which is right for a game record and wrong for everything else: a
+   * study chapter, an endgame, a composed problem. A FEN that does not parse
+   * falls back to the opening rather than rendering an empty board, and the
+   * caller is expected to have validated it.
+   *
+   * The side to move comes from the FEN, so a line can begin with Black.
+   */
+  startFen?: string;
   red: string;
   black: string;
   event: string;
@@ -295,12 +306,27 @@ export function mountXiangqiReplay(
   //
   // Only the two reasons a human decides, from the kernel's own set. Checkmate
   // and stalemate stay terminal, because no ruleset plays on through those.
-  const states: XiangqiGameState[] = [createInitialXiangqiState('xq-replay')];
+  const parsedStart = spec.startFen ? parseStandardXiangqiFen(spec.startFen, 'xq-replay') : null;
+  const startState: XiangqiGameState =
+    parsedStart?.ok === true ? parsedStart.state : createInitialXiangqiState('xq-replay');
+  // Red opens a game, but not a chapter set from a FEN. Every ply-parity
+  // decision below counts from here rather than assuming Red is odd: the move
+  // numbers, the Red/Black columns, and the two adjudicated-draw resumes.
+  const firstMover: XiangqiColor =
+    startState.status.type === 'playing' ? startState.status.turn : 'red';
+  const secondMover: XiangqiColor = firstMover === 'red' ? 'black' : 'red';
+  // A black-first line is numbered "1... , 2. , 2... , 3.", so the pairing is
+  // shifted by one half-move.
+  const plyOffset = firstMover === 'red' ? 0 : 1;
+
+  const states: XiangqiGameState[] = [startState];
   for (const [index, move] of moves.entries()) {
     let state = states[states.length - 1]!;
     if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      // Red moves first, so an even index is Red's turn.
-      state = { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+      state = {
+        ...state,
+        status: { type: 'playing', turn: index % 2 === 0 ? firstMover : secondMover },
+      };
     }
     states.push(applyXiangqiMove(state, move));
   }
@@ -511,10 +537,12 @@ export function mountXiangqiReplay(
   }
 
   // WXF is the notation English xiangqi material actually uses, and it is short
-  // enough for a move column. formatXiangqiMoves always starts from the initial
-  // position, so a variation is formatted as prefix+line with the prefix sliced
+  // enough for a move column. formatXiangqiMoves replays from the line's own
+  // start, so a variation is formatted as prefix+line with the prefix sliced
   // back off — no mid-game state to thread, and an illegal line cannot be
-  // notated into something that looks real.
+  // notated into something that looks real. Passing the start position is what
+  // keeps an endgame chapter in real notation: from the opening, its first move
+  // is illegal and every label silently degrades to coordinates.
   // Move labels follow the reader's notation setting, the same preference the
   // review pages use. Recomputed (not cached across changes) because the
   // variation labels are derived from the mainline prefix and would otherwise
@@ -523,7 +551,9 @@ export function mountXiangqiReplay(
   let variationLabels = new Map<number, string[]>();
 
   function relabel(): void {
-    mainlineLabels = annotated ? formatXiangqiMoves(moves, currentXiangqiNotationStyle()) : [];
+    mainlineLabels = annotated
+      ? formatXiangqiMoves(moves, currentXiangqiNotationStyle(), startState)
+      : [];
     variationLabels = new Map<number, string[]>();
   }
 
@@ -546,8 +576,9 @@ export function mountXiangqiReplay(
     const legal: XiangqiMove[] = [];
     for (const [step, mv] of parsed.entries()) {
       if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-        // Moves made so far is (ply - 1 + step); an even count means Red to move.
-        const turn = (ply - 1 + step) % 2 === 0 ? 'red' : 'black';
+        // Moves made so far is (ply - 1 + step); an even count means the side
+        // that opened the line is to move.
+        const turn = (ply - 1 + step) % 2 === 0 ? firstMover : secondMover;
         state = { ...state, status: { type: 'playing', turn } };
       }
       const next = applyXiangqiMove(state, mv);
@@ -562,9 +593,11 @@ export function mountXiangqiReplay(
     const cached = variationLabels.get(ply);
     if (cached) return cached;
     const prefix = moves.slice(0, ply - 1);
-    const all = formatXiangqiMoves([...prefix, ...line], currentXiangqiNotationStyle()).slice(
-      prefix.length,
-    );
+    const all = formatXiangqiMoves(
+      [...prefix, ...line],
+      currentXiangqiNotationStyle(),
+      startState,
+    ).slice(prefix.length);
     variationLabels.set(ply, all);
     return all;
   }
@@ -650,14 +683,15 @@ export function mountXiangqiReplay(
     if (!annotated) return;
     moveList.replaceChildren();
     for (let ply = 1; ply <= total; ply += 1) {
-      const isRed = ply % 2 === 1;
+      // Odd plies belong to whoever opened the line, which is not always Red.
+      const isRed = (ply % 2 === 1) === (firstMover === 'red');
       let row: HTMLElement;
       if (isRed) {
         row = document.createElement('div');
         row.className = 'xq-replay-row';
         const n = document.createElement('span');
         n.className = 'xq-replay-move-n';
-        n.textContent = `${Math.ceil(ply / 2)}.`;
+        n.textContent = `${Math.ceil((ply + plyOffset) / 2)}.`;
         row.appendChild(n);
         moveList.appendChild(row);
       } else {
@@ -671,7 +705,7 @@ export function mountXiangqiReplay(
           row.className = 'xq-replay-row xq-replay-row-black';
           const n = document.createElement('span');
           n.className = 'xq-replay-move-n';
-          n.textContent = `${Math.ceil(ply / 2)}\u2026`;
+          n.textContent = `${Math.ceil((ply + plyOffset) / 2)}\u2026`;
           row.appendChild(n);
           moveList.appendChild(row);
         }

@@ -30,3 +30,28 @@ export function embedThemeFromSearch(search: string): 'light' | 'dark' | null {
   const value = new URLSearchParams(search).get('theme');
   return value === 'light' || value === 'dark' ? value : null;
 }
+
+/**
+ * `?notation=wxf` (or `chinese`, `iccs`, `coordinate`) on an embed URL, pinning
+ * the move labels instead of following the reader's own setting.
+ *
+ * Same shape of problem as `theme`, for the same reason: the reader of an embed
+ * is on the EMBEDDER's page, and almost never has a stored Mistboard preference,
+ * so they get the site default of coordinates. That default is right for a
+ * general visitor and wrong for an article about endgame technique, where the
+ * source material is written in WXF or Chinese and `a5-a9` is the one form no
+ * manual uses. The embedder knows which their readers need; Mistboard does not.
+ *
+ * Anything else, including no param, returns null and the embed follows the
+ * reader. Deliberately does NOT write the preference: the embed is on
+ * mistboard.com's origin, so a write would change the reader's setting for the
+ * whole site from inside someone else's page.
+ */
+export function embedNotationFromSearch(
+  search: string,
+): 'coordinate' | 'chinese' | 'wxf' | 'iccs' | null {
+  const value = new URLSearchParams(search).get('notation');
+  return value === 'coordinate' || value === 'chinese' || value === 'wxf' || value === 'iccs'
+    ? value
+    : null;
+}
