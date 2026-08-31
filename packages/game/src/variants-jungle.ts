@@ -396,7 +396,15 @@ export type JungleApplyMoveOptions = {
 //
 // jungle_rust/src/engine.rs carries the same number as DEFAULT_PROGRESS_LIMIT; the golden-parity
 // test compares the two kernels frame for frame, so they move together or not at all.
-export const DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT = 200;
+// PINNED AT 100 until the deployed jungle binary carries 200. Production does not build the
+// engine from source: railpack.json fetches jungle-engine from a brianhliou/misty-jungle GitHub
+// release (latest v0.0.3, 2026-07-27, which has 100). Shipping this kernel at 200 while the
+// binary was at 100 left the server playing on past ply 100 while the engine scored every node
+// beyond it as a draw, collapsing its search to 0.00 on all quiet lines.
+//
+// The measurement above stands. Re-raise to 200 in BOTH kernels once a misty-jungle release
+// carries it.
+export const DEFAULT_JUNGLE_PROGRESS_CLOCK_LIMIT = 100;
 export const DEFAULT_JUNGLE_REPETITION_DRAW_COUNT = 3;
 
 function hasJungleLegalMove(board: JungleBoard, color: JungleColor): boolean {
