@@ -181,7 +181,7 @@ describe('site shell nav', () => {
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     // The Discord invite left the footer on 2026-08-31 (see nav-items.ts): the
-    // room is not ready to be promoted, and the forum home still hands it out.
+    // room is not ready to be promoted.
     expect(footer.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/privacy"]')?.textContent).toBe('隱私');
   });
@@ -193,11 +193,9 @@ describe('site shell geo-blocked links', () => {
     document.body.innerHTML = '';
   });
 
-  // Neither the nav nor the footer carries the Discord invite any more, so the
-  // shell has no country-gated link left to observe. The gate itself still
-  // matters (the forum home is the one surface that hands the invite out); it
-  // is covered at its remaining call site in forum.test.ts and at the primitive
-  // in viewer-geo.test.ts.
+  // Nothing on the site carries the Discord invite any more, so there is no
+  // country-gated link left to observe anywhere. The gate primitive stays
+  // covered by viewer-geo.test.ts, ready for the next off-site link.
   it('offers no off-site invite from the shell, in China or anywhere else', () => {
     for (const country of ['CN', 'US']) {
       document.cookie = `mb_cc=${country}; Path=/`;

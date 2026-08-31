@@ -186,32 +186,24 @@ describe('forum pages', () => {
     expect(reports?.getAttribute('href')).toBe('/forum/reports');
   });
 
-  // The forum home is the only surface that still hands out the Discord invite
-  // (it left the top nav 2026-08-28 and the homepage footer 2026-08-31), so the
-  // country gate that keeps a hanging link away from mainland China is now
-  // observable here and nowhere else.
-  it('gates the Discord invite on the forum home by viewer country', async () => {
+  // The forum home was the last surface handing out the Discord invite: it left
+  // the top nav 2026-08-28 and the homepage footer and this page on 2026-08-31,
+  // because the room is not ready to be promoted. Held as a test because the
+  // link moved three times in five days.
+  it('hands out no Discord invite from the forum home', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url.startsWith('/api/forum/categories')) return json({ categories });
       if (url.startsWith('/api/auth/me')) return json({ user: null });
       throw new Error(`unexpected fetch ${url}`);
     });
+    const root = document.createElement('div');
     const { mountForum } = await import('./forum.js');
 
-    document.cookie = 'mb_cc=CN; Path=/';
-    const blocked = document.createElement('div');
-    await mountForum(blocked);
-    expect(blocked.querySelector('.forum-discord-link')).toBeNull();
+    await mountForum(root);
 
-    document.cookie = 'mb_cc=US; Path=/';
-    const allowed = document.createElement('div');
-    await mountForum(allowed);
-    const invite = allowed.querySelector<HTMLAnchorElement>('.forum-discord-link');
-    expect(invite?.getAttribute('href')).toMatch(/^https:\/\/discord\.gg\//);
-    expect(invite?.target).toBe('_blank');
-
-    document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+    expect(root.querySelector('.forum-panel-actions')).not.toBeNull();
+    expect(root.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
   });
 
   it('renders a selected category as a focused topic view', async () => {

@@ -444,9 +444,9 @@ export function buildNotice(titleText: string, bodyText: string): HTMLElement {
 // fat footer: with our route count the columns read busier than the site is
 // (Brian, 2026-06-10).
 //
-// Every entry is currently an on-site page. `external`/`blockedIn` stay wired
-// for the next off-site link: the Discord invite used them until 2026-08-31,
-// when it came out of the footer (see nav-items.ts).
+// Every entry is an on-site page. `external`/`blockedIn` stay wired for the next
+// off-site link: the Discord invite was the last one to use them, until it came
+// out of the footer on 2026-08-31 (see nav-items.ts).
 const HOME_FOOTER_LINKS: ReadonlyArray<{
   href: string;
   labelKey: I18nKey;
