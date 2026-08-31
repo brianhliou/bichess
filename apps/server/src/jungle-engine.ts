@@ -21,7 +21,7 @@ import { runUciBestmove, runUciEval, UciEnginePool, type UciEval } from './uci-e
 
 // The binary self-reports "MistyJungle <version>" over UCI; bump on every shipped
 // eval/search change so the per-game configHash stays meaningful.
-export const JUNGLE_RUST_ENGINE_VERSION = '0.0.3';
+export const JUNGLE_RUST_ENGINE_VERSION = '0.0.4';
 
 export type JungleRustTier = {
   id: string;
