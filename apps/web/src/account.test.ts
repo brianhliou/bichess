@@ -424,8 +424,8 @@ describe('account page auth flow', () => {
         (heading) => heading.textContent,
       ),
     ).toEqual(['', 'Bell', 'Email']);
-    // Six rows, one channel each: five bell-only rows and one email-only row.
-    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(6);
+    // Seven rows, one channel each: five bell-only rows and two email-only rows.
+    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(7);
     expect(
       [...document.querySelectorAll<HTMLInputElement>('.account-notification-settings input')].map(
         (input) => input.name,
@@ -436,6 +436,7 @@ describe('account page auth flow', () => {
       'challengesBell',
       'forumBell',
       'followersBell',
+      'correspondenceStartEmail',
       'correspondenceDeadlineEmail',
     ]);
 
@@ -449,6 +450,22 @@ describe('account page auth flow', () => {
 
     expect(requests).toEqual([{ correspondenceDeadlineEmail: false }]);
     expect(deadlineEmail.checked).toBe(false);
+
+    // The game-start email is a second, independent opt-out: muting the
+    // deadline warning must not have muted it too.
+    const startEmail = document.querySelector<HTMLInputElement>(
+      'input[name="correspondenceStartEmail"]',
+    );
+    if (!startEmail) throw new Error('missing correspondence start email preference');
+    expect(startEmail.checked).toBe(true);
+    startEmail.checked = false;
+    startEmail.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushDom();
+
+    expect(requests).toEqual([
+      { correspondenceDeadlineEmail: false },
+      { correspondenceStartEmail: false },
+    ]);
   });
 
   it('hydrates piece animation from the signed-in account', async () => {

@@ -41,7 +41,8 @@ export type AccountPreferenceKey =
   | 'challengesBell'
   | 'forumBell'
   | 'followersBell'
-  | 'correspondenceDeadlineEmail';
+  | 'correspondenceDeadlineEmail'
+  | 'correspondenceStartEmail';
 export type AccountPreferences = {
   clockTenths: ClockTenthsPreference;
   lowTimeSound: boolean;
@@ -55,6 +56,9 @@ export type AccountPreferences = {
   forumBell: boolean;
   followersBell: boolean;
   correspondenceDeadlineEmail: boolean;
+  // Sent once, when somebody accepts a seek you posted and walked away from.
+  // Distinct from the deadline warning: that one fires late, near forfeit.
+  correspondenceStartEmail: boolean;
 };
 
 export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
@@ -68,6 +72,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   forumBell: true,
   followersBell: true,
   correspondenceDeadlineEmail: true,
+  correspondenceStartEmail: true,
 };
 
 export function isClockTenthsPreference(value: unknown): value is ClockTenthsPreference {
@@ -350,6 +355,10 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
     followersBell: booleanOrDefault(
       parsed.followersBell,
       DEFAULT_ACCOUNT_PREFERENCES.followersBell,
+    ),
+    correspondenceStartEmail: booleanOrDefault(
+      parsed.correspondenceStartEmail,
+      DEFAULT_ACCOUNT_PREFERENCES.correspondenceStartEmail,
     ),
     correspondenceDeadlineEmail: booleanOrDefault(
       parsed.correspondenceDeadlineEmail,

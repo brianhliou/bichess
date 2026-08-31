@@ -1,4 +1,6 @@
 import {
+  closeUserAccount,
+  correspondenceStartRecipient,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   createUser,
@@ -7,6 +9,7 @@ import {
   getCorrespondenceSeek,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
+  updateUserAccountPreference,
   userExists,
 } from './persistence.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -228,5 +231,37 @@ definePersistenceTests('correspondence seeks', () => {
     assert.notEqual(await getCorrespondenceSeek('exp-board'), null);
     // Idempotent: nothing left to reap.
     assert.equal(await deleteExpiredCorrespondenceSeeks(now), 0);
+  });
+
+  test('correspondenceStartRecipient honours the opt-out and skips closed accounts', async () => {
+    const player = await seedUser('start-mail-player', 'startmail', 'Start Mail');
+
+    // Never-touched preference: the key is absent from the JSON entirely, and
+    // the query must read that as opted IN. This is the case every real
+    // account is in until it visits the settings page, so a fail-closed
+    // COALESCE here would silently mute the email for everybody.
+    assert.equal((await correspondenceStartRecipient(player.id))?.email, player.email);
+
+    await updateUserAccountPreference(player.id, 'correspondenceStartEmail', false, at);
+    assert.equal(await correspondenceStartRecipient(player.id), null);
+
+    // The two correspondence emails opt out independently.
+    await updateUserAccountPreference(player.id, 'correspondenceStartEmail', true, at);
+    await updateUserAccountPreference(player.id, 'correspondenceDeadlineEmail', false, at);
+    assert.equal((await correspondenceStartRecipient(player.id))?.email, player.email);
+
+    assert.equal(await correspondenceStartRecipient('nobody-at-all'), null);
+
+    const quitter = await seedUser('start-mail-quitter', 'quitter', 'Quitter');
+    await closeUserAccount(
+      quitter.id,
+      {
+        closedEmailHash: 'hash-quitter',
+        closedHandle: 'closed-quitter',
+        placeholderEmail: 'closed-quitter@example.invalid',
+      },
+      at,
+    );
+    assert.equal(await correspondenceStartRecipient(quitter.id), null);
   });
 });
