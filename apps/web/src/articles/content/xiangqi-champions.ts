@@ -1219,7 +1219,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_z88B1zTk },
           caption:
-            'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.',
+            'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.',
         },
       ],
     },

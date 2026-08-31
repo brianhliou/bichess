@@ -1297,8 +1297,8 @@ const ZH_HANS: Record<string, string> = {
     '杨官璘对胡荣华，1960年10月28日。第24回合值得一看：一步杨官璘吃不得的炮，被标为妙手。',
   'And this is thirty-four years later, in a tournament he did not win, against a man who had taken two national titles of his own in between.':
     '这是三十四年之后，在一场他没有夺冠的比赛里，对手是这期间自己拿过两次全国冠军的人。',
-  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.':
-    '胡荣华对柳大华，1994年10月15日。胡荣华时年四十九，距离他第十四次夺冠还有六年。',
+  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.':
+    '胡荣华对柳大华，1994年10月15日。胡荣华时年四十八，距离他第十四次夺冠还有六年。',
   'Liu Dahua 柳大华, 1980': '柳大华，1980',
   'Two titles, 1980 and 1981, and the man who ended the longest run in the game: Hu had won every championship held for twenty years when Liu took the 1980 tournament off him. He is from Huangpi, in Hubei, and the sport knows him as 东方电脑, the Eastern Computer, for a memory that let him play nineteen simultaneous games blindfold in 1995. That was a world record until one of the champions further down this page broke it with twenty.':
     '两次冠军，1980和1981年，他也是终结了这项运动中最长连霸的人：柳大华拿下1980年那届时，此前二十年举办的全国赛冠军全是胡荣华的。他是湖北黄陂人，棋界称他东方电脑，因为他的记忆力让他在1995年下出十九盘同时进行的盲棋。那是当时的世界纪录，直到本页下面的一位冠军以二十盘打破它。',
@@ -3023,8 +3023,8 @@ const ZH_HANT: Record<string, string> = {
     '杨官璘對胡荣华，1960年10月28日。第24回合值得一看：一步杨官璘吃不得的炮，被標為妙手。',
   'And this is thirty-four years later, in a tournament he did not win, against a man who had taken two national titles of his own in between.':
     '這是三十四年之後，在一場他沒有奪冠的比賽裡，對手是這期間自己拿過兩次全國冠軍的人。',
-  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.':
-    '胡荣华對柳大华，1994年10月15日。胡荣华時年四十九，距離他第十四次奪冠還有六年。',
+  'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.':
+    '胡荣华對柳大华，1994年10月15日。胡荣华時年四十八，距離他第十四次奪冠還有六年。',
   'Two titles, 1980 and 1981, and the man who ended the longest run in the game: Hu had won every championship held for twenty years when Liu took the 1980 tournament off him. He is from Huangpi, in Hubei, and the sport knows him as 东方电脑, the Eastern Computer, for a memory that let him play nineteen simultaneous games blindfold in 1995. That was a world record until one of the champions further down this page broke it with twenty.':
     '兩次冠軍，1980和1981年，他也是終結了這項運動中最長連霸的人：柳大华拿下1980年那屆時，此前二十年舉辦的全國賽冠軍全是胡荣华的。他是湖北黃陂人，棋界稱他東方電腦，因為他的記憶力讓他在1995年下出十九盤同時進行的盲棋。那是當時的世界紀錄，直到本頁下面的一位冠軍以二十盤打破它。',
   'He beat Li Laiqun in the 1980 tournament, then Yang Guanlin five days later.':
