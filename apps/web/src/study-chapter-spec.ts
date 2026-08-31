@@ -124,7 +124,6 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
     node = played;
   }
 
-  if (!mainline.length) return null;
   const tags = chapter.tags ?? {};
   // A chapter rooted at the opening is every game record, and the widget's
   // default already is the opening, so leave startFen off rather than routing
@@ -137,6 +136,14 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
   // first move was illegal from there.
   const rootFen = chapter.root?.rootFen;
   const startFen = rootFen && positionKey(rootFen) !== OPENING_KEY ? rootFen : undefined;
+
+  // A chapter can legitimately be a position and nothing else: an endgame set
+  // from a FEN with no line played on it yet. Before startFen existed there was
+  // no way to render one, so an empty mainline could only mean an empty
+  // chapter, and this returned null. Now it means show the position. Without a
+  // start position AND without moves there is still nothing to draw.
+  if (!mainline.length && !startFen) return null;
+
   return {
     iccs: mainline.join(' '),
     ...(startFen ? { startFen } : {}),

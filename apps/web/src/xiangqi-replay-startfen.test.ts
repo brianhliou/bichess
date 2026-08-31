@@ -61,3 +61,12 @@ test('an unparseable start position falls back to the opening, not an empty boar
   expect(pieces(el)).toBe(32);
   c.destroy();
 });
+
+test('a position with no moves still draws its board', () => {
+  // What a position-only study chapter reduces to. The stepper has nothing to
+  // step, and the board is the whole point.
+  const c = mountXiangqiReplay(el, { ...base, iccs: '', startFen: ENDGAME });
+  expect(pieces(el)).toBe(5);
+  expect(numbers(el)).toEqual([]);
+  c.destroy();
+});

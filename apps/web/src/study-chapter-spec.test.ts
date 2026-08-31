@@ -145,3 +145,25 @@ describe('studyChapterToReplaySpec start position', () => {
     expect(studyChapterToReplaySpec(withRoot(opening))?.startFen).toBeUndefined();
   });
 });
+
+describe('studyChapterToReplaySpec position-only chapters', () => {
+  const ENDGAME = '2b1ka3/4a4/4b4/9/2P1P1P2/9/9/9/9/4K4 r - - 0 1';
+
+  it('renders a chapter that is a position with no moves played on it', () => {
+    // Every chapter of the endgame study carried an engine line, so an empty
+    // mainline could only mean an empty chapter and this returned null. Once a
+    // chapter can be rooted at a FEN, a position on its own is a real chapter.
+    const spec = studyChapterToReplaySpec({
+      id: 'c1',
+      name: 'Three soldiers, pulled back one rank',
+      root: { root: {}, rootFen: ENDGAME },
+    });
+    expect(spec).not.toBeNull();
+    expect(spec?.startFen).toBe(ENDGAME);
+    expect(spec?.iccs).toBe('');
+  });
+
+  it('still refuses a chapter with neither a position nor moves', () => {
+    expect(studyChapterToReplaySpec({ id: 'c2', name: 'Empty', root: { root: {} } })).toBeNull();
+  });
+});
