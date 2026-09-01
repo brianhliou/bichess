@@ -188,11 +188,11 @@ describe('landing shell', () => {
     const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
 
     expect(about?.textContent).toBe(
-      'Chinese chess and the games around it. Free in your browser. About Mistboard...',
+      'Strategy games including Xiangqi (Chinese chess), Banqi, Jieqi, Jungle Chess and more. Free in your browser. About Mistboard...',
     );
     expect(link?.textContent).toBe('About Mistboard...');
     expect(about?.childNodes[0]?.textContent).toBe(
-      'Chinese chess and the games around it. Free in your browser. ',
+      'Strategy games including Xiangqi (Chinese chess), Banqi, Jieqi, Jungle Chess and more. Free in your browser. ',
     );
   });
 });

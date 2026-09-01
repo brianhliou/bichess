@@ -45,7 +45,8 @@ export const ZH_HANT_SHELL = {
   'nav.signIn': '登入',
   'nav.register': '註冊',
   'nav.language': '語言',
-  'home.tagline': '象棋，以及與之相近的棋類。可在瀏覽器中免費遊玩。關於 Mistboard...',
+  'home.tagline':
+    '策略棋類遊戲，包括象棋、暗棋、揭棋、鬥獸棋等。可在瀏覽器中免費遊玩。關於 Mistboard...',
   'home.activityAria': '活躍度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',

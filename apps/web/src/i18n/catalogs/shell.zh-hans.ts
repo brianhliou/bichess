@@ -45,7 +45,8 @@ export const ZH_HANS_SHELL = {
   'nav.signIn': '登录',
   'nav.register': '注册',
   'nav.language': '语言',
-  'home.tagline': '象棋，以及与之相近的棋类。可在浏览器中免费游玩。关于 Mistboard...',
+  'home.tagline':
+    '策略棋类游戏，包括象棋、暗棋、揭棋、斗兽棋等。可在浏览器中免费游玩。关于 Mistboard...',
   'home.activityAria': '活跃度',
   'home.gamesPlayed': '局已下完',
   'home.gamesPlayedMonth': '局已下完（本月 {count} 局）',
