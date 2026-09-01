@@ -29,7 +29,8 @@ import {
 export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier). The shipped
 // engine is the no-net classical Pikafish jieqi_old build; bump on any engine/config change.
-export const JIEQI_ENGINE_VERSION = '0.2.0';
+// 0.3.0 (2026-08-31): new binary (ScoreCalc flip-node fix, pikafish-jieqi.ref 4f857757).
+export const JIEQI_ENGINE_VERSION = '0.3.0';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -43,16 +44,21 @@ export const JIEQI_ENGINE_VERSION = '0.2.0';
 // orphans sweeps whose movetime bound, since their evals and pvs are wrong.
 // Fortress is NOT bumped: it runs a pure `go depth N`, which always completes
 // its final iteration. The Misty-backed variants never touch this parser.
-export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.3.0';
+// 0.4.0 (2026-08-31): new binary. The ScoreCalc flip-node fix changes evals at any node
+// where a dark piece moves, so every cached sweep predates the engine that would produce
+// it now. The ref below moves in the same commit; this bump is belt-and-braces.
+export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.4.0';
 
-// Short form of the upstream `jieqi_old` commit the prod image builds (pikafish-jieqi.ref).
+// Short form of the commit the prod image builds (pikafish-jieqi.ref). Since 2026-08-31
+// that is OUR fork's `jieqi_old-mistboard` branch, not upstream: upstream 23b9466c plus a
+// single src/misc.h patch, so ScoreCalc no longer averages a forced loss away at flip nodes.
 // It belongs in the ANALYSIS cache key because that key's whole promise is "same inputs,
 // same evals": the binary is an input, and until 2026-08-28 the build cloned branch tip on
 // every deploy, so two deploys either side of an upstream commit filed evals from different
 // engines under one identical key. Version alone could not catch that, being hand-maintained.
 // jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
 // cannot land without moving the key and forcing a recompute.
-export const PIKAFISH_JIEQI_ENGINE_REF = '23b9466c';
+export const PIKAFISH_JIEQI_ENGINE_REF = '4f857757';
 
 export type JieqiEngineTier = {
   id: string;

@@ -1,6 +1,20 @@
-23b9466c981f0f3a1133f92de1a6f86406c4eccc
-# ^ The upstream official-pikafish/Pikafish `jieqi_old` commit the prod image builds
-# (railpack build step reads the first line; this comment is ignored).
+4f8577574a92f72735aee365af7b56ef28d708a4
+# ^ The commit the prod image builds (railpack build step reads the first line; this
+# comment is ignored).
+#
+# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus exactly one
+# patch, carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
+# `jieqi_old-mistboard`, and railpack clones THAT repo rather than
+# official-pikafish/Pikafish. `git diff 23b9466c 4f857757` is a single hunk in
+# src/misc.h. The upstream base is unchanged, so moving to a newer upstream jieqi_old
+# is a cherry-pick, not a merge.
+#
+# The patch stops ScoreCalc averaging a forced loss away at dark-piece flip nodes: a
+# mate was clamped to +/-DARKVALRATE (2862) and then diluted by the other revealed
+# identities, so the engine could score itself comfortably ahead while being mated.
+# Measured on 30 mate-decided positions: mates seen behind a dark root move went from
+# 39/47 to 44/47, none lost, and 4 of 89 non-mate evals moved (max 50 cp). Rig and raw
+# transcripts: mistboard-engine lab/jieqi-darkmove-2026-08-31/.
 #
 # Pinned 2026-08-28. Before this, the build was `git clone --depth 1 -b jieqi_old`,
 # so every deploy rebuilt the analysis engine from whatever branch tip existed that
@@ -19,3 +33,9 @@
 # Bumping: check out the new ref, rebuild, and expect a full recompute of every
 # jieqi review. There is no way to keep the old rows: they were produced by a
 # different engine, which is the whole point of keying on this.
+#
+# The browser WASM analysis build must move WITH this pin, or the analysis board and
+# the server run different engines while the articles tell readers they are the same
+# one. Its source of truth is apps/web/public/engine/pikafish-jieqi/ (source.patch +
+# pikajieqi-source-<short>.tar.gz) and its cache-buster is ENGINE_ASSET_VERSION in
+# apps/web/src/review/engine/pikajieqi-ceval.ts.

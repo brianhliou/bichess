@@ -12,7 +12,7 @@ import { depthForEffort } from './ceval-types.js';
 import { parseInfo } from './uci-info.js';
 
 const ENGINE_BASE = '/engine/pikafish-jieqi/';
-const ENGINE_ASSET_VERSION = '23b9466-emsdk3174-coep1';
+const ENGINE_ASSET_VERSION = '4f85775-emsdk3174-coep1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 const EMIT_THROTTLE_MS = 80;
 const EMPTY_UPDATE: CevalUpdate = {
