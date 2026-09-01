@@ -490,3 +490,27 @@ const baseAnnouncements: Announcement[] = [
 export function announcements(): Announcement[] {
   return baseAnnouncements;
 }
+
+/**
+ * Stable anchor for one entry on /feed, which is where the landing News rail
+ * sends a reader who clicks a row.
+ *
+ * Derived from the ENGLISH headline on purpose. The rail localizes an entry
+ * before rendering it, so slugging the localized headline would mint a
+ * different anchor per locale and a link shared from a zh page would land
+ * nowhere on an en one. Pass the source entry, never a localized copy.
+ *
+ * The date alone is not enough: 2026-08-30 carries two entries. The headline
+ * is what makes it unique, and rewriting a shipped headline breaks its anchor,
+ * which is acceptable because a headline edit is already a three-language job
+ * nobody does casually.
+ */
+export function announcementSlug(entry: Announcement): string {
+  const slug = entry.headline
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '');
+  return slug ? `${entry.date}-${slug}` : entry.date;
+}

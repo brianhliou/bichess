@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { localizeAnnouncement } from './announcement-i18n.js';
-import { type AnnouncementKind, announcements } from './announcements.js';
+import { type AnnouncementKind, announcementSlug, announcements } from './announcements.js';
 import { localizedArticleHref } from './article-i18n.js';
 import { articles } from './articles-data.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildNewsPage } from './news-page.js';
 import { uiIconForAnnouncementKind } from './ui-icon.js';
-import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
+import {
+  rulesHrefPublicSurfaceEnabled,
+  variantPublicSurfaceEnabled,
+} from './variant-public-surfaces.js';
 import { leaderboardVariants } from './variants.js';
 
 describe('landing announcements', () => {
@@ -33,10 +36,12 @@ describe('landing announcements', () => {
     // Derived from the announcement data rather than pinned to specific posts:
     // this asserts the gating and ordering behaviour, and does not need editing
     // every time a new announcement ships.
+    // Rows link to their own entry on /feed now, so this compares anchors
+    // rather than feature hrefs; the assertion is still gating and ordering.
     const expected = [...announcements()]
+      .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
       .sort((a, b) => b.date.localeCompare(a.date))
-      .map((entry) => entry.href)
-      .filter((href): href is string => typeof href === 'string')
+      .map((entry) => `/feed#${announcementSlug(entry)}`)
       .slice(0, hrefs.length);
     expect(hrefs).toEqual(expected);
   });
@@ -126,15 +131,70 @@ describe('landing announcements', () => {
     expect(visible).toHaveLength(rows.length);
   });
 
-  it('links each hoverable relative date to the full feed', () => {
+  it('links each hoverable relative date to its own entry on the feed', () => {
     const panel = buildLandingAnnouncements();
     const dates = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-date')];
 
     expect(dates).toHaveLength(panel.querySelectorAll('.landing-news-update').length);
     for (const date of dates) {
-      expect(date.getAttribute('href')).toBe('/feed');
+      const stamp = date.querySelector('time')?.dateTime ?? '';
+      expect(stamp).toMatch(/^2026-\d{2}-\d{2}$/);
+      // The anchor starts with this row's own date, so a row cannot link to a
+      // different row's entry.
+      expect(date.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
+      expect(date.getAttribute('href')).toContain(`/feed#${stamp}-`);
       expect(date.getAttribute('title')).toMatch(/2026/);
-      expect(date.querySelector('time')?.dateTime).toMatch(/^2026-\d{2}-\d{2}$/);
+    }
+  });
+
+  it('sends the headline to the entry on /feed, not to the feature it announces', () => {
+    // The row clamps its body to one line, so every row ends in an ellipsis. A
+    // reader clicking a truncated headline is asking to read the rest; before
+    // this, the headline jumped to /import (or wherever) and the only route to
+    // the full text was the small uppercase date.
+    const panel = buildLandingAnnouncements();
+    const links = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')];
+
+    expect(links).toHaveLength(panel.querySelectorAll('.landing-news-update').length);
+    for (const link of links) {
+      expect(link.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
+    }
+    // Every row's headline and its date agree on the target.
+    const rows = [...panel.querySelectorAll('.landing-news-update')];
+    for (const row of rows) {
+      const headline = row.querySelector('a.landing-news-link')?.getAttribute('href');
+      const date = row.querySelector('a.landing-news-date')?.getAttribute('href');
+      expect(headline).toBe(date);
+    }
+  });
+
+  it('gives every announcement a unique, locale-stable anchor', () => {
+    // Two entries share 2026-08-30, so the date alone cannot identify a row.
+    // The slug comes from the English headline, so a link shared from a zh page
+    // resolves on an en one.
+    const slugs = announcements().map((entry) => announcementSlug(entry));
+    expect(new Set(slugs).size).toBe(slugs.length);
+    for (const entry of announcements()) {
+      expect(announcementSlug(entry)).toMatch(/^2026-\d{2}-\d{2}(-[a-z0-9-]+)?$/);
+    }
+  });
+
+  it('/feed carries the anchor every rail row links to', () => {
+    // The rail's target only works if the entry it names exists on the page.
+    // These are built in two different modules from the same slug function, so
+    // nothing but this test stops a rail link pointing at a missing anchor.
+    const panel = buildLandingAnnouncements();
+    const news = buildNewsPage();
+    const ids = new Set(
+      [...news.querySelectorAll<HTMLElement>('.news-page-entry')].map((entry) => entry.id),
+    );
+
+    const targets = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map(
+      (link) => link.getAttribute('href')?.split('#')[1] ?? '',
+    );
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(ids, `rail links to #${target}, which /feed does not render`).toContain(target);
     }
   });
 
@@ -174,15 +234,24 @@ describe('landing announcements', () => {
     const more = landing.querySelector<HTMLElement>('.site-box-more');
     const news = buildNewsPage('zh-Hant');
 
-    // The rail localizes an href that HAS a localized form, so the expectation
-    // has to localize too. It read the raw href until 2026-08-29, which passed
-    // only because the newest entry happened to point at /import; the first
-    // newest entry pointing at a translated article turned that into a failure
-    // reporting the correct behaviour.
-    const newestRailEntry = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0];
-    const slug = /^\/(?:blog|rules)\/([a-z0-9-]+)$/.exec(newestRailEntry?.href ?? '')?.[1];
-    const article = slug ? articles.find((a) => a.slug === slug) : undefined;
-    const newestHref = article ? localizedArticleHref(article, 'zh-Hant') : newestRailEntry?.href;
+    // A row targets its own entry on /feed, so the expectation is the LOCALIZED
+    // feed path plus the anchor. The anchor itself is not localized: it is
+    // slugged from the English headline so one link resolves in every locale.
+    const newestRailEntry = [...announcements()]
+      .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    // /feed is not a locale-prefixed content path (localizedHref leaves it
+    // alone), and the anchor is slugged from English, so the whole target is
+    // identical in every locale. Only the row's TEXT is translated.
+    const newestHref = newestRailEntry ? `/feed#${announcementSlug(newestRailEntry)}` : undefined;
+    // The CTA on /feed itself still points at the feature, and IS localized
+    // when it targets a translated article. That link is the reason the rail
+    // can stop carrying one: the reader meets it with the full entry in view.
+    const articleSlug = /^\/(?:blog|rules)\/([a-z0-9-]+)$/.exec(newestRailEntry?.href ?? '')?.[1];
+    const article = articleSlug ? articles.find((a) => a.slug === articleSlug) : undefined;
+    const newestFeatureHref = article
+      ? localizedArticleHref(article, 'zh-Hant')
+      : newestRailEntry?.href;
 
     expect(landing.getAttribute('aria-label')).toBe('新聞');
     expect(firstRow?.getAttribute('href')).toBe(newestHref);
@@ -195,11 +264,13 @@ describe('landing announcements', () => {
       '/feed.xml',
     );
     expect(news.querySelector<HTMLAnchorElement>('.news-page-link')?.getAttribute('href')).toBe(
-      newestHref,
+      newestFeatureHref,
     );
+    // Both of the row's targets are the entry's anchor, so nothing in the row
+    // sends a reader somewhere other than the update they clicked.
     expect(
       landing.querySelector<HTMLAnchorElement>('a.landing-news-date')?.getAttribute('href'),
-    ).toBe('/feed');
+    ).toBe(newestHref);
     // Authored announcement copy (headline, body, CTA label) is translated by
     // announcement-i18n.ts, not the catalog, so the whole entry renders in zh.
     const newest = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0];

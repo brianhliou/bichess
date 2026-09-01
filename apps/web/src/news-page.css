@@ -25,6 +25,15 @@
   background: var(--site-zebra);
 }
 
+/* The entry a News-rail row linked to. Two-class selector so it wins over the
+   zebra rule above regardless of which chunk Vite emits first. The accent bar
+   carries it rather than a background tint, which reads as another zebra
+   stripe on the rows that already have one. */
+.news-page-entry.news-page-entry-linked {
+  box-shadow: inset 3px 0 0 var(--site-accent);
+  background: var(--site-accent-soft);
+}
+
 .news-page-date {
   color: var(--site-muted);
   font-size: 13px;

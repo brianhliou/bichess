@@ -3,7 +3,7 @@
 // entry per update with date, headline, and the short body line.
 import './news-page.css';
 import { localizeAnnouncement } from './announcement-i18n.js';
-import { type Announcement, announcements } from './announcements.js';
+import { type Announcement, announcementSlug, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { formatAnnouncementDate } from './landing-announcements.js';
@@ -50,6 +50,11 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
     const entry = localizeAnnouncement(source, locale);
     const item = document.createElement('li');
     item.className = 'news-page-entry';
+    // Anchor target for the landing News rail, whose rows link here rather than
+    // straight to the feature they announce: the rail clamps every body to one
+    // line, so the row ends in an ellipsis and a reader clicking it is asking to
+    // read the rest. Slug from `source`, not `entry` — see announcementSlug.
+    item.id = announcementSlug(source);
 
     const date = document.createElement('time');
     date.className = 'news-page-date';
@@ -87,8 +92,27 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
     list.append(item);
   }
   section.append(list);
+  highlightHashEntry(section);
 
   return section;
+}
+
+/** Bring the linked entry into view and mark it, so arriving from the News rail
+ *  lands on the row that was clicked instead of the top of the list. A plain
+ *  :target rule would not survive the SPA render (the hash is already set when
+ *  this list is built, so the browser has nothing left to scroll to), hence the
+ *  explicit scroll. */
+function highlightHashEntry(section: HTMLElement): void {
+  const hash = decodeURIComponent(globalThis.location?.hash ?? '').replace(/^#/, '');
+  if (!hash) return;
+  const target = section.querySelector<HTMLElement>(`[id="${CSS.escape(hash)}"]`);
+  if (!target) return;
+  target.classList.add('news-page-entry-linked');
+  // The list is built before it is in the document, so defer the scroll until
+  // the browser can measure it.
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ block: 'center', behavior: 'auto' });
+  });
 }
 
 function announcementCtaLabel(entry: Announcement, locale: Locale): string {

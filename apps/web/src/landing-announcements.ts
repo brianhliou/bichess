@@ -1,7 +1,7 @@
 import './site-box.css';
 import './landing-announcements.css';
 import { localizeAnnouncement } from './announcement-i18n.js';
-import { type Announcement, announcements } from './announcements.js';
+import { type Announcement, announcementSlug, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { buildSiteBox } from './site-box.js';
@@ -57,6 +57,9 @@ export function buildLandingAnnouncements(locale: Locale = currentLocale()): HTM
 
 function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   const entry = localizeAnnouncement(source, locale);
+  // From `source`: the slug is built from the English headline so one anchor
+  // works in every locale (announcementSlug). `entry` is already translated.
+  const entryHref = `${localizedHref('/feed', locale)}#${announcementSlug(source)}`;
   const row = document.createElement('article');
   row.className = `landing-news-update landing-news-update-${entry.kind}`;
   row.dataset.announcementKind = entry.kind;
@@ -74,35 +77,31 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   // archive, while hovering it exposes the exact calendar date.
   const dateLink = document.createElement('a');
   dateLink.className = 'landing-news-date';
-  dateLink.href = localizedHref('/feed', locale);
+  dateLink.href = entryHref;
   dateLink.title = formatAnnouncementDate(entry.date, true, locale);
   const date = document.createElement('time');
   date.dateTime = entry.date;
   date.textContent = formatAnnouncementRelativeDate(entry.date, locale);
   dateLink.append(date);
 
-  // The headline is the row's link. It used to be a run of plain text ahead of
-  // the body in one paragraph, with a trailing "Read more." CTA carrying the
-  // href: nothing in the row read as a headline, and the CTA cost a line per
-  // row. The authored CTA label survives as the link's tooltip, and /feed still
-  // renders it inline.
+  // The headline links to this entry ON /feed, not to the feature it announces.
+  // The row clamps its body to one line, so every row ends in an ellipsis, and
+  // a reader who clicks a truncated headline is asking to read the rest, not to
+  // be dropped into /import. /feed renders the full body with the authored CTA
+  // inline, so the feature is still one click away, from a place where the
+  // reader has the whole update in front of them.
+  //
+  // It used to link straight to entry.href, and the only route to the full text
+  // was the small uppercase date. That inverted the affordances: the least
+  // prominent element in the row was the one that did what the row looked like
+  // it would do.
   const headline = document.createElement('p');
   headline.className = 'landing-news-headline';
-  if (entry.href) {
-    const link = document.createElement('a');
-    link.className = 'landing-news-link';
-    const external = /^https?:/.test(entry.href);
-    link.href = external ? entry.href : localizedHref(entry.href, locale);
-    if (external) {
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-    }
-    link.title = ctaLabel(entry, locale);
-    link.textContent = entry.headline;
-    headline.append(link);
-  } else {
-    headline.textContent = entry.headline;
-  }
+  const link = document.createElement('a');
+  link.className = 'landing-news-link';
+  link.href = entryHref;
+  link.textContent = entry.headline;
+  headline.append(link);
   content.append(dateLink, headline);
 
   if (entry.body) {
@@ -114,10 +113,6 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
 
   row.append(marker, content);
   return row;
-}
-
-function ctaLabel(entry: Announcement, locale: Locale): string {
-  return entry.cta ?? t('news.readMore', {}, locale);
 }
 
 function formatAnnouncementRelativeDate(iso: string, locale: Locale): string {
