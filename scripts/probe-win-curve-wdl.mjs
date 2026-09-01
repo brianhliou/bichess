@@ -7,10 +7,13 @@
 //   2. Would reading WDL instead of deriving win% from cp widen the measurable
 //      zone in won positions (the conversion-grading question)?
 //
-// Answers, as of 2026-09-01: (1) no -- the engine's model is far more confident,
-// in the same direction the outcome fit pointed; (2) no -- WDL saturates HARDER
-// than the clamped curve, pinning at W100.0 from about +5.5 material onward.
-// Both results are recorded in the analysis.ts header note.
+// Answers, as of 2026-09-01: (1) the engine's model is far more confident, in the
+// same direction the outcome fit pointed -- but DO NOT read that as corroboration.
+// A chess control (Stockfish 18 vs lichess's own chess constant) reproduces the
+// same divergence at equal or larger size, so it is a property of engine WDL
+// models, not a fact about xiangqi. See the analysis.ts note before citing this
+// script as evidence about WIN_PCT_K. (2) no -- WDL saturates HARDER than the
+// clamped curve, pinning at W100.0 from about +5.5 material onward.
 //
 //   node scripts/probe-win-curve-wdl.mjs                  # default sample
 //   node scripts/probe-win-curve-wdl.mjs --nodes 1000000  # one budget

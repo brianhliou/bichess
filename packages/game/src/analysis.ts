@@ -23,21 +23,43 @@
 // from +300 to +150 is graded slightly gentler than xiangqi practice justifies.
 // That is the least consequential region there is.
 //
-// SECOND SOURCE ON THE 1.69x, 2026-09-01. The verdict above stands -- nothing
-// here clears the "bigger corpus" bar, and nothing below changes a constant.
-// But the 1.69x is no longer a lone point estimate that a wide CI explains away.
-// Pikafish carries its OWN WDL model (`UCI_ShowWDL`, off by default; win rate
-// params are a cubic in material count, `to_cp` = 100 * v / a). Probed on real
-// positions it disagrees with the chess curve in the SAME direction and the SAME
-// band the 70-game fit did: at -168cp the chess curve gives the better side
-// 65.0%, Pikafish's WDL model gives it 91.7%. Two independent sources -- an outcome
-// fit on human games, and the engine's own model -- now say the chess constant
-// is too flat around 200-400cp. Near dead-equal (+/-75cp) the finding above is
-// unchallenged and the chess curve is still right.
+// ENGINE WDL IS NOT A SECOND SOURCE, 2026-09-01. Recorded because it looks like
+// one and is not, and the next person to notice it will think they have found
+// something. Pikafish carries its own WDL model (`UCI_ShowWDL`, off by default).
+// Probed on 243 positions from 23 real games it disagrees with the curve below
+// enormously, and in the SAME direction the 70-game outcome fit pointed: the gap
+// peaks at ~+31 win-points near 200cp (logistic 67.6% vs engine 98.5%), and
+// vanishes at equality (+0.7 in -75..+75, independently confirming the finding
+// above). Tempting to call that corroboration. It is not, for three reasons:
 //
-// Why that matters more than the note above implies: 200-400cp is ordinary
-// middlegame play, not an already-decided position. The "least consequential
-// region" framing holds for the >1000cp tail, not for this band.
+//   - IT IS NOT AN INDEPENDENT OBSERVATION. Pikafish's reported cp is DEFINED by
+//     its WDL model -- normalized eval, where 1.0 pawn means 0.5 win probability
+//     (its own FAQ). Comparing cp-derived win% against WDL compares one function
+//     with itself in two coordinate systems, plus lichess's curve.
+//   - WRONG POPULATION, AND THE ANSWER WAS PREDETERMINED. That WDL is fit to
+//     engine self-play at fishtest LTC, i.e. ~3400-strength conversion. A
+//     near-perfect-play curve is GUARANTEED steeper than any human curve, so the
+//     test could only ever come out one way. Sign agreement carries no
+//     information.
+//   - A CHESS CONTROL KILLS THE XIANGQI-SPECIFIC CLAIM. Stockfish 18 over 40
+//     master chess games (210 deep samples, identical pipeline) diverges from
+//     WIN_PCT_K by +21.2 / +31.9 / +24.9 / +17.9 across the same bands -- LARGER
+//     than xiangqi's. And that constant is not miscalibrated for chess; it is
+//     lichess's own chess constant fit on lichess human games. Per-engine,
+//     xiangqi wants a SMALLER correction than chess (0.83x) -- the opposite sign
+//     from the 1.69x. The divergence is a property of engine WDL models in
+//     general, not a fact about xiangqi.
+//
+// The reconciling K over 150-500cp is ~0.021 (5.7x), far outside the outcome
+// fit's bootstrap CI (0.0033-0.0114). Adopting anything near it collapses every
+// position past ~250cp to 99-100%, so +400 -> +200 would grade as a ~1-point
+// loss: it DESTROYS resolution in exactly the won-position region this note
+// calls the residual error. That is a regression, not a fix.
+//
+// So the 1.69x remains a lone point estimate inside a CI that contains the chess
+// constant, and what would settle it is unchanged: a bigger corpus of AMATEUR
+// games with known results, the population postgame analysis actually grades.
+// Evidence: `tmp/wdl-control-2026-09-01/` (untracked; xiangqi + chess samples).
 //
 // WDL IS NOT THE FIX -- MEASURED AND CLOSED OFF. The obvious next move is to
 // stop deriving win% from cp and read the engine's WDL instead. Do not: it
