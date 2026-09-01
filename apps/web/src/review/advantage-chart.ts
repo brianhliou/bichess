@@ -138,6 +138,14 @@ export function createAdvantageChart(
       height: `${VIEW_H / 2}`,
       fill: `url(#${blackZoneId})`,
     }),
+  );
+
+  // The axis and the phase dividers draw ABOVE the advantage fills. The fills are
+  // opaque, so anything under them is simply gone — which is what happened to the
+  // zero line and the Opening/Middlegame/Endgame dividers the moment they became
+  // solid. Appended further down, after the fills.
+  const axis = svg('g', { class: 'advantage-chart__axis' });
+  axis.append(
     svg('line', {
       x1: '0',
       y1: `${VIEW_H / 2}`,
@@ -159,7 +167,7 @@ export function createAdvantageChart(
     }
     for (const mark of marks) {
       if (mark.ply > 0) {
-        chart.append(
+        axis.append(
           svg('line', {
             x1: `${xOf(mark.ply).toFixed(1)}`,
             y1: '0',
@@ -207,7 +215,10 @@ export function createAdvantageChart(
   const dot = svg('circle', { r: '2.6', cx: '0', cy: '0', class: 'advantage-chart__dot' });
   const luckBand = svg('polygon', { points: '', class: 'advantage-chart__luck-band' });
   const ghostLine = svg('polyline', { points: '', class: 'advantage-chart__ghost' });
-  chart.append(luckBand, areaRed, areaBlack, ghostLine, line, cursor, dot);
+  // The luck band sits OVER the fills for the same reason the axis does: it is a
+  // translucent overlay meant to be read against them, and opaque fills would
+  // swallow it where it matters most (jieqi, where the reveal swings are large).
+  chart.append(areaRed, areaBlack, luckBand, axis, ghostLine, line, cursor, dot);
   plot.append(chart);
 
   // Hover readout (lichess: the chart scrubs under the pointer and names the move

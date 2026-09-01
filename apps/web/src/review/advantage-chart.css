@@ -45,15 +45,21 @@
   stop-color: var(--advantage-zone-ink);
   stop-opacity: 0;
 }
+/* The axis and dividers now cross opaque fills as well as bare ground, so they
+   are drawn in the page colour rather than a muted ink: a grey line disappears
+   into the black half, while the ground colour reads against every fill. */
+.advantage-chart__axis {
+  opacity: 0.5;
+}
 .advantage-chart__mid {
-  stroke: color-mix(in srgb, var(--site-muted) 45%, transparent);
+  stroke: var(--site-bg);
   stroke-width: 0.5;
 }
 /* Game-phase dividers + rotated segment labels (lichess: Opening / Middlegame /
    Endgame read downward at each phase start). Labels are HTML overlays so the
    non-uniform SVG scaling can't distort them. */
 .advantage-chart__phase {
-  stroke: color-mix(in srgb, var(--site-muted) 40%, transparent);
+  stroke: var(--site-bg);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -69,28 +75,28 @@
   pointer-events: none;
   user-select: none;
 }
-/* The advantage area wears the leading player's bound ink (clipped per half),
-   as a WASH rather than a solid. At full strength the two areas were a slab of
-   terracotta against a near-black smear, and the curve — the thing being
-   measured — had to fight both of them. Kept light, the areas read as ground and
-   the curve stays the figure. (The eval bar beside the board still uses these
-   inks at full strength; it is a two-tone readout, not a field.) */
+/* The advantage area wears the leading player's bound ink at FULL strength, flat
+   and opaque, the way the eval bar beside the board wears it. The lead is the one
+   thing this chart is about, so it gets a solid shape rather than a wash, and the
+   curve is the hard edge of that shape rather than a line laid over a tint. This
+   is the reason the axis, the phase dividers and the luck band all draw above the
+   fills (see advantage-chart.ts): under an opaque fill they would not exist. */
 .advantage-chart__area--red {
-  fill: color-mix(in srgb, #c0563f 38%, transparent);
+  fill: #c0563f;
 }
 .advantage-chart__area--black {
-  fill: color-mix(in srgb, #34302e 26%, transparent);
+  fill: #34302e;
 }
 /* Dark theme: a dark fill vanishes against the dark panel; Black's area reads as
    a light neutral instead (lichess dark does the same). */
 :root[data-effective-theme="dark"] .advantage-chart__area--black {
-  fill: color-mix(in srgb, #d8d2c6 30%, transparent);
+  fill: #d8d2c6;
 }
 :root[data-effective-theme="dark"] .advantage-chart__zone--black {
   --advantage-zone-ink: #d8d2c6;
 }
 :root[data-effective-theme="dark"] .advantage-chart__area--red {
-  fill: color-mix(in srgb, #d4674c 40%, transparent);
+  fill: #d4674c;
 }
 /* Jungle family (Jungle Chess + Flip Jungle): the "black" side is Blue, so its
    advantage area/zone wear the piece navy (lifted to read clearly as blue),
@@ -98,7 +104,7 @@
    neutral, so re-assert a lighter blue at higher specificity for dark mode. */
 .jungle-review .advantage-chart__area--black,
 .jungle-flip-review .advantage-chart__area--black {
-  fill: color-mix(in srgb, #34557a 32%, transparent);
+  fill: #34557a;
 }
 .jungle-review .advantage-chart__zone--black,
 .jungle-flip-review .advantage-chart__zone--black {
@@ -106,7 +112,7 @@
 }
 :root[data-effective-theme="dark"] .jungle-review .advantage-chart__area--black,
 :root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__area--black {
-  fill: color-mix(in srgb, #6b96c8 34%, transparent);
+  fill: #6b96c8;
 }
 :root[data-effective-theme="dark"] .jungle-review .advantage-chart__zone--black,
 :root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__zone--black {
@@ -131,13 +137,10 @@
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
-  /* One tight casing, not two. The doubled 1.4px halo this replaces was sized
-     for the old solid fills, where the curve crossed a mid-red slab above the
-     midline and a near-black one below and no single hue cleared 2:1 against all
-     four surfaces. The fills are washes now, so the halo only has to hold the
-     stroke apart from its own area fill, and at 0.8px it does that without the
-     embossed look the doubled blur gave the whole line. */
-  filter: drop-shadow(0 0 0.8px var(--site-bg));
+  /* No casing. A halo in the page colour reads as the fill fading out as it
+     approaches the curve, which is the opposite of what a solid fill is for: the
+     colour has to run all the way to the line. The contrast this used to buy is
+     bought instead by the fill being flat and the stroke sitting on its edge. */
 }
 /* The ply cursor is a hairline: it says WHERE you are, and at the old 1.5px in
    full accent it outweighed the curve, which says what happened. */

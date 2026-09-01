@@ -158,3 +158,33 @@ describe('advantage chart hover readout', () => {
     expect(tip(chart.el).textContent).toBe('-0.5');
   });
 });
+
+describe('advantage chart draw order', () => {
+  it('draws the axis, dividers and luck band above the advantage fills', () => {
+    const chart = createAdvantageChart(evals, { onJump: () => {}, phases: { middle: 1, end: 2 } });
+    chart.setLuckOverlay(new Map([[1, 20]]));
+    // The fills are OPAQUE, so anything painted under them does not exist. Nothing
+    // here fails visibly in a unit test and nothing fails loudly in a browser
+    // either — the zero line, the phase dividers and the jieqi luck band simply
+    // stop being on screen. Order is the only thing holding them there.
+    const svg = chart.el.querySelector('.advantage-chart__svg') as SVGSVGElement;
+    const order = [...svg.children].map((node) => node.getAttribute('class') ?? node.nodeName);
+    const at = (cls: string) => order.findIndex((name) => name.includes(cls));
+
+    const lastFill = Math.max(at('advantage-chart__area--'), at('advantage-chart__area'));
+    expect(lastFill).toBeGreaterThan(-1);
+    for (const above of ['advantage-chart__luck-band', 'advantage-chart__axis']) {
+      expect(at(above)).toBeGreaterThan(lastFill);
+    }
+    // ...and the curve, its cursor and the hover dot stay on top of all of it.
+    for (const top of [
+      'advantage-chart__line',
+      'advantage-chart__cursor',
+      'advantage-chart__dot',
+    ]) {
+      expect(at(top)).toBeGreaterThan(at('advantage-chart__axis'));
+    }
+    // The phase dividers ride inside the axis layer, not loose behind the fills.
+    expect(svg.querySelectorAll('.advantage-chart__axis .advantage-chart__phase').length).toBe(2);
+  });
+});
