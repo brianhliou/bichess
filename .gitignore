@@ -91,3 +91,8 @@ scripts/distribution/
 # xiangqi-puzzle-miner.ts). Local mining artifacts; the reviewed output is the
 # emitted packages/game/src/puzzles-xiangqi-mined.ts module.
 scripts/variant-lab/out/
+
+# Win-curve calibration corpus: re-harvestable third-party game records, not
+# redistributed here. The derived samples (scripts/data/win-curve-samples.json)
+# are what the fit needs and those ARE tracked. See scripts/calibrate-win-curve.mjs.
+scripts/data/win-curve-corpus/
