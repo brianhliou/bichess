@@ -22,6 +22,45 @@
 // So the residual error is confined to already-decided positions, where a drop
 // from +300 to +150 is graded slightly gentler than xiangqi practice justifies.
 // That is the least consequential region there is.
+//
+// SECOND SOURCE ON THE 1.69x, 2026-09-01. The verdict above stands -- nothing
+// here clears the "bigger corpus" bar, and nothing below changes a constant.
+// But the 1.69x is no longer a lone point estimate that a wide CI explains away.
+// Pikafish carries its OWN WDL model (`UCI_ShowWDL`, off by default; win rate
+// params are a cubic in material count, `to_cp` = 100 * v / a). Probed on real
+// positions it disagrees with the chess curve in the SAME direction and the SAME
+// band the 70-game fit did: at -168cp the chess curve gives the better side
+// 65.0%, Pikafish's WDL model gives it 91.7%. Two independent sources -- an outcome
+// fit on human games, and the engine's own model -- now say the chess constant
+// is too flat around 200-400cp. Near dead-equal (+/-75cp) the finding above is
+// unchallenged and the chess curve is still right.
+//
+// Why that matters more than the note above implies: 200-400cp is ordinary
+// middlegame play, not an already-decided position. The "least consequential
+// region" framing holds for the >1000cp tail, not for this band.
+//
+// WDL IS NOT THE FIX -- MEASURED AND CLOSED OFF. The obvious next move is to
+// stop deriving win% from cp and read the engine's WDL instead. Do not: it
+// saturates HARDER than the clamped curve. Probed down one real game at
+// 250k/1M/4M nodes, WDL pins at W100.0/D0.0/L0.0 from +5.5 material onward and
+// never moves again across a further 15 points of material, while the clamped cp
+// curve still climbs (87.6 -> 94.4 -> 97.3). Switching shrinks the measurable
+// zone. The deeper reason is structural: engine WDL is fit to how the ENGINE
+// converts, so it reports certainty exactly where a human review wants to grade
+// conversion difficulty. `scripts/probe-win-curve-wdl.mjs` reproduces the probe.
+//
+// Corollary for anything that wants to grade conversion in a won position: no
+// probability can do it, because the probability is genuinely ~1. Use quantities
+// that stay unsaturated there -- material conceded (xiangqi-exchange.ts, already
+// computed) and mate distance -- not a reshaped curve.
+//
+// REPRODUCIBILITY WARNING, 2026-09-01. `calibrate-win-curve.mjs` does NOT run as
+// committed: it imports from `~/projects/mistboard-champions-replay` (a worktree
+// that no longer exists) and reads its corpus from a session-scoped scratchpad
+// path that is now empty. Both halves of the 70-game evidence are gone; only
+// this note survives it. Anyone re-litigating starts by re-harvesting via
+// `dpxq-archive-harvest.mjs`, and should land the corpus somewhere durable
+// before spending the engine time.
 
 export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 
