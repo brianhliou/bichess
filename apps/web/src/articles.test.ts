@@ -85,28 +85,26 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // Draft, dated 2026-09-03, ahead of everything published. Out of the
-      // sitemap and noindex until it actually publishes.
+      // The three unpublished drafts, ahead of everything published. Out of the
+      // sitemap and noindex until they publish. The mining explainer was pulled
+      // FORWARD past both jieqi pages (2026-08-23 to 09-03) and the jieqi pair
+      // pushed back behind it, keeping their own order and two-day gap: the
+      // openings article links to the platform page, so it cannot land first.
       '/blog/jieqi-openings',
-      // Both drafts, both dated 2026-09-01: co-up is DERIVED from the platform
-      // page, so it inherits that date, and the tie breaks by title ('Cờ úp...'
-      // before 'Jieqi...'). Moving the platform page's date moves this one too.
-      '/blog/co-up',
       '/blog/jieqi-platform',
+      // jieqi-platform's Vietnamese derivation (co-up) inherits its date but
+      // never appears here: a page with sourceLang set is out of the index by
+      // rule, so moving that date still moves two articles, it just moves one
+      // of them somewhere this list cannot see.
+      '/blog/how-puzzle-mining-works',
       // The two champion articles, newest first. They shipped hours apart on
       // 2026-08-29 and are deliberately dated a day apart: two halves of one
       // argument landing on the same date read as a dump, and the world-title
       // piece is the one that answers the other.
       '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
-      // Draft, still 2026-08-28: the Vietnamese rules page is not derived from
-      // the platform page and keeps its own date.
-      '/blog/luat-co-up',
       '/blog/titled-players',
-      // Same publish date as the mining explainer; ties break alphabetically
-      // by title, and 'The Riverbank...' sorts before 'Where Mistboard...'.
       '/blog/riverbank-cannon',
-      '/blog/how-puzzle-mining-works',
       '/blog/skill-vs-luck',
       '/blog/fog-openings',
       '/blog/misty',
@@ -114,6 +112,19 @@ describe('article public listing gates', () => {
       '/blog/server-enforced-fog',
       '/blog/fog-chess-concepts',
     ]);
+  });
+
+  it('keeps Vietnamese pages out of the index, in every locale, drafts included', () => {
+    // They are not hidden, they are unlisted: search and the sitemap are their
+    // discovery path, and they stay reachable by direct URL. An English index
+    // card for a Vietnamese page is noise to both readers.
+    vi.stubEnv('DEV', true);
+
+    for (const locale of [undefined, 'zh-Hans', 'zh-Hant'] as const) {
+      const index = buildArticlesIndex(locale);
+      expect(index.querySelector('.articles-index-card[href$="/blog/co-up"]')).toBeNull();
+      expect(index.querySelector('.articles-index-card[href$="/blog/luat-co-up"]')).toBeNull();
+    }
   });
 
   it('keeps only working Community and By Mistboard blog navigation', () => {

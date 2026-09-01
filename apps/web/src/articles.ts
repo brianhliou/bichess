@@ -121,6 +121,16 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
   if (article.showInIndex === false) return false;
+  // A page written in a language the interface does not speak never lists here.
+  // The index is one reader's shelf, and a Vietnamese card in an English list is
+  // noise to everyone: an English reader cannot read it, and a Vietnamese reader
+  // never sees the list, because they arrive from a search for `luật cờ úp`
+  // straight onto the page. Search and the sitemap are the discovery path for
+  // these, plus a link from the English original; the index is not.
+  //
+  // Structural rather than per-file (`showInIndex: false` on each) so the next
+  // translated page cannot forget it.
+  if (article.sourceLang) return false;
   if (
     article.kind === 'rules' &&
     !rulesSlugPublicSurfaceEnabled(article.gameSpecId ?? article.slug)

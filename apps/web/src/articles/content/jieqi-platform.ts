@@ -24,6 +24,50 @@ import type { Article, ArticleBlock } from '../types.js';
 // a change to JIEQI_ANALYSIS_DEPTH invalidates them (the cache key carries depth)
 // and they have to be re-shot. That has already bitten once.
 
+// Text card in the family TITLED_PLAYERS_THUMBNAIL started and CHAMPIONS carried
+// on: CJK eyebrow, one English mark, a quieter line under it. Same geometry,
+// palette and type colours on purpose.
+//
+// The mark is English for the reason recorded on the champions card: the reader
+// is a chess player who does not read hanzi, and at 158px in the index row a
+// second line falls to about 8px, so the one legible thing must be a word they
+// can decode. 揭棋 rides above as an eyebrow, saying "Chinese" without needing
+// to be read.
+//
+// The disc row is the departure, and it earns its place: it is the only element
+// that says what jieqi IS. Four cards of pure type in one index read as one
+// card, and a face-down disc is this game's whole premise. Discs use the board
+// renderer's own shrouded fills (#a95f4a red, #2f7d62 black) rather than
+// approximations, so the card and the boards inside the article agree.
+//
+// Not a board: the openings article next to it in the index already shows the
+// jieqi start position, and two boards of face-down discs side by side are one
+// card twice.
+const JIEQI_PLATFORM_THUMBNAIL = [
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
+  'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
+  'aria-label="A card reading Jieqi, every piece face down, over a row of face-down pieces">',
+  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+  '<text x="160" y="52" text-anchor="middle" font-family="\'Noto Sans SC\', ',
+  '\'PingFang SC\', \'Hiragino Sans GB\', \'Microsoft YaHei\', system-ui, sans-serif" ',
+  'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" ',
+  'opacity="0.5">\u63ed\u68cb</text>',
+  '<text x="160" y="108" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+  'font-size="40" font-weight="700" fill="#b9832f">JIEQI</text>',
+  '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+  'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
+  'EVERY PIECE FACE DOWN</text>',
+  ...[0, 1, 2, 3, 4, 5, 6].map((i) => {
+    const red = i % 2 === 0;
+    return [
+      `<circle cx="${64 + i * 32}" cy="172" r="12" `,
+      `fill="${red ? '#a95f4a' : '#2f7d62'}" `,
+      `stroke="${red ? '#6f342c' : '#174536'}" stroke-width="2"/>`,
+    ].join('');
+  }),
+  '</svg>',
+].join('');
+
 export const jieqiPlatformArticle: Article = {
   slug: 'jieqi-platform',
   kind: 'article',
@@ -35,8 +79,9 @@ export const jieqiPlatformArticle: Article = {
     'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.',
   showSummaryOnPage: false,
   status: 'draft',
-  publishedAt: '2026-09-01',
+  publishedAt: '2026-09-06',
   audience: 'Jieqi players looking for somewhere to play and review their games.',
+  thumbnail: { kind: 'svg', svg: JIEQI_PLATFORM_THUMBNAIL },
   intro: [
     {
       kind: 'paragraph',
