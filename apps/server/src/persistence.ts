@@ -100,6 +100,7 @@ export type {
   SeekVisibility,
 } from './persistence-correspondence-seeks.js';
 export {
+  correspondenceStartRecipient,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   deleteCorrespondenceSeek,

@@ -2,6 +2,10 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { DARK_CHESS_SPEC_ID, DAY_MS } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
+import {
+  type CorrespondenceStartNotice,
+  notifyCorrespondenceStart,
+} from './../correspondence-start-email.js';
 import { correspondenceEnabled } from './../feature-flags.js';
 import type { SeekColorPreference, SeekVisibility, UserAccount } from './../persistence.js';
 import * as persistence from './../persistence.js';
@@ -347,6 +351,32 @@ async function createSeek(
   return true;
 }
 
+/**
+ * Who the "your seek was accepted" email goes to, and what it says. Split out
+ * of acceptSeek so the mapping is testable without a socket, a database, or a
+ * mail provider: the failure that matters here is a silent one — swapping the
+ * two players, or inverting who owes the first move, still sends a
+ * plausible-looking email to the wrong person.
+ *
+ * `creatorSide` is move order, already resolved (a 'random' seek has had its
+ * coin flipped by this point), so the creator owes move 1 exactly when they
+ * took the first side.
+ */
+export function correspondenceStartNoticeFor(
+  roomId: string,
+  seek: { creatorUserId: string; daysPerMove: number },
+  accepter: { displayName: string; handle: string },
+  creatorSide: 'first' | 'second',
+): CorrespondenceStartNotice {
+  return {
+    roomId,
+    creatorUserId: seek.creatorUserId,
+    accepterName: accepter.displayName || accepter.handle,
+    creatorOnMove: creatorSide === 'first',
+    daysPerMove: seek.daysPerMove,
+  };
+}
+
 async function acceptSeek(
   ctx: HttpApiContext,
   user: UserAccount,
@@ -424,6 +454,11 @@ async function acceptSeek(
     writeJson(response, status, { error: created.error });
     return true;
   }
+  // The creator posted this seek and left; nothing else will tell them it was
+  // taken. Fire-and-forget on purpose: the seated game is the durable outcome,
+  // so a mail provider outage must never turn a successful accept into an error
+  // for the accepter, who is right here watching this response.
+  notifyCorrespondenceStart(correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide));
   writeJson(response, 201, {
     roomId: created.room.id,
     url: `/room/${encodeURIComponent(created.room.id)}`,

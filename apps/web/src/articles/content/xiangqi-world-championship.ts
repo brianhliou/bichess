@@ -855,7 +855,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. They are findings by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.',
+          text: 'The rulings came out of the match-fixing case the Chinese press calls 录音门, the recording gate, which the Chinese Xiangqi Association worked through between 2024 and 2026. It has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources. The findings are by the sport’s own governing body rather than allegations, and they are about those players’ careers rather than about specific world championship games.'
         },
         {
           kind: 'paragraph',

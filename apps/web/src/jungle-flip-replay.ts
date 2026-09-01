@@ -14,6 +14,7 @@ import {
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleFlipSquare,
+  jungleFlipLastMoverInk,
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import type { JungleFlipReplaySpec } from './articles/types.js';
@@ -178,6 +179,7 @@ export function mountJungleFlipReplay(
     const view = getJungleFlipPlayerView(states[index]!, 'red');
     frame.innerHTML = renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
       lastMove: view.lastMove ?? null,
+      lastMoveInk: jungleFlipLastMoverInk(view),
     });
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;

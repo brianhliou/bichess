@@ -826,10 +826,24 @@ export async function serveArticlesIndexPage(params: {
   langPrefix?: string;
   view?: 'community' | 'mistboard';
 }): Promise<void> {
-  const indexPath = resolve(params.staticDir, 'index.html');
-  let html = await fs.readFile(indexPath, 'utf-8');
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
+
+  // The default-locale post list is prerendered (blog.html). The localized
+  // indexes and the community view are not, and stay on the shell below.
+  if (langKey === 'en' && params.view !== 'community') {
+    const prerendered = await fs
+      .readFile(resolve(params.staticDir, 'blog.html'), 'utf-8')
+      .catch(() => null);
+    if (prerendered !== null) {
+      params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      params.response.end(prerendered);
+      return;
+    }
+  }
+
+  const indexPath = resolve(params.staticDir, 'index.html');
+  let html = await fs.readFile(indexPath, 'utf-8');
   const meta = ARTICLES_INDEX_META[langKey];
   if (langKey !== 'en') {
     html = html.replace('<html lang="en">', `<html lang="${meta.htmlLang}">`);

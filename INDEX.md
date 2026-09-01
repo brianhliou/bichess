@@ -14,6 +14,7 @@ Edit task → find file → open only that file.
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
 | `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, shogi, jungle, military-chess, ...), board geometries, movement/objective rules, and the open / dark / hidden-identity visibility axis that fail-closed variant dispatch keys on |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
+| `js-compat.ts` | `hasOwnKey` / `deepCloneJson`: shims for builtins newer than the browsers that actually reach us (`Object.hasOwn` needs Chrome 93, `structuredClone` Chrome 98). Vite's `build.target` lowers syntax only, never builtins, so a too-new global ships verbatim and throws on load; Chrome 92 / Android hard-failed `/puzzles` this way in Aug 2026. `apps/web/src/web-builtin-floor.test.ts` fails the build if either builtin returns to client code |
 | `engine-protocol.ts` | Public redacted engine request/response contract shared by server and external/first-party engines |
 | `bughouse-engine-protocol.ts` | Draft Chess Bughouse partner-bot request/response contract, validators, seat/team mappings, clocks, legal actions, reserve needs, and cross-seat signaling rules |
 | `bughouse-engine-protocol.fixtures.ts` | JSON-stable partner-bot protocol fixtures for engine-side contract tests and Mistboard/server validation |
@@ -324,6 +325,7 @@ Edit task → find file → open only that file.
 | `variant-tenant/registry.ts` | `VariantTenant` registry — variant-type-erased routing (kind/gameSpecId/roomIdPrefix/flag + bound closures); the dispatch extension point for `index.ts` sweeps, ws runtime resolver, `/api/rooms` create, `/api/lobby` matcher |
 | `variant-tenant/register-tenants.ts` | The single side-effect import that populates the registry (imports each `*-registration.ts`). Adding a variant = adding its registration import here |
 | `variant-tenant/deadline-sweeper.ts` | Interval sweeper for durable correspondence deadlines: lists due `room_deadlines` rows, routes each to its tenant's `sweepDueDeadline`, which re-derives the deadline from the hydrated room before acting |
+| `correspondence-start-email.ts` | "Your seek was accepted" email: the only signal a seek creator who walked away gets that their game exists. Once per game, to the creator only; opt-out via `correspondenceStartEmail` |
 | `correspondence-deadline-warning.ts` | Correspondence deadline-warning email: decides whether a game's warning lead is reached, sends via the shared Resend helper, marks the row to send once per deadline |
 | `send-email.ts` | Shared Resend transactional-email sender — the single wire call to the email provider (auth codes, feedback, engine alerts, correspondence nudges). Never logs (API key must not leak); policy stays caller-owned |
 | `persistence-room-deadlines.ts` | `room_deadlines` persistence: durable index for correspondence deadline enforcement (upsert per event, delete on terminal); the event log stays source of truth |
@@ -580,6 +582,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `landing-showcase.ts` | Homepage replay showcase catalog and hero POV selection for the landing replay loop |
 | `watch-route.ts` | `/watch` route mount: watch feed fetch/polling, replay mounting, status/empty state, channel links, and replay queue rendering. Prioritizes the center replay before starting its two queue previews. Loads `watch-route.css` |
 | `watch-board-aspect.ts` | Per-variant board display ratios used to pre-size the renderer-swap skeleton, so a `/watch` channel switch reserves the incoming board's box instead of shifting layout twice. Cosmetic only; unknown specs fall back to a neutral square |
+| `web-builtin-floor.test.ts` | Scans `apps/web/src` + `packages/game/src` for JS builtins above the browser floor and fails with the offending file. The guard for `js-compat.ts`; six `Object.hasOwn` call sites had accumulated before a Chrome 92 crash on `/puzzles` surfaced them |
 | `watch-route.css` | `/watch` route styles, including watch replay sizing, status, channel links, empty state, queue, and responsive route layout |
 | `xiangqi-broadcast.ts` | Public xiangqi tournament broadcast routes: index, tour, round, and board replay pages fed by `/api/xiangqi/broadcasts/*`; subscribes to SSE snapshot streams for round/board live updates |
 | `xiangqi-broadcast.css` | Xiangqi broadcast route layout: tournament index/status rows, round rows, board replay controls, move list, and responsive viewer polish |

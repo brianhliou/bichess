@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { EMBED_DEFAULT_HEIGHT, EMBED_DEFAULT_WIDTH } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { embedThemeFromSearch } from './embed-route.js';
+import { embedNotationFromSearch, embedThemeFromSearch } from './embed-route.js';
 
 // The default size is not a taste question, it is a claim about a layout that
 // lives in a stylesheet, and the two drifted apart: the replay stacks its move
@@ -66,5 +66,27 @@ describe('embedThemeFromSearch', () => {
     // 'system' is the default already; naming it must not pin anything, or the
     // OS-change listener would stop updating a document that asked to follow.
     expect(embedThemeFromSearch('?theme=system')).toBeNull();
+  });
+});
+
+describe('embedNotationFromSearch', () => {
+  // Same problem as theme, one layer down: an embed's reader is on the
+  // embedder's page and has no stored Mistboard preference, so every embed
+  // renders the site's coordinate default. Fine for a visitor, wrong for an
+  // endgame article, where the manuals are written in WXF and Chinese.
+  it('reads a pinned notation off the query string', () => {
+    expect(embedNotationFromSearch('?notation=wxf')).toBe('wxf');
+    expect(embedNotationFromSearch('?notation=chinese')).toBe('chinese');
+    expect(embedNotationFromSearch('?notation=iccs')).toBe('iccs');
+    expect(embedNotationFromSearch('?notation=coordinate')).toBe('coordinate');
+    expect(embedNotationFromSearch('?theme=light&notation=wxf')).toBe('wxf');
+  });
+
+  it('follows the reader when the embedder says nothing, or says nonsense', () => {
+    expect(embedNotationFromSearch('')).toBeNull();
+    expect(embedNotationFromSearch('?theme=light')).toBeNull();
+    expect(embedNotationFromSearch('?notation=')).toBeNull();
+    expect(embedNotationFromSearch('?notation=WXF')).toBeNull();
+    expect(embedNotationFromSearch('?notation=中文')).toBeNull();
   });
 });

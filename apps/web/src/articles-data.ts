@@ -42,6 +42,7 @@ import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog
 import { shogiArticle } from './articles/content/shogi.js';
 import { shogi4Article } from './articles/content/shogi4.js';
 import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js';
+import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
 import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-world-championship.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
@@ -59,6 +60,7 @@ export const articles: Article[] = [
   darkDraft960Article,
   xiangqiArticle,
   xiangqiChampionsArticle,
+  xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,
   miniXiangqiArticle,

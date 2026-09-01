@@ -256,7 +256,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  /* 10px, not 12: it is the icon-to-label gap the account rows use, and the two
+     lists sit in one dropdown. Rows with no icon are unaffected. */
+  gap: 10px;
   width: 100%;
   border: 0;
   border-radius: 0;
@@ -299,6 +301,25 @@
 
 .account-nav[data-account-nav-view="root"] .appearance-menu-root .appearance-menu-row {
   border-radius: 0;
+}
+
+/* Only the Language row carries a glyph (see theme-settings-panel.ts). Sized and
+   coloured to match the account-menu rows above it in the profile dropdown, so
+   the two icon columns line up; the label takes the slack so the chevron stays
+   pinned right on rows with and without an icon. */
+.appearance-menu-row-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--site-muted);
+}
+
+.appearance-menu-row:hover .appearance-menu-row-icon,
+.appearance-menu-row:focus-visible .appearance-menu-row-icon {
+  color: currentColor;
+}
+
+.appearance-menu-row-label {
+  flex: 1 1 auto;
 }
 
 /* Right-pointing chevron in the accent color, mirroring the lichess rows. */

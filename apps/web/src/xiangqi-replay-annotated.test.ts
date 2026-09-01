@@ -98,6 +98,30 @@ test('clicking into the line steps the board, and arrows walk the line not the g
   c.destroy();
 });
 
+// The exit above clicks a DIFFERENT mainline move than the one the line belongs
+// to, which is the one case that always worked: the repaint was gated on the
+// mainline cursor moving. Opening a line leaves that cursor on the owning move,
+// so clicking it did nothing and a reader deep in a sideline was stuck.
+test('clicking the move the line hangs off returns to the game', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 3: { glyph: '??', cp: -420, line: 'b0c2 c9e7 a0b0' } } },
+  });
+  // The flow that breaks: step onto the judged move first (which is how a
+  // reader notices the ?? at all), then walk into the line beneath it.
+  (mainButtons(el)[2] as HTMLButtonElement).click();
+  (branchButtons(el)[0] as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
+  (el.querySelector('.stepper-button-next') as HTMLButtonElement).click();
+  expect(branchButtons(el)[2]?.className).toContain('is-current');
+
+  // Ply 3 is both the current mainline ply and the move the branch belongs to.
+  (mainButtons(el)[2] as HTMLButtonElement).click();
+  expect(el.querySelector('.xq-replay-branch .is-current')).toBeNull();
+  expect(mainButtons(el)[2]?.className).toContain('is-current');
+  c.destroy();
+});
+
 // A line that does not replay legally (a stale annotation against a corrected
 // record) must truncate rather than throw or notate a move that cannot be made.
 test('an illegal continuation truncates the branch', () => {
@@ -349,4 +373,57 @@ test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
     expect(cy + r, `${label} crosses the bottom edge`).toBeLessThanOrEqual(vh + 0.5);
   }
   c.destroy();
+});
+
+// Clicking to the end of a game disables the "next" control, and a browser hands
+// focus back to the document when the focused element is disabled. The arrow keys
+// are bound to the widget host, so they went dead at exactly the moment a reader
+// arrives at the last move and wants to step back through it.
+//
+// jsdom does NOT blur on disable, so these cannot reproduce the browser's part of
+// it. What they pin is the fix's observable effect: when a control the reader was
+// on becomes disabled, focus lands on the host, which is the element listening for
+// the arrow keys. Without the handoff, focus stays on the dead button.
+test('hands focus to the host when stepping onto the last move disables next', () => {
+  mountXiangqiReplay(el, { ...base });
+  const next = el.querySelector<HTMLButtonElement>('.stepper-button-next');
+  expect(next, 'no next control').toBeTruthy();
+
+  for (let i = 0; i < 4; i += 1) {
+    next?.focus();
+    next?.click();
+  }
+  expect(next?.disabled, 'next should be spent at the last move').toBe(true);
+  expect(document.activeElement, 'focus was left on the dead button').toBe(el);
+
+  // And the key the reader reaches for next still moves the game.
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  expect(next?.disabled, 'ArrowLeft did not step back off the last move').toBe(false);
+});
+
+test('does the same at ply zero, where prev is the control that disables', () => {
+  mountXiangqiReplay(el, { ...base });
+  const next = el.querySelector<HTMLButtonElement>('.stepper-button-next');
+  const prev = el.querySelector<HTMLButtonElement>('.stepper-button-prev');
+  next?.focus();
+  next?.click();
+  prev?.focus();
+  prev?.click();
+  expect(prev?.disabled, 'prev should be spent at the start').toBe(true);
+  expect(document.activeElement, 'focus was left on the dead button').toBe(el);
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(prev?.disabled, 'ArrowRight did not step forward off ply zero').toBe(false);
+});
+
+test('leaves focus alone while the control the reader is on stays alive', () => {
+  mountXiangqiReplay(el, { ...base });
+  const next = el.querySelector<HTMLButtonElement>('.stepper-button-next');
+  const prev = el.querySelector<HTMLButtonElement>('.stepper-button-prev');
+  next?.click();
+  next?.click();
+  // Mid-game: prev is live and stays live, so stepping must not yank focus off it.
+  prev?.focus();
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(prev?.disabled, 'prev should still be live mid-game').toBe(false);
+  expect(document.activeElement, 'focus moved when it did not have to').toBe(prev);
 });

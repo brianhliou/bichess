@@ -114,58 +114,66 @@ export function jungleFaceDownDiscSvg(
   return `${open}<circle cx="${cx}" cy="${cy}" r="${cell * radiusRatio}" fill="${fill}" stroke="${stroke}" stroke-width="${cell * strokeRatio}"/></g>`;
 }
 
-/** Last-move mark spec shared by Jungle AND Flip Jungle (one ratio set so the two
- *  boards never drift apart again). Same grammar and circular geometry as the
- *  xiangqi boards: a darker shadow disc at the origin and a calm gold halo around
- *  the destination piece. Concrete colours (no CSS vars) keep the marks visible in
- *  standalone SVGs such as OG cards. */
+/** Last-move mark spec shared by Jungle AND Flip Jungle (one spec so the two
+ *  boards never drift apart again).
+ *
+ *  These boards place pieces in CELL CENTRES, so the mark tints the whole cell
+ *  rather than ringing the piece -- the same call banqi makes, and for the same
+ *  reason: a circular mark on a cell board either traces the grid line or has to
+ *  be squeezed into the few units between the piece and the cell edge. A tint is
+ *  bounded by the cell by construction.
+ *
+ *  The tint carries the MOVER's ink. On a normal move the piece that landed
+ *  already says who moved, but Flip Jungle turns up a RANDOM tile whose colour
+ *  is independent of the flipper, so a flip otherwise carries no signal at all.
+ *
+ *  EVERY alpha lives in the rgba colour, never in `opacity`: the arrival
+ *  animation fades element opacity 0 -> 1, and a mark with a resting opacity
+ *  below 1 flashes solid and then snaps back. Concrete colours (no CSS vars)
+ *  keep the marks visible in standalone SVGs such as OG cards.
+ */
 export const JUNGLE_LAST_MOVE = {
-  /** Origin shadow radius ÷ cell, matching xiangqi's piece-sized shadow disc. */
-  fromRadiusRatio: 0.45,
-  /** Destination halo radius ÷ cell (26 on xiangqi's 60-unit grid). */
-  ringRadiusRatio: 26 / 60,
-  /** Destination gold ring stroke ÷ cell. */
-  ringRatio: 4 / 60,
-  /** Dark under-edge stroke ÷ cell (peeks ~half a px around the gold so the ring
-   *  stays legible on busy terrain: grass, water, den, trap). */
-  edgeRatio: 0.1,
-  /** A flip has no origin, so it gets one extra outer halo to make the singular
-   *  reveal action as legible as a two-endpoint move. */
-  revealRadiusRatio: 0.475,
-  revealRingRatio: 0.045,
-  /** Calm gold, the platform highlight family (app-base --board-highlight). */
-  ring: '#e3b34d',
-  edge: 'rgba(32,21,3,0.5)',
-  /** Origin shadow fill: the token drop-shadow ink (#3a2c20) as a translucent
-   *  disc fill, reading as "the piece came from here". */
-  fromFill: 'rgba(58,44,32,0.36)',
+  /** Border on a flip's single cell, ÷ cell. */
+  flipStrokeRatio: 3 / 48,
+  /** Tints keyed by the ink that ACTED. `null` is the pre-binding fallback. */
+  fill: {
+    red: { from: 'rgba(181,50,43,0.20)', to: 'rgba(181,50,43,0.38)' },
+    // JungleColor calls this side 'black', but it inks as navy (#28323c) and
+    // reads as blue on the board, so the tint follows the ink, not the name.
+    black: { from: 'rgba(22,78,150,0.28)', to: 'rgba(22,78,150,0.5)' },
+    none: { from: 'rgba(227,179,77,0.26)', to: 'rgba(227,179,77,0.44)' },
+  },
+  stroke: {
+    red: 'rgba(140,32,26,0.38)',
+    black: 'rgba(20,38,60,0.44)',
+    none: 'rgba(227,179,77,0.44)',
+  },
 } as const;
 
-function lastMoveCenterAttrs(x: number, y: number, cell: number): string {
-  return `cx="${x + cell / 2}" cy="${y + cell / 2}"`;
-}
+export type JungleLastMoveInk = 'red' | 'black' | null;
+export type JungleLastMoveKind = 'from' | 'to' | 'flip';
 
-/** Origin (from) last-move mark: a subtle darker shadow disc on the vacated cell. */
-export function jungleLastMoveFromSvg(x: number, y: number, cell: number): string {
-  return `<circle class="jungle-last-move-from" ${lastMoveCenterAttrs(x, y, cell)} r="${cell * JUNGLE_LAST_MOVE.fromRadiusRatio}" fill="${JUNGLE_LAST_MOVE.fromFill}"/>`;
-}
-
-/** Destination (to) last-move mark: a thin gold ring over a slim dark under-edge. */
-export function jungleLastMoveToSvg(x: number, y: number, cell: number): string {
-  const attrs = lastMoveCenterAttrs(x, y, cell);
-  const radius = cell * JUNGLE_LAST_MOVE.ringRadiusRatio;
-  const edge = cell * JUNGLE_LAST_MOVE.edgeRatio;
-  const ring = cell * JUNGLE_LAST_MOVE.ringRatio;
-  return (
-    `<circle class="jungle-last-move-ring-edge" ${attrs} r="${radius}" fill="none" stroke="${JUNGLE_LAST_MOVE.edge}" stroke-width="${edge}"/>` +
-    `<circle class="jungle-last-move-ring" ${attrs} r="${radius}" fill="none" stroke="${JUNGLE_LAST_MOVE.ring}" stroke-width="${ring}"/>`
-  );
-}
-
-/** A self-move flip: the destination halo plus a slim outer reveal halo. */
-export function jungleLastMoveRevealSvg(x: number, y: number, cell: number): string {
-  return (
-    jungleLastMoveToSvg(x, y, cell) +
-    `<circle class="jungle-last-move-reveal" ${lastMoveCenterAttrs(x, y, cell)} r="${cell * JUNGLE_LAST_MOVE.revealRadiusRatio}" fill="none" stroke="${JUNGLE_LAST_MOVE.ring}" stroke-width="${cell * JUNGLE_LAST_MOVE.revealRingRatio}"/>`
-  );
+/**
+ * One last-move cell tint. `x`/`y` are the cell's top-left corner.
+ *
+ * A flip's border straddles the rect edge, so its rect comes in by half the
+ * stroke -- an un-inset border paints its outer half into the next cell, which
+ * is the whole failure a cell-bounded mark exists to avoid.
+ */
+export function jungleLastMoveCellSvg(
+  x: number,
+  y: number,
+  cell: number,
+  kind: JungleLastMoveKind,
+  ink: JungleLastMoveInk,
+): string {
+  const key = ink ?? 'none';
+  const flip = kind === 'flip';
+  const inset = flip ? (cell * JUNGLE_LAST_MOVE.flipStrokeRatio) / 2 : 0;
+  const span = cell - inset * 2;
+  const fill = JUNGLE_LAST_MOVE.fill[key][kind === 'from' ? 'from' : 'to'];
+  const border = flip
+    ? ` stroke="${JUNGLE_LAST_MOVE.stroke[key]}" stroke-width="${cell * JUNGLE_LAST_MOVE.flipStrokeRatio}"`
+    : '';
+  return `<rect class="jungle-last-move-${kind}" x="${x + inset}" y="${y + inset}" width="${span}" height="${span}" fill="${fill}"${border}/>`;
 }

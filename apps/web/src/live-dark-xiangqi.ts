@@ -26,6 +26,7 @@ import type {
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import './live-xiangqi.css';
+import { type BoardPoint, boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
@@ -434,16 +435,41 @@ function fogLayer(view: DarkXiangqiWireView, perspective: XiangqiColor, maskId: 
   );
 }
 
+// Same origin-wash + destination-halo grammar as the open board
+// (xiangqi-board.ts), through the same shared geometry -- fog changes what a
+// viewer may be told, not how a move is drawn. Until 2026-08-30 this board drew
+// a symmetric pair of plain amber discs while every other token board drew the
+// directional pair, so the same event looked like two different things
+// depending on which room you were in.
+//
+// The per-endpoint null is a guard, not the operative filter. The SERVER is
+// what enforces the hidden-info rule here, and it is stricter than visibility:
+// getDarkXiangqiClientView drops lastMove wholesale unless the viewing seat is
+// the one that moved (dark-xiangqi-runtime.test.ts pins that red gets no
+// lastMove even when the destination square is in its visibleSquares). So in a
+// live room these marks describe your own move; the half-visible case only
+// arises where the reveal widens -- postgame, /watch replay. Draw nothing for a
+// square this view cannot see anyway: a render path that can only ever be fed
+// safe input is one refactor away from being fed unsafe input.
 function lastMoveLayer(view: DarkXiangqiWireView, perspective: XiangqiColor): string {
   if (!view.lastMove) return '';
-  return [view.lastMove.from, view.lastMove.to]
-    .filter((square) => view.visibleSquares.includes(square))
-    .map((square) => {
-      const coord = coordOf(square);
-      const center = intersection(coord.file, coord.rank, perspective);
-      return `<circle class="xq-live-lastmove-cell" cx="${center.x}" cy="${center.y}" r="27"/>`;
-    })
-    .join('');
+  return boardLastMoveMarkersSvg(
+    {
+      from: visibleLastMoveCenter(view, view.lastMove.from, perspective),
+      to: visibleLastMoveCenter(view, view.lastMove.to, perspective),
+    },
+    PIECE_SIZE,
+  );
+}
+
+function visibleLastMoveCenter(
+  view: DarkXiangqiWireView,
+  square: XiangqiSquare,
+  perspective: XiangqiColor,
+): BoardPoint | null {
+  if (!view.visibleSquares.includes(square)) return null;
+  const coord = coordOf(square);
+  return intersection(coord.file, coord.rank, perspective);
 }
 
 function selectionLayer(square: XiangqiSquare | null, perspective: XiangqiColor): string {

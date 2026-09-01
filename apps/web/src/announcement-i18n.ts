@@ -13,6 +13,7 @@
 //
 // Variant names follow the play catalog exactly (variant.*.name), so a reader
 // sees the same term in the feed and in the lobby.
+import { hasOwnKey } from '@mistboard/game';
 import type { Announcement } from './announcements.js';
 import type { Locale } from './i18n/locale.js';
 
@@ -494,7 +495,7 @@ export function localizeAnnouncement(entry: Announcement, locale: Locale): Annou
 }
 
 export function hasAnnouncementTranslation(lang: AnnouncementLang, text: string): boolean {
-  return Object.hasOwn(ANNOUNCEMENT_DICTS[lang], text);
+  return hasOwnKey(ANNOUNCEMENT_DICTS[lang], text);
 }
 
 export function announcementTranslationKeys(lang: AnnouncementLang): string[] {

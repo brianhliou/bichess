@@ -622,7 +622,7 @@ export function installFortressXiangqiBoardStyles(): void {
       aspect-ratio: 516 / 588;
       width: 100%;
       min-height: 0;
-      border-radius: 10px;
+      border-radius: var(--board-corner-radius);
       overflow: hidden;
       box-shadow: 0 18px 50px rgba(37, 31, 24, 0.16);
     }

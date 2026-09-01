@@ -186,6 +186,26 @@ describe('forum pages', () => {
     expect(reports?.getAttribute('href')).toBe('/forum/reports');
   });
 
+  // The forum home was the last surface handing out the Discord invite: it left
+  // the top nav 2026-08-28 and the homepage footer and this page on 2026-08-31,
+  // because the room is not ready to be promoted. Held as a test because the
+  // link moved three times in five days.
+  it('hands out no Discord invite from the forum home', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForum } = await import('./forum.js');
+
+    await mountForum(root);
+
+    expect(root.querySelector('.forum-panel-actions')).not.toBeNull();
+    expect(root.querySelector('a[href^="https://discord.gg/"]')).toBeNull();
+  });
+
   it('renders a selected category as a focused topic view', async () => {
     const fetchedUrls: string[] = [];
     window.history.pushState(null, '', '/forum/general-discussion');

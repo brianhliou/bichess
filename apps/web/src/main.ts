@@ -1,5 +1,9 @@
 import './app-base.css';
-import { embedStudyRouteFromPath, embedThemeFromSearch } from './embed/embed-route.js';
+import {
+  embedNotationFromSearch,
+  embedStudyRouteFromPath,
+  embedThemeFromSearch,
+} from './embed/embed-route.js';
 import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
@@ -36,6 +40,7 @@ import {
   webVariantTenantForRoomId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
+import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 // Installed before anything else so EVERY later dynamic import — including
 // post-bootstrap lazy loads on long-lived tabs (/watch) that no per-mount guard
@@ -79,6 +84,10 @@ const isEmbedDocument =
 if (isEmbedDocument) {
   const pinned = embedThemeFromSearch(window.location.search);
   if (pinned) pinSiteTheme(pinned);
+  // Same idea for move labels: an embed's reader has no stored preference, so
+  // without this every embed shows the coordinate default.
+  const notation = embedNotationFromSearch(window.location.search);
+  if (notation) pinXiangqiNotation(notation);
 }
 
 // The account nav renders localized labels, so it waits for the locale chunk

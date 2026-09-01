@@ -48,6 +48,7 @@ import {
   type XiangqiBoardChoice,
   xiangqiAppearanceEnabled,
 } from './theme.js';
+import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import {
   readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
@@ -110,18 +111,30 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   root.className = 'appearance-menu-root';
   const submenus: HTMLElement[] = [];
 
-  const addCategory = (key: string, label: string, body: HTMLElement[]): void => {
-    root.append(createAppearanceRow(key, label));
+  const addCategory = (
+    key: string,
+    label: string,
+    body: HTMLElement[],
+    icon?: UiIconName,
+  ): void => {
+    root.append(createAppearanceRow(key, label, icon));
     submenus.push(createAppearanceSubmenu(key, label, body));
   };
 
   // Row order mirrors the lichess dasher (Language, Sound, Appearance, Board,
   // Piece set). The per-game Board/Piece pickers carry the Game family selector
   // inside their own sub-panel, so the root stays a narrow list of rows.
+  // Language is the one row that carries a glyph, as on lichess: it is the row a
+  // reader who cannot read the current interface language has to find, so it
+  // needs a marker that survives not reading the label. The sibling rows stay
+  // text-only on purpose; icons on all five would drown it out.
   if (options.includeLanguage) {
-    addCategory('language', t('nav.language', {}, locale), [
-      createLanguageField(locale, options.onLocaleSelect),
-    ]);
+    addCategory(
+      'language',
+      t('nav.language', {}, locale),
+      [createLanguageField(locale, options.onLocaleSelect)],
+      'language',
+    );
   }
   addCategory('sound', t('prefs.sound', {}, locale), [createSoundPanel()]);
   addCategory('theme', t('prefs.appearance', {}, locale), [createSiteThemeList()]);
@@ -224,16 +237,18 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   return menu;
 }
 
-function createAppearanceRow(key: string, label: string): HTMLButtonElement {
+function createAppearanceRow(key: string, label: string, icon?: UiIconName): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'appearance-menu-row';
   button.dataset.appearanceTarget = key;
   const text = document.createElement('span');
+  text.className = 'appearance-menu-row-label';
   text.textContent = label;
   const chevron = document.createElement('span');
   chevron.className = 'appearance-menu-chevron';
   chevron.setAttribute('aria-hidden', 'true');
+  if (icon) button.append(buildUiIcon(icon, 'appearance-menu-row-icon'));
   button.append(text, chevron);
   return button;
 }

@@ -21,7 +21,7 @@ import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './study.css';
 import './study-index.css';
-import { normalizeStartFen } from '@mistboard/game';
+import { deepCloneJson, normalizeStartFen } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
@@ -273,7 +273,7 @@ function renderStudy(
     // rootFen rides inside the tree blob (SerializedTree.rootFen). Duplicating a
     // chapter supplies the whole source tree instead.
     const chapterRoot: SerializedTree = sourceRoot
-      ? structuredClone(sourceRoot)
+      ? deepCloneJson(sourceRoot)
       : rootFen
         ? { ...EMPTY_TREE, rootFen }
         : EMPTY_TREE;

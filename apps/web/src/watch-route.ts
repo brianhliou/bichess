@@ -31,6 +31,7 @@ import {
   seatResultScores,
 } from './review/game-meta-card.js';
 import { createMoveList, type MoveList } from './review/move-list.js';
+import { installReviewKeyboard } from './review/review-layout.js';
 import { createReviewShell } from './review/review-shell.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
@@ -392,6 +393,15 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     () => watchPly,
     () => watchMaxPly,
     watch.replayControlsRoot,
+  );
+
+  installReviewKeyboard(
+    watchKeyboardHandlers(
+      jumpBoardToPly,
+      () => watchPly,
+      () => watchMaxPly,
+    ),
+    abortController.signal,
   );
 
   // The rail clocks for the ply on the board: the times the players actually had there,
@@ -1279,6 +1289,26 @@ export function buildWatchScrubber(
       next.disabled = ply >= maxPly;
       last.disabled = ply >= maxPly;
     },
+  };
+}
+
+// Arrow keys drive the same jump the on-screen controls do, so TV steps like the
+// review page (lichess parity: the keys work anywhere on the page, not only
+// while a control is focused). `enabled` stands the listener down when there is
+// nothing to step through: the live-follow board and the empty state both
+// leave maxPly at 0, and swallowing the arrows there would kill page scrolling
+// for nothing. No `flip`: TV's only orientation control is the fog POV toggle.
+export function watchKeyboardHandlers(
+  jump: (ply: number) => void,
+  getPly: () => number,
+  getMaxPly: () => number,
+): Parameters<typeof installReviewKeyboard>[0] {
+  return {
+    enabled: () => getMaxPly() > 0,
+    stepBack: () => jump(getPly() - 1),
+    stepForward: () => jump(getPly() + 1),
+    toStart: () => jump(0),
+    toEnd: () => jump(getMaxPly()),
   };
 }
 

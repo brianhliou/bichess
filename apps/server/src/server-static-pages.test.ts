@@ -318,6 +318,68 @@ test('serveArticlesIndexPage keeps the community-posts view canonical', async ()
   );
 });
 
+test('serveArticlesIndexPage serves the prerendered post list when the build baked one', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(
+    join(staticDir, 'blog.html'),
+    '<html><body>baked post list</body></html>',
+    'utf-8',
+  );
+  const response = captureResponse();
+
+  await serveArticlesIndexPage({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /baked post list/);
+});
+
+// Only the default-locale "By Mistboard" list is baked. The localized indexes
+// and the community view are still client-rendered, and handing them the
+// English baked file would ship the wrong language or the wrong list.
+test('serveArticlesIndexPage keeps localized and community views on the shell', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(
+    join(staticDir, 'blog.html'),
+    '<html><body>baked post list</body></html>',
+    'utf-8',
+  );
+
+  for (const params of [{ langPrefix: 'zh-hans' }, { view: 'community' as const }]) {
+    const response = captureResponse();
+    await serveArticlesIndexPage({
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+      ...params,
+    });
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(response.body, /baked post list/);
+  }
+});
+
+// An older build (or a partial deploy) has no blog.html. The index still has to
+// answer, so the shell path stays the fallback rather than a 500.
+test('serveArticlesIndexPage falls back to the shell when no prerender exists', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+
+  await serveArticlesIndexPage({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /<title>Articles \| Mistboard<\/title>/);
+});
+
 test('serveRulesIndexPage injects rules metadata', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');

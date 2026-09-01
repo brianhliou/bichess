@@ -7,16 +7,11 @@ import {
   type BanqiSeat,
   type BanqiSquare,
   banqiCoordOf,
+  banqiLastMoverInk,
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import {
-  BOARD_LASTMOVE_MARKER_SELECTOR,
-  boardLastMoveMarkersSvg,
-  boardLastMoveOuterRadius,
-  boardLastMoveStyleAttr,
-  boardLastMoveUnit,
-} from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
+import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -50,17 +45,37 @@ const PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
-// The origin wash and destination halo are the shared marks (board-lastmove.ts).
-// The reveal ring is banqi's alone -- a flip is a self-move, so there is no
-// origin to wash -- and sits just outside where the shared marks end, making a
-// revealed-in-place tile read as a double ring against a move's single one.
 // Engine candidate marker. Was sharing the last-move ring's radius, which tied an
 // unrelated mark to that ring's geometry; the other boards size it from the piece
 // like their selection ring, so do the same here.
 const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
-const LAST_MOVE_REVEAL_RADIUS =
-  Math.round((boardLastMoveOuterRadius(PIECE_SIZE) + 2.5 * boardLastMoveUnit(PIECE_SIZE)) * 100) /
-  100;
+// Last move: banqi TINTS THE CELL instead of ringing the piece, and this is the
+// one board on which that is the right call.
+//
+// board-lastmove.ts sizes both of its marks so the outer edge lands at half a
+// cell. Every other board on that layer anchors pieces to INTERSECTIONS, where
+// half a cell is open board. Banqi anchors to cell centres, where half a cell is
+// the drawn grid line: the mark traced the cell exactly, erased the lines it
+// crossed, and two marks on adjacent cells merged into a single blob (a1-b1 in
+// any game). The reveal ring for flips sat 2.9 units FURTHER out, so it bled
+// into the neighbouring cell outright.
+//
+// There was no room to shrink into. TOKEN_PIECE_RATIO is 0.90, so a halo living
+// outside the piece (radius 29) and inside the cell (32) has three units to work
+// with, and the shared geometry spent all of them. A cell tint is bounded by the
+// cell by construction: adjacent marks cannot collide at any board scale, and
+// the fill has the area to carry the mover's ink, which a 4-unit ring did not.
+// The tint fills the cell edge to edge with square corners: this board IS a grid
+// of squares, so a mark that traces the square is the honest one, and a rounded
+// inset chip reads as a sticker floating in the cell rather than the cell being
+// lit. Two adjacent marks therefore share an edge and paint over the grid line
+// between them -- accepted, because the origin/destination opacity step still
+// separates them and the pair reads as the path the piece took.
+const LAST_MOVE_FLIP_STROKE = 2.5;
+// A stroke straddles its rect's edge, so the flip's border needs half of itself
+// back inside or it paints into the next cell -- the whole failure this
+// treatment exists to end.
+const LAST_MOVE_FLIP_INSET = LAST_MOVE_FLIP_STROKE / 2;
 
 export const BANQI_PIECE_PX = PIECE_SIZE;
 
@@ -250,18 +265,39 @@ function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
     .join('');
 }
 
+function lastMoveCell(
+  square: BanqiSquare,
+  modifier: string,
+  ink: BanqiColor | null,
+  inset = 0,
+): string {
+  const { x, y } = cellCenter(square);
+  const span = CELL - inset * 2;
+  const inkClass = ink ? ` banqi-lastmove--${ink}` : '';
+  return `<rect class="banqi-lastmove ${modifier}${inkClass}" x="${x - span / 2}" y="${y - span / 2}" width="${span}" height="${span}"/>`;
+}
+
 function lastMoveMarkers(view: BanqiPlayerView): string {
   if (!view.lastMove) return '';
-  const to = cellCenter(view.lastMove.to);
-  // Flips are self-moves: mark the destination only, never invent an origin to
-  // wash, and add the reveal ring so a flip is distinguishable from a move.
+  // Ink of the side that ACTED, never the ink of the piece a flip turned up:
+  // a flip reveals a random tile, so the two disagree about half the time and
+  // reading the mark off the board would be wrong exactly where it is needed.
+  const ink = banqiLastMoverInk(view);
+  // A flip is a self-move: one cell, never an invented origin to wash. One
+  // tinted cell already reads as a flip against a move's two, and the border
+  // says so without depending on the viewer seeing both cells at once.
   if (view.lastMove.from === view.lastMove.to) {
-    return (
-      boardLastMoveMarkersSvg({ to }, PIECE_SIZE) +
-      `<circle class="banqi-last-reveal" cx="${to.x}" cy="${to.y}" r="${LAST_MOVE_REVEAL_RADIUS}"/>`
+    return lastMoveCell(
+      view.lastMove.to,
+      'banqi-lastmove-to banqi-lastmove-flip',
+      ink,
+      LAST_MOVE_FLIP_INSET,
     );
   }
-  return boardLastMoveMarkersSvg({ from: cellCenter(view.lastMove.from), to }, PIECE_SIZE);
+  return (
+    lastMoveCell(view.lastMove.from, 'banqi-lastmove-from', ink) +
+    lastMoveCell(view.lastMove.to, 'banqi-lastmove-to', ink)
+  );
 }
 
 function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView): string {
@@ -299,8 +335,8 @@ export function renderBanqiBoardSvg(
     ? (options.legalMoves ?? []).filter((m) => m.from === options.selectedSquare)
     : [];
   return `
-    <svg class="banqi-board"${boardLastMoveStyleAttr(PIECE_SIZE)} viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
-      <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="6"/>
+    <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
+      <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
       <g class="banqi-grid">${gridLines()}</g>
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
@@ -358,15 +394,37 @@ export const BANQI_BOARD_CSS = `
     .banqi-hit--target:hover .banqi-hint-capture {
       opacity: 0;
     }
-    /* Origin wash and destination halo now come from board-lastmove.css, shared
-       with the xiangqi family. Only the reveal ring is this board's own. */
-    .banqi-last-reveal {
-      fill: none;
-      stroke: var(--board-highlight, #d6af4e);
-      stroke-width: var(--board-lastmove-origin-stroke, 2);
-      opacity: 0.9;
-      pointer-events: none;
+    /* Last move: a tinted CELL, not a ring around the piece (see the geometry
+       note in this file). The tint carries the MOVER's ink so a flip says who
+       flipped -- on a normal move the piece that landed already tells you, but a
+       flip turns up a random tile whose colour means nothing about the mover.
+       Gold is the fallback for the opening flip, before an ink is bound. */
+    /* EVERY alpha here lives in the rgba colour, never in \`opacity\`. The arrival
+       animation (drawMarkerOnArrival) fades element opacity 0 -> 1, so a mark
+       whose resting opacity is 0.36 ramps to fully solid and then snaps back
+       when the animation clears: it reads as a dark flash that settles lighter.
+       This is the same rule live-xiangqi.css states for the square-grid marks;
+       banqi shipped it wrong on 2026-08-30 and this is the fix.
+       A gold fill barely reads on the tan board, which is why the ink is carried
+       by the FILL and not by a border: a saturated 3-unit stroke around a gold
+       cell was measurably harder to read than this at the same board scale.
+       Red and black are balanced by eye rather than sharing one alpha -- red
+       keeps far more chroma than navy does when composited over #f0d6a4. */
+    .banqi-lastmove { pointer-events: none; }
+    .banqi-lastmove-from { fill: rgba(214, 175, 78, 0.24); }
+    .banqi-lastmove-to { fill: rgba(214, 175, 78, 0.4); }
+    .banqi-lastmove--red.banqi-lastmove-from { fill: rgba(194, 32, 26, 0.19); }
+    .banqi-lastmove--red.banqi-lastmove-to { fill: rgba(194, 32, 26, 0.36); }
+    .banqi-lastmove--black.banqi-lastmove-from { fill: rgba(22, 40, 58, 0.22); }
+    .banqi-lastmove--black.banqi-lastmove-to { fill: rgba(22, 40, 58, 0.44); }
+    /* One tinted cell already reads as a flip against a move's two; the border
+       says so on a glance that catches only the one cell. */
+    .banqi-lastmove-flip {
+      stroke: rgba(214, 175, 78, 0.4);
+      stroke-width: ${LAST_MOVE_FLIP_STROKE};
     }
+    .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
+    .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
     .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
     .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
     .banqi-drag-source { opacity: 0.34; }

@@ -1,4 +1,5 @@
 import type { Color, PieceRole, Square } from '@mistboard/game';
+import { boardCornerRadius } from './board-metrics.js';
 import { PIECE_SVGS } from './pieces.js';
 import { type BoardPalette, BROWN_PALETTE, FOG_TILE_SIZE, type FogStyle } from './tokens.js';
 
@@ -68,7 +69,7 @@ export function renderBoardSvg(
   const palette = opts.palette ?? BROWN_PALETTE;
   const fogStyle = opts.fogStyle ?? 'solid';
   const round = opts.clipId !== undefined;
-  const radius = opts.cornerRadius ?? size * 0.019;
+  const radius = opts.cornerRadius ?? boardCornerRadius(size);
   const sq = size / 8;
   const out: string[] = [];
   const fogCoords = fogSquares.map(squareToFileRank);

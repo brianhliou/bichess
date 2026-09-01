@@ -85,11 +85,13 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The three unpublished drafts, ahead of everything published. Out of the
-      // sitemap and noindex until they publish. The mining explainer was pulled
-      // FORWARD past both jieqi pages (2026-08-23 to 09-03) and the jieqi pair
-      // pushed back behind it, keeping their own order and two-day gap: the
-      // openings article links to the platform page, so it cannot land first.
+      // The four unpublished drafts, ahead of everything published and out of the
+      // sitemap until they ship. The mining explainer was pulled FORWARD past
+      // both jieqi pages (2026-08-23 to 09-03); the jieqi pair sits behind it
+      // keeping their own order and two-day gap, because the openings article
+      // links to the platform page and cannot land first. The match-fixing
+      // draft is dated a day past the champion pages, whose ruling column it is
+      // the long version of.
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       // jieqi-platform's Vietnamese derivation (co-up) inherits its date but
@@ -97,6 +99,7 @@ describe('article public listing gates', () => {
       // rule, so moving that date still moves two articles, it just moves one
       // of them somewhere this list cannot see.
       '/blog/how-puzzle-mining-works',
+      '/blog/xiangqi-match-fixing',
       // The two champion articles, newest first. They shipped hours apart on
       // 2026-08-29 and are deliberately dated a day apart: two halves of one
       // argument landing on the same date read as a dump, and the world-title
@@ -260,6 +263,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
       '/blog/titled-players',
@@ -1202,5 +1206,98 @@ describe('rules variant sidebar', () => {
       .join('');
 
     expect(figureText).toContain('?');
+  });
+});
+
+describe('blog post read-next footer', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.unstubAllEnvs();
+  });
+
+  const publishedBlogSlugs = (): string[] => {
+    vi.stubEnv('DEV', false);
+    return articles
+      .filter(
+        (article) =>
+          article.kind === 'article' &&
+          article.status === 'published' &&
+          article.showInIndex !== false &&
+          article.publisher === 'mistboard',
+      )
+      .map((article) => article.slug);
+  };
+
+  const footerLinks = (slug: string): string[] =>
+    [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
+      (card) => card.getAttribute('href') ?? '',
+    );
+
+  it('closes a blog post with three onward posts instead of nothing', () => {
+    vi.stubEnv('DEV', false);
+    const page = buildArticlePage('riverbank-cannon');
+    const footer = page.querySelector('.article-footer');
+
+    expect(footer).not.toBeNull();
+    expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('Read next');
+    expect(footer?.querySelectorAll('.articles-index-card')).toHaveLength(3);
+  });
+
+  // Rules docs already carry the variant rail as their onward path; a second
+  // list of unrelated blog posts under it would be noise, not navigation.
+  it('leaves rules pages on the variant rail alone', () => {
+    expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
+  });
+
+  // One star per card is texture in a long index grid. Three in a row under an
+  // article read as a rating, so the footer drops the badge outright rather
+  // than shipping DOM it then hides.
+  it('drops the index star badge, which /blog keeps', () => {
+    vi.stubEnv('DEV', false);
+    const footer = buildArticlePage('riverbank-cannon').querySelector('.article-footer');
+    expect(footer?.querySelector('.articles-index-card-author')).toBeNull();
+    expect(buildArticlesIndex().querySelector('.articles-index-card-author')).not.toBeNull();
+  });
+
+  // The whole point is that a reader who finishes a post has somewhere to go.
+  // A post linking itself, or linking a page the index hides, is a dead end
+  // wearing a card.
+  it('never points a post at itself or at an unlisted page', () => {
+    const listed = new Set(publishedBlogSlugs().map((slug) => `/blog/${slug}`));
+    for (const slug of publishedBlogSlugs()) {
+      const links = footerLinks(slug);
+      expect(links, `${slug} has no onward posts`).toHaveLength(3);
+      expect(links, `${slug} links itself`).not.toContain(`/blog/${slug}`);
+      for (const href of links) {
+        expect(listed, `${slug} links ${href}, which the index does not list`).toContain(href);
+      }
+    }
+  });
+
+  // Recency alone would hand all nine posts the same newest three, which makes
+  // the row furniture rather than navigation. Walking the date ring from each
+  // post is what keeps the trios distinct, so assert the property, not the
+  // implementation.
+  it('gives each post a different trio', () => {
+    const seen = new Map<string, string>();
+    for (const slug of publishedBlogSlugs()) {
+      const key = footerLinks(slug).join(',');
+      expect(seen.get(key), `${slug} repeats the row on ${seen.get(key)}`).toBeUndefined();
+      seen.set(key, slug);
+    }
+  });
+
+  // The row overrides the index's column ladder at two classes of specificity,
+  // which outranks the index's own media queries. That is deliberate (three
+  // cards in a two-column grid orphan one), but it means the footer owns the
+  // whole ladder: without its own narrow-width rule the row stays three across
+  // on a phone, and nothing else in the file can rescue it.
+  it('collapses its own column ladder instead of inheriting the index one', () => {
+    expect(articleStyles).toMatch(
+      /\.article-footer \.article-footer-list \{[^}]*grid-template-columns: repeat\(3/,
+    );
+    expect(articleStyles).toMatch(
+      /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
+    );
   });
 });

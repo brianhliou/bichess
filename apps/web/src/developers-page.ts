@@ -179,6 +179,14 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'a phone, so keep it if your layout is fluid.',
     ]),
 
+    proseSubheading('Background'),
+    proseParagraph([
+      'The frame is transparent. Whatever your page has behind the iframe shows ' +
+        'through around the board, so the embed sits on your surface rather than ' +
+        'stamping a coloured card onto it. The board and move list carry their own ' +
+        'panel, so they stay legible either way.',
+    ]),
+
     proseSubheading('Theme'),
     proseParagraph([
       'By default the embed follows the READER: it renders light or dark to match ' +
@@ -193,6 +201,22 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'the document inside it.',
     ]),
     codeBlock(`${exampleEmbedUrl(origin)}?theme=light`),
+
+    proseSubheading('Notation'),
+    proseParagraph([
+      'Move labels follow the reader the same way, and run into the same problem: a ' +
+        'reader meeting Mistboard for the first time inside your page has no stored ' +
+        'preference, so they get the default, which is coordinates. That suits a ' +
+        'general visitor and not an article about technique, where the source ' +
+        'material is written in WXF or Chinese and a5-a9 is the one form no manual ' +
+        'uses.',
+    ]),
+    proseParagraph([
+      'Add notation=wxf, notation=chinese, notation=iccs or notation=coordinate to ' +
+        'pin it for your readers. It applies to that frame alone and never writes to ' +
+        "their settings, so a reader's own choice on Mistboard is untouched.",
+    ]),
+    codeBlock(`${exampleEmbedUrl(origin)}?theme=light&notation=wxf`),
 
     proseSubheading('oEmbed'),
     proseParagraph([

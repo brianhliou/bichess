@@ -102,6 +102,24 @@ function injectPageMeta(html, meta) {
         `$1${escapeHtml(meta.imageUrl)}$2`,
       );
   }
+  // The shell declares og:type="website" for the site as a whole. A blog post is
+  // an article, and og:type is what tells a share card renderer to look for
+  // published/modified times and a byline instead of treating the page as a
+  // site homepage.
+  if (meta.ogType) {
+    out = out.replace(
+      /(<meta\s+property="og:type"\s+content=")[^"]*(")/,
+      `$1${escapeHtml(meta.ogType)}$2`,
+    );
+  }
+  // Likewise og:image:alt, which the shell sets to the site's generic card
+  // description. On an article the card is that article's own card.
+  if (meta.imageAlt) {
+    out = out.replace(
+      /(<meta\s+property="og:image:alt"\s+content=")[^"]*(")/,
+      `$1${escapeHtml(meta.imageAlt)}$2`,
+    );
+  }
   return out;
 }
 
@@ -274,6 +292,45 @@ ${items}
 `;
 }
 
+// The blog's own feed, separate from /feed.xml (which carries announcements:
+// one-line release notes, not posts). A reader who subscribes to a blog wants
+// the posts, and mixing the two means either the announcements drown the posts
+// or subscribing to the posts signs you up for changelog entries.
+function renderArticlesRss(entries) {
+  const items = entries
+    .map((entry) => {
+      const url = `${host}/blog/${encodeURIComponent(entry.slug)}`;
+      return [
+        '    <item>',
+        `      <title>${xmlEscape(entry.title)}</title>`,
+        `      <link>${xmlEscape(url)}</link>`,
+        // Keyed by slug, not URL: a renamed slug 301s (RENAMED_ARTICLE_SLUGS)
+        // and the post is still the same post, so the id has to survive it.
+        `      <guid isPermaLink="false">mistboard:blog:${xmlEscape(entry.slug)}</guid>`,
+        ...(entry.publishedAt ? [`      <pubDate>${rssDate(entry.publishedAt)}</pubDate>`] : []),
+        `      <description>${xmlEscape(entry.summary)}</description>`,
+        '    </item>',
+      ].join('\n');
+    })
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mistboard blog</title>
+    <link>${host}/blog</link>
+    <atom:link href="${host}/blog/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Xiangqi, fog variants, and engine work from Mistboard.</description>
+    <language>en</language>
+${items}
+  </channel>
+</rss>
+`;
+}
+
+// Advertised in the head of every blog page so a reader's extension finds the
+// feed without being told it exists.
+const BLOG_RSS_LINK = `<link rel="alternate" type="application/rss+xml" title="Mistboard blog" href="${host}/blog/feed.xml" />`;
+
 const server = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
@@ -410,6 +467,8 @@ try {
         description: localized.summary,
         url,
         imageUrl,
+        ogType: 'article',
+        imageAlt: localized.title,
       });
       const jsonLd = {
         '@context': 'https://schema.org',
@@ -469,9 +528,10 @@ try {
           ? '<meta name="robots" content="noindex, follow" />'
           : '';
       const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+      const rssLink = article.kind === 'rules' ? '' : BLOG_RSS_LINK;
       html = html.replace(
         '</head>',
-        `${robots}${canonical}${hreflang}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
+        `${robots}${canonical}${hreflang}${rssLink}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
       );
 
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));
@@ -499,6 +559,46 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'home.html'), homeHtml, 'utf-8');
   console.log('prerendered / (home.html)');
+
+  // /blog: the post index. Authored data only, so the baked DOM is the page a
+  // reader gets. It has been in the sitemap all along while answering with the
+  // empty shell, which is worse than not being listed.
+  const { renderArticlesIndexShellForPrerender } =
+    await server.ssrLoadModule('/src/pages-static.ts');
+  const blogIndexInner = await renderArticlesIndexShellForPrerender();
+  let blogIndexHtml = shell.replace(
+    '<div id="app"></div>',
+    `<div id="app" class="landing-page articles-route">${blogIndexInner}</div>`,
+  );
+  // Full meta, not a title-only replace: servePrerenderedPage returns this file
+  // as-is and never runs the server's own injection, so anything left alone
+  // here ships the homepage's copy. Same strings as ARTICLES_INDEX_META.en in
+  // apps/server/src/server-static-pages.ts, which covers the fallback path.
+  blogIndexHtml = injectPageMeta(blogIndexHtml, {
+    title: 'Articles | Mistboard',
+    description: 'Long-form writing on original strategy games, rules, and engine research.',
+    url: `${host}/blog`,
+  });
+  blogIndexHtml = blogIndexHtml.replace(
+    '</head>',
+    `<link rel="canonical" href="${host}/blog" />${BLOG_RSS_LINK}${articleAssetLinks}</head>`,
+  );
+  await fs.writeFile(resolve(distDir, 'blog.html'), blogIndexHtml, 'utf-8');
+  console.log('prerendered /blog (blog.html)');
+
+  // blog/feed.xml: the posts as RSS, alongside the announcement feed at
+  // /feed.xml. Published blog posts only, newest first; rules docs are
+  // reference pages, not posts, and drafts are not public.
+  const blogFeedEntries = published
+    .filter((entry) => entry.kind === 'article')
+    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+  await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
+  await fs.writeFile(
+    resolve(distDir, 'blog', 'feed.xml'),
+    renderArticlesRss(blogFeedEntries),
+    'utf-8',
+  );
+  console.log(`wrote /blog/feed.xml (${blogFeedEntries.length} entries)`);
 
   // Player: bake the players-page frame (rail, twin headings, loading
   // panels) with its route CSS so first paint gets the full layout instead of

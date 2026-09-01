@@ -11,8 +11,8 @@ export interface NavItem {
   // resolves, so site-shell picks the initial visibility from the persisted
   // signed-in hint and account-nav reconciles it once /api/auth/me settles.
   signedInOnly?: boolean;
-  // An off-site destination (the Discord invite): rendered as-is (no locale
-  // prefix), opens in a new tab, never marked active.
+  // An off-site destination: rendered as-is (no locale prefix), opens in a new
+  // tab, never marked active. No nav item is external today.
   external?: boolean;
   // Countries (ISO 3166-1 alpha-2) where the destination is unreachable, so the
   // item is not rendered for viewers there (viewer-geo.ts reads the country the
@@ -20,13 +20,16 @@ export interface NavItem {
   blockedIn?: readonly string[];
 }
 
+// NO SURFACE LINKS THE DISCORD as of 2026-08-31 (nav, footer and forum home all
+// dropped it, in that order). These two are kept, unreferenced, because the
+// invite is a fact worth holding: it never expires and has unlimited uses, and
+// a discord.com/channels/... URL would only work for members. Wire them back up
+// when the room is ready to be promoted; delete them if it never is.
+//
 // Discord (discord.com and discord.gg) is blocked in mainland China, which was
-// about a third of visitors in Aug 2026. Those visitors get the forum instead.
+// about a third of visitors in Aug 2026, so any surface that links the invite
+// has to gate on this list.
 export const DISCORD_BLOCKED_IN: readonly string[] = ['CN'];
-
-// The public invite to the Mistboard Discord (never expires, unlimited uses).
-// Set up 2026-08-27. A discord.com/channels/... URL would only work for
-// members, so the invite is the one link the site hands out.
 export const DISCORD_INVITE_URL = 'https://discord.gg/Qp6AZ6qAYm';
 
 export function primaryNavItems(): NavItem[] {
@@ -43,10 +46,10 @@ export function primaryNavItems(): NavItem[] {
 // from communityRailItems(): the dropdown is the wide social entry, the rail is
 // the leaderboard/bots sub-nav.
 //
-// The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28: not
-// a defect, a decision to stop promoting it from the top nav for now. It is
-// still linked from the footer and the forum home, which is why the invite
-// constants below are still exported and the blockedIn machinery still runs.
+// The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28,
+// then out of the homepage footer and the forum home on 2026-08-31: not
+// defects, a decision to stop promoting the Discord while it is still empty.
+// No surface links it now (see the constants above).
 export function communityNavItems(): NavItem[] {
   return [
     { label: 'Players', labelKey: 'nav.players', href: '/player' },

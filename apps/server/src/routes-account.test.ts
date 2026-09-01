@@ -122,6 +122,7 @@ definePersistenceTests('account routes', () => {
       { clockTenths: 'always' },
       { premoves: false },
       { correspondenceDeadlineEmail: false },
+      { correspondenceStartEmail: false },
     ]) {
       const response = captureResponse();
       const handled = await tryHandle(
@@ -145,6 +146,7 @@ definePersistenceTests('account routes', () => {
       challengesBell: true,
       forumBell: true,
       followersBell: true,
+      correspondenceStartEmail: false,
       correspondenceDeadlineEmail: false,
     });
   });

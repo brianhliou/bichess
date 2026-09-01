@@ -20,20 +20,21 @@ import {
   ALL_JUNGLE_FLIP_SQUARES,
   type JungleFlipColor,
   type JungleFlipPieceRole,
+  type JungleFlipSeat,
   type JungleFlipSquare,
   jungleFlipCoordOf,
 } from '@mistboard/game';
-import { TOKEN_PIECE_RATIO } from './board-metrics.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { boardCornerRadius, TOKEN_PIECE_RATIO } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
   framedTokenSvg,
+  type JungleLastMoveInk,
   jungleBoardAssetHref,
   jungleCoverImage,
   jungleFaceDownDiscSvg,
-  jungleLastMoveFromSvg,
-  jungleLastMoveRevealSvg,
-  jungleLastMoveToSvg,
+  jungleLastMoveCellSvg,
   jungleShadowFilterDef,
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
@@ -50,8 +51,9 @@ const FILES = 4;
 const RANKS = 4;
 const CELL = 64;
 // Board corner radius, shared by the descriptor's internal clip-path AND the drawn
-// border below so the two can never disagree about the curve.
-const BOARD_RADIUS = 5;
+// border below so the two can never disagree about the curve. Derived from the shared
+// ratio rather than hand-computed, which is what let it sit at 5 against a 4.86 target.
+const BOARD_RADIUS = boardCornerRadius(FILES * CELL);
 // Flip tokens back off the canonical ratio so they sit INSIDE the last-move
 // ring (its inner clear is ~0.83·cell).
 const FLIP_TOKEN_RATIO = TOKEN_PIECE_RATIO - 0.03;
@@ -89,8 +91,7 @@ const DESCRIPTOR: GridBoardDescriptor = {
   palette: PALETTE,
   pad: 0,
   // Full-bleed <image> terrain (like jungle) isn't clipped by the outer CSS
-  // border-radius, so round the internal clip-path (~1.9% of the 256u board
-  // width = the shared --board-corner-radius token) to clip the corner images.
+  // border-radius, so round the internal clip-path to clip the corner images.
   boardRadius: BOARD_RADIUS,
   svgClass: 'jungle-flip-live-svg',
 };
@@ -103,6 +104,12 @@ export type JungleFlipRenderOptions = {
   arrows?: readonly JungleFlipBoardArrow[];
   markers?: readonly JungleFlipBoardMarker[];
   lastMove?: { from: JungleFlipSquare; to: JungleFlipSquare } | null;
+  /**
+   * Ink of the side that made `lastMove`, from jungleFlipLastMoverInk. Must NOT
+   * be read off the board: a flip reveals a random tile whose colour is
+   * independent of the flipper. Omitted (diagrams, OG cards) falls back to gold.
+   */
+  lastMoveInk?: JungleLastMoveInk;
   selected?: JungleFlipSquare | null;
   targets?: readonly JungleFlipSquare[];
   // The square a revealed piece is being dragged from: its on-board token dims to a ghost.
@@ -144,6 +151,7 @@ function defs(gid: string): string {
 function terrain(
   geom: GridGeometry,
   lastMove: { from: JungleFlipSquare; to: JungleFlipSquare } | null,
+  lastMoveInk: JungleLastMoveInk,
   boardSkin: JungleBoardSkin,
 ): string {
   const c = geom.cell;
@@ -178,22 +186,21 @@ function terrain(
     );
   }
   if (lastMove) {
-    // A board move gets xiangqi's two-part grammar: origin shadow disc plus a
-    // destination halo. A flip is a self-move (`from === to`), so it gets only the
-    // halo around the revealed piece. Drawing the origin shadow there as well would
-    // falsely suggest that the piece travelled away and back.
-    const from = jungleFlipCoordOf(lastMove.from);
-    const fromTopLeft = geom.topLeft(from.file, from.rank);
+    // A board move tints two cells, origin weaker than destination. A flip is a
+    // self-move (`from === to`), so it tints one and takes a border: drawing an
+    // origin tint there too would falsely suggest the piece travelled away and
+    // back. The tint carries the ink of the side that ACTED, which for a flip is
+    // not the ink of the tile it turned up.
     const to = jungleFlipCoordOf(lastMove.to);
     const toTopLeft = geom.topLeft(to.file, to.rank);
-    if (lastMove.from !== lastMove.to) {
-      parts.push(jungleLastMoveFromSvg(fromTopLeft.x, fromTopLeft.y, c));
+    if (lastMove.from === lastMove.to) {
+      parts.push(jungleLastMoveCellSvg(toTopLeft.x, toTopLeft.y, c, 'flip', lastMoveInk));
+    } else {
+      const from = jungleFlipCoordOf(lastMove.from);
+      const fromTopLeft = geom.topLeft(from.file, from.rank);
+      parts.push(jungleLastMoveCellSvg(fromTopLeft.x, fromTopLeft.y, c, 'from', lastMoveInk));
+      parts.push(jungleLastMoveCellSvg(toTopLeft.x, toTopLeft.y, c, 'to', lastMoveInk));
     }
-    parts.push(
-      lastMove.from === lastMove.to
-        ? jungleLastMoveRevealSvg(toTopLeft.x, toTopLeft.y, c)
-        : jungleLastMoveToSvg(toTopLeft.x, toTopLeft.y, c),
-    );
   }
   return parts.join('');
 }
@@ -216,25 +223,59 @@ function pieces(
     if (!entry) continue;
     const { file, rank } = jungleFlipCoordOf(square);
     const { x, y } = geom.center(file, rank);
-    if (entry.faceDown) {
-      // Face-down back: a banqi-style neutral jade disc (no ink/identity — the deal is
-      // hidden from both sides), small enough to sit inside the last-move ring.
-      parts.push(jungleFaceDownDiscSvg(x, y, geom.cell, filterId));
-      continue;
-    }
-    // Revealed: the framed token for the active skin (matches the vanilla board).
-    const token = tokenSvg({
-      cx: x,
-      cy: y,
-      size: s,
-      ink: entry.color,
-      role: entry.role,
-      filterId,
-    });
+    // Every tile gets a keyed slot, face-down included: a revealed piece can
+    // capture onto a square and the glide has to find whatever settled there.
+    // The keyed outer slot lets a post-render glide find the token
+    // (animateJungleFlipBoardMove); the drag-source dimmer stays an inner wrapper.
+    const body = entry.faceDown
+      ? // Face-down back: a banqi-style neutral jade disc (no ink/identity — the deal is
+        // hidden from both sides), small enough to sit inside the last-move mark.
+        jungleFaceDownDiscSvg(x, y, geom.cell, filterId)
+      : // Revealed: the framed token for the active skin (matches the vanilla board).
+        tokenSvg({ cx: x, cy: y, size: s, ink: entry.color, role: entry.role, filterId });
     // While this piece is being dragged, dim its on-board token so only the ghost reads.
-    parts.push(square === draggingFrom ? `<g class="jungle-drag-source">${token}</g>` : token);
+    const slotBody =
+      !entry.faceDown && square === draggingFrom
+        ? `<g class="jungle-drag-source">${body}</g>`
+        : body;
+    parts.push(`<g class="jgf-piece-slot" data-piece-square="${square}">${slotBody}</g>`);
   }
   return parts.join('');
+}
+
+/**
+ * Glide the piece that settled on `move.to` from its origin (or with `reverse`
+ * the piece back on `move.from`). Call AFTER the innerHTML swap. Deltas come
+ * from the same grid geometry the renderer uses (flip-aware). No-op at duration
+ * 0 or when the slot is missing. Move payloads only, never board diffs.
+ *
+ * A FLIP is the self-move `from === to`: nothing travelled, so there is nothing
+ * to glide and no arrival to fade. Same contract as the banqi board.
+ */
+export function animateJungleFlipBoardMove(
+  host: HTMLElement,
+  move: { from: JungleFlipSquare; to: JungleFlipSquare },
+  perspective: JungleFlipSeat,
+  opts: { reverse?: boolean } = {},
+): void {
+  if (move.from === move.to) return;
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settleSquare = opts.reverse ? move.from : move.to;
+  const originSquare = opts.reverse ? move.to : move.from;
+  const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
+  if (!slot) return;
+  const geom = createGridGeometry(DESCRIPTOR, perspective === 'black');
+  const origin = jungleFlipCoordOf(originSquare);
+  const settle = jungleFlipCoordOf(settleSquare);
+  const from = geom.center(origin.file, origin.rank);
+  const to = geom.center(settle.file, settle.rank);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Fade the destination tint in as the piece lands. A reverse step renders the
+  // PRIOR move's mark on a different cell, so fading it would not track the glide.
+  if (!opts.reverse) {
+    drawMarkerOnArrival(host.querySelector('.jungle-last-move-to'), duration);
+  }
 }
 
 // The floating ghost piece shown while dragging a revealed animal (a framed token in a
@@ -269,7 +310,7 @@ export function renderJungleFlipBoardSvg(
     extraDefs: shadow ? defs(gid) : '',
     coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
-      terrain(geom, options.lastMove ?? null, boardSkin) +
+      terrain(geom, options.lastMove ?? null, options.lastMoveInk ?? null, boardSkin) +
       pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
       `<g class="jungle-flip-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${jungleFlipMarkerLayer(options.markers ?? [], geom)}</g>` +
       `<g class="jungle-flip-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleFlipArrowLayer(options.arrows ?? [], geom)}</g>`,

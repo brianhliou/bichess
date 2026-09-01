@@ -213,3 +213,28 @@ export async function deleteCorrespondenceSeek(id: string, ownerUserId?: string)
     : await getPool().query('DELETE FROM correspondence_seeks WHERE id = $1', [id]);
   return (result.rowCount ?? 0) > 0;
 }
+
+/**
+ * The seek creator's mailbox, for the "your seek was accepted" email
+ * (correspondence-start-email.ts). Returns null when the account is gone or
+ * carries no email, and honours the opt-out in SQL the way the deadline
+ * warning's candidate query does: an account that never touched the toggle has
+ * no key in account_preferences, and COALESCE(..., true) opts it in.
+ *
+ * A row is returned only when the notice should actually be sent, so the caller
+ * never has to re-derive the preference and the two correspondence emails can
+ * never disagree about what "unset" means.
+ */
+export async function correspondenceStartRecipient(
+  userId: string,
+): Promise<{ email: string } | null> {
+  const { rows } = await getPool().query<{ email: string }>(
+    `SELECT email FROM users
+     WHERE id = $1
+       AND email IS NOT NULL
+       AND closed_at IS NULL
+       AND COALESCE((account_preferences->>'correspondenceStartEmail')::boolean, true)`,
+    [userId],
+  );
+  return rows[0] ? { email: rows[0].email } : null;
+}

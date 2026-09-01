@@ -115,6 +115,12 @@ export const ARTICLE_META: Record<
     description:
       'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for each of the thirteen who built the game\u2019s first fifty years. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.',
   },
+  'xiangqi-match-fixing': {
+    title: 'The Xiangqi Match-Fixing Case',
+    kind: 'article',
+    description:
+      'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.',
+  },
   'xiangqi-world-championship': {
     title: 'The Xiangqi World Championship',
     kind: 'article',

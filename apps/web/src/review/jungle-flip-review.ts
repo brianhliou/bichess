@@ -16,6 +16,7 @@ import {
 import { rectangularGridAspect } from '../board-metrics.js';
 import { createJungleFlipInteractiveBoard } from '../jungle-flip-board.js';
 import {
+  animateJungleFlipBoardMove,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
@@ -106,7 +107,7 @@ function makeJungleFlipPresentation(
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
     createBoard: (opts) => createJungleFlipInteractiveBoard(opts),
     // No glide animation (a flip has no travel; board re-renders on nav).
-    animateMove: () => {},
+    animateMove: animateJungleFlipBoardMove,
     shapeToArrow: (s: NodeShape): JungleFlipBoardArrow => ({
       from: s.orig as JungleFlipBoardArrow['from'],
       to: (s.dest ?? s.orig) as JungleFlipBoardArrow['to'],

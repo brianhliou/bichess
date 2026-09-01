@@ -477,7 +477,14 @@ export function installReviewKeyboard(
     stepForward(): void;
     toStart(): void;
     toEnd(): void;
-    flip(): void;
+    /** Optional: `f` flips the board. Surfaces without a flip (Mistboard TV,
+     *  whose only orientation control is the fog POV toggle) omit it, and `f`
+     *  keeps its default behavior there. */
+    flip?(): void;
+    /** Optional: when this returns false the whole listener stands down for that
+     *  keypress, so arrows keep scrolling the page on a surface with nothing to
+     *  step through (TV's live-follow board owns no ply). */
+    enabled?(): boolean;
     /** Optional: dismiss a transient chooser (the tree surface's variation picker). */
     escape?(): void;
     /** Optional: `a` toggles the engine's on-board arrows (lichess parity). Only
@@ -495,6 +502,7 @@ export function installReviewKeyboard(
     'keydown',
     (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (handlers.enabled && !handlers.enabled()) return;
       const target = event.target as HTMLElement | null;
       if (
         target &&
@@ -517,7 +525,7 @@ export function installReviewKeyboard(
       } else if (event.key === 'ArrowDown' || event.key === 'End') {
         event.preventDefault();
         handlers.toEnd();
-      } else if (event.key === 'f' || event.key === 'F') {
+      } else if ((event.key === 'f' || event.key === 'F') && handlers.flip) {
         event.preventDefault();
         handlers.flip();
       } else if ((event.key === 'a' || event.key === 'A') && handlers.toggleArrows) {

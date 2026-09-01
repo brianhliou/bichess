@@ -295,7 +295,6 @@ export const ZH_HANS_COMMUNITY = {
   'forum.reportQueueCouldNotLoad': '举报队列加载失败。',
   'forum.mistboardForum': 'Mistboard 论坛',
   'forum.reports': '举报',
-  'forum.discord': 'Discord',
   'forum.searchResults': '搜索结果',
   'forum.backToForum': '返回论坛',
   'forum.reportsTitle': '论坛举报',

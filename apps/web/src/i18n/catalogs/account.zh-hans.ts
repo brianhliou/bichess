@@ -70,6 +70,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.notificationForum': '论坛：你关注主题的回复，以及引用你的帖子',
   'account.notificationFollowers': '新粉丝',
   'account.notificationCorrespondenceDeadline': '通信棋截止时间提醒',
+  'account.notificationCorrespondenceStart': '通信棋对局开始',
   'account.preferenceSaved': '偏好已保存。',
   'account.settingsUsername': '更改用户名',
   'account.settingsUsernameCopy': '用户名会公开显示，并用于标识你的资料。',

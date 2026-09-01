@@ -320,6 +320,76 @@
   transform: translateX(3px);
 }
 
+/* Onward row at the foot of a blog post. It reuses the index card wholesale but
+   carries its OWN column ladder: the index collapses 3 -> 2 -> 1, and a row of
+   exactly three cards in a two-column grid leaves a lopsided 2 + 1 orphan. The
+   selector is two classes so it wins wherever the index's media queries land in
+   the built stylesheet, which is also why the ladder below has to be complete
+   rather than leaning on the index's rules for the narrow cases. */
+.article-footer {
+  margin: 52px 0 0;
+  padding: 30px 0 0;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.article-footer-heading {
+  margin: 0 0 20px;
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 21px;
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--site-heading);
+}
+
+.article-footer .article-footer-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* The index card's 2px gold border earns its weight on /blog, where the cards
+   are the page. Under an article it outweighs the prose and the CTA above it,
+   which is backwards for a subordinate row: in light mode three gold rectangles
+   become the loudest thing on the page. Quieter frame here, gold kept for the
+   hover so the card still announces itself as a link. */
+.article-footer .articles-index-card {
+  border-width: 1px;
+  border-color: var(--site-border-soft);
+  box-shadow: none;
+}
+
+.article-footer .articles-index-card:hover {
+  border-color: #d4932c;
+  box-shadow: 0 2px 7px rgba(29, 37, 34, 0.14);
+}
+
+/* Three across, then straight to one. The sheet caps at 800px, so three cards
+   hold ~220px each all the way down to here; below it they would be too narrow
+   to read before two-up would have helped. */
+@media (max-width: 720px) {
+  .article-footer .article-footer-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Smaller type wherever the row is three across, since a footer card is ~220px
+   against the ~430px the same card gets on /blog. */
+@media (min-width: 721px) {
+  .article-footer .articles-index-card-body {
+    padding: 13px 15px 15px;
+    max-height: 128px;
+  }
+
+  .article-footer .articles-index-card-title {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .article-footer .articles-index-card-summary {
+    margin-top: 5px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 1280px) {
   .articles-index-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));

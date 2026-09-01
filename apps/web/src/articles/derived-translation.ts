@@ -18,6 +18,7 @@
 // A string with no dictionary entry falls through as English. That is deliberate:
 // an English edit surfaces as visible English on the translated page rather than
 // silently vanishing, and `untranslatedStrings` turns it into a check.
+import { hasOwnKey } from '@mistboard/game';
 import type { Article } from './types.js';
 
 function deepSubstitute<T>(value: T, dict: Record<string, string>): T {
@@ -75,7 +76,7 @@ export function untranslatedStrings(
   source: Article,
   dict: Record<string, string>,
 ): string[] {
-  return [...new Set(articleStrings(source))].filter((s) => !Object.hasOwn(dict, s));
+  return [...new Set(articleStrings(source))].filter((s) => !hasOwnKey(dict, s));
 }
 
 export type DerivedTranslationOptions = {

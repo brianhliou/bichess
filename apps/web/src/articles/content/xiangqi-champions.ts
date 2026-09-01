@@ -1219,7 +1219,7 @@ export const xiangqiChampionsArticle: Article = {
           kind: 'xq-replay',
           spec: { ...C_z88B1zTk },
           caption:
-            'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-nine, six years before his fourteenth title.',
+            'Hu Ronghua vs Liu Dahua, 15 October 1994. Hu at forty-eight, six years before his fourteenth title.',
         },
       ],
     },
@@ -1425,7 +1425,7 @@ export const xiangqiChampionsArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls \u5f55\u97f3\u95e8, the recording gate. On 12 January 2025 it sanctioned forty-one people at once, three of them banned for life. A court in Hangzhou convicted six grandmasters that September. A third batch of rulings in April 2026 added three more lifetime bans.',
+            'The red bars in the chart are the reason this list needs a footnote. Between 2024 and 2026 the Chinese Xiangqi Association worked through a match-fixing case the Chinese press calls 录音门, the recording gate, and it has [a page of its own](/blog/xiangqi-match-fixing): the investigation, everyone sanctioned, the reasoning, and the sources.'
         },
         {
           kind: 'paragraph',

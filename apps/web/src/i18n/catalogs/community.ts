@@ -302,7 +302,6 @@ export const EN_COMMUNITY = {
   'forum.reportQueueCouldNotLoad': 'The report queue could not load.',
   'forum.mistboardForum': 'Mistboard Forum',
   'forum.reports': 'Reports',
-  'forum.discord': 'Discord',
   'forum.searchResults': 'Search results',
   'forum.backToForum': 'Back to forum',
   'forum.reportsTitle': 'Forum reports',

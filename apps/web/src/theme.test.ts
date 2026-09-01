@@ -206,6 +206,18 @@ describe('appearance family gating', () => {
     ).toBe('zh-Hant');
   });
 
+  it('marks the language row with a glyph, and only that row', async () => {
+    await rebuildThemePanel();
+
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-appearance-target]')];
+    const withIcon = rows
+      .filter((row) => row.querySelector('.appearance-menu-row-icon'))
+      .map((row) => row.dataset.appearanceTarget);
+
+    expect(rows.length).toBeGreaterThan(1);
+    expect(withIcon).toEqual(['language']);
+  });
+
   it('renders signed-out sound, appearance, and connection controls in the gear menu', async () => {
     await rebuildThemePanel();
 

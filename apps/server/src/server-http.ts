@@ -330,6 +330,16 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The blog's RSS feed, written to dist/blog/feed.xml by the prerender. It
+    // has to be claimed here because 'feed.xml' otherwise matches the
+    // /blog/:slug article route below, which would answer a feed reader with
+    // the SPA shell at 200 rather than 404ing.
+    if (pathname === '/blog/feed.xml') {
+      request.url = '/blog/feed.xml';
+      void serveHandler(request, response, { public: options.staticDir });
+      return;
+    }
+
     // The community-posts view is a reserved blog index path, so it must win
     // over the generic /blog/:slug article route below.
     const blogIndexMatch = pathname.match(/^(?:\/(zh-hans|zh-hant))?\/blog(?:\/(community))?\/?$/);

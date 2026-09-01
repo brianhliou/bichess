@@ -274,9 +274,16 @@ export function formatXiangqiMove(
 }
 
 /**
- * Format a whole game line, replaying from the standard opening. If a move is
- * illegal at its turn, that move and the rest of the line render as
- * coordinate labels (the board state is no longer trustworthy).
+ * Format a whole game line, replaying from `startState` (the standard opening
+ * when omitted). If a move is illegal at its turn, that move and the rest of
+ * the line render as coordinate labels (the board state is no longer
+ * trustworthy).
+ *
+ * `startState` exists for records that do not begin at the opening: a study
+ * chapter set from a FEN, an endgame, a composed problem. Without it those
+ * lines are illegal from ply 1 against a board of 32 pieces, so every move
+ * silently fell out to coordinates -- which reads as working notation and is
+ * not.
  *
  * A record is not live play, so an ARBITER-ADJUDICATED draw does not end the
  * line: this kernel auto-draws on repetition and on the progress clock, and real
@@ -287,14 +294,20 @@ export function formatXiangqiMove(
 export function formatXiangqiMoves(
   moves: readonly XiangqiMove[],
   style: XiangqiNotationStyle,
+  startState?: XiangqiGameState,
 ): string[] {
-  let state: XiangqiGameState | null = createInitialXiangqiState('notation-format');
+  const initial = startState ?? createInitialXiangqiState('notation-format');
+  // Whoever is to move in the start position, not always Red: a chapter FEN can
+  // hand the line to Black on ply 1, and the resume below alternates from here.
+  const firstMover: XiangqiColor = initial.status.type === 'playing' ? initial.status.turn : 'red';
+  let state: XiangqiGameState | null = initial;
   const labels: string[] = [];
   for (const [index, move] of moves.entries()) {
-    // Resume through an auto-draw the record clearly played past. Red moves
-    // first, so an even index is Red's turn.
+    // Resume through an auto-draw the record clearly played past.
     if (state?.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      state = { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+      const turn: XiangqiColor =
+        index % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
+      state = { ...state, status: { type: 'playing', turn } };
     }
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {
       labels.push(formatXiangqiMove(state, move, style));

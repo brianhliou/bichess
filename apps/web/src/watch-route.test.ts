@@ -8,6 +8,7 @@ import { registeredVariantTenants } from '../../server/src/variant-tenant/regist
 import { listWatchChannels } from '../../server/src/watch-channels.js';
 import type { FeaturedGame } from './game-display.js';
 import { createGameTable } from './game-table.js';
+import { installReviewKeyboard } from './review/review-layout.js';
 import {
   buildWatchScrubber,
   createWatchSwitchGuard,
@@ -25,6 +26,7 @@ import {
   watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
+  watchKeyboardHandlers,
   watchPovToggleApplies,
   watchQueueMatchupLabel,
   watchQueueResultLabel,
@@ -423,6 +425,69 @@ describe('watchFeedCacheIsFresh', () => {
     // The cache may not outlive the refresh interval the page already runs on,
     // or the rail could show data older than the poll would ever allow.
     expect(WATCH_FEED_CACHE_MS).toBeLessThan(15_000);
+  });
+});
+
+describe('watchKeyboardHandlers', () => {
+  const press = (key: string, target?: HTMLElement) => {
+    (target ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
+    );
+  };
+
+  const install = (ply: number, maxPly: number) => {
+    const controller = new AbortController();
+    const jumps: number[] = [];
+    installReviewKeyboard(
+      watchKeyboardHandlers(
+        (p) => jumps.push(p),
+        () => ply,
+        () => maxPly,
+      ),
+      controller.signal,
+    );
+    return { jumps, dispose: () => controller.abort() };
+  };
+
+  it('steps the board on the arrow keys, resolving the ply at keypress time', () => {
+    const { jumps, dispose } = install(3, 10);
+    press('ArrowLeft');
+    press('ArrowRight');
+    press('ArrowUp');
+    press('ArrowDown');
+    dispose();
+    expect(jumps).toEqual([2, 4, 0, 10]);
+  });
+
+  it('stands down when there is no ply to step, so arrows still scroll the page', () => {
+    const { jumps, dispose } = install(0, 0);
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+    dispose();
+    expect(jumps).toEqual([]);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('leaves the board alone while a form control has focus', () => {
+    const input = document.createElement('input');
+    document.body.append(input);
+    const { jumps, dispose } = install(3, 10);
+    press('ArrowLeft', input);
+    dispose();
+    input.remove();
+    expect(jumps).toEqual([]);
+  });
+
+  it('offers no flip, so `f` keeps its default behaviour on TV', () => {
+    const { dispose } = install(3, 10);
+    const event = new KeyboardEvent('keydown', { key: 'f', bubbles: true, cancelable: true });
+    document.body.dispatchEvent(event);
+    dispose();
+    expect(event.defaultPrevented).toBe(false);
   });
 });
 

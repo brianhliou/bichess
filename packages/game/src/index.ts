@@ -11,6 +11,7 @@ export * from './events.js';
 export * from './export-formats.js';
 export * from './game-specs.js';
 export * from './jieqi-fen.js';
+export * from './js-compat.js';
 export * from './jungle-fen.js';
 export * from './jungle-flip-fen.js';
 export * from './notation.js';

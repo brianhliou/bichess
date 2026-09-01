@@ -84,6 +84,7 @@ export const EN_ACCOUNT = {
   'account.notificationForum': 'Forum: replies in threads you watch, and quotes of you',
   'account.notificationFollowers': 'New followers',
   'account.notificationCorrespondenceDeadline': 'Correspondence deadline warning',
+  'account.notificationCorrespondenceStart': 'A correspondence game starts',
   'account.preferenceSaved': 'Preference saved.',
   'account.settingsUsername': 'Change username',
   'account.settingsUsernameCopy': 'Your username is public and identifies your profile.',

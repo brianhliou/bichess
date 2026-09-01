@@ -831,6 +831,13 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
     ),
     buildNotificationPreferenceRow(
       user,
+      t('account.notificationCorrespondenceStart', {}, locale),
+      null,
+      'correspondenceStartEmail',
+      locale,
+    ),
+    buildNotificationPreferenceRow(
+      user,
       t('account.notificationCorrespondenceDeadline', {}, locale),
       null,
       'correspondenceDeadlineEmail',
@@ -855,6 +862,7 @@ type BellPreferenceId =
   | 'challengesBell'
   | 'forumBell'
   | 'followersBell';
+type EmailPreferenceId = 'correspondenceDeadlineEmail' | 'correspondenceStartEmail';
 const BELL_PREFERENCE_IDS = new Set<string>([
   'inboxBell',
   'correspondenceBell',
@@ -867,7 +875,7 @@ function buildNotificationPreferenceRow(
   user: AuthUser,
   labelText: string,
   bell: BellPreferenceId | null,
-  email: 'correspondenceDeadlineEmail' | null,
+  email: EmailPreferenceId | null,
   locale: Locale,
 ): HTMLTableRowElement {
   const row = document.createElement('tr');
@@ -884,7 +892,7 @@ function buildNotificationPreferenceRow(
 
 function notificationPreferenceCell(
   user: AuthUser,
-  id: BellPreferenceId | 'correspondenceDeadlineEmail' | null,
+  id: BellPreferenceId | EmailPreferenceId | null,
   labelText: string,
   locale: Locale,
 ): HTMLTableCellElement {
@@ -900,7 +908,7 @@ function notificationPreferenceCell(
   input.type = 'checkbox';
   input.name = id;
   input.checked = normalizeAccountPreferences(user.accountPreferences)[id];
-  const channel = id === 'correspondenceDeadlineEmail' ? 'notificationEmail' : 'notificationBell';
+  const channel = BELL_PREFERENCE_IDS.has(id) ? 'notificationBell' : 'notificationEmail';
   input.setAttribute('aria-label', `${labelText}: ${t(`account.${channel}`, {}, locale)}`);
   const track = document.createElement('span');
   track.className = 'account-preference-switch-track';

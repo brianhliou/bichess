@@ -22,9 +22,11 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
+import { jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
 import {
+  animateJungleFlipBoardMove,
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipRenderBoard,
   jungleFlipPieceGhostSvg,
@@ -169,6 +171,28 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     roomMode = 'pvp';
   },
   renderBoard,
+  // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
+  // move already re-rendered synchronously at input time, so animating the server
+  // echo would double-play it. Scrubs glide the stepped-into move forward and
+  // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
+  // drag ghost, and a no-op for flips, which travel nowhere.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view || draggingFrom) return;
+    const pending = takePendingAnimation();
+    if (!pending) return;
+    const perspective = core?.orientation() ?? view.perspective;
+    if (pending.kind === 'live') {
+      if (pending.color === core?.state.seat) return;
+      animateJungleFlipBoardMove(liveRefs.board, pending.move, perspective);
+      return;
+    }
+    if (pending.direction === 'forward') {
+      if (view.lastMove) animateJungleFlipBoardMove(liveRefs.board, view.lastMove, perspective);
+      return;
+    }
+    const undone = pending.prevView?.lastMove;
+    if (undone) animateJungleFlipBoardMove(liveRefs.board, undone, perspective, { reverse: true });
+  },
   onDisabled: () => {
     selectedSquare = null;
   },
@@ -199,6 +223,7 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
       JSON.stringify({
         board: view.board,
         lastMove: view.lastMove ?? null,
+        lastMoveInk: jungleFlipLastMoverInk(view),
         status: view.status,
         ply: view.ply,
         firstColor: view.firstColor,
@@ -255,6 +280,7 @@ function renderBoard(liveRefs: LiveRefs, view: JungleFlipWireView | null): void 
     targets,
     draggingFrom,
     lastMove: view.lastMove ?? null,
+    lastMoveInk: jungleFlipLastMoverInk(view),
   });
 }
 
