@@ -9,6 +9,8 @@ import {
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   type GameSpecId,
+  JIEQI_SPEC_ID,
+  XIANGQI_SPEC_ID,
 } from './game-specs.js';
 
 // The classes a rating bucket may hold, and the exact mirror of
@@ -140,6 +142,58 @@ const ENGINE_TIME_CONTROL_PINS: Readonly<Partial<Record<GameSpecId, TimeControlI
 export const ENGINE_PINNED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
   ENGINE_TIME_CONTROL_PINS,
 ) as GameSpecId[];
+
+// The pace a variant PRESELECTS, for variants that want something other than
+// the house 3+2. A preference, not a constraint: every pace the variant offers
+// stays selectable, and a player's stored choice outranks this.
+//
+// Deliberate variants sit here because a full xiangqi board at 3+2 is a pace
+// guests could not finish a game in. Measured 2026-09-01 across every finished
+// PvE game with a human seat: guests flagged in 32% of jieqi and 36% of xiangqi
+// games while signed-in players flagged 0 of 159 at the same pace, and the
+// arithmetic agrees — guests spend 12-17s a move where 3+2 affords 8.0.
+//
+// Lives here rather than in the web tenant registry because BOTH sides need it:
+// the picker preselects it (landing-play.ts), the Lobby/Quick-Pairing chip
+// advertises it (landing-bot-policy.ts offerPace), and the server applies it
+// when a bot-id create omits a time control (routes/rooms.ts). Those three
+// disagreeing is how a chip advertises one clock and starts another.
+//
+// A default MUST be a pace the variant offers; variant-registry-sync.test.ts
+// holds that against each tenant's timePresetIds.
+const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
+  [XIANGQI_SPEC_ID]: '10m5',
+  [JIEQI_SPEC_ID]: '10m5',
+};
+
+/** The house pace, for every variant that does not name its own. */
+export const DEFAULT_TIME_CONTROL_ID: TimeControlId = '3m2';
+
+export const VARIANT_DEFAULT_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
+  VARIANT_DEFAULT_TIME_CONTROLS,
+) as GameSpecId[];
+
+/**
+ * The pace a new game on this spec should start at when nobody picked one.
+ * Precedence is the caller's job: an explicit request wins, then the engine pin
+ * (a hard constraint), then this.
+ */
+export function variantDefaultTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
+  const id = VARIANT_DEFAULT_TIME_CONTROLS[gameSpecId as GameSpecId] ?? DEFAULT_TIME_CONTROL_ID;
+  const spec = TIME_CONTROLS.find((tc) => tc.id === id);
+  if (!spec) throw new Error(`variant default ${id} is not a known time control`);
+  return spec;
+}
+
+/**
+ * The pace a PvE game on this spec starts at absent an explicit request: the
+ * engine pin if the engine cannot honor anything else, otherwise the variant
+ * default. One function so the web chip and the server create route cannot
+ * drift into advertising one clock and starting another.
+ */
+export function defaultEngineTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
+  return engineTimeControlPin(gameSpecId as GameSpecId) ?? variantDefaultTimeControl(gameSpecId);
+}
 
 /** The pace an engine game for this spec is pinned to, or null when unpinned. */
 export function engineTimeControlPin(gameSpecId: GameSpecId): TimeControlSpec | null {

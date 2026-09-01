@@ -9,6 +9,11 @@ import {
   test,
 } from './persistence-test-support.js';
 import type { HttpApiContext } from './routes/lib.js';
+// Side-effect import: populates the server tenant registry the way index.ts
+// does. isBotSpecPlayable resolves a non-chess spec through that registry, so
+// without this every tenant-variant bot create rejects as unplayable.
+import './variant-tenant/register-tenants.js';
+import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
 import { resolveBotRoomRequest, tryHandle } from './routes/rooms.js';
 // The multi-variant resolve tests exercise Misty's banqi entry, which needs
 // the banqi tenant registered (isBotSpecPlayable reads the launch flag through
@@ -119,6 +124,52 @@ definePersistenceTests('room bot play requests', () => {
     assert.equal(handled, true);
     assert.equal(response.status, 201);
     assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }]);
+  });
+
+  // The bot's stored pace is the house 3+2 on every real row, and it is one
+  // pace per BOT where the pace belongs to the VARIANT. A jieqi bot create that
+  // names no clock has to resolve to jieqi's own default, or the Quick Pairing
+  // chip advertises 10+5 while the room starts at 3+2 — the pace guests could
+  // not finish a game in, which is the whole reason the default moved.
+  //
+  // Asserted on resolveBotRoomRequest rather than through tryHandle: that is
+  // where the pace is resolved, and it runs BEFORE tenant dispatch, so a tenant
+  // variant like jieqi never reaches the chess-path room factory a context
+  // fixture can hook.
+  test('an unpinned bot create that names no pace resolves to the variant default', async () => {
+    await insertBotProfile('jieqi-bot', 'Jieqi Bot', 'public', 'jieqi', JIEQI_DEFAULT_ENGINE_ID);
+    const resolved = await withJieqiEnabled(() =>
+      resolveBotRoomRequest(captureResponse(), { botId: 'jieqi-bot', mode: 'pve' }),
+    );
+    // 10+5, NOT the 180000/2000 this fixture just wrote into the row.
+    assert.deepEqual(resolved?.timeControl, { initialMs: 600_000, incrementMs: 5_000 });
+  });
+
+  test('a pinned bot create still takes the pin over the variant default', async () => {
+    await insertBotProfile('fog-bot', 'Fog Bot', 'public', 'dark-chess');
+    const resolved = await resolveBotRoomRequest(captureResponse(), {
+      botId: 'fog-bot',
+      mode: 'pve',
+    });
+    assert.deepEqual(resolved?.timeControl, { initialMs: 300_000, incrementMs: 5_000 });
+  });
+
+  test('an explicit pace still outranks both pin and variant default', async () => {
+    await insertBotProfile(
+      'jieqi-bot-explicit',
+      'Jieqi Bot',
+      'public',
+      'jieqi',
+      JIEQI_DEFAULT_ENGINE_ID,
+    );
+    const resolved = await withJieqiEnabled(() =>
+      resolveBotRoomRequest(captureResponse(), {
+        botId: 'jieqi-bot-explicit',
+        mode: 'pve',
+        timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+      }),
+    );
+    assert.deepEqual(resolved?.timeControl, { initialMs: 180_000, incrementMs: 2_000 });
   });
 
   test('room creation rejects a bot id combined with a client-selected engine', async () => {
@@ -255,10 +306,28 @@ async function insertMistyProfile(): Promise<void> {
   }
 }
 
+// jieqi PvE is behind a launch flag that isBotSpecPlayable resolves through the
+// tenant registry, so a bot create for it rejects as unplayable with the flag
+// off, whatever the pace logic does.
+async function withJieqiEnabled<T>(run: () => Promise<T>): Promise<T> {
+  const before = process.env.MISTBOARD_JIEQI_ENABLED;
+  process.env.MISTBOARD_JIEQI_ENABLED = 'true';
+  try {
+    return await run();
+  } finally {
+    if (before === undefined) delete process.env.MISTBOARD_JIEQI_ENABLED;
+    else process.env.MISTBOARD_JIEQI_ENABLED = before;
+  }
+}
+
 async function insertBotProfile(
   id: string,
   displayName: string,
   visibility: 'private' | 'unlisted' | 'public',
+  // Every row is written at the house 3+2, exactly as the real rows are: the
+  // create route must resolve the pace from shared policy and ignore this.
+  gameSpecId = 'dark-chess',
+  engineId = 'python-v2-v1.6',
 ): Promise<void> {
   const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
   await client.connect();
@@ -267,9 +336,9 @@ async function insertBotProfile(
       `INSERT INTO bot_profiles
          (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
           supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
-       VALUES ($1, $2, '', 'system', 'python-v2-v1.6', 'dark-chess',
-               ARRAY['dark-chess'], 180000, 2000, $3)`,
-      [id, displayName, visibility],
+       VALUES ($1, $2, '', 'system', $5, $4,
+               ARRAY[$4], 180000, 2000, $3)`,
+      [id, displayName, visibility, gameSpecId, engineId],
     );
   } finally {
     await client.end();

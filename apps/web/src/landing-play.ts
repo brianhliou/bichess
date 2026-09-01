@@ -50,7 +50,6 @@ import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import {
-  DEFAULT_TIME_PRESET_ID,
   defaultTimePresetForSpec,
   webVariantTenantForSpecId,
   webVariantTenants,
@@ -1991,8 +1990,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       selectedPreset =
         allowed.has(preferred) || allowed.size === 0
           ? preferred
-          : (LANDING_TIME_PRESETS.find((preset) => allowed.has(preset.id))?.id ??
-            DEFAULT_TIME_PRESET_ID);
+          : (LANDING_TIME_PRESETS.find((preset) => allowed.has(preset.id))?.id ?? preferred);
     }
     for (const { button, preset } of presetButtons) {
       const show = allowed.has(preset.id);

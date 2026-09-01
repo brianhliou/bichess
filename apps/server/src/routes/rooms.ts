@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   DARK_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
+  defaultEngineTimeControl,
   engineTimeControlPin,
   type GameSpecId,
   isAllowedEngineTimeControl,
@@ -324,20 +325,23 @@ export async function resolveBotRoomRequest(
     return null;
   }
   // The caller may pick any pace the target surface allows (the tenant/chess
-  // time-control gates downstream stay authoritative); omitted keeps the bot's
-  // standing clock.
+  // time-control gates downstream stay authoritative); omitted resolves to
+  // shared policy, NOT to the bot's stored clock.
   //
-  // The pin OVERRIDES that standing clock rather than rejecting against it: a
-  // bot profile's stored pace is DB state that predates the engine pin (the fog
-  // bots are stored at the house 3+2, which their engines cannot honor, #283).
-  // Rejecting instead would 400 every bot-id create that omits a time control
-  // until the rows are migrated, and the profile is not the authority on what
-  // its engine can actually play. An EXPLICIT off-pin request still falls
-  // through to the create gate and is refused there.
-  const pin = engineTimeControlPin(gameSpecId as GameSpecId);
-  let timeControl = pin
-    ? { initialMs: pin.initialMs, incrementMs: pin.incrementMs }
-    : bot.play.timeControl;
+  // bot_profiles.play_initial_ms/play_increment_ms is DB state that predates
+  // both the engine pin and the per-variant defaults, and every row still reads
+  // the house 3+2. It is also the wrong SHAPE: one pace per BOT, where the
+  // right pace belongs to the VARIANT — fairy-stockfish-level-N serves xiangqi
+  // (10+5) and fortress-xiangqi (3+2), which one column cannot express. So the
+  // profile is not the authority on what pace to start, and migrating the rows
+  // would only re-create this drift the next time a default moves.
+  //
+  // defaultEngineTimeControl applies the pin first (a hard constraint: the fog
+  // engines lose on time at 3+2, #283), then the variant default. An EXPLICIT
+  // off-pin request still falls through to the create gate and is refused
+  // there.
+  const resolved = defaultEngineTimeControl(gameSpecId);
+  let timeControl = { initialMs: resolved.initialMs, incrementMs: resolved.incrementMs };
   if (body.timeControl !== undefined) {
     const requested = parseRoomTimeControl(body.timeControl);
     if (!requested) {

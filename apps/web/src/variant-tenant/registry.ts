@@ -34,6 +34,7 @@ import {
   MINI_XIANGQI_SPEC_ID,
   REVEAL_CHESS_SPEC_ID,
   type TimeControlId,
+  variantDefaultTimeControl,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
@@ -82,13 +83,6 @@ export type WebTenantLandingConfig = {
   };
   // Casual time-control presets the picker offers (rated is globally 3+2).
   timePresetIds: readonly TimeControlId[];
-  // Pace the picker preselects, when the variant wants something other than the
-  // house default of 3+2 (landing-play.ts DEFAULT_TIME_PRESET_ID). Deliberate
-  // variants set it slower: a guest on a full xiangqi board flagged in ~a third
-  // of games at 3+2, because the pace affords 8s a move and they spend 12-17.
-  // MUST be a member of timePresetIds above; variant-registry-sync.test.ts
-  // holds that, or the picker would preselect a chip it does not render.
-  defaultTimePresetId?: TimeControlId;
   // Whether the variant appears in normal play-menu entry points.
   offerInMenu(): boolean;
   // Whether a ?play deep link may select the variant (soft-launch links can be
@@ -233,7 +227,6 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // measured 2026-09-01) while signed-in players flagged none, so the
       // preselected pace moves up two rungs. 3+2 stays on offer.
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      defaultTimePresetId: '10m5',
       offerInMenu: xiangqiEnabled,
       acceptsDeepLink: xiangqiEnabled,
       // Standard-Xiangqi public profiles, ordered strongest-first. FSF supplies
@@ -401,7 +394,6 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // 44% rate of reaching any real result; signed-in players flagged none.
       // Hidden piece identities make every move a re-read of the board.
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      defaultTimePresetId: '10m5',
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: jieqiEnabled,
       // One public identity (bot-consolidation 2026-07-21): Pikafish fronts the
@@ -1161,20 +1153,14 @@ export function webVariantTenantForSpecId(value: string | null): WebVariantTenan
   );
 }
 
-/** The house pace, for every variant that does not name its own default. */
-export const DEFAULT_TIME_PRESET_ID: TimeControlId = '3m2';
-
 /**
- * The pace a variant's picker preselects. Lives here rather than in
- * landing-play so landing-bot-policy can read it too: landing-play imports
- * landing-bot-policy, so the helper cannot live in the former without a cycle,
- * and the bot chip MUST advertise the same pace the picker will start.
+ * The pace a variant's picker preselects. A thin re-export of the shared policy
+ * in @mistboard/game, which the SERVER also applies when a bot-id create omits
+ * a time control — one table, so the chip and the create route cannot drift.
  *
- * Preselection only — the rest of the variant's ladder stays on offer, and a
- * player's stored preference outranks this.
+ * Preselection only: the rest of the variant's ladder stays on offer, and a
+ * player's stored preference outranks it.
  */
 export function defaultTimePresetForSpec(gameSpecId: string | null): TimeControlId {
-  return (
-    webVariantTenantForSpecId(gameSpecId)?.landing?.defaultTimePresetId ?? DEFAULT_TIME_PRESET_ID
-  );
+  return variantDefaultTimeControl(gameSpecId ?? '').id;
 }

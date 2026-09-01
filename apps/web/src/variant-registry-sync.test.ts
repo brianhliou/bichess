@@ -13,7 +13,12 @@ import { isClientRoute } from '../../server/src/server-policy.js';
 // Side-effect import: populates the server tenant registry exactly like
 // apps/server/src/index.ts (and registry.test.ts) do.
 import '../../server/src/variant-tenant/register-tenants.js';
-import { ENGINE_PINNED_GAME_SPEC_IDS, engineTimeControlPin } from '@mistboard/game';
+import {
+  ENGINE_PINNED_GAME_SPEC_IDS,
+  engineTimeControlPin,
+  VARIANT_DEFAULT_GAME_SPEC_IDS,
+  variantDefaultTimeControl,
+} from '@mistboard/game';
 import { JIEQI_DEFAULT_ENGINE_ID } from '../../server/src/jieqi-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
@@ -148,18 +153,24 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 
-  it('every variant default pace is one the variant actually offers', () => {
-    // defaultTimePresetId only preselects a chip; it does not widen
-    // timePresetIds. Naming a pace the picker does not render would preselect
-    // an invisible control, and the player would have no way to see or change
-    // the pace their game is about to start at.
-    for (const tenant of webVariantTenants()) {
-      const landing = tenant.landing;
-      if (!landing?.defaultTimePresetId) continue;
+  it('every variant default pace is one that variant actually offers', () => {
+    // A default only preselects a chip; it does not widen timePresetIds. Naming
+    // a pace the picker does not render would preselect an invisible control,
+    // and the player would have no way to see or change the pace their game is
+    // about to start at. The table now lives in @mistboard/game (the server
+    // reads it too), so this is the check that it still agrees with the web
+    // tenants' own offers.
+    for (const gameSpecId of VARIANT_DEFAULT_GAME_SPEC_IDS) {
+      const landing = webVariantTenants().find(
+        (tenant) => tenant.gameSpecId === gameSpecId,
+      )?.landing;
+      // Specs with no tenant landing config fall back to the picker's own set,
+      // which holds every official pace, so any default is offered.
+      if (!landing) continue;
       expect(
         landing.timePresetIds,
-        `${tenant.gameSpecId} defaults to ${landing.defaultTimePresetId} but does not offer it`,
-      ).toContain(landing.defaultTimePresetId);
+        `${gameSpecId} defaults to ${variantDefaultTimeControl(gameSpecId).id} but does not offer it`,
+      ).toContain(variantDefaultTimeControl(gameSpecId).id);
     }
   });
 

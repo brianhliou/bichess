@@ -5,6 +5,7 @@ import {
   correspondenceTimeControl,
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
+  defaultEngineTimeControl,
   engineTimeControlPin,
   findTimeControl,
   isAllowedEngineTimeControl,
@@ -14,6 +15,8 @@ import {
   RATED_TIME_CONTROLS,
   TIME_CONTROLS,
   timeClassFromTimeControl,
+  VARIANT_DEFAULT_GAME_SPEC_IDS,
+  variantDefaultTimeControl,
 } from './time-controls.js';
 
 test('TIME_CONTROLS lists the official Mistboard time controls', () => {
@@ -230,6 +233,36 @@ test('unpinned specs accept every pace their own allowlist offers', () => {
         incrementMs: tc.incrementMs,
       }),
       true,
+    );
+  }
+});
+
+test('variantDefaultTimeControl: deliberate variants opt out of the house pace', () => {
+  assert.equal(variantDefaultTimeControl('jieqi').id, '10m5');
+  assert.equal(variantDefaultTimeControl('xiangqi').id, '10m5');
+  // Everything else keeps 3+2, including a spec with no entry at all.
+  assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
+  assert.equal(variantDefaultTimeControl('fortress-xiangqi').id, '3m2');
+  assert.equal(variantDefaultTimeControl('not-a-real-spec').id, '3m2');
+});
+
+test('defaultEngineTimeControl: pin outranks the variant default', () => {
+  // The precedence the web chip (landing-bot-policy offerPace) and the server
+  // create route (routes/rooms.ts) BOTH have to apply, or one advertises a pace
+  // the other does not start. A pin is a hard constraint (#283); a variant
+  // default is only a preference.
+  assert.equal(defaultEngineTimeControl('dark-chess').id, '5m5');
+  assert.equal(defaultEngineTimeControl('dark-xiangqi').id, '5m5');
+  assert.equal(defaultEngineTimeControl('jieqi').id, '10m5');
+  assert.equal(defaultEngineTimeControl('banqi').id, '3m2');
+});
+
+test('every variant default is a real, offerable pace', () => {
+  for (const gameSpecId of VARIANT_DEFAULT_GAME_SPEC_IDS) {
+    const spec = variantDefaultTimeControl(gameSpecId);
+    assert.ok(
+      TIME_CONTROLS.some((tc) => tc.id === spec.id),
+      `${gameSpecId} defaults to unknown pace ${spec.id}`,
     );
   }
 });

@@ -1,3 +1,4 @@
+import { defaultEngineTimeControl } from '@mistboard/game';
 import { PROVISIONAL_RD } from './glicko.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
@@ -139,14 +140,26 @@ export async function getPublicBotForPlay(botId: string): Promise<BotPlayProfile
       mode: 'pve',
       gameSpecId: row.default_game_spec_id,
       engineId: row.active_engine_id,
-      timeControl: {
-        initialMs: row.play_initial_ms,
-        incrementMs: row.play_increment_ms,
-      },
+      timeControl: botPlayTimeControl(row),
       preferredColor: 'random',
     },
     visibility: row.visibility,
   };
+}
+
+// The pace a "play this bot" click actually starts, for the bot's default game
+// spec. NOT bot_profiles.play_initial_ms/play_increment_ms: those columns hold
+// one pace per bot (all still at the house 3+2) where the pace belongs to the
+// variant, so the stored value would advertise 3+2 while routes/rooms.ts armed
+// the variant default. The columns stay as the create route's last-resort
+// fallback; nothing user-facing reads them.
+function botPlayTimeControl(row: {
+  default_game_spec_id: string;
+  play_initial_ms: number;
+  play_increment_ms: number;
+}): { initialMs: number; incrementMs: number } {
+  const resolved = defaultEngineTimeControl(row.default_game_spec_id);
+  return { initialMs: resolved.initialMs, incrementMs: resolved.incrementMs };
 }
 
 export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
@@ -452,10 +465,7 @@ function botFromRow(row: BotProfileRow): BotProfile {
       mode: 'pve',
       gameSpecId: row.default_game_spec_id,
       engineId: row.active_engine_id,
-      timeControl: {
-        initialMs: row.play_initial_ms,
-        incrementMs: row.play_increment_ms,
-      },
+      timeControl: botPlayTimeControl(row),
       preferredColor: 'random',
     },
     rating: ratingFromRow(row),
