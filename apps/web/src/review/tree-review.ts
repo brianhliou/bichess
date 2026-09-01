@@ -1544,6 +1544,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
       phases: gamePhases,
+      // Names the ply under the pointer in the chart's hover readout, in the same
+      // "5. b1-c3" / "5… c7-c6" form the move tree numbers its rows with, so the
+      // two readings of one move agree.
+      moveLabel: (ply) => {
+        const node = nodes[ply];
+        if (!node?.parent) return null; // ply 0 is the starting position, not a move
+        const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
+        return `${number} ${node.label}`;
+      },
       onJump: (ply) => {
         const target = nodes[ply];
         if (target) go(tree.pathTo(target));

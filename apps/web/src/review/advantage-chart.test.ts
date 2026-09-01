@@ -75,3 +75,86 @@ describe('advantage chart luck overlay', () => {
     expect(legend(chart.el).hidden).toBe(true);
   });
 });
+
+function cursorX(el: HTMLElement): string {
+  return (el.querySelector('.advantage-chart__cursor') as SVGLineElement).getAttribute('x1')!;
+}
+function tip(el: HTMLElement): HTMLElement {
+  return el.querySelector('.advantage-chart__tip') as HTMLElement;
+}
+/** jsdom lays nothing out, so the chart cannot read its own width. Give the frame
+ *  a 300px box so client-x maps to a ply the way it does in a browser. */
+function withLayout(el: HTMLElement): SVGSVGElement {
+  const svg = el.querySelector('.advantage-chart__svg') as SVGSVGElement;
+  svg.getBoundingClientRect = () => ({ left: 0, width: 300, top: 0, height: 100 }) as DOMRect;
+  return svg;
+}
+function pointerAt(svg: SVGSVGElement, clientX: number): void {
+  svg.dispatchEvent(new PointerEvent('pointermove', { clientX, bubbles: true }));
+}
+
+describe('advantage chart frame', () => {
+  it('keeps a forced mate off the frame edge', () => {
+    const chart = createAdvantageChart(
+      [
+        { ply: 0, cp: 0, mate: null, best: null },
+        { ply: 1, cp: null, mate: 1, best: null },
+      ],
+      { onJump: () => {} },
+    );
+    const ys = (chart.el.querySelector('.advantage-chart__line') as SVGPolylineElement)
+      .getAttribute('points')!
+      .split(' ')
+      .map((point) => Number(point.split(',')[1]));
+    // A forced mate is the top of the win% scale, and without the reserved margin
+    // it plots within a rounding error of y=0 and loses half its stroke to the
+    // frame edge. The margin is 4 view units out of 100; anything that leaves
+    // less than a stroke's worth of room has lost it.
+    expect(Math.min(...ys)).toBeGreaterThan(2);
+    expect(Math.max(...ys)).toBeLessThan(98);
+  });
+
+  it('keeps the cursor inside the frame at ply 0', () => {
+    const chart = createAdvantageChart(evals, { onJump: () => {} });
+    chart.setPly(0);
+    expect(Number(cursorX(chart.el))).toBeGreaterThan(0);
+  });
+});
+
+describe('advantage chart hover readout', () => {
+  it('names the hovered move and its eval, and hides on the way out', () => {
+    const chart = createAdvantageChart(evals, {
+      onJump: () => {},
+      moveLabel: (ply) => `${ply}. move`,
+    });
+    const svg = withLayout(chart.el);
+    expect(tip(chart.el).hidden).toBe(true);
+
+    pointerAt(svg, 300); // the last ply
+    expect(tip(chart.el).hidden).toBe(false);
+    expect(tip(chart.el).textContent).toBe('3. move+2.0');
+
+    svg.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    expect(tip(chart.el).hidden).toBe(true);
+  });
+
+  it('returns the cursor to the selected ply when the pointer leaves', () => {
+    const chart = createAdvantageChart(evals, { onJump: () => {} });
+    const svg = withLayout(chart.el);
+    chart.setPly(1);
+    const selected = cursorX(chart.el);
+
+    pointerAt(svg, 300);
+    expect(cursorX(chart.el)).not.toBe(selected);
+
+    svg.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    // Hovering must not redefine where the board is: the cursor comes back.
+    expect(cursorX(chart.el)).toBe(selected);
+  });
+
+  it('shows the eval alone when the caller supplies no move labels', () => {
+    const chart = createAdvantageChart(evals, { onJump: () => {} });
+    pointerAt(withLayout(chart.el), 150);
+    expect(tip(chart.el).textContent).toBe('-0.5');
+  });
+});

@@ -6,12 +6,23 @@
 // raw cp so mates don't spike the axis.
 import { winPercent } from '@mistboard/game';
 import './advantage-chart.css';
+import { formatEval } from './engine/eval-format.js';
 import type { GamePhases, PlyEval } from './game-analysis.js';
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW_W = 300;
 const VIEW_H = 100;
+/** Vertical breathing room, in view units, kept outside the plotted band at both
+ *  ends. A forced mate is win% 0 or 100, which without this lands exactly ON the
+ *  frame edge and gets half its stroke clipped — the one eval you most want to
+ *  see reads as a cut-off line. lichess reserves the same margin by plotting
+ *  into +/-1 on a +/-1.05 axis. */
+const PAD_Y = 4;
+/** Half a hairline in view units at the width this chart actually renders, so the
+ *  cursor at ply 0 or at the final ply draws inside the frame instead of losing
+ *  half its stroke to the edge. */
+const EDGE_INSET = 0.6;
 
 /** Unique clip-path ids per mounted chart (re-mounts must not collide). */
 let chartInstance = 0;
@@ -40,14 +51,25 @@ export function createAdvantageChart(
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
+    /** Move text for the position at `ply` (e.g. "12... h10-i10"), shown in the
+     *  hover readout above the eval. Omitted = the readout shows the eval alone. */
+    moveLabel?: (ply: number) => string | null;
   },
 ): AdvantageChart {
   const maxPly = Math.max(1, evals.length - 1);
   const xOf = (ply: number) => (ply / maxPly) * VIEW_W;
-  const yOf = (e: PlyEval) => (1 - winPercent(e.cp, e.mate) / 100) * VIEW_H;
+  const yFor = (win: number) => PAD_Y + (1 - win / 100) * (VIEW_H - 2 * PAD_Y);
+  const yOf = (e: PlyEval) => yFor(winPercent(e.cp, e.mate));
 
   const el = document.createElement('section');
   el.className = 'advantage-chart';
+  // The plot area is its own positioning context. The phase labels and the hover
+  // readout are placed against the FRAME, not against the component, and the
+  // component also carries the luck legend below it — anchoring to `el` would put
+  // a bottom-aligned readout on top of that legend.
+  const plot = document.createElement('div');
+  plot.className = 'advantage-chart__plot';
+  el.append(plot);
   const firstColor = reviewColorForSeat('red', opts.seatColors);
   const secondColor = reviewColorForSeat('black', opts.seatColors);
 
@@ -70,7 +92,35 @@ export function createAdvantageChart(
   blackClip.append(
     svg('rect', { x: '0', y: `${VIEW_H / 2}`, width: `${VIEW_W}`, height: `${VIEW_H / 2}` }),
   );
-  defs.append(redClip, blackClip);
+  // Each half's ground fades OUT from the midline rather than filling flat. Flat
+  // per-half tints turned the chart into two stacked blocks with a hard seam at
+  // the midline, which is the shape the eye reads first and it is not the data;
+  // fading from the axis leaves one continuous field while still saying which
+  // half belongs to whom before either side is ahead. lichess can skip the cue
+  // entirely (white is always on top); our flip variants bind seats at runtime,
+  // so we keep it and spend almost no ink on it.
+  const redZoneId = `advantage-chart-zone-red-${chartInstance}`;
+  const blackZoneId = `advantage-chart-zone-black-${chartInstance}`;
+  const zoneGradient = (id: string, fromMidUp: boolean): SVGElement => {
+    const grad = svg('linearGradient', {
+      id,
+      gradientUnits: 'userSpaceOnUse',
+      x1: '0',
+      y1: `${VIEW_H / 2}`,
+      x2: '0',
+      y2: fromMidUp ? '0' : `${VIEW_H}`,
+    });
+    grad.append(
+      svg('stop', { offset: '0', class: 'advantage-chart__zone-stop--near' }),
+      svg('stop', { offset: '1', class: 'advantage-chart__zone-stop--far' }),
+    );
+    return grad;
+  };
+  const redZone = zoneGradient(redZoneId, true);
+  const blackZone = zoneGradient(blackZoneId, false);
+  redZone.classList.add('advantage-chart__zone', `advantage-chart__zone--${firstColor}`);
+  blackZone.classList.add('advantage-chart__zone', `advantage-chart__zone--${secondColor}`);
+  defs.append(redClip, blackClip, redZone, blackZone);
 
   chart.append(
     defs,
@@ -79,14 +129,14 @@ export function createAdvantageChart(
       y: '0',
       width: `${VIEW_W}`,
       height: `${VIEW_H / 2}`,
-      class: `advantage-chart__zone advantage-chart__zone--${firstColor}`,
+      fill: `url(#${redZoneId})`,
     }),
     svg('rect', {
       x: '0',
       y: `${VIEW_H / 2}`,
       width: `${VIEW_W}`,
       height: `${VIEW_H / 2}`,
-      class: `advantage-chart__zone advantage-chart__zone--${secondColor}`,
+      fill: `url(#${blackZoneId})`,
     }),
     svg('line', {
       x1: '0',
@@ -123,7 +173,7 @@ export function createAdvantageChart(
       label.className = 'advantage-chart__phase-label';
       label.style.left = `${((mark.ply / maxPly) * 100).toFixed(2)}%`;
       label.textContent = mark.label;
-      el.append(label);
+      plot.append(label);
     }
   }
 
@@ -152,10 +202,20 @@ export function createAdvantageChart(
   // Luck overlay layers (populated by setLuckOverlay when decisions load). The band sits UNDER
   // the realized line/cursor; the ghost line sits just under the cursor so the real line reads as
   // primary. Kept as stable nodes so a re-call just rewrites their points.
+  // Marks the hovered ply ON the curve, so the readout is anchored to a point
+  // rather than floating over the field.
+  const dot = svg('circle', { r: '2.6', cx: '0', cy: '0', class: 'advantage-chart__dot' });
   const luckBand = svg('polygon', { points: '', class: 'advantage-chart__luck-band' });
   const ghostLine = svg('polyline', { points: '', class: 'advantage-chart__ghost' });
-  chart.append(luckBand, areaRed, areaBlack, ghostLine, line, cursor);
-  el.append(chart);
+  chart.append(luckBand, areaRed, areaBlack, ghostLine, line, cursor, dot);
+  plot.append(chart);
+
+  // Hover readout (lichess: the chart scrubs under the pointer and names the move
+  // it is over, so you can read the game's shape without clicking through it).
+  const tip = document.createElement('div');
+  tip.className = 'advantage-chart__tip';
+  tip.hidden = true;
+  plot.append(tip);
 
   // Legend (hidden until the luck overlay is set): explains solid vs dashed.
   const legend = document.createElement('div');
@@ -166,17 +226,81 @@ export function createAdvantageChart(
     '<span class="advantage-chart__legend-item"><span class="advantage-chart__legend-swatch advantage-chart__legend-swatch--ghost"></span>If reveals ran average</span>';
   el.append(legend);
 
-  el.addEventListener('click', (event) => {
+  /** Nearest ply under a client x, or null when the chart has no layout yet
+   *  (offscreen, or a jsdom test). */
+  function plyAtClientX(clientX: number): number | null {
     const box = chart.getBoundingClientRect();
-    if (box.width === 0) return;
-    const frac = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
-    opts.onJump(Math.round(frac * maxPly));
+    if (box.width === 0) return null;
+    const frac = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
+    return Math.round(frac * maxPly);
+  }
+
+  el.addEventListener('click', (event) => {
+    const ply = plyAtClientX(event.clientX);
+    if (ply != null) opts.onJump(ply);
   });
 
-  function setPly(ply: number): void {
-    const x = `${xOf(Math.max(0, Math.min(maxPly, ply)))}`;
+  /** `selectedPly` is where the board actually is; the cursor borrows it while a
+   *  pointer is over the chart and gets it back on the way out. Without the
+   *  split, a hover would silently redefine "current ply" and the cursor would
+   *  come to rest wherever the pointer happened to leave. */
+  chart.addEventListener('pointermove', (event) => {
+    const ply = plyAtClientX(event.clientX);
+    if (ply == null) return;
+    moveCursor(ply);
+    showTip(ply);
+  });
+  chart.addEventListener('pointerleave', () => {
+    moveCursor(selectedPly);
+    tip.hidden = true;
+    dot.classList.remove('advantage-chart__dot--on');
+  });
+
+  function showTip(ply: number): void {
+    const point = evals[ply];
+    if (!point) return;
+    dot.setAttribute('cx', xOf(point.ply).toFixed(2));
+    dot.setAttribute('cy', yOf(point).toFixed(2));
+    dot.classList.add('advantage-chart__dot--on');
+
+    // Same formatter as the move list's eval column right beside the chart: two
+    // readings of one number must not disagree about its scale.
+    const score = formatEval(point.cp, point.mate);
+    const move = opts.moveLabel?.(ply) ?? null;
+    tip.replaceChildren();
+    if (move) {
+      const label = document.createElement('span');
+      label.className = 'advantage-chart__tip-move';
+      label.textContent = move;
+      tip.append(label);
+    }
+    const value = document.createElement('span');
+    value.className = 'advantage-chart__tip-eval';
+    value.textContent = score;
+    tip.append(value);
+    tip.hidden = false;
+    // Anchor to the cursor, and slide the box back over itself as it approaches
+    // the right edge so it stays inside the frame without a measure-and-clamp.
+    const bias = ply / maxPly;
+    tip.style.left = `${(bias * 100).toFixed(3)}%`;
+    tip.style.transform = `translateX(${(-bias * 100).toFixed(1)}%)`;
+    // Sit in the half the curve is NOT in. Pinned to the top, the readout covered
+    // the very peaks it was there to explain.
+    tip.classList.toggle('advantage-chart__tip--low', yOf(point) < VIEW_H / 2);
+  }
+
+  let selectedPly = 0;
+
+  function moveCursor(ply: number): void {
+    const raw = xOf(Math.max(0, Math.min(maxPly, ply)));
+    const x = `${Math.max(EDGE_INSET, Math.min(VIEW_W - EDGE_INSET, raw)).toFixed(2)}`;
     cursor.setAttribute('x1', x);
     cursor.setAttribute('x2', x);
+  }
+
+  function setPly(ply: number): void {
+    selectedPly = ply;
+    moveCursor(ply);
   }
 
   function setLuckOverlay(redLuckByPly: ReadonlyMap<number, number>): void {
@@ -191,7 +315,7 @@ export function createAdvantageChart(
     for (const e of evals) {
       cumulative += redLuckByPly.get(e.ply) ?? 0;
       const ghostWin = Math.max(0, Math.min(100, winPercent(e.cp, e.mate) - cumulative));
-      ghostPoints.push(`${xOf(e.ply).toFixed(1)},${((1 - ghostWin / 100) * VIEW_H).toFixed(1)}`);
+      ghostPoints.push(`${xOf(e.ply).toFixed(1)},${yFor(ghostWin).toFixed(1)}`);
     }
     ghostLine.setAttribute('points', ghostPoints.join(' '));
     // Band between the realized line and the ghost line: realized forward, ghost back.
