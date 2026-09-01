@@ -63,6 +63,7 @@ export const ZH_HANS_CONTENT = {
   'articles.status.draft': '草稿',
   'articles.status.outline': '大纲',
   'articles.tldr': '概要',
+  'articles.readNext': '接着读',
   'articles.notFoundTitle': '未找到文章',
   'articles.notFoundBody': '这篇文章还不存在。',
   'rules.heading': '规则',

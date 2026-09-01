@@ -111,6 +111,17 @@ export async function mountArticlesIndex(
   mountArticleThumbnails(index);
 }
 
+/* /blog, baked at build time. The index is authored data with no live or
+ * per-account content, so the prerendered DOM is exactly the page a reader
+ * gets. It was the one sitemap-advertised article surface still answering with
+ * an empty shell while every individual post was prerendered. Default locale
+ * and the "By Mistboard" view only: the localized indexes and the (currently
+ * empty) community view stay on the client-rendered shell. */
+export async function renderArticlesIndexShellForPrerender(): Promise<string> {
+  const { buildArticlesIndex } = await import('./articles.js');
+  return `${buildNav().outerHTML}${buildArticlesIndex(undefined, 'mistboard').outerHTML}`;
+}
+
 export async function mountRulesIndex(
   root: HTMLElement,
   lang?: import('./article-i18n.js').ArticleLang | null,

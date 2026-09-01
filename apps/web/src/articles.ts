@@ -875,11 +875,85 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     if (variantNav) main.append(variantNav);
   }
   sheet.append(body);
+  const footer = buildArticleFooter(base, articleLang);
+  if (footer) sheet.append(footer);
   main.append(sheet);
   const sidebar = buildTocSidebar(body, articleLang);
   if (sidebar) main.append(sidebar);
 
   return main;
+}
+
+// Blog posts used to end at the last section: no footer (the site footer is
+// homepage-only by design), no onward link, nothing. Every post was a dead end
+// for a reader and for a crawler. This is the lichess ublog footer minus the
+// social half — the "you may also like" row, which is the part that costs no
+// social proof we don't have yet.
+//
+// Rules docs already carry the variant rail as their onward path, so they keep
+// their current shape and only /blog gets this.
+function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
+  if (article.kind !== 'article') return null;
+  const related = relatedArticles(article);
+  if (related.length === 0) return null;
+  const locale = articleLocale(lang);
+
+  const footer = document.createElement('footer');
+  footer.className = 'article-footer';
+
+  const heading = document.createElement('h2');
+  heading.className = 'article-footer-heading';
+  heading.textContent = t('articles.readNext', {}, locale);
+
+  const list = document.createElement('ul');
+  list.className = 'articles-index-list article-footer-list';
+  for (const entry of related) {
+    list.append(articleCard(entry, lang, { showStarBadge: false }));
+  }
+
+  footer.append(heading, list);
+  return footer;
+}
+
+const ARTICLE_FOOTER_RELATED_COUNT = 3;
+
+// `publisher` lives only on the blog arm of the union, so the related-post walk
+// works in the narrowed type rather than re-checking `kind` at every access.
+type BlogArticle = Extract<Article, { kind: 'article' }>;
+
+// Deterministic on purpose: the page is baked at build time, so a shuffle (what
+// lichess does here) would make the prerendered HTML disagree with what the
+// client re-renders on takeover. Straight recency would point every post at the
+// same newest three, so we walk the date-sorted ring starting just after the
+// current post: every post gets a distinct trio and it reads as "the posts
+// either side of this one".
+//
+// No topic weighting, deliberately. `boardFamily` is the obvious candidate and
+// it is the wrong field: it selects which appearance pickers an article shows,
+// so it is set on the banqi engine write-up and unset on the xiangqi champions
+// list. Ranking by it demoted a xiangqi article below a banqi one on a xiangqi
+// page. A real topic signal needs a field that means topic; until the schema has
+// one, recency is the honest answer.
+function relatedArticles(article: BlogArticle): BlogArticle[] {
+  const pool = articles
+    .filter(
+      (candidate): candidate is BlogArticle =>
+        candidate.kind === 'article' &&
+        candidate.slug !== article.slug &&
+        candidate.publisher === article.publisher &&
+        isArticleListedInThisEnv(candidate),
+    )
+    .sort(compareArticlesNewestFirst);
+  if (pool.length === 0) return [];
+
+  // Slot this post back into the same ordering so the ring can start at its
+  // next-older neighbour and wrap around to the newest.
+  const ordered = [...pool, article].sort(compareArticlesNewestFirst);
+  const start = ordered.findIndex((candidate) => candidate.slug === article.slug);
+  return Array.from(
+    { length: Math.min(ARTICLE_FOOTER_RELATED_COUNT, ordered.length - 1) },
+    (_, i) => ordered[(start + 1 + i) % ordered.length]!,
+  );
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed
@@ -2252,7 +2326,15 @@ function renderStaticBoardsBlock(block: StaticBoardsBlock): HTMLElement {
 // spec on each pending wrap and consume it in mountArticleThumbnails.
 const pendingThumbnails = new WeakMap<HTMLElement, ArticleThumbnail>();
 
-function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
+function articleCard(
+  baseArticle: Article,
+  lang?: ArticleLang,
+  // The star is an index affordance: one per card in a long grid, repeating
+  // often enough that it reads as texture. Three of them in a row at the foot
+  // of an article read as a rating or a "featured" mark instead, and they are
+  // neither, so the footer opts out rather than hiding them in CSS.
+  options: { showStarBadge?: boolean } = {},
+): HTMLLIElement {
   const locale = articleLocale(lang);
   const articleLang = publishedArticleLang(baseArticle.slug, lang);
   const article = articleLang ? translateArticle(baseArticle, articleLang) : baseArticle;
@@ -2282,7 +2364,9 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
     thumb.append(date);
   }
 
-  thumb.append(articleCardStarBadge('articles-index-card-over-image articles-index-card-author'));
+  if (options.showStarBadge ?? true) {
+    thumb.append(articleCardStarBadge('articles-index-card-over-image articles-index-card-author'));
+  }
 
   if (isArticleStatusBadge(article.status)) {
     const badge = document.createElement('span');

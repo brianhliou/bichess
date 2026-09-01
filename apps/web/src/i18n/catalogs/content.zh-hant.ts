@@ -63,6 +63,7 @@ export const ZH_HANT_CONTENT = {
   'articles.status.draft': '草稿',
   'articles.status.outline': '大綱',
   'articles.tldr': '概要',
+  'articles.readNext': '接著讀',
   'articles.notFoundTitle': '找不到文章',
   'articles.notFoundBody': '這篇文章還不存在。',
   'rules.heading': '規則',

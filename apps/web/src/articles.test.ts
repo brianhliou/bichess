@@ -1193,3 +1193,96 @@ describe('rules variant sidebar', () => {
     expect(figureText).toContain('?');
   });
 });
+
+describe('blog post read-next footer', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.unstubAllEnvs();
+  });
+
+  const publishedBlogSlugs = (): string[] => {
+    vi.stubEnv('DEV', false);
+    return articles
+      .filter(
+        (article) =>
+          article.kind === 'article' &&
+          article.status === 'published' &&
+          article.showInIndex !== false &&
+          article.publisher === 'mistboard',
+      )
+      .map((article) => article.slug);
+  };
+
+  const footerLinks = (slug: string): string[] =>
+    [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
+      (card) => card.getAttribute('href') ?? '',
+    );
+
+  it('closes a blog post with three onward posts instead of nothing', () => {
+    vi.stubEnv('DEV', false);
+    const page = buildArticlePage('riverbank-cannon');
+    const footer = page.querySelector('.article-footer');
+
+    expect(footer).not.toBeNull();
+    expect(footer?.querySelector('.article-footer-heading')?.textContent).toBe('Read next');
+    expect(footer?.querySelectorAll('.articles-index-card')).toHaveLength(3);
+  });
+
+  // Rules docs already carry the variant rail as their onward path; a second
+  // list of unrelated blog posts under it would be noise, not navigation.
+  it('leaves rules pages on the variant rail alone', () => {
+    expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
+  });
+
+  // One star per card is texture in a long index grid. Three in a row under an
+  // article read as a rating, so the footer drops the badge outright rather
+  // than shipping DOM it then hides.
+  it('drops the index star badge, which /blog keeps', () => {
+    vi.stubEnv('DEV', false);
+    const footer = buildArticlePage('riverbank-cannon').querySelector('.article-footer');
+    expect(footer?.querySelector('.articles-index-card-author')).toBeNull();
+    expect(buildArticlesIndex().querySelector('.articles-index-card-author')).not.toBeNull();
+  });
+
+  // The whole point is that a reader who finishes a post has somewhere to go.
+  // A post linking itself, or linking a page the index hides, is a dead end
+  // wearing a card.
+  it('never points a post at itself or at an unlisted page', () => {
+    const listed = new Set(publishedBlogSlugs().map((slug) => `/blog/${slug}`));
+    for (const slug of publishedBlogSlugs()) {
+      const links = footerLinks(slug);
+      expect(links, `${slug} has no onward posts`).toHaveLength(3);
+      expect(links, `${slug} links itself`).not.toContain(`/blog/${slug}`);
+      for (const href of links) {
+        expect(listed, `${slug} links ${href}, which the index does not list`).toContain(href);
+      }
+    }
+  });
+
+  // Recency alone would hand all nine posts the same newest three, which makes
+  // the row furniture rather than navigation. Walking the date ring from each
+  // post is what keeps the trios distinct, so assert the property, not the
+  // implementation.
+  it('gives each post a different trio', () => {
+    const seen = new Map<string, string>();
+    for (const slug of publishedBlogSlugs()) {
+      const key = footerLinks(slug).join(',');
+      expect(seen.get(key), `${slug} repeats the row on ${seen.get(key)}`).toBeUndefined();
+      seen.set(key, slug);
+    }
+  });
+
+  // The row overrides the index's column ladder at two classes of specificity,
+  // which outranks the index's own media queries. That is deliberate (three
+  // cards in a two-column grid orphan one), but it means the footer owns the
+  // whole ladder: without its own narrow-width rule the row stays three across
+  // on a phone, and nothing else in the file can rescue it.
+  it('collapses its own column ladder instead of inheriting the index one', () => {
+    expect(articleStyles).toMatch(
+      /\.article-footer \.article-footer-list \{[^}]*grid-template-columns: repeat\(3/,
+    );
+    expect(articleStyles).toMatch(
+      /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
+    );
+  });
+});
