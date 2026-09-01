@@ -27,13 +27,20 @@ describe('landing bot policy', () => {
     }
   });
 
-  it('pins one stable FSF opponent per variant at 3+2', () => {
+  it('pins one stable FSF opponent per variant, at the variant default pace', () => {
+    // Xiangqi is a deliberate variant: it defaults to 10+5, not the 3+2 house
+    // pace, because guests flagged 36% of their games at 3+2. The offer has to
+    // advertise that, since the click starts the picker on the same default.
     expect(landingBotOffer('xiangqi')).toMatchObject({
       botId: 'fairy-stockfish-level-5',
       botName: 'Fairy-Stockfish Level 5',
+      timeControlId: '10m5',
+    });
+    // Fortress xiangqi has no default of its own, so it keeps the house pace.
+    expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+      botId: 'fairy-stockfish-level-4',
       timeControlId: '3m2',
     });
-    expect(landingBotOffer('fortress-xiangqi')?.botId).toBe('fairy-stockfish-level-4');
   });
 
   it('offers the xiangqi ladder ascending, with the primary as one of its rungs', () => {

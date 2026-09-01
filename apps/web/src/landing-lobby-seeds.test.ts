@@ -46,12 +46,17 @@ describe('landing lobby bot seeks', () => {
     ]);
     expect(new Set(signature).size).toBe(8);
     expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
-    // 3+2 is the house pace; the Fog Chess row sits at 5+5 because Misty's
-    // per-move floor outruns a 2s increment and it loses on time in long games
-    // (#283). The row order above puts dark-chess sixth.
+    // Three paces show here, for three different reasons, in the row order
+    // asserted above:
+    //   xiangqi x3 and jieqi at 10+5 — deliberate variants, whose own default
+    //     is slower because guests could not finish a full-board game at 3+2;
+    //   dark-chess at 5+5 — an engine PIN, not a preference: Misty's per-move
+    //     floor outruns a 2s increment and it loses on time (#283);
+    //   banqi, jungle, jungle-flip at 3+2 — the house pace, and their guests
+    //     essentially never flag at it.
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['3+2', '3+2', '3+2', '3+2', '3+2', '5+5', '3+2', '3+2']);
+    ).toEqual(['10+5', '10+5', '10+5', '3+2', '10+5', '5+5', '3+2', '3+2']);
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -295,7 +300,7 @@ describe('landing lobby bot seeks', () => {
     ]);
   });
 
-  it('uses the same pinned bot and 3+2 pace in Quick Pairing', async () => {
+  it('uses the same pinned bot and default pace in Quick Pairing', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/quick_bot' });
       return jsonResponse({}, { status: 404 });
@@ -318,7 +323,10 @@ describe('landing lobby bot seeks', () => {
     expect(JSON.parse(String((post![1] as RequestInit).body))).toMatchObject({
       botId: 'fairy-stockfish-level-5',
       gameSpecId: 'xiangqi',
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+      // 10+5, xiangqi's own default: the chip advertises it, and the room the
+      // click creates has to actually start there. This is the end of the
+      // chain the guest-timeout fix depends on.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
   });
 

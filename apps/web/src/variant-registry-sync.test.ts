@@ -20,7 +20,8 @@ import {
   XIANGQI_DEFAULT_ENGINE_ID,
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
-import { webVariantTenants } from './variant-tenant/registry.js';
+import { landingBotOffer } from './landing-bot-policy.js';
+import { defaultTimePresetForSpec, webVariantTenants } from './variant-tenant/registry.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
@@ -144,6 +145,38 @@ describe('web tenant registry <-> server tenant registry parity', () => {
         tenantLanding.timePresetIds,
         `${gameSpecId} is pinned to ${pin?.id} but its landing config does not offer it`,
       ).toContain(pin?.id);
+    }
+  });
+
+  it('every variant default pace is one the variant actually offers', () => {
+    // defaultTimePresetId only preselects a chip; it does not widen
+    // timePresetIds. Naming a pace the picker does not render would preselect
+    // an invisible control, and the player would have no way to see or change
+    // the pace their game is about to start at.
+    for (const tenant of webVariantTenants()) {
+      const landing = tenant.landing;
+      if (!landing?.defaultTimePresetId) continue;
+      expect(
+        landing.timePresetIds,
+        `${tenant.gameSpecId} defaults to ${landing.defaultTimePresetId} but does not offer it`,
+      ).toContain(landing.defaultTimePresetId);
+    }
+  });
+
+  it('a bot offer advertises the pace its own picker will preselect', () => {
+    // The Lobby row and Quick Pairing chip print a clock beside the bot's name;
+    // landing-play then opens the setup dialog on the variant's default. Those
+    // are computed in two places (landing-bot-policy offerPace, registry
+    // defaultTimePresetForSpec), so nothing but this test stops them drifting
+    // into advertising one pace and starting another.
+    for (const tenant of webVariantTenants()) {
+      const offer = landingBotOffer(tenant.gameSpecId);
+      if (!offer) continue;
+      const pin = engineTimeControlPin(tenant.gameSpecId)?.id;
+      expect(
+        offer.timeControlId,
+        `${tenant.gameSpecId} advertises ${offer.timeControlId} for ${offer.botName}`,
+      ).toBe(pin ?? defaultTimePresetForSpec(tenant.gameSpecId));
     }
   });
 });

@@ -10,6 +10,7 @@ import {
   type TimeControlId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
+import { defaultTimePresetForSpec } from './variant-tenant/registry.js';
 
 // One small merchandising policy shared by the Lobby rows and Quick Pairing's
 // Computer chips. Room creation remains server-authoritative.
@@ -93,13 +94,16 @@ export function landingBotOffer(gameSpecId: string): LandingBotOffer | null {
   return { botId: 'misty', botName: 'Misty', gameSpecId, timeControlId: offerPace(gameSpecId) };
 }
 
-// 3+2 is the house pace for every bot offer. An engine that cannot honor it
-// takes its pin instead (@mistboard/game engineTimeControlPin) — the fog
-// engines lose on time at 3+2 (#283) — so the Lobby row and the Quick Pairing
-// chip advertise the clock the click will actually start, which is also the
-// only one the picker and the create route will accept.
+// The Lobby row and the Quick Pairing chip must advertise the clock the click
+// will actually start, so this mirrors the picker's preselection exactly.
+// Precedence, strongest first:
+//   1. the engine pin — a HARD constraint: the fog engines lose on time at 3+2
+//      (#283) and the create route rejects anything else;
+//   2. the variant's own default — a preference, slower on the deliberate
+//      variants because guests cannot finish a full-board game at 3+2;
+//   3. the house pace, 3+2.
 function offerPace(gameSpecId: LandingBotGameSpecId): TimeControlId {
-  return engineTimeControlPin(gameSpecId)?.id ?? '3m2';
+  return engineTimeControlPin(gameSpecId)?.id ?? defaultTimePresetForSpec(gameSpecId);
 }
 
 // The Lobby carries the whole Xiangqi ladder at once, weakest rung first. The

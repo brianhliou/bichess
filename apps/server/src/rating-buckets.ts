@@ -5,16 +5,20 @@ import {
   type GameSpecId,
   isRatedPoolBase,
   maybeGameSpecForId,
+  type RatedTimeClass,
   type RatingVariant,
   ratingPoolForSpec,
-  type TimeClass,
 } from '@mistboard/game';
 
 // Rated-pool vocabulary lives on the game spec (single source of truth):
 // RatingVariant + ratingPoolForSpec derive from each spec's `rated` flag.
 // Re-exported here so existing server importers keep their import path.
 export type { RatingVariant } from '@mistboard/game';
-export type RatingTimeClass = TimeClass;
+// RatedTimeClass, not TimeClass: the classifier returns 'classical' for slow
+// enough paces, but user_ratings.time_class only accepts bullet/blitz/rapid
+// (migration 026). Keeping the bucket type narrow makes a rated classical pace
+// a compile error in bucketForGame rather than a CHECK violation in prod.
+export type RatingTimeClass = RatedTimeClass;
 
 export type RatingBucket = {
   variant: RatingVariant;

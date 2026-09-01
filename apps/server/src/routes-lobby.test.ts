@@ -366,6 +366,23 @@ test('lobby: Crossroads Chess allows 5+5 and rejects off-menu time controls', as
   });
 });
 
+test('lobby: the 10+5 rung clears the time-control allowlist', async () => {
+  // The deliberate-variant rung. A lobby allowlist must accept everything its
+  // variant's picker offers, or a menu-listed chip 400s at join time — adding
+  // 10+5 to a tenant's timePresetIds without widening ALLOWED_FULL_TIME_CONTROL
+  // _IDS would do exactly that. (10+5 is casual-only; the rated gate is a
+  // separate flag, covered by the `rated` assertion in the @mistboard/game
+  // time-controls test rather than here, where rated mode is switched off.)
+  await withCrossroadsFlag(true, async () => {
+    const { ctx } = testContext();
+    const casual = await post(ctx, {
+      gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+      timeControl: { initialMs: 600000, incrementMs: 5000 },
+    });
+    assert.equal(casual.status, 202);
+  });
+});
+
 test('lobby: Crossroads Chess requests are disabled when the launch flag is off', async () => {
   await withCrossroadsFlag(false, async () => {
     const { ctx } = testContext();

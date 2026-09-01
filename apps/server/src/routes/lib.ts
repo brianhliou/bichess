@@ -24,14 +24,25 @@ export const minRoomClockInitialMs = 10_000;
 export const maxRoomClockInitialMs = 180 * 60 * 1000;
 export const maxRoomClockIncrementMs = 60_000;
 
-// Playable time-control allowlists. Dark chess is scoped to bullet + blitz:
-// 5+5 was dropped because dark-chess is low-calculation and decisive (a blunder
-// under fog usually ends it), so rapid mostly buys idle time, and fewer time
-// controls merge players into fewer matchmaking pools. Every other live variant
-// offers the full three official controls (including rapid 5+5) in its picker,
-// so they share the full allowlist; a lobby's allowlist must accept exactly what
-// its variant's picker offers, or a menu-listed control 400s at join time.
-const ALLOWED_FULL_TIME_CONTROL_IDS: ReadonlySet<TimeControlId> = new Set(['1m1', '3m2', '5m5']);
+// Playable time-control allowlist. A lobby's allowlist must accept everything
+// its variant's picker offers, or a menu-listed control 400s at join time — so
+// this is the union of every tenant's timePresetIds, and narrowing happens in
+// the picker (registry.ts timePresetIds), not here.
+//
+// 10+5 is offered only by the deliberate variants (jieqi, xiangqi) but sits in
+// the shared set for that reason: it is not the lobby's job to re-derive which
+// tenant offers what. It is casual-only via the spec's `rated` flag, which
+// isRatedTimeControl enforces separately.
+//
+// (An earlier comment here claimed dark chess was scoped to bullet + blitz with
+// 5+5 dropped. That has not been true since dark-chess PvE was pinned to 5+5;
+// the set has held all three ids throughout.)
+const ALLOWED_FULL_TIME_CONTROL_IDS: ReadonlySet<TimeControlId> = new Set([
+  '1m1',
+  '3m2',
+  '5m5',
+  '10m5',
+]);
 
 // ── Context ────────────────────────────────────────────────────────────────
 export interface HttpApiContext {

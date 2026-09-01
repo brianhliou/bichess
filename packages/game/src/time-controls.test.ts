@@ -16,12 +16,32 @@ import {
   timeClassFromTimeControl,
 } from './time-controls.js';
 
-test('TIME_CONTROLS lists the three official Mistboard time controls', () => {
-  assert.equal(TIME_CONTROLS.length, 3);
+test('TIME_CONTROLS lists the official Mistboard time controls', () => {
+  assert.equal(TIME_CONTROLS.length, 4);
   assert.deepEqual(
     TIME_CONTROLS.map((tc) => tc.id),
-    ['1m1', '3m2', '5m5'],
+    ['1m1', '3m2', '5m5', '10m5'],
   );
+});
+
+test('every rated pace sits in a time class user_ratings can store', () => {
+  // bucketForGame writes spec.timeClass straight into user_ratings.time_class,
+  // whose CHECK admits bullet/blitz/rapid only (migration 026). The type keeps
+  // this honest at compile time; assert it too, so the reason is discoverable
+  // from the test name when someone adds a slow rated pace.
+  for (const tc of TIME_CONTROLS.filter((spec) => spec.rated)) {
+    assert.ok(
+      ['bullet', 'blitz', 'rapid'].includes(tc.timeClass),
+      `${tc.id} is rated at an unstorable time class ${tc.timeClass}`,
+    );
+  }
+});
+
+test('10+5 shares the rapid bucket with 5+5, so it adds no rating pool', () => {
+  assert.equal(timeClassFromTimeControl(300_000, 5_000), 'rapid');
+  assert.equal(timeClassFromTimeControl(600_000, 5_000), 'rapid');
+  // Casual-only on arrival: nothing it does can reach a rating bucket at all.
+  assert.equal(findTimeControl(600_000, 5_000)?.rated, false);
 });
 
 test('TIME_CONTROLS entries have consistent label/initialMs derivation', () => {
@@ -53,10 +73,40 @@ test('timeClassFromTimeControl classifies each official TC correctly', () => {
   assert.equal(timeClassFromTimeControl(300_000, 5_000), 'rapid');
 });
 
-test('timeClassFromTimeControl returns null for unknown TCs', () => {
-  assert.equal(timeClassFromTimeControl(120_000, 1_000), null);
-  assert.equal(timeClassFromTimeControl(60_000, 0), null);
-  assert.equal(timeClassFromTimeControl(300_000, 3_000), null);
+test('timeClassFromTimeControl classifies UNOFFICIAL paces by formula', () => {
+  // lichess's rule (initial + 40 x increment), bands from lila Speed.scala.
+  // This deliberately no longer returns null for an off-table pace: labels are
+  // a display concern, and a loadtest or hand-crafted room still deserves one.
+  assert.equal(timeClassFromTimeControl(120_000, 1_000), 'bullet'); // 160s
+  assert.equal(timeClassFromTimeControl(60_000, 0), 'bullet'); // 60s
+  assert.equal(timeClassFromTimeControl(300_000, 3_000), 'blitz'); // 420s
+  assert.equal(timeClassFromTimeControl(600_000, 0), 'rapid'); // 600s
+  assert.equal(timeClassFromTimeControl(1_800_000, 0), 'classical'); // 1800s
+});
+
+test('timeClassFromTimeControl is null only when there is no clock', () => {
+  assert.equal(timeClassFromTimeControl(null, null), null);
+  assert.equal(timeClassFromTimeControl(undefined, undefined), null);
+});
+
+test('band edges land on lichess boundaries', () => {
+  // Ranges are inclusive-low in lila (blitz = 180..479), so the estimate that
+  // lands exactly on a boundary belongs to the SLOWER class.
+  assert.equal(timeClassFromTimeControl(179_000, 0), 'bullet');
+  assert.equal(timeClassFromTimeControl(180_000, 0), 'blitz');
+  assert.equal(timeClassFromTimeControl(479_000, 0), 'blitz');
+  assert.equal(timeClassFromTimeControl(480_000, 0), 'rapid');
+  assert.equal(timeClassFromTimeControl(1_499_000, 0), 'rapid');
+  assert.equal(timeClassFromTimeControl(1_500_000, 0), 'classical');
+});
+
+test('classifying a pace never makes it official or rated', () => {
+  // The whole safety argument for widening the classifier: rating buckets and
+  // the server allowlists resolve through findTimeControl, not through this.
+  assert.equal(timeClassFromTimeControl(600_000, 0), 'rapid');
+  assert.equal(findTimeControl(600_000, 0), null);
+  assert.equal(isOfficialTimeControl({ initialMs: 600_000, incrementMs: 0 }), false);
+  assert.equal(isRatedTimeControl({ initialMs: 600_000, incrementMs: 0 }), false);
 });
 
 test('isOfficialTimeControl gates loadtest/PVE allowlists', () => {

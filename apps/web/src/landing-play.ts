@@ -49,7 +49,12 @@ import { isRatedModeEnabled } from './rated-flag.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
-import { webVariantTenantForSpecId, webVariantTenants } from './variant-tenant/registry.js';
+import {
+  DEFAULT_TIME_PRESET_ID,
+  defaultTimePresetForSpec,
+  webVariantTenantForSpecId,
+  webVariantTenants,
+} from './variant-tenant/registry.js';
 import { isVariantEnabled, variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
 
@@ -857,11 +862,18 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
       // so a future variant with narrower clocks cannot render a dead control.
       // Resolved against the PvE set, not the human-pool one above, so a pinned
       // engine pace (pveTimePresetPin) cannot be widened back here.
+      //
+      // Looked up in LANDING_TIME_PRESETS, NOT in `columns`: the bot chip is
+      // appended after the grid rather than being one of its cells, so it is
+      // not confined to the pooled column paces. Searching `columns` silently
+      // dropped any offer priced outside QUICK_PAIR_COLUMN_IDS onto the
+      // fallback — which is the FIRST preset, ie. the fastest — so a variant
+      // defaulting to 10+5 advertised 10+5 and started the game at 1+1.
       const botAllowed = allowedTimePresetIds(gameSpecId, false, 'pve');
       const botControl =
-        columns.find(
-          (column) => column.id === botOffer.timeControlId && botAllowed.has(column.id),
-        ) ?? columns.find((column) => botAllowed.has(column.id));
+        LANDING_TIME_PRESETS.find(
+          (preset) => preset.id === botOffer.timeControlId && botAllowed.has(preset.id),
+        ) ?? LANDING_TIME_PRESETS.find((preset) => botAllowed.has(preset.id));
       const botChip = document.createElement('button');
       botChip.type = 'button';
       botChip.className = 'landing-quickpair-chip landing-quickpair-bot';
@@ -1637,7 +1649,10 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   if (choice.mode === 'pve' && !landingVariantSupportsPve(selectedGameSpecId)) {
     selectedGameSpecId = fallbackGameSpecId;
   }
-  let selectedPreset: LandingTimePresetId = storedPreference.timePresetId ?? '3m2';
+  // A stored preference is the player's own choice and always wins; otherwise
+  // the variant's own default, then the house default.
+  let selectedPreset: LandingTimePresetId =
+    storedPreference.timePresetId ?? defaultTimePresetForSpec(selectedGameSpecId);
   // Non-null when a correspondence (days-per-move) option is chosen — it takes
   // over from the real-time preset above. Only offered for Challenge-a-friend
   // and Find opponent on casual dark chess.
@@ -1967,14 +1982,17 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceGroup.hidden = !corrActive;
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
-    // Fall back INSIDE the allowed set: 3+2 is the house default but a pinned
-    // engine pace can exclude it, and selecting a hidden preset would start a
-    // game at a pace the picker refuses to show.
+    // Fall back INSIDE the allowed set: the variant's default is the first
+    // choice, but a pinned engine pace or the rated allowlist can exclude it,
+    // and selecting a hidden preset would start a game at a pace the picker
+    // refuses to show.
     if (!allowed.has(selectedPreset)) {
+      const preferred = defaultTimePresetForSpec(selectedGameSpecId);
       selectedPreset =
-        allowed.has('3m2') || allowed.size === 0
-          ? '3m2'
-          : (LANDING_TIME_PRESETS.find((preset) => allowed.has(preset.id))?.id ?? '3m2');
+        allowed.has(preferred) || allowed.size === 0
+          ? preferred
+          : (LANDING_TIME_PRESETS.find((preset) => allowed.has(preset.id))?.id ??
+            DEFAULT_TIME_PRESET_ID);
     }
     for (const { button, preset } of presetButtons) {
       const show = allowed.has(preset.id);

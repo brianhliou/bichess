@@ -4,7 +4,8 @@ import {
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
   maybeGameSpecForId,
-  timeClassFromTimeControl,
+  type TimeClass,
+  timeClassForPace,
   type VariantId,
 } from '@mistboard/game';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
@@ -17,20 +18,14 @@ export type GameSpecAnalyticsProps = {
   rating_pool: GameSpec['ratingPoolBase'];
 };
 
-export function classifyTimeControl(
-  initialMs: number,
-  incrementMs: number,
-): 'bullet' | 'blitz' | 'rapid' | 'classical' {
-  // Official Mistboard TCs always agree with the rating-bucket classifier;
-  // unofficial TCs (loadtest, dev sandboxes) fall back to a chess.com-style
-  // heuristic so analytics still tags them sensibly.
-  const official = timeClassFromTimeControl(initialMs, incrementMs);
-  if (official) return official;
-  const estimated = initialMs + 40 * incrementMs;
-  if (estimated < 3 * 60 * 1000) return 'bullet';
-  if (estimated < 8 * 60 * 1000) return 'blitz';
-  if (estimated < 25 * 60 * 1000) return 'rapid';
-  return 'classical';
+/**
+ * Kept as a thin alias: this heuristic USED to live here as a fallback for
+ * unofficial paces while the shared classifier did an exact preset lookup. The
+ * shared one now runs the same formula for every pace, so the two can no longer
+ * disagree. Call sites keep this name; new code can use timeClassFromTimeControl.
+ */
+export function classifyTimeControl(initialMs: number, incrementMs: number): TimeClass {
+  return timeClassForPace(initialMs, incrementMs);
 }
 
 function analyticsPropsFromSpec(spec: GameSpec): GameSpecAnalyticsProps {

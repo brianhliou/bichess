@@ -218,7 +218,12 @@ function checkSqlEnums() {
       label: 'user_ratings.time_class',
       constraint: 'user_ratings_time_class_check',
       file: 'packages/game/src/time-controls.ts',
-      type: 'TimeClass',
+      // RatedTimeClass, NOT TimeClass. TimeClass is the pace classifier's
+      // output and carries 'classical' for arbitrary slow paces; this column
+      // only ever receives a rated preset's class, and RatedTimeClass is
+      // defined as exactly that set. Pointing this back at TimeClass would
+      // demand a migration adding a value nothing is able to write.
+      type: 'RatedTimeClass',
     },
   ];
 

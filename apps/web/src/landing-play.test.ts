@@ -373,8 +373,10 @@ describe('landing play panel', () => {
     await flushPromises();
     document.querySelector('.landing-setup-overlay')?.remove();
 
+    // Each entry point starts at the variant's default pace (xiangqi = 10+5)
+    // until that entry point has remembered a choice of its own.
     openPlaySetup(panel, 'Challenge a friend');
-    expect(selectedModalTimeControl()).toBe('3 + 2');
+    expect(selectedModalTimeControl()).toBe('10 + 5');
     expect(selectedModalColor()).toBe('Random');
     // Xiangqi is the default variant, so the colour row reads Red/Random/Black.
     clickModalColor('Red');
@@ -383,7 +385,7 @@ describe('landing play panel', () => {
     document.querySelector('.landing-setup-overlay')?.remove();
 
     openPlaySetup(panel, 'Find opponent');
-    expect(selectedModalTimeControl()).toBe('3 + 2');
+    expect(selectedModalTimeControl()).toBe('10 + 5');
     expect(document.querySelector('.landing-color-label')).toBeNull();
     clickModalButton('1 + 1');
     clickModalButton('Find opponent');
@@ -396,7 +398,7 @@ describe('landing play panel', () => {
     document.querySelector('.landing-setup-overlay')?.remove();
 
     openPlaySetup(panel, 'Challenge a friend');
-    expect(selectedModalTimeControl()).toBe('3 + 2');
+    expect(selectedModalTimeControl()).toBe('10 + 5');
     expect(selectedModalColor()).toBe('Red');
     document.querySelector('.landing-setup-overlay')?.remove();
 
@@ -767,8 +769,10 @@ describe('landing play panel', () => {
     const panel = buildLandingPlayPanel([]);
     document.body.append(panel);
 
+    // Opens on the default variant (xiangqi), which carries the casual-only
+    // 10+5 rung; friend challenges are always casual, so it shows.
     openPlaySetup(panel, 'Challenge a friend');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
     document.querySelector('.landing-setup-overlay')?.remove();
 
     // DMX is hidden from the picker; reach it by deep link and confirm it also
@@ -896,14 +900,16 @@ describe('landing play panel', () => {
     const panel = buildLandingPlayPanel([]);
     document.body.append(panel);
 
-    // Every official live pace is rated, so toggling casual/rated no longer
-    // changes what Fog Chess offers. A variant whose picker omits a pace still
-    // omits it rated: allowedTimePresetIds narrows the variant's own set.
+    // The default variant here is xiangqi, which carries the deliberate ladder:
+    // 10+5 is offered casually but is casual-ONLY (rated: false on the spec), so
+    // the rated toggle is what separates the two sets. A variant whose picker
+    // omits a pace still omits it rated: allowedTimePresetIds narrows the
+    // variant's own set.
     openPlaySetup(panel, 'Find opponent');
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
 
     clickModalButton('Casual');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     clickModalButton('Rated');
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
@@ -922,7 +928,8 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Find opponent');
 
     expect(document.body.textContent).toContain('Ratedcoming soon');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    // Signed out is casual, so xiangqi's casual-only 10+5 rung shows here.
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('offers Crossroads Chess for engine and lobby play', () => {

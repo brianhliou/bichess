@@ -1,4 +1,4 @@
-import { type TimeClass, timeClassFromTimeControl } from '@mistboard/game';
+import { findTimeControl, type TimeClass } from '@mistboard/game';
 import pg from 'pg';
 import {
   buildEngineEloMleReport,
@@ -124,7 +124,10 @@ export function timeClassFromEngineTimeControlBucket(bucket: string | null): Tim
   const initialSeconds = Number(match[1]!.replace('p', '.'));
   const incrementSeconds = Number(match[2]!.replace('p', '.'));
   if (!Number.isFinite(initialSeconds) || !Number.isFinite(incrementSeconds)) return null;
-  return timeClassFromTimeControl(initialSeconds * 1000, incrementSeconds * 1000);
+  // Exact preset lookup, NOT timeClassFromTimeControl: these snapshots land in
+  // bot_rating_snapshots.time_class, so an off-table bakeoff pace has to fall
+  // through to the caller's explicit class rather than be labelled by formula.
+  return findTimeControl(initialSeconds * 1000, incrementSeconds * 1000)?.timeClass ?? null;
 }
 
 export async function insertBotRatingSnapshotDrafts(

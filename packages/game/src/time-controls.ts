@@ -11,15 +11,31 @@ import {
   type GameSpecId,
 } from './game-specs.js';
 
-export type TimeClass = 'bullet' | 'blitz' | 'rapid';
-export type TimeControlId = '1m1' | '3m2' | '5m5';
+// The classes a rating bucket may hold, and the exact mirror of
+// user_ratings.time_class CHECK (time_class IN ('bullet','blitz','rapid'))
+// (migration 026). scripts/drift-check.mjs compares THIS union against that
+// constraint, so the two cannot drift — keep it a plain literal union, since
+// the checker reads quoted members and an Exclude<> would hand it the excluded
+// value instead.
+//
+// TimeControlSpec.timeClass uses this rather than TimeClass, which makes a
+// rated classical pace a COMPILE error in bucketForGame rather than a runtime
+// CHECK violation: whoever adds one has to add the migration with it.
+export type RatedTimeClass = 'bullet' | 'blitz' | 'rapid';
+
+// Every class the pace classifier can produce. Wider than the column, because
+// timeClassForPace labels arbitrary paces and nothing stops someone asking it
+// about 30+0; no preset is classical, so nothing classical can reach the DB.
+export type TimeClass = RatedTimeClass | 'classical';
+
+export type TimeControlId = '1m1' | '3m2' | '5m5' | '10m5';
 
 export type TimeControlSpec = {
   id: TimeControlId;
   label: string;
   initialMs: number;
   incrementMs: number;
-  timeClass: TimeClass;
+  timeClass: RatedTimeClass;
   // Whether a game at this pace can be rated. Mirrors the `rated` flag on
   // GameSpec: one source of truth, so the server allowlist and the web time
   // picker derive rather than each hand-maintaining a list (they drifted
@@ -52,6 +68,23 @@ export const TIME_CONTROLS: readonly TimeControlSpec[] = [
     incrementMs: 5_000,
     timeClass: 'rapid',
     rated: true,
+  },
+  {
+    // The deliberate-variant rung. Measured 2026-09-01 over every finished PvE
+    // game with a human seat: guests spend a median 17s/move in jieqi and 12s
+    // in xiangqi, and a game that reaches a real result runs 30 (p75) to 42
+    // (p90) human moves. 3+2 affords 8.0s/move at 30 moves and 5+5 affords
+    // 15.0, so a guest on a full xiangqi board cannot finish one — they flagged
+    // in 32% of jieqi and 36% of xiangqi games, against 0 of 159 for signed-in
+    // players at the same pace. 10+5 affords 25.0s/move, the first rung clear
+    // of the measured need. Casual-only for now: it shares the rapid bucket
+    // with 5+5, so flipping `rated` later adds no rating pool.
+    id: '10m5',
+    label: '10 + 5',
+    initialMs: 600_000,
+    incrementMs: 5_000,
+    timeClass: 'rapid',
+    rated: false,
   },
 ];
 
@@ -136,11 +169,42 @@ export function findTimeControl(
   );
 }
 
+/** How long a game at this pace is assumed to last: 40 moves a side, the same
+ *  estimate lichess uses (scalachess Clock.scala estimateTotalSeconds). */
+export function estimatedTimeControlSeconds(initialMs: number, incrementMs: number): number {
+  return Math.round((initialMs + 40 * incrementMs) / 1000);
+}
+
+/**
+ * Speed class for ANY pace, official or not. Bands match lila's Speed.scala
+ * (bullet <180s, blitz <480s, rapid <1500s, classical above) on the estimate
+ * above — the same rule we already ran as an analytics-only fallback in
+ * apps/web/src/analytics.ts while this function did an exact preset lookup, so
+ * every existing pace keeps the class it had: 1+1 -> 100s bullet, 3+2 -> 260s
+ * blitz, 5+5 -> 500s rapid. No stored game is reclassified by the switch.
+ *
+ * Total by design, so a pace off the preset table still gets a sensible LABEL.
+ * It is deliberately NOT the rated gate: rating buckets resolve through
+ * findTimeControl plus the spec's `rated` flag (apps/server/src/rating-buckets
+ * .ts bucketForGame), so widening this cannot make an unofficial pace rated.
+ * Any caller that means "is this pace one of ours" must keep using
+ * findTimeControl, not this.
+ */
+export function timeClassForPace(initialMs: number, incrementMs: number): TimeClass {
+  const estimated = estimatedTimeControlSeconds(initialMs, incrementMs);
+  if (estimated < 180) return 'bullet';
+  if (estimated < 480) return 'blitz';
+  if (estimated < 1500) return 'rapid';
+  return 'classical';
+}
+
+/** Nullable-tolerant wrapper: null in, null out (a game row with no clock). */
 export function timeClassFromTimeControl(
   initialMs: number | null | undefined,
   incrementMs: number | null | undefined,
 ): TimeClass | null {
-  return findTimeControl(initialMs, incrementMs)?.timeClass ?? null;
+  if (initialMs == null || incrementMs == null) return null;
+  return timeClassForPace(initialMs, incrementMs);
 }
 
 export function isOfficialTimeControl(tc: RoomTimeControl): boolean {
