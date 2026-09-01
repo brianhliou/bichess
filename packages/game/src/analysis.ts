@@ -22,6 +22,67 @@
 // So the residual error is confined to already-decided positions, where a drop
 // from +300 to +150 is graded slightly gentler than xiangqi practice justifies.
 // That is the least consequential region there is.
+//
+// ENGINE WDL IS NOT A SECOND SOURCE, 2026-09-01. Recorded because it looks like
+// one and is not, and the next person to notice it will think they have found
+// something. Pikafish carries its own WDL model (`UCI_ShowWDL`, off by default).
+// Probed on 243 positions from 23 real games it disagrees with the curve below
+// enormously, and in the SAME direction the 70-game outcome fit pointed: the gap
+// peaks at ~+31 win-points near 200cp (logistic 67.6% vs engine 98.5%), and
+// vanishes at equality (+0.7 in -75..+75, independently confirming the finding
+// above). Tempting to call that corroboration. It is not, for three reasons:
+//
+//   - IT IS NOT AN INDEPENDENT OBSERVATION. Pikafish's reported cp is DEFINED by
+//     its WDL model -- normalized eval, where 1.0 pawn means 0.5 win probability
+//     (its own FAQ). Comparing cp-derived win% against WDL compares one function
+//     with itself in two coordinate systems, plus lichess's curve.
+//   - WRONG POPULATION, AND THE ANSWER WAS PREDETERMINED. That WDL is fit to
+//     engine self-play at fishtest LTC, i.e. ~3400-strength conversion. A
+//     near-perfect-play curve is GUARANTEED steeper than any human curve, so the
+//     test could only ever come out one way. Sign agreement carries no
+//     information.
+//   - A CHESS CONTROL KILLS THE XIANGQI-SPECIFIC CLAIM. Stockfish 18 over 40
+//     master chess games (210 deep samples, identical pipeline) diverges from
+//     WIN_PCT_K by +21.2 / +31.9 / +24.9 / +17.9 across the same bands -- LARGER
+//     than xiangqi's. And that constant is not miscalibrated for chess; it is
+//     lichess's own chess constant fit on lichess human games. Per-engine,
+//     xiangqi wants a SMALLER correction than chess (0.83x) -- the opposite sign
+//     from the 1.69x. The divergence is a property of engine WDL models in
+//     general, not a fact about xiangqi.
+//
+// The reconciling K over 150-500cp is ~0.021 (5.7x), far outside the outcome
+// fit's bootstrap CI (0.0033-0.0114). Adopting anything near it collapses every
+// position past ~250cp to 99-100%, so +400 -> +200 would grade as a ~1-point
+// loss: it DESTROYS resolution in exactly the won-position region this note
+// calls the residual error. That is a regression, not a fix.
+//
+// So the 1.69x remains a lone point estimate inside a CI that contains the chess
+// constant, and what would settle it is unchanged: a bigger corpus of AMATEUR
+// games with known results, the population postgame analysis actually grades.
+// Evidence: `tmp/wdl-control-2026-09-01/` (untracked; xiangqi + chess samples).
+//
+// WDL IS NOT THE FIX -- MEASURED AND CLOSED OFF. The obvious next move is to
+// stop deriving win% from cp and read the engine's WDL instead. Do not: it
+// saturates HARDER than the clamped curve. Probed down one real game at
+// 250k/1M/4M nodes, WDL pins at W100.0/D0.0/L0.0 from +5.5 material onward and
+// never moves again across a further 15 points of material, while the clamped cp
+// curve still climbs (87.6 -> 94.4 -> 97.3). Switching shrinks the measurable
+// zone. The deeper reason is structural: engine WDL is fit to how the ENGINE
+// converts, so it reports certainty exactly where a human review wants to grade
+// conversion difficulty. `scripts/probe-win-curve-wdl.mjs` reproduces the probe.
+//
+// Corollary for anything that wants to grade conversion in a won position: no
+// probability can do it, because the probability is genuinely ~1. Use quantities
+// that stay unsaturated there -- material conceded (xiangqi-exchange.ts, already
+// computed) and mate distance -- not a reshaped curve.
+//
+// REPRODUCIBILITY WARNING, 2026-09-01. `calibrate-win-curve.mjs` does NOT run as
+// committed: it imports from `~/projects/mistboard-champions-replay` (a worktree
+// that no longer exists) and reads its corpus from a session-scoped scratchpad
+// path that is now empty. Both halves of the 70-game evidence are gone; only
+// this note survives it. Anyone re-litigating starts by re-harvesting via
+// `dpxq-archive-harvest.mjs`, and should land the corpus somewhere durable
+// before spending the engine time.
 
 export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 
