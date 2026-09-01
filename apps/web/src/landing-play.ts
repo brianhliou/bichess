@@ -197,9 +197,12 @@ function allowedTimePresetIds(
   mode: LandingPlayMode,
 ): ReadonlySet<LandingTimePresetId> {
   const tenantLanding = webVariantTenantForSpecId(gameSpecId)?.landing;
+  // The no-tenant-config fallback is fog chess and draft960. Their PvE is
+  // pinned to 5+5 (#283) and the pin narrows this set below, so the 10+5 rung
+  // here only ever reaches their human games.
   const offered = tenantLanding
     ? new Set<LandingTimePresetId>(tenantLanding.timePresetIds)
-    : new Set<LandingTimePresetId>(['1m1', '3m2', '5m5']);
+    : new Set<LandingTimePresetId>(['1m1', '3m2', '5m5', '10m5']);
   const pin = mode === 'pve' ? pveTimePresetPin(gameSpecId) : null;
   const paced = pin && offered.has(pin) ? new Set<LandingTimePresetId>([pin]) : offered;
   if (!rated) return paced;
@@ -1652,6 +1655,13 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // the variant's own default, then the house default.
   let selectedPreset: LandingTimePresetId =
     storedPreference.timePresetId ?? defaultTimePresetForSpec(selectedGameSpecId);
+  // Whether selectedPreset is a CHOICE or merely the variant's default. Every
+  // variant offers 10+5, so switching variants no longer narrows the preset out
+  // of the allowed set — without this flag, xiangqi's 10+5 default would follow
+  // the player into banqi and every other variant would silently inherit it,
+  // which is precisely what offering-without-defaulting is meant to avoid. A
+  // stored preference counts as a past explicit choice.
+  let presetIsExplicit = storedPreference.timePresetId !== undefined;
   // Non-null when a correspondence (days-per-move) option is chosen — it takes
   // over from the real-time preset above. Only offered for Challenge-a-friend
   // and Find opponent on casual dark chess.
@@ -1921,6 +1931,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     button.addEventListener('click', () => {
       if (button.hidden) return;
       selectedPreset = preset.id;
+      presetIsExplicit = true;
       selectedTimeMode = 'realtime';
       selectedCorrespondenceDays = null;
       syncTimeControls();
@@ -1981,6 +1992,8 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceGroup.hidden = !corrActive;
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
+    // An untouched preset follows the selected variant; a chosen one sticks.
+    if (!presetIsExplicit) selectedPreset = defaultTimePresetForSpec(selectedGameSpecId);
     // Fall back INSIDE the allowed set: the variant's default is the first
     // choice, but a pinned engine pace or the rated allowlist can exclude it,
     // and selecting a hidden preset would start a game at a pace the picker

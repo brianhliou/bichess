@@ -82,6 +82,14 @@ export type WebTenantLandingConfig = {
     supportsTimeControl: boolean;
   };
   // Casual time-control presets the picker offers (rated is globally 3+2).
+  //
+  // OFFERING a pace is not DEFAULTING to it. Every variant offers 10+5 so a
+  // player who wants a long game can ask for one; which pace is preselected is
+  // VARIANT_DEFAULT_TIME_CONTROLS in @mistboard/game, and only the two variants
+  // with measured evidence (xiangqi, jieqi) opt out of the house 3+2 there.
+  // Widening this list costs a chip of UI and removes nothing; the usual
+  // objection, matchmaking-pool fragmentation, does not apply at this repo's
+  // PvP volume (9 human-vs-human games in the 2.5 months to 2026-09-01).
   timePresetIds: readonly TimeControlId[];
   // Whether the variant appears in normal play-menu entry points.
   offerInMenu(): boolean;
@@ -341,7 +349,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
       ],
       defaultEngineId: 'python-fdx-v1.1',
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: darkXiangqiEnabled,
     },
@@ -457,7 +465,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: alwaysEnabled,
       // One versioned bot (was 3 difficulty tiers; consolidated 2026-06-18 with the v0.2.0
@@ -532,7 +540,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleEnabled,
       acceptsDeepLink: jungleEnabled,
       // Misty Jungle: one bot, full strength. The three-rung ladder behind this
@@ -595,7 +603,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: jungleFlipEnabled,
       acceptsDeepLink: jungleFlipEnabled,
       // Tier-B MistyJungleFlip UCI engine (jungle-flip-engine in mistboard-engine),
@@ -640,7 +648,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: alwaysEnabled,
       engineOptions: [
@@ -739,7 +747,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: dropMiniXiangqiEnabled,
       engineOptions: [
@@ -803,7 +811,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: fortressXiangqiEnabled,
       acceptsDeepLink: fortressXiangqiEnabled,
       // Eight-level ladder (bot-consolidation 2026-07-21) mirroring the
@@ -861,7 +869,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: revealChessEnabled,
       acceptsDeepLink: revealChessEnabled,
     },
@@ -908,7 +916,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: crossroadsChessEnabled,
       acceptsDeepLink: crossroadsChessEnabled,
       // Ordered strongest-first so the toughest opponent sits at the top of the picker.
@@ -982,7 +990,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: darkCrossroadsChessEnabled,
       acceptsDeepLink: darkCrossroadsChessEnabled,
     },
@@ -1032,7 +1040,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: darkShogiEnabled,
     },
@@ -1079,7 +1087,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: darkCrazyhouseEnabled,
     },
@@ -1127,7 +1135,7 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsStartFormat: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['1m1', '3m2', '5m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: kriegspielEnabled,
       acceptsDeepLink: kriegspielEnabled,
     },

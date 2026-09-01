@@ -460,7 +460,7 @@ describe('landing play panel', () => {
       { label: 'Random', glyph: '帥將', classes: 'landing-color-glyph random xiangqi' },
       { label: 'Black', glyph: '將', classes: 'landing-color-glyph black xiangqi' },
     ]);
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
     expect(document.body.textContent).toContain('Ratedcoming soon');
     clickModalButton('5 + 5');
     clickModalColor('Red');
@@ -499,7 +499,7 @@ describe('landing play panel', () => {
     ]);
     expect(document.body.textContent).toContain('Black');
     expect(document.body.textContent).not.toContain('Red');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
     clickModalButton('5 + 5');
     clickModalColor('Black');
     clickModalButton('Create room');
@@ -538,7 +538,7 @@ describe('landing play panel', () => {
       { label: 'Random', glyph: '♚♚', classes: 'landing-color-glyph random' },
       { label: 'Black', glyph: '♚', classes: 'landing-color-glyph black' },
     ]);
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
     clickModalButton('5 + 5');
     clickModalColor('White');
     clickModalButton('Create room');
@@ -837,10 +837,10 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Challenge a friend');
     selectModalVariant('dark-chess');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
 
     selectModalVariant('dark-xiangqi');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('offers 1+1 for Fortress Xiangqi', () => {
@@ -854,7 +854,7 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Challenge a friend');
     selectModalVariant('fortress-xiangqi');
 
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
   it('offers correspondence days for casual dark chess in both friend challenge and find opponent', () => {
@@ -888,6 +888,32 @@ describe('landing play panel', () => {
     expect(correspondenceToggleVisible()).toBe(true);
     clickModalButton('Correspondence');
     expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+  });
+
+  it('an untouched pace follows the variant; a chosen one sticks across variants', () => {
+    // Every variant OFFERS 10+5, but only xiangqi and jieqi DEFAULT to it. That
+    // distinction only survives if an untouched preset re-resolves on a variant
+    // switch: the preset is no longer narrowed out of the allowed set when you
+    // leave xiangqi, so without this, xiangqi's default would follow the player
+    // into banqi and every variant would inherit 10+5 by the back door.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    expect(selectedModalTimeControl()).toBe('10 + 5'); // xiangqi, the default variant
+
+    selectModalVariant('banqi');
+    expect(selectedModalTimeControl()).toBe('3 + 2'); // banqi keeps the house pace
+
+    // An explicit pick survives the switch, including onto a variant whose own
+    // default differs.
+    clickModalButton('10 + 5');
+    selectModalVariant('jungle');
+    expect(selectedModalTimeControl()).toBe('10 + 5');
   });
 
   it('offers every rated-eligible pace in rated setup', () => {
