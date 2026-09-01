@@ -15,6 +15,7 @@
 import { existsSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { resolve } from 'node:path';
+import { logger } from './obs.js';
 import {
   boundedEnvInt,
   runUciBestmove,
@@ -152,6 +153,12 @@ const analysisPool = new UciEnginePool({
   defaultQueueTimeoutMs: 30_000,
   queueTimeoutMessage: 'pikafish-jieqi analysis queue timed out',
 });
+
+// How many times ONE sweep may respawn its analysis engine after a crash. Low on
+// purpose: recovering from the occasional PikaJieQi segfault is the goal, but an
+// engine that dies on position after position is a real failure and must surface
+// instead of silently costing a fresh process every eval.
+const ANALYSIS_SESSION_MAX_RESPAWNS = 3;
 
 // Resolve the PikaJieQi binary: explicit env override, else the known dev location,
 // else the prod (railpack-compiled) / system locations.
@@ -315,6 +322,15 @@ export async function evaluateJieqiFen(
  * as-is (the engine never sees a hidden id). Holds one analysis-pool slot for the
  * duration, so a sweep never occupies a live bot-move slot; the session is always
  * killed on the way out.
+ *
+ * SURVIVES AN ENGINE DEATH. A whole-game sweep walks 40-100+ positions through ONE
+ * process, so without recovery a single engine exit fails the entire sweep — and
+ * PikaJieQi (a research fork with its assertions compiled out) does crash: it can
+ * play a general capture and segfault, deterministically, on a warm process. See
+ * mistboard-engine lab/jieqi-darkmove-2026-08-31/CRASH_FINDINGS.md. The live
+ * bot-move path is immune because it spawns per move; this one is not, so it
+ * respawns and retries the eval that died. Bounded, because an engine dying on
+ * every position is a real failure and must surface rather than spin.
  */
 export async function withJieqiAnalysisSession<T>(
   fn: (
@@ -325,27 +341,46 @@ export async function withJieqiAnalysisSession<T>(
   ) => Promise<T>,
 ): Promise<T> {
   const release = await analysisPool.acquire();
-  const session = new UciEngineSession({
-    bin: pikaJieqiPath(),
-    name: 'pikafish-jieqi-analysis',
-    initCommands: [
-      'uci',
-      ...netOption(),
-      ...jieqiAnalysisResourceOptions(),
-      'ucinewgame',
-      'isready',
-    ],
-  });
+  const spawnSession = () =>
+    new UciEngineSession({
+      bin: pikaJieqiPath(),
+      name: 'pikafish-jieqi-analysis',
+      initCommands: [
+        'uci',
+        ...netOption(),
+        ...jieqiAnalysisResourceOptions(),
+        'ucinewgame',
+        'isready',
+      ],
+    });
+  let session = spawnSession();
+  let respawns = 0;
   try {
     await session.ready();
-    return await fn((fen, opts) =>
-      session.evalPosition({
+    return await fn(async (fen, opts) => {
+      const request = {
         positionCommand: buildJieqiPositionCommand(fen, opts.moves),
         goCommand: jieqiGoCommand(opts),
         timeoutMs: opts.movetimeMs + 4_000,
         timeoutMessage: 'pikafish-jieqi analysis eval timed out',
-      }),
-    );
+      };
+      try {
+        return await session.evalPosition(request);
+      } catch (err) {
+        // Only a DEAD session is worth respawning for. A rejection from a session
+        // that is still alive is a real error and must surface unchanged.
+        if (!session.failed || respawns >= ANALYSIS_SESSION_MAX_RESPAWNS) throw err;
+        respawns += 1;
+        logger.warn(
+          { err: String(err), respawns, max: ANALYSIS_SESSION_MAX_RESPAWNS },
+          'pikafish-jieqi analysis session died mid-sweep; respawning and retrying the eval',
+        );
+        session.close();
+        session = spawnSession();
+        await session.ready();
+        return await session.evalPosition(request);
+      }
+    });
   } finally {
     session.close();
     release();

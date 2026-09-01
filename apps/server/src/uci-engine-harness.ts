@@ -669,6 +669,19 @@ export class UciEngineSession {
   }
 
   /**
+   * True once the session has terminally failed — the engine exited, or a search
+   * or the init handshake timed out. `fail()` kills the process and can never be
+   * undone (mid-search state is unknowable), so a caller that wants to carry on
+   * must spawn a NEW session rather than retry on this one.
+   *
+   * Exposed so a caller can tell a dead engine from a live engine's rejection:
+   * the first is worth respawning for, the second is a real error to surface.
+   */
+  get failed(): boolean {
+    return this.exitError !== null;
+  }
+
+  /**
    * Evaluate one position: write `positionCommand` + `goCommand`, keep the last
    * `info … score` line, resolve on `bestmove`. Requests are serialized; each has
    * its own hard timeout, after which the session is failed closed (the engine's
