@@ -9,6 +9,7 @@ import {
   Bot,
   Crown,
   createElement,
+  Globe,
   Heart,
   type IconNode,
   Info,
@@ -39,6 +40,7 @@ export type UiIconName =
   | 'featured-channel'
   | 'find-opponent'
   | 'forum-topic'
+  | 'language'
   | 'notification'
   | 'play-engine'
   | 'play-game'
@@ -60,6 +62,10 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'featured-channel': Crown,
   'find-opponent': Users,
   'forum-topic': MessagesSquare,
+  // Globe, not Lucide's Languages: lichess's 文A mark is a glyph in their own
+  // icon font (licon.Language, U+E06E), so there is nothing to import, and the
+  // nearest Lucide equivalent is six strokes that turn to mush in an 18px row.
+  language: Globe,
   notification: Bell,
   'play-engine': Bot,
   'play-game': Swords,
