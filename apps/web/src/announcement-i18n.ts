@@ -35,6 +35,13 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-01 ── 时限 matches the rated-games entry
+  // below; 加每步五秒 is the increment as the site's own clocks read it.
+  'A ten-minute clock, on every game.': '十分钟时限，每种棋都能选。',
+  'Ten minutes with a five-second increment is now on the time control list for every variant, and xiangqi and jieqi start there. A full board runs thirty to forty moves a side, which three minutes does not cover. The faster paces are all still there.':
+    '十分钟加每步五秒现已列入所有变体的时限选项，象棋和揭棋默认从这一档开始。整盘棋每方要走三四十步，三分钟不够用。原有的快棋时限都还在。',
+  'Start a game': '开始一局',
+
   // ── 2026-08-30 ── Terms taken from the source the
   // games came from and from strings this site already publishes: 甲级联赛 and
   // 预选赛 are the event's own names, 台 is the board number inside a team
@@ -252,6 +259,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-01 ── Same terms as the Simplified entry above.
+  'A ten-minute clock, on every game.': '十分鐘時限，每種棋都能選。',
+  'Ten minutes with a five-second increment is now on the time control list for every variant, and xiangqi and jieqi start there. A full board runs thirty to forty moves a side, which three minutes does not cover. The faster paces are all still there.':
+    '十分鐘加每步五秒現已列入所有變體的時限選項，象棋和揭棋預設從這一檔開始。整盤棋每方要走三四十步，三分鐘不夠用。原有的快棋時限都還在。',
+  'Start a game': '開始一局',
+
   // ── 2026-08-30 ── Same terms as the Simplified
   // entry above.
   'Sixty-one games from the Division A qualifier.': '甲級聯賽預選賽，六十一局。',

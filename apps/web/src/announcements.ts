@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-01',
+    kind: 'release',
+    headline: 'A ten-minute clock, on every game.',
+    body: 'Ten minutes with a five-second increment is now on the time control list for every variant, and xiangqi and jieqi start there. A full board runs thirty to forty moves a side, which three minutes does not cover. The faster paces are all still there.',
+    href: '/?play=computer',
+    cta: 'Start a game',
+  },
+  {
     date: '2026-08-30',
     kind: 'update',
     headline: 'Sixty-one games from the Division A qualifier.',
