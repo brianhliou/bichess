@@ -30,10 +30,6 @@ import {
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
 
-// The live renderer's viewBox geometry (7 files x 8 ranks at 72px cells with
-// 42px margins) — needed to compose labeled multi-board rows.
-const BOARD_W = 516;
-const BOARD_H = 588;
 const ROW_GAP = 30;
 const ROW_LABEL_H = 44;
 
@@ -67,21 +63,60 @@ function diagram(
   return responsive(boardSvg(view, options), maxWidth);
 }
 
-// Two labeled boards side by side in one responsive <svg>. The embedded boards
-// drop the fxq-board class (its global width:100% rule would fight the row
-// layout); their child classes still pick up the installed theme styles.
-function boardRow(items: Array<{ label: string; svg: string }>, maxWidth: number): string {
-  const totalW = items.length * BOARD_W + (items.length - 1) * ROW_GAP;
-  const totalH = ROW_LABEL_H + BOARD_H;
-  const parts = items.map((item, index) => {
-    const x = index * (BOARD_W + ROW_GAP);
-    const positioned = item.svg.replace(
-      '<svg class="fxq-board" ',
-      `<svg x="${x}" y="${ROW_LABEL_H}" width="${BOARD_W}" height="${BOARD_H}" `,
+// Place one rendered board inside a row: give its <svg> explicit x/y/width/
+// height and take its own viewBox as the footprint, so the row geometry can
+// never desync from what the live renderer actually emits.
+//
+// This rewrites the live renderer's opening tag, so the match has to survive
+// that tag growing new classes and attributes. It did not. The anchor used to
+// be the literal `<svg class="fxq-board" `, and once the board gained layout
+// and theme classes the replace became a silent no-op: every board in a row
+// lost its position, defaulted to filling the whole wrapper viewport, and the
+// boards stacked on each other and on their labels (fixed 2026-09-02). Hence
+// the loose match and the throw — a composition step that cannot place its
+// content must fail, not render garbage.
+function placeBoard(
+  svg: string,
+  x: number,
+  y: number,
+): { svg: string; width: number; height: number } {
+  const openTag = svg.match(/<svg class="fxq-board[^>]*>/)?.[0];
+  if (!openTag) {
+    throw new Error(
+      'fortress rules diagram: no <svg class="fxq-board..."> in the rendered board — the live renderer changed its opening tag and rows can no longer position it',
     );
-    const label = `<text x="${x + BOARD_W / 2}" y="${ROW_LABEL_H - 16}" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="2.6" style="fill: var(--site-muted, #6b7280)">${item.label}</text>`;
-    return label + positioned;
-  });
+  }
+  const viewBox = openTag.match(/viewBox="-?[\d.]+ -?[\d.]+ ([\d.]+) ([\d.]+)"/);
+  if (!viewBox) {
+    throw new Error('fortress rules diagram: board <svg> has no readable viewBox');
+  }
+  const width = Number(viewBox[1]);
+  const height = Number(viewBox[2]);
+  const placed = openTag
+    // Drop only the `fxq-board` token: its global `width: 100%` rule would beat
+    // the width attribute below. The layout/theme classes beside it are what the
+    // installed board styles key on, so they stay.
+    .replace(/ class="fxq-board ?/, ' class="')
+    .replace('<svg ', `<svg x="${x}" y="${y}" width="${width}" height="${height}" `);
+  return { svg: svg.replace(openTag, placed), width, height };
+}
+
+// Two labeled boards side by side in one responsive <svg>.
+function boardRow(items: Array<{ label: string; svg: string }>, maxWidth: number): string {
+  const parts: string[] = [];
+  let x = 0;
+  let tallest = 0;
+  for (const item of items) {
+    const board = placeBoard(item.svg, x, ROW_LABEL_H);
+    parts.push(
+      `<text x="${x + board.width / 2}" y="${ROW_LABEL_H - 16}" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="2.6" style="fill: var(--site-muted, #6b7280)">${item.label}</text>`,
+      board.svg,
+    );
+    x += board.width + ROW_GAP;
+    tallest = Math.max(tallest, board.height);
+  }
+  const totalW = Math.max(x - ROW_GAP, 0);
+  const totalH = ROW_LABEL_H + tallest;
   return responsive(
     `<svg viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress movement diagram">${parts.join('')}</svg>`,
     maxWidth,
