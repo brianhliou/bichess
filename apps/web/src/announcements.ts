@@ -24,6 +24,15 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    // Dated to the day the article becomes readable, not the day it was drafted.
+    date: '2026-09-02',
+    kind: 'article',
+    headline: 'Where the puzzles come from.',
+    body: 'Three thousand five hundred real games went through Pikafish looking for tactics. It found 10,503 blunders and published 1,211 of them. The whole pipeline is written up, including the parts that throw work away: two thirds of every blunder found dies because the position had more than one winning move, or because winning it took one obvious move.',
+    href: '/blog/how-puzzle-mining-works',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-09-01',
     kind: 'release',
     headline: 'A ten-minute clock, on every game.',

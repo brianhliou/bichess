@@ -110,3 +110,69 @@ test('derivation is deterministic', () => {
     assert.deepEqual(deriveXiangqiPuzzleDifficulty(puzzle), deriveXiangqiPuzzleDifficulty(puzzle));
   }
 });
+
+// The key move takes a chariot on c8 that nothing defends, and the line runs on
+// for six more plies. This is the shape that scored 2250 out of 2600 in the
+// served corpus before free-material was measured: the miner's gate admits it
+// with its widest margin (a hanging piece is the most uniquely best move on the
+// board) and the depth-driven prior then rates it expert.
+const FREE_CHARIOT: XiangqiPuzzle = {
+  id: 'test-free-chariot',
+  variant: XIANGQI_SPEC_ID,
+  title: 'free chariot',
+  initial: {
+    id: 'test-free-chariot',
+    board: {
+      c8: { role: 'chariot', color: 'red' },
+      c3: { role: 'chariot', color: 'black' },
+      e1: { role: 'general', color: 'red' },
+      e10: { role: 'general', color: 'black' },
+    },
+    status: { type: 'playing', turn: 'black' },
+    moveNumber: 40,
+    progressClock: 0,
+    positionCounts: {},
+  },
+  solution: [{ from: 'c3', to: 'c8' }],
+  goal: { type: 'winning-advantage', winner: 'black', centipawns: 900 },
+  themes: [],
+} as unknown as XiangqiPuzzle;
+
+test('an unanswerable capture is scored as free material, not as a hard puzzle', () => {
+  const derived = deriveXiangqiPuzzleDifficulty(FREE_CHARIOT);
+  assert.equal(derived.freeCaptureCp, 900, 'a chariot nothing defends is 900cp of free material');
+  assert.ok(derived.motifs.includes('free-material'));
+  const penalised = derived.score;
+
+  // Same line, but a red general now guards c8, so the capture has to be
+  // calculated rather than seen. Nothing else about the puzzle changes.
+  const defended = structuredClone(FREE_CHARIOT);
+  defended.initial.board.c9 = { role: 'general', color: 'red' };
+  delete defended.initial.board.e1;
+  const guarded = deriveXiangqiPuzzleDifficulty(defended);
+  assert.equal(guarded.freeCaptureCp, 0, 'a defended capture is not free material');
+  assert.ok(
+    guarded.score > penalised,
+    `defended (${guarded.score}) should outrank free (${penalised})`,
+  );
+});
+
+// A capture that mates leaves the opponent no legal moves at all, which a naive
+// "can anything recapture?" check reads as unanswerable. It is not free: the
+// game is simply over. Without this guard every mating capture in the corpus
+// takes the full penalty.
+test('a capture that delivers mate is not counted as free material', () => {
+  const mating = corpus.filter((puzzle) => {
+    const derived = deriveXiangqiPuzzleDifficulty(puzzle);
+    return derived.complete && !derived.quietFirstMove && puzzle.solution.length === 1;
+  });
+  for (const puzzle of mating) {
+    const derived = deriveXiangqiPuzzleDifficulty(puzzle);
+    if (puzzle.goal.type !== 'checkmate') continue;
+    assert.equal(
+      derived.freeCaptureCp,
+      0,
+      `${puzzle.id}: a mating capture must not be read as free material`,
+    );
+  }
+});

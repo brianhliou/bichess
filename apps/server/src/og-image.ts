@@ -257,6 +257,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'crossroads-chess': renderCrossroadsChessOgSvg,
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
+  'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
 };
 
 export async function serveArticleOgImage(params: {
@@ -826,6 +827,91 @@ function renderWorldTitleOgSvg(title: string): string {
       palette: OG_TIMELINE_PALETTE,
     }),
   );
+}
+
+// The puzzle-mining card is the article's thesis as one bar: of every blunder
+// the miner finds, most are thrown away, and the reasons they are thrown away
+// are what a puzzle is. Same shares and same red/green vocabulary as the
+// article's own thumbnail (PUZZLE_MINING_THUMBNAIL), so the two surfaces read
+// as one picture.
+//
+// "MATE NOT REACHED", never "no mate": the band is candidates whose engine
+// score was a MATE score that the line then failed to deliver inside the ply
+// cap, so the claim could not be verified. It is not "candidates without a
+// mate" -- an ordinary winning eval skips that check entirely and ships as a
+// winning-advantage puzzle, which is 640 of the 1,605 served. The short label
+// read as the second thing and misled a reader who knew the corpus.
+const PUZZLE_MINING_OG_BANDS: [label: string, share: number, fill: string][] = [
+  ['NEAR-TIE', 35, '#c96f62'],
+  ['TOO SHORT', 32, '#cf8479'],
+  ['MATE NOT REACHED', 12, '#d69a91'],
+  ['NOT UNIQUE', 9, '#ddb0a9'],
+  ['PUZZLE', 12, '#5da271'],
+];
+
+// Legend metrics. Approximate advance width for Noto Sans semibold at 24px
+// with 1.2 tracking; the legend is centred as a whole, so a few px of drift
+// moves the block rather than colliding anything.
+const PM_LEGEND_CHAR_W = 15.4;
+const PM_LEGEND_SWATCH = 22;
+const PM_LEGEND_GAP = 14;
+const PM_LEGEND_PAD = 40;
+
+function renderPuzzleMiningOgSvg(title: string): string {
+  const barX = 80;
+  const barY = 150;
+  const barW = OG_WIDTH - barX * 2;
+  const barH = 190;
+  const legendY = 440;
+
+  const bands: { label: string; share: number; fill: string; x: number; w: number }[] = [];
+  let cursor = barX;
+  for (const [label, share, fill] of PUZZLE_MINING_OG_BANDS) {
+    const w = (share / 100) * barW;
+    bands.push({ label, share, fill, x: cursor, w });
+    cursor += w;
+  }
+
+  const rects = bands
+    .map(
+      (b) =>
+        `<rect x="${b.x.toFixed(1)}" y="${barY}" width="${b.w.toFixed(1)}" height="${barH}" fill="${b.fill}"/>`,
+    )
+    .join('');
+  const shares = bands
+    .map(
+      (b) =>
+        `<text x="${(b.x + b.w / 2).toFixed(1)}" y="${barY + barH / 2 + 14}" text-anchor="middle" font-family="${FONT}" font-size="38" font-weight="700" fill="#171a1f">${b.share}%</text>`,
+    )
+    .join('');
+
+  // Laid out sequentially rather than positioned per band: a label's place no
+  // longer depends on how wide its band is, so the 9% band cannot squeeze its
+  // own name into its neighbour. Centring by band centre is what broke here.
+  const widths = bands.map(
+    (b) => PM_LEGEND_SWATCH + PM_LEGEND_GAP + b.label.length * PM_LEGEND_CHAR_W,
+  );
+  const legendTotal = widths.reduce((sum, n) => sum + n, 0) + PM_LEGEND_PAD * (bands.length - 1);
+  let legendX = (OG_WIDTH - legendTotal) / 2;
+  const legend: string[] = [];
+  bands.forEach((b, i) => {
+    legend.push(
+      `<rect x="${legendX.toFixed(1)}" y="${legendY - 19}" width="${PM_LEGEND_SWATCH}" height="${PM_LEGEND_SWATCH}" rx="4" fill="${b.fill}"/>`,
+      `<text x="${(legendX + PM_LEGEND_SWATCH + PM_LEGEND_GAP).toFixed(1)}" y="${legendY}" font-family="${FONT}" font-size="24" font-weight="600" letter-spacing="1.2" fill="#c8ccd2">${b.label}</text>`,
+    );
+    legendX += (widths[i] ?? 0) + PM_LEGEND_PAD;
+  });
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<defs><clipPath id="pm-og-bar"><rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="12"/></clipPath></defs>`,
+    `<g clip-path="url(#pm-og-bar)">${rects}</g>`,
+    shares,
+    legend.join(''),
+    ogFooterLine(title, 578),
+    `</svg>`,
+  ].join('');
 }
 
 function renderSkillVsLuckOgSvg(title: string): string {

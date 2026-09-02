@@ -3,6 +3,7 @@ import {
   ARTICLE_LANGS,
   hasTranslation,
   TRANSLATED_ARTICLE_SLUGS,
+  translateArticle,
   translateArticleText,
   translationKeys,
 } from './article-i18n.js';
@@ -54,6 +55,29 @@ describe('article translation coverage', () => {
       }
     }
     expect(missing, `untranslated seoTitle:\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  // ZH_HANT spreads ...ZH_HANS as its base and overrides below it, so Traditional
+  // entries authored ABOVE that spread are silently replaced by the Simplified
+  // ones. Every other check here passes when that happens: the keys resolve, and
+  // the parallel-values guard compares a value against itself, so length and
+  // ASCII match perfectly. On 2026-09-01 all 51 entries for the puzzle-mining
+  // article were being discarded while the whole file was green, and it was only
+  // caught by reading the built page. A locked article that renders identically
+  // in both scripts is that bug.
+  it('a locked article does not render identically in both zh scripts', () => {
+    const identical: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const article = published.find((a) => a.slug === slug);
+      if (!article) continue;
+      const render = (lang: (typeof ARTICLE_LANGS)[number]) =>
+        [...articleProse(translateArticle(article, lang))].map((p) => p.text).join('\n');
+      if (render('zh-Hans') === render('zh-Hant')) identical.push(slug);
+    }
+    expect(
+      identical,
+      `zh-Hant is byte-identical to zh-Hans for these slugs, which means their\nTraditional entries sit above the ...ZH_HANS spread in article-i18n.ts:\n${identical.join('\n')}`,
+    ).toEqual([]);
   });
 
   it('locked slugs are real published articles', () => {

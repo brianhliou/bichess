@@ -263,6 +263,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/how-puzzle-mining-works',
       '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
