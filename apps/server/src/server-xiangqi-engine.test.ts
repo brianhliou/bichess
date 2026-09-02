@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { XiangqiMove } from '@mistboard/game';
-import { buildXiangqiEngineDecisionPayload, legalMoveForUci } from './server-xiangqi-engine.js';
+import {
+  buildXiangqiEngineDecisionPayload,
+  legalMoveForUci,
+  queueXiangqiEngineDecision,
+} from './server-xiangqi-engine.js';
 import {
   xiangqiEngineVersion as catalogXiangqiEngineVersion,
   isXiangqiEngineClientId as isCatalogXiangqiEngineClientId,
@@ -300,4 +304,32 @@ test('decision payload marks a fail-closed turn and a guard replacement', () => 
     mate: null,
     pv: [],
   });
+});
+
+test('decisions queue on the room for the game-end flush, with the artifact shape and a cap', () => {
+  // Written at move time they violate the games FK (xiangqi has no games row
+  // until game end), so the loop queues and the tenant event writer flushes.
+  const room: { id: string; pendingDebugArtifacts?: unknown[] } = { id: 'xq_queue' };
+  queueXiangqiEngineDecision(room as never, { ply: 0, move: 'h2e2' });
+  queueXiangqiEngineDecision(room as never, { ply: 2, move: 'h0g2' });
+  assert.deepEqual(room.pendingDebugArtifacts, [
+    {
+      gameId: 'xq_queue',
+      ply: 0,
+      engineColor: null,
+      artifactType: 'live-engine-decision',
+      payload: { ply: 0, move: 'h2e2' },
+    },
+    {
+      gameId: 'xq_queue',
+      ply: 2,
+      engineColor: null,
+      artifactType: 'live-engine-decision',
+      payload: { ply: 2, move: 'h0g2' },
+    },
+  ]);
+  for (let ply = 4; ply < 1_000; ply += 2) {
+    queueXiangqiEngineDecision(room as never, { ply, move: 'a0a1' });
+  }
+  assert.equal(room.pendingDebugArtifacts?.length, 400, 'queue is capped, oldest kept');
 });

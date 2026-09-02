@@ -37,7 +37,6 @@ import {
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
-import * as persistence from './persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import type { UciEval } from './uci-engine-harness.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
@@ -228,12 +227,14 @@ export async function playXiangqiEngineMoveIfReady(
       roomId: room.id,
       color: seat,
     };
-    const seq = await ctx.appendEvent(room, resign);
-    ctx.broadcastEventAppended(room, resign, seq);
-    await recordXiangqiEngineDecision(
-      room.id,
+    // Queue BEFORE the append: the resign finishes the game, and the tenant
+    // event writer flushes the queue in the same append.
+    queueXiangqiEngineDecision(
+      room,
       buildXiangqiEngineDecisionPayload({ ...decisionBase, move: null, guardReplaced: false }),
     );
+    const seq = await ctx.appendEvent(room, resign);
+    ctx.broadcastEventAppended(room, resign, seq);
     return;
   }
 
@@ -262,17 +263,19 @@ export async function playXiangqiEngineMoveIfReady(
     color: seat,
     move: chosen,
   };
-  const seq = await ctx.appendEvent(room, event);
-  ctx.broadcastEventAppended(room, event, seq);
-  // After the broadcast, so the artifact write never sits on the move's latency.
-  await recordXiangqiEngineDecision(
-    room.id,
+  // Queue BEFORE the append: if this move mates, the tenant event writer records
+  // the game end and flushes the queue inside the same append, and a decision
+  // queued afterwards would never be written.
+  queueXiangqiEngineDecision(
+    room,
     buildXiangqiEngineDecisionPayload({
       ...decisionBase,
       move: xiangqiMoveToPikafishUci(chosen),
       guardReplaced: guarded !== validated,
     }),
   );
+  const seq = await ctx.appendEvent(room, event);
+  ctx.broadcastEventAppended(room, event, seq);
 }
 
 export type XiangqiEngineDecisionInput = {
@@ -357,30 +360,30 @@ export function buildXiangqiEngineDecisionPayload(
   };
 }
 
-async function recordXiangqiEngineDecision(
-  roomId: string,
+/** Longest game the queue will hold; past this the oldest decisions are kept. */
+const MAX_QUEUED_DECISIONS = 400;
+
+/**
+ * Queue one decision on the room for the tenant event writer to persist at game
+ * end. Xiangqi rooms have no games row until then (recordGameStart is omitted on
+ * purpose, matching dark xiangqi), and game_debug_artifacts.game_id is a foreign
+ * key onto that row, so writing here at move time fails on every ply; the first
+ * prod attempt (2026-09-02) did exactly that. Exported for tests.
+ */
+export function queueXiangqiEngineDecision(
+  room: Pick<XiangqiEngineRoom, 'id' | 'pendingDebugArtifacts'>,
   payload: Record<string, unknown>,
-): Promise<void> {
-  if (!persistence.isInitialized()) return;
-  try {
-    await persistence.recordGameDebugArtifact({
-      gameId: roomId,
-      ply: typeof payload.ply === 'number' ? payload.ply : null,
-      engineColor: null,
-      artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
-      payload,
-    });
-  } catch (err) {
-    logger.error(
-      {
-        kind: 'xiangqi_engine_artifact_persistence_failed',
-        room_id: roomId,
-        ply: payload.ply,
-        error: (err as Error).message,
-      },
-      'Xiangqi engine decision artifact failed to persist',
-    );
-  }
+): void {
+  if (!room.pendingDebugArtifacts) room.pendingDebugArtifacts = [];
+  const queue = room.pendingDebugArtifacts;
+  if (queue.length >= MAX_QUEUED_DECISIONS) return;
+  queue.push({
+    gameId: room.id,
+    ply: typeof payload.ply === 'number' ? payload.ply : null,
+    engineColor: null,
+    artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
+    payload,
+  });
 }
 
 function bothSeatsFilled(room: XiangqiEngineRoom): boolean {
