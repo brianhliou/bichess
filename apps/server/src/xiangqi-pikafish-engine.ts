@@ -21,11 +21,11 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
-  runUciBestmove,
   runUciEval,
   UciEnginePool,
   UciEngineSession,
   type UciEval,
+  UciWarmSessionCache,
 } from './uci-engine-harness.js';
 
 // Xiangqi -> engine UCI now lives in @mistboard/game so the browser FSF-wasm
@@ -263,14 +263,15 @@ export type XiangqiEngineOptions = { movetimeMs?: number };
 /**
  * Ask mainline Pikafish for a move given the Pikafish-UCI move history since the
  * start position (built by the adapter via xiangqiMoveToPikafishUci). Returns the
- * bestmove in Pikafish UCI (e.g. "b0c2") or null. The history is server-built and
- * trusted.
+ * search summary: `best` is the bestmove in Pikafish UCI (e.g. "b0c2") or null,
+ * alongside the depth/nodes/time/score the live loop persists per move. The
+ * history is server-built and trusted.
  */
 export async function xiangqiLiveEngineMove(
   engineId: string,
   moves: string[],
   opts: XiangqiEngineOptions = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = xiangqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Xiangqi engine: ${engineId}`);
   const release = await enginePool.acquire();
@@ -287,29 +288,40 @@ export async function xiangqiLiveEngineMove(
 export function xiangqiEngineMove(
   moves: string[],
   opts: { nodes: number; movetimeMs: number },
-): Promise<string | null> {
+): Promise<UciEval> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
   const nodes = Math.max(1, Math.floor(opts.nodes));
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs));
   const position =
     moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
-  const commands = [
-    'uci',
-    `setoption name EvalFile value ${net}`,
-    'ucinewgame',
-    'isready',
-    position,
-    // `go nodes N movetime T` halts at whichever binds first: the node budget is
-    // the reproducible strength anchor; the movetime is the latency ceiling.
-    `go nodes ${nodes} movetime ${movetimeMs}`,
-  ];
-  return runUciBestmove({
-    bin,
-    commands,
-    timeoutMs: movetimeMs + 4000,
-    timeoutMessage: 'pikafish-xiangqi move timed out',
-  });
+  // Warm session: mainline Pikafish reloads its ~40 MB net on every spawn
+  // (~2.8 s on prod, measured in the container 2026-09-02), which a
+  // spawn-per-move loop charged to the bot's clock on every ply.
+  return warmSessions.withSession(
+    {
+      bin,
+      initCommands: ['uci', `setoption name EvalFile value ${net}`, 'ucinewgame', 'isready'],
+      name: 'pikafish-xiangqi',
+    },
+    (session) =>
+      session.evalPosition({
+        positionCommand: position,
+        // `go nodes N movetime T` halts at whichever binds first: the node budget
+        // is the reproducible strength anchor; the movetime is the latency ceiling.
+        goCommand: `go nodes ${nodes} movetime ${movetimeMs}`,
+        timeoutMs: movetimeMs + 4000,
+        timeoutMessage: 'pikafish-xiangqi move timed out',
+      }),
+  );
+}
+
+// Parked live-move engine processes; enginePool above still caps concurrency.
+const warmSessions = new UciWarmSessionCache({ name: 'pikafish-xiangqi' });
+
+/** Point-in-time warm-session counters (spawned/reused/idle) for diagnostics. */
+export function pikafishXiangqiWarmSessionStats() {
+  return warmSessions.stats();
 }
 
 /** Fixed analysis depth: comparable evals across every ply of a game (P3). */

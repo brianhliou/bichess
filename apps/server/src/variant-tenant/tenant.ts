@@ -195,6 +195,17 @@ export type TenantRuntimeRoom<
   forfeitDeadline: number | null;
   forfeitSeat: C | null;
   gameEndRecorded: boolean;
+  /**
+   * Debug artifacts (per-move engine decisions) an engine loop produced before
+   * the games row exists. Tenants that omit recordGameStart (xiangqi, dark
+   * xiangqi) insert their games row only at game end, and
+   * game_debug_artifacts.game_id is a foreign key onto it, so a mid-game write
+   * violates the FK (prod, 2026-09-02, every xiangqi PvE ply). The loop queues
+   * here and appendTenantEvent flushes right after recordGameEnd succeeds; an
+   * aborted room drops the queue, since there is no game to attach it to.
+   * Memory-only: a restart mid-game loses the queue, never the game.
+   */
+  pendingDebugArtifacts?: persistence.GameDebugArtifactInput[];
   pendingWrites: Promise<void>;
   seatTokens: Partial<Record<C, TenantSeatTokenState<C>>>;
   rematch: TenantRematchState<C>;

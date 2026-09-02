@@ -28,6 +28,8 @@ export type TenantEventWriterPersistence<C extends string, M, Spec extends strin
   appendRoomEvent(roomId: string, seq: number, event: TenantRoomEvent<C, M, Spec>): Promise<void>;
   deleteRoomDeadline(roomId: string): Promise<void>;
   isInitialized(): boolean;
+  /** Flush target for room.pendingDebugArtifacts once the games row exists. */
+  recordGameDebugArtifact?(artifact: persistence.GameDebugArtifactInput): Promise<void>;
   recordGameEnd(roomId: string, summary: persistence.GameSummary): Promise<void>;
   upsertRoomDeadline(record: {
     roomId: string;
@@ -100,9 +102,11 @@ export async function appendTenantEvent<
       room.gameEndRecorded = true;
       const summary =
         tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+      let gameEndRecorded = false;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           await writer.persistence.recordGameEnd(room.id, summary);
+          gameEndRecorded = true;
           break;
         } catch (err) {
           if (attempt === 2) {
@@ -112,9 +116,17 @@ export async function appendTenantEvent<
           }
         }
       }
+      // The games row now exists, so the engine loop's queued per-move artifacts
+      // can satisfy their foreign key. Best-effort, one row at a time: a failed
+      // artifact must never fail the game-end path that just succeeded.
+      if (gameEndRecorded) await flushPendingDebugArtifacts(tenant, room, writer.persistence);
+      room.pendingDebugArtifacts = undefined;
     }
     if (room.projection.state.status.type === 'aborted' && !room.gameEndRecorded) {
       room.gameEndRecorded = true;
+      // No game, no artifacts: an aborted room never gets a games row to hang
+      // them on (and a pregame abort cascades away any row that did exist).
+      room.pendingDebugArtifacts = undefined;
       // Aborts flip the running games row (status='aborted', no result)
       // instead of recordGameEnd — mirrors the chess stack. No-op for rooms
       // that never recorded a game start.
@@ -250,6 +262,43 @@ export function recordTenantPersistenceError(
     },
     `${tenant.persistence.logLabel} persistence failure`,
   );
+}
+
+async function flushPendingDebugArtifacts<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(
+  tenant: { persistence: { logKindPrefix: string; logLabel: string } },
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  writer: TenantEventWriterPersistence<C, M, Spec>,
+): Promise<void> {
+  const queued = room.pendingDebugArtifacts;
+  if (!queued || queued.length === 0 || !writer.recordGameDebugArtifact) return;
+  let failed = 0;
+  let lastError: string | null = null;
+  for (const artifact of queued) {
+    try {
+      await writer.recordGameDebugArtifact(artifact);
+    } catch (err) {
+      failed += 1;
+      lastError = (err as Error).message;
+    }
+  }
+  if (failed > 0) {
+    logger.error(
+      {
+        kind: `${tenant.persistence.logKindPrefix}_debug_artifact_flush_failed`,
+        room_id: room.id,
+        queued: queued.length,
+        failed,
+        error: lastError,
+      },
+      `${tenant.persistence.logLabel} engine decision artifacts failed to persist at game end`,
+    );
+  }
 }
 
 function contextWithDefaults<

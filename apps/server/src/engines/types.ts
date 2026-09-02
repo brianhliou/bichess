@@ -148,13 +148,16 @@ export type PythonSubprocessEngineConfig = {
   engine_pin?: string;
 };
 
-/** Fairy-Stockfish UCI engines (Crossroads Chess, Mini Xiangqi). */
+/** Fairy-Stockfish UCI engines (Crossroads Chess, Mini Xiangqi, Xiangqi ladder). */
 export type FairyStockfishEngineConfig = {
   kind: 'fairy-stockfish';
   skill: number;
   movetime_ms: number;
   depth?: number;
   nodes?: number;
+  hash_mb?: number;
+  /** NNUE net file name when the rung runs a net; absent means classical eval. */
+  nnue?: string;
 };
 
 /** Pikafish jieqi UCI engines. `depth` is uncapped (absent) on the top tier. */

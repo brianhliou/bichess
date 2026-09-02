@@ -920,6 +920,27 @@ export class UciEngineSession {
     }
   }
 
+  /**
+   * Stop this idle session from holding the Node event loop open. A warm cache
+   * parks sessions between moves; without this, a CLI that made one engine call
+   * would never exit, and a test runner would hang on the parked children. The
+   * cache calls `ref()` again for the duration of a request so an in-flight
+   * search is never abandoned by an exiting process.
+   */
+  unref(): void {
+    this.child.unref();
+    for (const stream of [this.child.stdin, this.child.stdout, this.child.stderr]) {
+      refStream(stream, 'unref');
+    }
+  }
+
+  ref(): void {
+    this.child.ref();
+    for (const stream of [this.child.stdin, this.child.stdout, this.child.stderr]) {
+      refStream(stream, 'ref');
+    }
+  }
+
   private label(): string {
     return this.config.name ?? 'uci-engine-session';
   }
@@ -1031,6 +1052,160 @@ export class UciEngineSession {
   }
 }
 
+// A child's stdio pipes are net.Socket instances at runtime (they carry ref/unref)
+// but are typed as plain streams; a pipe that is not unref'd keeps the event loop
+// alive even when the ChildProcess handle itself is unref'd.
+function refStream(stream: unknown, method: 'ref' | 'unref'): void {
+  const fn = (stream as { [key in typeof method]?: () => void } | null | undefined)?.[method];
+  if (typeof fn === 'function') fn.call(stream);
+}
+
+// ── Warm session cache (live PvE moves without a spawn per move) ─────────────
+
+export type WarmSessionSpec = {
+  /** Absolute path to the engine binary. */
+  bin: string;
+  /** `uci` … `isready` block written once at spawn; part of the cache key, so
+   *  sessions never mix tiers (different Skill Level / Hash / net). */
+  initCommands: readonly string[];
+  /** Error-message prefix for session-level failures. */
+  name?: string;
+  initTimeoutMs?: number;
+};
+
+export type UciWarmSessionCacheStats = {
+  name: string;
+  idle: number;
+  keys: number;
+  spawned: number;
+  reused: number;
+  discarded: number;
+};
+
+/**
+ * Keeps engine processes warm between live moves. The one-shot runners spawn a
+ * fresh process per request, which was fine while startup was ~0.2 s; the FSF
+ * build the xiangqi ladder moved to on 2026-09-02 takes ~4.3 s to start on prod
+ * before it reads its first command (measured in the container: `printf quit |
+ * binary`), and Pikafish reloads a 40 MB net per spawn (~2.8 s). Both were
+ * charged to the bot's clock on every move. A parked session answers a request
+ * with just `position` + `go`.
+ *
+ * Contract: a session is exclusive while lent out (UCI engines answer one `go`
+ * at a time); callers still gate concurrency through their UciEnginePool, so
+ * the number of live sessions per key never exceeds the pool's slots. A session
+ * whose request failed (timeout, crash, protocol error) is DISCARDED, never
+ * reused: `UciEngineSession.fail()` already killed it and its state is unknown.
+ * Idle sessions are `unref()`d so they never hold the process open, and are
+ * closed after `idleTtlMs` so a rung nobody plays does not keep 100 MB of hash
+ * and net resident forever.
+ */
+export class UciWarmSessionCache {
+  private readonly idle = new Map<string, Array<{ session: UciEngineSession; since: number }>>();
+  private readonly sweeper: ReturnType<typeof setInterval>;
+  private spawned = 0;
+  private reused = 0;
+  private discarded = 0;
+
+  constructor(
+    private readonly config: {
+      name: string;
+      /** Close a parked session this long after its last request. Default 10 min. */
+      idleTtlMs?: number;
+      /** Parked sessions kept per key beyond which the oldest is closed. Default 2. */
+      maxIdlePerKey?: number;
+    },
+  ) {
+    const ttl = config.idleTtlMs ?? 10 * 60_000;
+    this.sweeper = setInterval(() => this.sweep(), Math.max(1_000, Math.min(60_000, ttl / 2)));
+    this.sweeper.unref();
+  }
+
+  /**
+   * Run `fn` with a warm session for `spec` (spawning one if none is parked),
+   * then park it again, or discard it if it failed. Any rejection from `fn`
+   * discards the session: a request that threw left the engine mid-search or
+   * dead, and neither state is safe to hand to the next move.
+   */
+  async withSession<T>(spec: WarmSessionSpec, fn: (session: UciEngineSession) => Promise<T>) {
+    const key = `${spec.bin}\n${spec.initCommands.join('\n')}`;
+    const parked = this.idle.get(key)?.shift();
+    let session: UciEngineSession;
+    if (parked && !parked.session.failed) {
+      session = parked.session;
+      session.ref();
+      this.reused += 1;
+    } else {
+      if (parked) this.discard(parked.session);
+      session = new UciEngineSession({
+        bin: spec.bin,
+        initCommands: spec.initCommands,
+        name: spec.name ?? this.config.name,
+        ...(spec.initTimeoutMs === undefined ? {} : { initTimeoutMs: spec.initTimeoutMs }),
+      });
+      this.spawned += 1;
+    }
+    let result: T;
+    try {
+      result = await fn(session);
+    } catch (err) {
+      this.discard(session);
+      throw err;
+    }
+    if (session.failed) {
+      this.discard(session);
+    } else {
+      session.unref();
+      const list = this.idle.get(key) ?? [];
+      list.push({ session, since: Date.now() });
+      this.idle.set(key, list);
+      const cap = this.config.maxIdlePerKey ?? 2;
+      while (list.length > cap) this.discard(list.shift()!.session);
+    }
+    return result;
+  }
+
+  stats(): UciWarmSessionCacheStats {
+    let idle = 0;
+    for (const list of this.idle.values()) idle += list.length;
+    return {
+      name: this.config.name,
+      idle,
+      keys: this.idle.size,
+      spawned: this.spawned,
+      reused: this.reused,
+      discarded: this.discarded,
+    };
+  }
+
+  /** Close every parked session (shutdown, tests). Lent-out sessions are the
+   *  borrower's to finish; they are discarded on return if the cache is gone. */
+  closeAll(): void {
+    for (const list of this.idle.values()) for (const entry of list) this.discard(entry.session);
+    this.idle.clear();
+    clearInterval(this.sweeper);
+  }
+
+  private discard(session: UciEngineSession): void {
+    this.discarded += 1;
+    session.close();
+  }
+
+  private sweep(): void {
+    const ttl = this.config.idleTtlMs ?? 10 * 60_000;
+    const cutoff = Date.now() - ttl;
+    for (const [key, list] of this.idle) {
+      const keep = list.filter((entry) => {
+        if (entry.since >= cutoff && !entry.session.failed) return true;
+        this.discard(entry.session);
+        return false;
+      });
+      if (keep.length === 0) this.idle.delete(key);
+      else this.idle.set(key, keep);
+    }
+  }
+}
+
 // ── Fairy-Stockfish layer (the perfect-info xiangqi + crossroads providers) ───
 
 // Resolve the FSF binary: explicit env override, else the known dev location, else
@@ -1089,6 +1264,21 @@ export type FairyStockfishMoveRequest = {
   nodes?: number;
   /** Movetime cap in ms for `go`; also sets the hard timeout (movetime + 4000). */
   movetimeMs: number;
+  /**
+   * Evaluation selection. Omitted: the engine default (classical on a build with
+   * no embedded net). `{ evalFile }`: load that NNUE net and turn `Use NNUE` on
+   * explicitly, so a build that happens to embed a default net cannot silently
+   * substitute it. `'classical'`: turn `Use NNUE` off explicitly, for tiers whose
+   * calibration was done against the hand-written eval and must not drift when
+   * the binary underneath them gains a net.
+   */
+  eval?: { evalFile: string } | 'classical';
+  /** `Threads` option; omit for the engine default (1). */
+  threads?: number;
+  /** `Hash` option in MB; omit for the engine default (16). */
+  hashMb?: number;
+  /** Binary to run; omit for the shared `fairyStockfishPath()` resolution. */
+  bin?: string;
 };
 
 /**
@@ -1097,9 +1287,25 @@ export type FairyStockfishMoveRequest = {
  * exactly as the per-variant providers did before extraction.
  */
 export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): string[] {
+  const { init, position, go } = splitFairyStockfishCommands(req);
+  return [...init, position, go];
+}
+
+/**
+ * The same block split for a warm session: `init` is written once at spawn
+ * (`uci` … `isready`), `position` + `go` per request. The two builders share one
+ * body so the per-request path can never drift from the one-shot path.
+ */
+export function splitFairyStockfishCommands(req: FairyStockfishMoveRequest): {
+  init: string[];
+  position: string;
+  go: string;
+} {
   const skill = req.skill === undefined ? null : Math.max(-20, Math.min(20, Math.floor(req.skill)));
   const nodes = req.nodes === undefined ? null : Math.max(1, Math.floor(req.nodes));
   const depth = req.depth === undefined ? null : Math.max(1, Math.floor(req.depth));
+  const threads = req.threads === undefined ? null : Math.max(1, Math.floor(req.threads));
+  const hashMb = req.hashMb === undefined ? null : Math.max(1, Math.floor(req.hashMb));
   const position =
     req.moves.length > 0 ? `position startpos moves ${req.moves.join(' ')}` : 'position startpos';
   // `go [nodes N] movetime M` stops at whichever limit is reached first: nodes pin
@@ -1109,16 +1315,33 @@ export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): str
     ...(depth === null ? [] : [`depth ${depth}`]),
     `movetime ${req.movetimeMs}`,
   ].join(' ');
-  return [
-    'uci',
-    ...(req.iniPath ? [`setoption name VariantPath value ${req.iniPath}`] : []),
-    `setoption name UCI_Variant value ${req.variant}`,
-    ...(skill === null ? [] : [`setoption name Skill Level value ${skill}`]),
-    'ucinewgame',
-    'isready',
+  // Eval options come before UCI_Variant: FSF (re)loads the net when the variant
+  // is set, and a net built for another variant is refused right there, which is
+  // the loud failure we want rather than a silent classical fallback.
+  const evalOptions =
+    req.eval === undefined
+      ? []
+      : req.eval === 'classical'
+        ? ['setoption name Use NNUE value false']
+        : [
+            'setoption name Use NNUE value true',
+            `setoption name EvalFile value ${req.eval.evalFile}`,
+          ];
+  return {
+    init: [
+      'uci',
+      ...(threads === null ? [] : [`setoption name Threads value ${threads}`]),
+      ...(hashMb === null ? [] : [`setoption name Hash value ${hashMb}`]),
+      ...evalOptions,
+      ...(req.iniPath ? [`setoption name VariantPath value ${req.iniPath}`] : []),
+      `setoption name UCI_Variant value ${req.variant}`,
+      ...(skill === null ? [] : [`setoption name Skill Level value ${skill}`]),
+      'ucinewgame',
+      'isready',
+    ],
     position,
-    `go ${goLimits}`,
-  ];
+    go: `go ${goLimits}`,
+  };
 }
 
 /**
@@ -1129,7 +1352,23 @@ export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): str
  */
 export function fairyStockfishBestmove(req: FairyStockfishMoveRequest): Promise<string | null> {
   return runUciBestmove({
-    bin: fairyStockfishPath(),
+    bin: req.bin ?? fairyStockfishPath(),
+    commands: buildFairyStockfishCommands(req),
+    timeoutMs: req.movetimeMs + 4000,
+    timeoutMessage: 'fsf move timed out',
+  });
+}
+
+/**
+ * Like fairyStockfishBestmove, but keeps the search's last exact `info` line so the
+ * caller can persist what the engine actually did (depth reached, nodes, time,
+ * score) next to the move it played. Live xiangqi PvE records this per move: until
+ * 2026-09-02 the bot persisted nothing, so "how deep did Level 8 really search on
+ * prod" had no answer short of an offline replay.
+ */
+export function fairyStockfishEval(req: FairyStockfishMoveRequest): Promise<UciEval> {
+  return runUciEval({
+    bin: req.bin ?? fairyStockfishPath(),
     commands: buildFairyStockfishCommands(req),
     timeoutMs: req.movetimeMs + 4000,
     timeoutMessage: 'fsf move timed out',

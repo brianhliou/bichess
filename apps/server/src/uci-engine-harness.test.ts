@@ -12,7 +12,9 @@ import {
   parseInfoMultiPv,
   parseUciOptionLine,
   runUciBestmove,
+  splitFairyStockfishCommands,
   UciEnginePool,
+  UciWarmSessionCache,
 } from './uci-engine-harness.js';
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -521,4 +523,168 @@ test('runUciBestmove drains stderr, so a chatty engine cannot deadlock', async (
     timeoutMessage: 'engine move timed out',
   });
   assert.equal(move, 'd2d3');
+});
+
+test('buildFairyStockfishCommands: eval, threads and hash options precede the variant', () => {
+  // Eval options must land before UCI_Variant: FSF (re)loads the net when the variant
+  // is set, and a net for the wrong variant is refused there rather than silently
+  // falling back to classical.
+  const nnue = buildFairyStockfishCommands({
+    moves: [],
+    variant: 'xiangqi',
+    skill: 20,
+    nodes: 1_000_000,
+    threads: 2,
+    hashMb: 64,
+    eval: { evalFile: '/nets/xiangqi-c07e94a5c7cb.nnue' },
+    movetimeMs: 6_000,
+  });
+  assert.deepEqual(nnue, [
+    'uci',
+    'setoption name Threads value 2',
+    'setoption name Hash value 64',
+    'setoption name Use NNUE value true',
+    'setoption name EvalFile value /nets/xiangqi-c07e94a5c7cb.nnue',
+    'setoption name UCI_Variant value xiangqi',
+    'setoption name Skill Level value 20',
+    'ucinewgame',
+    'isready',
+    'position startpos',
+    'go nodes 1000000 movetime 6000',
+  ]);
+  const classical = buildFairyStockfishCommands({
+    moves: [],
+    variant: 'xiangqi',
+    eval: 'classical',
+    movetimeMs: 100,
+  });
+  assert.deepEqual(classical.slice(0, 3), [
+    'uci',
+    'setoption name Use NNUE value false',
+    'setoption name UCI_Variant value xiangqi',
+  ]);
+  // Omitting every new field reproduces the pre-2026-09 block byte for byte.
+  const legacy = buildFairyStockfishCommands({ moves: [], variant: 'xiangqi', movetimeMs: 100 });
+  assert.deepEqual(legacy, [
+    'uci',
+    'setoption name UCI_Variant value xiangqi',
+    'ucinewgame',
+    'isready',
+    'position startpos',
+    'go movetime 100',
+  ]);
+});
+
+// ── splitFairyStockfishCommands + UciWarmSessionCache ────────────────────────
+
+test('splitFairyStockfishCommands is the one-shot block cut at position/go', () => {
+  const req = {
+    moves: ['h3e3'],
+    variant: 'xiangqi',
+    skill: 20,
+    nodes: 1_000_000,
+    hashMb: 64,
+    eval: { evalFile: '/nets/x.nnue' } as const,
+    movetimeMs: 6_000,
+  };
+  const { init, position, go } = splitFairyStockfishCommands(req);
+  assert.deepEqual([...init, position, go], buildFairyStockfishCommands(req));
+  assert.equal(init.at(-1), 'isready');
+  assert.equal(position, 'position startpos moves h3e3');
+  assert.equal(go, 'go nodes 1000000 movetime 6000');
+});
+
+// Answers the UCI handshake and every `go` with a fixed bestmove. Prints its pid
+// on `isready`, so a test can prove two requests hit the SAME process.
+const warmResponderBin = writeFakeEngine(
+  'warm-responder.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') process.stdout.write('id name warm\\nuciok\\n');
+    if (line === 'isready') process.stdout.write('readyok\\n');
+    if (line.startsWith('go')) {
+      process.stdout.write('info depth 5 score cp 10 nodes 100 time 5 pv a1a2\\nbestmove a1a2\\n');
+    }
+  }
+});`,
+);
+
+// Handshakes fine but never answers `go`: the request times out and the session dies.
+const warmMuteBin = writeFakeEngine(
+  'warm-mute.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') process.stdout.write('uciok\\n');
+    if (line === 'isready') process.stdout.write('readyok\\n');
+  }
+});`,
+);
+
+test('UciWarmSessionCache reuses a parked session instead of spawning per request', async () => {
+  const cache = new UciWarmSessionCache({ name: 'test-warm' });
+  const spec = { bin: warmResponderBin, initCommands: ['uci', 'isready'] };
+  const ask = () =>
+    cache.withSession(spec, (session) =>
+      session.evalPosition({
+        positionCommand: 'position startpos',
+        goCommand: 'go nodes 10',
+        timeoutMs: 5_000,
+        timeoutMessage: 'test move timed out',
+      }),
+    );
+  try {
+    const first = await ask();
+    const second = await ask();
+    assert.equal(first.best, 'a1a2');
+    assert.equal(second.nodes, 100);
+    assert.deepEqual(
+      { ...cache.stats(), name: undefined },
+      { name: undefined, idle: 1, keys: 1, spawned: 1, reused: 1, discarded: 0 },
+    );
+    // A different init block is a different engine configuration: its own process.
+    await cache.withSession({ ...spec, initCommands: ['uci', 'ucinewgame', 'isready'] }, (s) =>
+      s.ready(),
+    );
+    assert.equal(cache.stats().spawned, 2);
+    assert.equal(cache.stats().keys, 2);
+  } finally {
+    cache.closeAll();
+  }
+});
+
+test('UciWarmSessionCache discards a session whose request failed and spawns afresh', async () => {
+  const cache = new UciWarmSessionCache({ name: 'test-warm-fail' });
+  const spec = { bin: warmMuteBin, initCommands: ['uci', 'isready'] };
+  const ask = () =>
+    cache.withSession(spec, (session) =>
+      session.evalPosition({
+        positionCommand: 'position startpos',
+        goCommand: 'go nodes 10',
+        timeoutMs: 200,
+        timeoutMessage: 'test move timed out',
+      }),
+    );
+  try {
+    await assert.rejects(ask, /test move timed out/);
+    assert.deepEqual(
+      { ...cache.stats(), name: undefined },
+      { name: undefined, idle: 0, keys: 0, spawned: 1, reused: 0, discarded: 1 },
+    );
+    // The dead process is never handed out again: the next request spawns anew.
+    await assert.rejects(ask, /test move timed out/);
+    assert.equal(cache.stats().spawned, 2);
+    assert.equal(cache.stats().discarded, 2);
+  } finally {
+    cache.closeAll();
+  }
 });

@@ -82,10 +82,22 @@ test('standard Xiangqi FSF ladder preserves the PlayStrategy weakening parameter
     depth: 5,
     movetime_ms: 50,
   });
-  assert.deepEqual(loadEngine('fairy-stockfish-xiangqi-level-8').config, {
+  // Level 8 left the PlayStrategy profile on 2026-09-02: node-anchored, NNUE net,
+  // no depth cap. The hash names the pinned build and the net so the EvE ladder
+  // sees a new engine identity, not a stronger version of the old one.
+  const level8 = loadEngine('fairy-stockfish-xiangqi-level-8');
+  assert.deepEqual(level8.config, {
     kind: 'fairy-stockfish',
     skill: 20,
-    depth: 22,
-    movetime_ms: 1_000,
+    movetime_ms: 6_000,
+    nodes: 1_000_000,
+    hash_mb: 64,
+    nnue: 'xiangqi-c07e94a5c7cb.nnue',
   });
+  assert.match(
+    level8.configHash,
+    /^fsf-xiangqi-0\.2\.0-[0-9a-f]{8}-skill-20-nodes-1000000-xiangqi-c07e94a5c7cb$/,
+  );
+  assert.match(level1.configHash, /^fsf-xiangqi-0\.2\.0-[0-9a-f]{8}-skill--9-depth-5$/);
+  assert.equal(level8.configHash, level8.playSignature);
 });
