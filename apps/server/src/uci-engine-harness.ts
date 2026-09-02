@@ -15,7 +15,7 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logger } from './obs.js';
 
@@ -245,6 +245,42 @@ function uciProtocolError(line: string): string | null {
   return /^(?:No such option|Unknown option|Unknown command)\b/i.test(line) ? line : null;
 }
 
+/** How much of a dead engine's stderr to keep for the failure message. */
+const STDERR_TAIL_LIMIT = 2_000;
+
+/**
+ * Keep the tail of a child's stderr so a crash can name itself, and — just as
+ * important — DRAIN it. `stdio: [..., 'pipe']` with no reader is a hang: once the
+ * 64KB pipe buffer fills, the engine blocks on its next write and never reaches
+ * `bestmove`.
+ */
+function captureStderrTail(child: ReturnType<typeof spawn>): () => string {
+  let tail = '';
+  child.stderr?.on('data', (chunk: Buffer) => {
+    tail = (tail + chunk.toString('utf8')).slice(-STDERR_TAIL_LIMIT);
+  });
+  return () => tail.trim();
+}
+
+/**
+ * The child closed before producing a result. Every per-request runner listens for
+ * this now, because without it a crashed engine is INDISTINGUISHABLE from a slow
+ * one: the promise sat until the hard timeout and rejected with the timeout
+ * message. Prod, 2026-09-02: six jieqi PvE games were resigned on "pikafish-jieqi
+ * move timed out" at a budget the same call clears in 4.1s locally, and the logs
+ * could not say whether the engine had died or was merely late.
+ */
+function earlyExitError(
+  bin: string,
+  code: number | null,
+  signal: NodeJS.Signals | null,
+  stderrTail: string,
+): Error {
+  const how = signal !== null ? `was killed by ${signal}` : `exited with code ${code}`;
+  const detail = stderrTail === '' ? '' : `; stderr: ${stderrTail}`;
+  return new Error(`UCI engine ${basename(bin)} ${how} before returning a result${detail}`);
+}
+
 export type RunUciBestmoveArgs = {
   /** Absolute path to the engine binary. */
   bin: string;
@@ -290,9 +326,9 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
 
     const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
 
+    const readStderrTail = captureStderrTail(child);
     child.on('error', (err) => finish(() => reject(err)));
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
+    const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
@@ -318,6 +354,20 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
         }
         newline = buf.indexOf('\n');
       }
+    };
+    child.stdout.on('data', (chunk: Buffer) => {
+      buf += chunk.toString('utf8');
+      consume();
+    });
+    child.on('close', (code, signal) => {
+      if (settled) return;
+      // A final line missing its newline is still a result; flush it before
+      // calling this a crash.
+      if (buf.trim() !== '') {
+        buf += '\n';
+        consume();
+      }
+      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
     });
 
     child.stdin.write(`${commands.join('\n')}\n`);
@@ -425,9 +475,9 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
 
     const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
 
+    const readStderrTail = captureStderrTail(child);
     child.on('error', (err) => finish(() => reject(err)));
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
+    const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
@@ -468,6 +518,20 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
         }
         newline = buf.indexOf('\n');
       }
+    };
+    child.stdout.on('data', (chunk: Buffer) => {
+      buf += chunk.toString('utf8');
+      consume();
+    });
+    child.on('close', (code, signal) => {
+      if (settled) return;
+      // A final line missing its newline is still a result; flush it before
+      // calling this a crash.
+      if (buf.trim() !== '') {
+        buf += '\n';
+        consume();
+      }
+      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
     });
 
     child.stdin.write(`${commands.join('\n')}\n`);
@@ -574,9 +638,9 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
 
     const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
 
+    const readStderrTail = captureStderrTail(child);
     child.on('error', (err) => finish(() => reject(err)));
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
+    const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
@@ -604,6 +668,20 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
         }
         newline = buf.indexOf('\n');
       }
+    };
+    child.stdout.on('data', (chunk: Buffer) => {
+      buf += chunk.toString('utf8');
+      consume();
+    });
+    child.on('close', (code, signal) => {
+      if (settled) return;
+      // A final line missing its newline is still a result; flush it before
+      // calling this a crash.
+      if (buf.trim() !== '') {
+        buf += '\n';
+        consume();
+      }
+      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
     });
 
     child.stdin.write(`${commands.join('\n')}\n`);
@@ -651,9 +729,13 @@ export class UciEngineSession {
 
   constructor(private readonly config: UciEngineSessionConfig) {
     this.child = spawn(config.bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const readStderrTail = captureStderrTail(this.child);
     this.child.on('error', (err) => this.fail(err));
-    this.child.on('exit', (code) => {
-      if (!this.closed) this.fail(new Error(`${this.label()} exited with code ${code}`));
+    this.child.on('exit', (code, signal) => {
+      if (this.closed) return;
+      const how = signal !== null ? `was killed by ${signal}` : `exited with code ${code}`;
+      const tail = readStderrTail();
+      this.fail(new Error(`${this.label()} ${how}${tail === '' ? '' : `; stderr: ${tail}`}`));
     });
     this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
     this.readyPromise = this.enqueue(() => this.init());

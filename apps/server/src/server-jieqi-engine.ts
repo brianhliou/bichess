@@ -92,11 +92,22 @@ function engineToMove(room: JieqiEngineRoom, seat: JieqiColor): boolean {
 // replaying move-by-move — capture = target occupied, reveal = moving piece faceDown.
 // Within a window every piece's revealed-ness is constant, so the window-start redacted FEN
 // plus the quiet moves leak no hidden identity and replay cleanly. Empty window => FEN only.
-function jieqiEngineRepWindow(room: JieqiEngineRoom): { fen: string; moves: string[] } {
+// `moves` is only the slice the engine replays; `gameMoves` is the whole game, and
+// the decision record needs BOTH. Reporting the window as the game's history is how
+// a twelve-ply game paged as a two-ply one on 2026-09-02.
+function jieqiEngineRepWindow(room: JieqiEngineRoom): {
+  fen: string;
+  moves: string[];
+  gameMoves: string[];
+} {
   const events = room.events as readonly JieqiEvent[];
+  const gameMoves: string[] = [];
+  for (const event of events) {
+    if (event.type === 'move-played') gameMoves.push(jieqiMoveToPikafishUci(event.move));
+  }
   const created = events[0];
   if (created?.type !== 'room-created') {
-    return { fen: jieqiStateToPikafishFen(room.projection.state), moves: [] };
+    return { fen: jieqiStateToPikafishFen(room.projection.state), moves: [], gameMoves };
   }
   let proj = replayTenantEvents(jieqiTenant, [created]);
   let startState = proj.state;
@@ -119,6 +130,7 @@ function jieqiEngineRepWindow(room: JieqiEngineRoom): { fen: string; moves: stri
   return {
     fen: jieqiStateToPikafishFen(startState),
     moves: windowMoves.map(jieqiMoveToPikafishUci),
+    gameMoves,
   };
 }
 
@@ -154,7 +166,7 @@ export async function playJieqiEngineMoveIfReady(
   const incrementMs = clock?.incrementMs ?? 0;
   if (remainingMs !== null && remainingMs <= 0) return;
 
-  const { fen, moves } = jieqiEngineRepWindow(room);
+  const { fen, moves, gameMoves } = jieqiEngineRepWindow(room);
   // Clock-aware per-move budget (shared allocator). Jieqi's strength anchor is the
   // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
   // latency ceiling + time-pressure guard. Existing ceiling preserved —
@@ -210,19 +222,16 @@ export async function playJieqiEngineMoveIfReady(
       engineVersion: JIEQI_ENGINE_VERSION,
       movetimeMs,
       tier: { movetimeMs: tier.movetimeMs },
-      ply: moves.length,
+      ply: gameMoves.length,
       toMove: seat,
       inCheck: false,
       fen,
-      history: moves,
+      history: gameMoves,
+      engineWindow: moves,
       legalUci: getJieqiLegalMoves(room.projection.state).map(jieqiMoveToPikafishUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'jieqi_engine_failed_closed',
-      'Jieqi engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'jieqi_engine_failed_closed', 'Jieqi');
     const resign: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),

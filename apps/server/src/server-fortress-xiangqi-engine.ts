@@ -206,11 +206,7 @@ export async function playFortressXiangqiEngineMoveIfReady(
       legalUci: getFortressXiangqiLegalMoves(room.projection.state).map(fortressXiangqiMoveToUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'fortress_xiangqi_engine_failed_closed',
-      'Fortress Xiangqi engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'fortress_xiangqi_engine_failed_closed', 'Fortress Xiangqi');
     const resign: TenantRoomEvent<
       FortressXiangqiColor,
       FortressXiangqiMove,

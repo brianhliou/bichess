@@ -41,19 +41,32 @@ export type EngineDecisionRecord = {
   tier_skill: number | null;
   tier_nodes: number | null;
   tier_movetime_ms: number | null;
+  /** The GAME's ply count — not the length of whatever slice the engine was fed. */
   ply: number;
   to_move: string;
   in_check: boolean;
   // FEN of the position, for engines fed a FEN (banqi/jieqi). null for engines
   // replayed purely from move history (drop-mini, mini-xiangqi).
   fen: string | null;
+  /** The whole game, in engine UCI. */
   history: string;
+  /**
+   * The moves actually replayed onto `fen` for this call, when the caller feeds the
+   * engine a window rather than the whole game (jieqi/banqi replay only the quiet
+   * plies since the last irreversible move, so the engine sees repetitions). Kept
+   * separate from `history` because collapsing the two makes the record lie: the
+   * 2026-09-02 jieqi alert reported `ply: 2, history: "d5c6 g5g7"` for a game that
+   * was twelve plies deep, and pointed triage at an opening bug that did not exist.
+   */
+  engine_window: string | null;
   legal_moves: string;
   legal_count: number;
   attempts: number;
   reject_reason: EngineMoveRejectReason | null;
   last_output: string;
   attempts_detail: string;
+  /** Every attempt failed on the request itself: infrastructure, not a bad move. */
+  unreachable: boolean;
 };
 
 export function buildEngineDecisionRecord(input: {
@@ -67,7 +80,10 @@ export function buildEngineDecisionRecord(input: {
   toMove: string;
   inCheck: boolean;
   fen?: string | null;
+  /** The whole game, in engine UCI. */
   history: string[];
+  /** The slice replayed onto `fen`, when that is narrower than `history`. */
+  engineWindow?: readonly string[];
   legalUci: string[];
   attempts: EngineMoveAttempt[];
 }): EngineDecisionRecord {
@@ -87,6 +103,7 @@ export function buildEngineDecisionRecord(input: {
     in_check: input.inCheck,
     fen: input.fen ?? null,
     history: input.history.join(' '),
+    engine_window: input.engineWindow === undefined ? null : input.engineWindow.join(' '),
     legal_moves: input.legalUci.join(' '),
     legal_count: input.legalUci.length,
     attempts: input.attempts.length,
@@ -95,13 +112,31 @@ export function buildEngineDecisionRecord(input: {
     attempts_detail: input.attempts
       .map((a) => `${a.attempt}:${a.uci ?? a.error ?? '(none)'}:${a.reason ?? 'ok'}`)
       .join(' | '),
+    unreachable: engineNeverResponded(input.attempts),
   };
 }
 
-function engineFailClosedAlert(record: EngineDecisionRecord): EngineAlertEmailPayload {
+/**
+ * True when the engine never answered at all — every attempt died on the request
+ * (crash, hang, timeout) rather than returning a move the kernel refused.
+ *
+ * The two are different incidents wanting different triage: an illegal move is an
+ * engine bug reproducible from `fen`, while no move at all is infrastructure and
+ * reproduces from nothing. They were reported under one name until 2026-09-02, when
+ * six jieqi games were resigned on `request-failed` under an alert that said the
+ * engine had failed to produce a KERNEL-LEGAL move.
+ */
+export function engineNeverResponded(attempts: readonly EngineMoveAttempt[]): boolean {
+  return attempts.length > 0 && attempts.every((attempt) => attempt.reason === 'request-failed');
+}
+
+export function engineFailClosedAlert(record: EngineDecisionRecord): EngineAlertEmailPayload {
   return {
     severity: 'critical',
-    kind: 'engine_failed_closed',
+    // `alert_kind` is what the email subject, the throttle bucket, and every other
+    // alert site key on; this one spelled it `kind` and was bucketed as a generic
+    // "engine" alert alongside unrelated infra pages.
+    alert_kind: record.unreachable ? 'engine_unreachable' : 'engine_failed_closed',
     variant: record.variant,
     room_id: record.room_id,
     engine_id: record.engine_id,
@@ -109,8 +144,11 @@ function engineFailClosedAlert(record: EngineDecisionRecord): EngineAlertEmailPa
     revision: record.revision ?? 'unknown',
     ply: record.ply,
     to_move: record.to_move,
+    attempts: record.attempts,
     reject_reason: record.reject_reason ?? 'unknown',
     last_output: record.last_output,
+    attempts_detail: record.attempts_detail,
+    ...(record.engine_window === null ? {} : { engine_window: record.engine_window }),
     history: record.history || '(startpos)',
   };
 }
@@ -124,18 +162,33 @@ export function reportEngineMoveOk(): void {
 }
 
 /**
+ * The one line an operator reads in a log list, so it has to say WHICH failure this
+ * was. Every variant used to pass the same hand-written sentence ("no kernel-legal
+ * move after retries"), which is a lie when the engine never answered — and that is
+ * the sentence the 2026-09-02 jieqi incident was triaged from.
+ */
+function engineFallbackSummary(record: EngineDecisionRecord, displayName: string): string {
+  return record.unreachable
+    ? `${displayName} engine unreachable: no response in ${record.attempts} attempt(s) (${record.last_output}); resigning the engine seat`
+    : `${displayName} engine failed closed: no kernel-legal move after retries; resigning the engine seat`;
+}
+
+/**
  * The engine could not produce an acceptable move. Count it as a fallback, log
  * the full record at error, and page immediately. For perfect-information
  * engines where a rejected move is unambiguously a bug. The caller still
  * performs the terminal action (resign / forfeit).
+ *
+ * `displayName` is the variant's human name ("Flip Jungle"); the summary sentence
+ * is built here so every variant reports the same two failure modes the same way.
  */
 export function reportEngineFallback(
   record: EngineDecisionRecord,
   logKind: string,
-  message: string,
+  displayName: string,
 ): void {
   engineCounters.recordMove(true);
-  logger.error({ kind: logKind, ...record }, message);
+  logger.error({ kind: logKind, ...record }, engineFallbackSummary(record, displayName));
   void sendEngineAlertNotification(engineFailClosedAlert(record)).catch(() => {});
 }
 

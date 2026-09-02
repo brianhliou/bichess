@@ -373,11 +373,7 @@ async function playJungleRustEngineMove(
       legalUci: getJungleLegalMoves(state).map(jungleMoveToEngineUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'jungle_engine_failed_closed',
-      'Jungle engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'jungle_engine_failed_closed', 'Jungle');
     const resign: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
       type: 'seat-resigned',
       at: Date.now(),

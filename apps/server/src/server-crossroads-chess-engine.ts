@@ -164,11 +164,7 @@ export async function playCrossroadsChessEngineMoveIfReady(
       ),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'crossroads_chess_engine_failed_closed',
-      'Crossroads Chess engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'crossroads_chess_engine_failed_closed', 'Crossroads Chess');
     const resign: CrossroadsChessEvent = {
       type: 'seat-resigned',
       at: Date.now(),

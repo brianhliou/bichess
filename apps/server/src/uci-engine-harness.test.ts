@@ -404,3 +404,121 @@ test('runUciBestmove rejects when the binary cannot be spawned', async () => {
     }),
   );
 });
+
+// ── A dead engine must not masquerade as a slow one ──────────────────────────
+//
+// Before these, `stdio: [..., 'pipe']` had no stderr reader and no `close`
+// handler: a crash produced no output, the promise sat until the hard timeout,
+// and the caller was told "timed out". That is how six jieqi PvE games were
+// resigned on 2026-09-02 with nothing in the logs to say why.
+
+// Dies with a nonzero exit code, after saying why on stderr.
+const crasherBin = writeFakeEngine(
+  'crasher.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line.startsWith('go')) {
+      process.stderr.write('terminate called after throwing std::bad_alloc\\n');
+      process.exit(3);
+    }
+  }
+});`,
+);
+
+// Dies the way a segfaulting engine does: on a signal, silently.
+const signalCrasherBin = writeFakeEngine(
+  'signal-crasher.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  if (buf.includes('go')) process.kill(process.pid, 'SIGSEGV');
+});`,
+);
+
+// Answers, but leaves the last line unterminated, then exits.
+const unterminatedBin = writeFakeEngine(
+  'unterminated.mjs',
+  `let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  if (buf.includes('go')) {
+    process.stdout.write('bestmove d2d3');
+    setTimeout(() => process.exit(0), 25);
+  }
+});`,
+);
+
+// Writes far more than a pipe buffer holds to stderr before answering, and does it
+// with BLOCKING writes the way a C++ engine does (process.stderr.write would just
+// queue in node's own buffer and never block). With an undrained stderr the child
+// wedges on a write nobody is reading, and the call can only ever time out.
+const stderrFloodBin = writeFakeEngine(
+  'stderr-flood.mjs',
+  `import { writeSync } from 'node:fs';
+let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  if (buf.includes('go')) {
+    const block = 'x'.repeat(64 * 1024) + '\\n';
+    for (let i = 0; i < 64; i += 1) writeSync(2, block);
+    process.stdout.write('bestmove d2d3\\n');
+  }
+});`,
+);
+
+test('runUciBestmove reports a crashed engine instead of blaming the timeout', async () => {
+  const startedAt = Date.now();
+  await assert.rejects(
+    runUciBestmove({
+      bin: crasherBin,
+      commands: ['uci', 'go movetime 50'],
+      timeoutMs: 5_000,
+      timeoutMessage: 'engine move timed out',
+    }),
+    (err: Error) => {
+      assert.match(err.message, /exited with code 3/);
+      assert.match(err.message, /std::bad_alloc/);
+      assert.doesNotMatch(err.message, /timed out/);
+      return true;
+    },
+  );
+  // The whole point: it fails on close, it does not burn the search budget first.
+  assert.ok(Date.now() - startedAt < 4_000, 'rejected on close, not on the hard timeout');
+});
+
+test('runUciBestmove names the signal when the engine is killed', async () => {
+  await assert.rejects(
+    runUciBestmove({
+      bin: signalCrasherBin,
+      commands: ['uci', 'go movetime 50'],
+      timeoutMs: 5_000,
+      timeoutMessage: 'engine move timed out',
+    }),
+    /was killed by SIG/,
+  );
+});
+
+test('runUciBestmove keeps a bestmove that arrived without its trailing newline', async () => {
+  const move = await runUciBestmove({
+    bin: unterminatedBin,
+    commands: ['uci', 'go movetime 50'],
+    timeoutMs: 5_000,
+    timeoutMessage: 'should not time out',
+  });
+  assert.equal(move, 'd2d3');
+});
+
+test('runUciBestmove drains stderr, so a chatty engine cannot deadlock', async () => {
+  const move = await runUciBestmove({
+    bin: stderrFloodBin,
+    commands: ['uci', 'go movetime 50'],
+    timeoutMs: 5_000,
+    timeoutMessage: 'engine move timed out',
+  });
+  assert.equal(move, 'd2d3');
+});

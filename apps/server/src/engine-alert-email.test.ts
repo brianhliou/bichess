@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { engineAlertEmailSubject, engineAlertEmailText } from './engine-alert-email.js';
+import {
+  alertKindOf,
+  alertThrottleKey,
+  engineAlertEmailSubject,
+  engineAlertEmailText,
+} from './engine-alert-email.js';
 import {
   buildSyntheticEngineAlert,
   parseEngineAlertEmailCliArgs,
@@ -72,5 +77,63 @@ test('engine alert CLI requires severity to use the severity option', () => {
   assert.throws(
     () => parseEngineAlertEmailCliArgs(['--field', 'severity=critical']),
     /Use --severity/,
+  );
+});
+
+// ── Throttling must not collapse separate incidents ──────────────────────────
+
+test('the throttle buckets per room, so distinct games page separately', () => {
+  const base = { severity: 'critical', alert_kind: 'engine_unreachable' } as const;
+  // The 2026-09-02 failure mode: six different jieqi rooms shared one bucket, so
+  // the operator was paged about one of them and never heard about the other five.
+  assert.notEqual(
+    alertThrottleKey({ ...base, room_id: 'jq_one' }),
+    alertThrottleKey({ ...base, room_id: 'jq_two' }),
+  );
+  // The same room retrying is what the throttle is actually for.
+  assert.equal(
+    alertThrottleKey({ ...base, room_id: 'jq_one' }),
+    alertThrottleKey({ ...base, room_id: 'jq_one', ply: 14 }),
+  );
+  // Different kinds never mask each other.
+  assert.notEqual(
+    alertThrottleKey({ ...base, room_id: 'jq_one' }),
+    alertThrottleKey({
+      severity: 'critical',
+      alert_kind: 'engine_seat_forfeited',
+      room_id: 'jq_one',
+    }),
+  );
+});
+
+test('alertKindOf falls back to a payload that spells the kind `kind`', () => {
+  assert.equal(
+    alertKindOf({ severity: 'critical', alert_kind: 'engine_unreachable' }),
+    'engine_unreachable',
+  );
+  assert.equal(
+    alertKindOf({ severity: 'critical', kind: 'engine_failed_closed' }),
+    'engine_failed_closed',
+  );
+  assert.equal(alertKindOf({ severity: 'warning', engine_fallbacks_tick: 2 }), 'engine');
+});
+
+test('the suggested log search names a kind the server actually logs', () => {
+  const text = engineAlertEmailText(
+    {
+      severity: 'critical',
+      alert_kind: 'engine_unreachable',
+      variant: 'jieqi',
+      room_id: 'jq_66ae08e2',
+    },
+    new Date('2026-09-02T02:50:07.610Z'),
+    'web',
+  );
+  assert.match(text, /kind="engine_unreachable" room_id="jq_66ae08e2"/);
+  // `kind="engine_alert"` matched nothing in production logs.
+  assert.doesNotMatch(text, /engine_alert/);
+  assert.match(
+    engineAlertEmailSubject({ severity: 'critical', alert_kind: 'engine_unreachable' }, 'web'),
+    /CRITICAL engine_unreachable alert \(web\)/,
   );
 });

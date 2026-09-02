@@ -229,11 +229,7 @@ export async function playJungleFlipEngineMoveIfReady(
       legalUci: getJungleFlipLegalMoves(room.projection.state).map(jungleFlipMoveToEngineUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'jungle_flip_engine_failed_closed',
-      'Flip Jungle engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'jungle_flip_engine_failed_closed', 'Flip Jungle');
     const resign: TenantRoomEvent<JungleFlipSeat, JungleFlipMove, JungleFlipSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),
