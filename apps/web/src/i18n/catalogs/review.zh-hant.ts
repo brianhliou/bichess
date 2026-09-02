@@ -405,6 +405,7 @@ export const ZH_HANT_REVIEW = {
   'engine.toggleLocal': '開關本機引擎',
   'engine.inLocalBrowser': '在本機瀏覽器中執行',
   'engine.bestMoveIndicators': '最佳著法提示',
+  'engine.shortcutHint': '快捷鍵：按 {key} 切換',
   'engine.multipleLines': '多路變著',
   'engine.searchEffort': '搜尋強度',
   'engine.firstPlayerPerspective': '以先行方視角',

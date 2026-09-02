@@ -414,9 +414,14 @@ function checkboxRow(
   input.type = 'checkbox';
   input.checked = initial;
   input.className = 'engine-panel__setting-checkbox';
-  const shortcut = document.createElement('span');
-  shortcut.className = 'engine-panel__setting-value';
+  // The `a` key toggles this row (review-layout.ts installReviewKeyboard).
+  // A bare "a" in a box read as a mystery glyph, so it is a real <kbd> keycap
+  // with a tooltip that says what the key does.
+  const shortcut = document.createElement('kbd');
+  shortcut.className = 'engine-panel__setting-key';
   shortcut.textContent = 'a';
+  shortcut.title = t('engine.shortcutHint', { key: 'a' });
+  shortcut.setAttribute('aria-label', shortcut.title);
   input.addEventListener('change', () => onChange(input.checked));
   row.append(name, input, shortcut);
   return row;

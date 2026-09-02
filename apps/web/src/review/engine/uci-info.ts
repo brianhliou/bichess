@@ -7,6 +7,9 @@ export interface InfoFields {
   nodes: number;
   nps: number;
   pvUci: string[];
+  /** True for an aspiration-window fail-high/fail-low report (`lowerbound` /
+   *  `upperbound`): a search bound, not an evaluation. */
+  bound: boolean;
 }
 
 /** Parse a UCI `info` line into fields. Returns null for `info string ...` and
@@ -23,6 +26,7 @@ export function parseInfo(line: string): InfoFields | null {
     nodes: 0,
     nps: 0,
     pvUci: [],
+    bound: false,
   };
   for (let i = 1; i < t.length; i++) {
     switch (t[i]) {
@@ -49,6 +53,10 @@ export function parseInfo(line: string): InfoFields | null {
           f.mate = Number(t[i + 2]);
           i += 2;
         }
+        break;
+      case 'lowerbound':
+      case 'upperbound':
+        f.bound = true;
         break;
       case 'pv':
         f.pvUci = t.slice(i + 1);
