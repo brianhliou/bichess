@@ -180,20 +180,6 @@ export const puzzleMiningArticle: Article = {
       heading: 'What it keeps',
       blocks: [
         {
-          kind: 'table',
-          headers: ['Outcome', 'Share of candidates'],
-          rows: [
-            ['Rejected: near-tie', '35%'],
-            ['Rejected: too short', '32%'],
-            ['Rejected: promised mate not reached', '12%'],
-            ['Rejected: not unique, or not winning', '9%'],
-            ['Survived to the audit', '12%'],
-          ],
-          highlightRows: [0],
-          caption:
-            'Measured over 10,503 candidates from 3,500 games in August 2026. The shares have held within about two points across three runs; the totals will not survive the next one.',
-        },
-        {
           kind: 'paragraph',
           text: '**Two thirds of the puzzles open with a move that captures nothing.** If you hunt for tactics by scanning the captures first, which is what most of us do, you are looking at the wrong third of the board most of the time. Step through this one: the chariot goes the length of the board and takes nothing on the way.',
         },
@@ -207,9 +193,10 @@ export const puzzleMiningArticle: Article = {
             perspective: 'red',
             red: 'Solver',
             black: 'Defence',
-            resultText:
-              'The horse comes back to c3 to cover the mate and does not cover it. Nothing is captured until the mate itself.',
+            resultText: 'Mate in two.',
           },
+          caption:
+            'Red plays the chariot the length of the board, taking nothing. Black brings the horse back to c3 to cover the mate, and it does not cover it.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -225,9 +212,10 @@ export const puzzleMiningArticle: Article = {
             perspective: 'red',
             red: 'Solver',
             black: 'Defence',
-            resultText:
-              'Red gave a chariot for an advisor and a horse, so it finishes 1,150 down instead of 900. The material never comes back. The mate just arrives first.',
+            resultText: 'Mate in two.',
           },
+          caption:
+            'Red gave a chariot for an advisor and a horse, so it finishes 1,150 centipawns down instead of 900. The material never comes back. The mate just arrives first.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -243,27 +231,29 @@ export const puzzleMiningArticle: Article = {
             perspective: 'black',
             red: 'Defence',
             black: 'Solver',
-            resultText:
-              'Black ends a thousand centipawns up, an advisor and both horses against one soldier. There is no mate here and no threat of one. It is still a puzzle.',
+            resultText: 'Winning advantage, no mate.',
           },
+          caption:
+            'Black ends a thousand centipawns up, an advisor and both horses against one soldier. There is no mate here and no threat of one. It is still a puzzle.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'Others are less subtle. This one takes a chariot on the first move and then spends six more walking it round to collect an elephant as well.',
+          text: 'And one that takes nothing for four plies. Red is 150 centipawns down here and the engine calls the position level.',
         },
         {
           kind: 'xq-replay',
           spec: {
-            startFen: '2b1ka3/9/2R6/p6P1/8p/9/9/2r1B3r/4A4/2B1KA3 b - - 0 40',
-            iccs: 'c2c7 h6g6 c7b7 e1d0 b7b0 f0e1 b0c0',
-            title: 'Two pieces up, no mate',
+            startFen: 'Rn3a3/3ka4/b8/9/9/4P1P2/P8/6R2/1r2A4/2rAK1B2 r - - 0 32',
+            iccs: 'g2d2 e8d7 a9a8 d8d9 d2d7',
+            title: 'Level, then winning',
             event: 'Mined puzzle, winning advantage',
-            perspective: 'black',
-            red: 'Defence',
-            black: 'Solver',
-            resultText:
-              'A chariot and an elephant, 1,100 centipawns. The game is not over. It is just decided, which is all the miner is claiming.',
+            perspective: 'red',
+            red: 'Solver',
+            black: 'Defence',
+            resultText: 'Winning advantage, no mate.',
           },
+          caption:
+            'The chariot steps quietly to d3, the general is walked to the back rank, and the advisor on d8 falls. Red goes from 150 down to an engine score of +917, with Black left holding two legal moves.',
         } as ArticleBlock,
       ],
     },
@@ -273,6 +263,20 @@ export const puzzleMiningArticle: Article = {
         {
           kind: 'paragraph',
           text: 'The rejects define a puzzle better than the keeps do, because each one is a real blunder that failed for exactly one reason.',
+        },
+        {
+          kind: 'table',
+          headers: ['Outcome', 'Share of candidates'],
+          rows: [
+            ['Rejected: near-tie', '35%'],
+            ['Rejected: too short', '32%'],
+            ['Rejected: promised mate not reached', '12%'],
+            ['Rejected: not unique, or not winning', '9%'],
+            ['Survived to the audit', '12%'],
+          ],
+          highlightRows: [0],
+          caption:
+            'Measured over 10,503 candidates from 3,500 games in August 2026. The shares have held within about two points across three runs; the totals will not survive the next one.',
         },
         {
           kind: 'paragraph',
@@ -292,9 +296,10 @@ export const puzzleMiningArticle: Article = {
             perspective: 'black',
             red: 'Defence',
             black: 'Solver',
-            resultText:
-              'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected, because the whole win is one move and one move is a spot-check rather than a puzzle.',
+            resultText: 'Rejected: too short.',
           },
+          caption:
+            'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected, because the whole win is one move and one move is a spot-check rather than a puzzle.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -310,13 +315,14 @@ export const puzzleMiningArticle: Article = {
             perspective: 'red',
             red: 'Solver',
             black: 'Defence',
-            resultText:
-              'The horse mates on c9. It also mates on g9. Two answers is not one answer, so this is not a puzzle.',
+            resultText: 'Rejected: two winning answers.',
           },
+          caption:
+            'The horse mates on c9. It also mates on g9. Two answers is not one answer, so this is not a puzzle.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score, so the line promised a mate, and replaying it inside the seven-ply cap never got there. The promise could not be checked, so the candidate goes. A position with an ordinary winning evaluation never enters that branch, and ships as a winning-advantage puzzle: about 40% of the corpus.',
+          text: '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score, so the line promised a mate, and replaying it inside the seven-ply cap never got there. The promise could not be checked, so the candidate goes. A position with an ordinary winning evaluation never enters that branch at all, and ships as one of the winning-advantage puzzles above.',
         },
       ],
     },
@@ -333,7 +339,15 @@ export const puzzleMiningArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve borrows a scale constant from chess that nobody has recalibrated for xiangqi. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists and has not been pointed at it.',
+          text: 'Writing this up turned up a hole in it. In 12% of the mined puzzles now served, the solver was already ahead by more than a horse before the blunder happened and the answer is to take a piece that nothing defends. The gate cannot catch those, because a hanging piece is the most uniquely best move on the board: uniqueness and difficulty point in opposite directions exactly there, and only one of them is measured.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The difficulty prior made it worse. It is driven by how long the forced line runs, so one of those free captures was rated 2250 against a 2600 ceiling and served to the strongest solvers on the site. That much is now fixed: the prior checks whether anything can recapture the piece the key move takes, and drops the rating by the value of the material when nothing can. It reclassified 300 puzzles, and the ones that hang a chariot now average 1067. The gate that admits them is untouched, because tightening it means picking new thresholds with no solve-rate data to say whether the pick was right.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve those thresholds act on is steeper than the one this site calibrated for its own analysis, by a factor of about 1.56. Two constants for the same curve, in different parameterizations, and the miner is using the uncalibrated one. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists and has not been pointed at it.',
         },
         {
           kind: 'cta',
