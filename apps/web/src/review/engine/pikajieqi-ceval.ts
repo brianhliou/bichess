@@ -9,6 +9,7 @@ import type {
   CevalVariant,
 } from './ceval-types.js';
 import { depthForEffort } from './ceval-types.js';
+import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-burst.js';
 import { parseInfo } from './uci-info.js';
 
 const ENGINE_BASE = '/engine/pikafish-jieqi/';
@@ -153,18 +154,21 @@ export class PikaJieQiCeval implements CevalHandle {
         : `position fen ${fen}`,
     );
 
-    const byPv = new Map<number, CevalLine>();
-    let depth = 0;
+    // Complete bursts only, same as the Fairy-Stockfish backend (multipv-burst.ts).
+    const bursts = createMultiPvBurstCollector(multiPv);
+    let lines: CevalLine[] = [];
     let seldepth = 0;
     let nodes = 0;
     let nps = 0;
-    let lastEmit = 0;
     const snapshot = (): CevalUpdate => ({
-      depth,
+      depth: lines[0]?.depth ?? 0,
       seldepth,
       nodes,
       nps,
-      lines: [...byPv.values()].sort((a, b) => a.multipv - b.multipv),
+      lines,
+    });
+    const emitter = createThrottledEmitter(EMIT_THROTTLE_MS, () => {
+      if (this.token === myToken) req.onUpdate?.(snapshot());
     });
 
     return await new Promise<CevalUpdate>((resolve) => {
@@ -172,33 +176,26 @@ export class PikaJieQiCeval implements CevalHandle {
         if (line.startsWith('info ') && this.token === myToken) {
           const info = parseInfo(line);
           if (!info) return;
-          if (info.depth) depth = info.depth;
           if (info.seldepth) seldepth = info.seldepth;
           if (info.nodes) nodes = info.nodes;
           if (info.nps) nps = info.nps;
-          if (info.pvUci.length) {
-            byPv.set(info.multipv, {
-              multipv: info.multipv,
-              depth: info.depth,
-              scoreCp: info.scoreCp,
-              mate: info.mate,
-              pvUci: info.pvUci,
-            });
-            const now = Date.now();
-            if (req.onUpdate && now - lastEmit > EMIT_THROTTLE_MS) {
-              lastEmit = now;
-              req.onUpdate(snapshot());
-            }
+          const burst = bursts.push(info);
+          if (burst) {
+            lines = burst;
+            if (req.onUpdate) emitter.schedule();
           }
           return;
         }
         if (!line.startsWith('bestmove')) return;
         off();
         this.searching = false;
+        emitter.cancel();
         if (this.token !== myToken) {
           resolve(EMPTY_UPDATE);
           return;
         }
+        const tail = bursts.flush();
+        if (tail) lines = tail;
         const update = snapshot();
         req.onUpdate?.(update);
         resolve(update);

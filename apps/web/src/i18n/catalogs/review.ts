@@ -429,6 +429,7 @@ export const EN_REVIEW = {
   'engine.toggleLocal': 'Toggle local engine',
   'engine.inLocalBrowser': 'in local browser',
   'engine.bestMoveIndicators': 'Best move indicators',
+  'engine.shortcutHint': 'Keyboard shortcut: press {key} to toggle',
   'engine.multipleLines': 'Multiple lines',
   'engine.searchEffort': 'Search effort',
   'engine.firstPlayerPerspective': 'First player perspective',

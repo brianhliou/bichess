@@ -210,13 +210,18 @@
   accent-color: var(--site-accent, #237960);
   cursor: pointer;
 }
-.engine-panel__setting--checkbox .engine-panel__setting-value {
+.engine-panel__setting-key {
   justify-self: end;
-  min-width: 0;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border: 1px solid var(--site-border);
-  border-radius: 3px;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: inherit;
   font-size: 11px;
+  line-height: 1.4;
+  color: var(--site-muted);
+  background: var(--site-surface);
+  cursor: help;
 }
 
 .engine-panel__lines {
