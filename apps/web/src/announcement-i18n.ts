@@ -35,6 +35,14 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-01 ── 题目 is the site's own word for a puzzle
+  // (nav.puzzles, puzzle.heading), 漏着 is the move judgment the review page
+  // already prints for a blunder, and Pikafish stays in Latin as it does in the
+  // engine entries below.
+  'Where the puzzles come from.': '题目是怎么来的。',
+  'Three thousand five hundred real games went through Pikafish looking for tactics. It found 10,503 blunders and published 1,211 of them. The whole pipeline is written up, including the parts that throw work away: two thirds of every blunder found dies because the position had more than one winning move, or because winning it took one obvious move.':
+    '3,500 局真实对局交给 Pikafish 逐个局面搜索战术，找出 10,503 个漏着，最终发布了 1,211 道题。整条流水线都写下来了，包括被丢掉的那些部分：找到的漏着有三分之二会被淘汰，要么这个局面不止一种取胜着法，要么取胜只需一步显而易见的棋。',
+
   // ── 2026-09-01 ── 时限 matches the rated-games entry
   // below; 加每步五秒 is the increment as the site's own clocks read it.
   'A ten-minute clock, on every game.': '十分钟时限，每种棋都能选。',
@@ -259,6 +267,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-01 ── Same terms as the Simplified entry
+  // above, in the Traditional forms this site publishes: 題目 and 漏著.
+  'Where the puzzles come from.': '題目是怎麼來的。',
+  'Three thousand five hundred real games went through Pikafish looking for tactics. It found 10,503 blunders and published 1,211 of them. The whole pipeline is written up, including the parts that throw work away: two thirds of every blunder found dies because the position had more than one winning move, or because winning it took one obvious move.':
+    '3,500 局真實對局交給 Pikafish 逐個局面搜尋戰術，找出 10,503 個漏著，最終發布了 1,211 道題。整條流水線都寫下來了，包括被丟掉的那些部分：找到的漏著有三分之二會被淘汰，要麼這個局面不止一種取勝著法，要麼取勝只需一步顯而易見的棋。',
+
   // ── 2026-09-01 ── Same terms as the Simplified entry above.
   'A ten-minute clock, on every game.': '十分鐘時限，每種棋都能選。',
   'Ten minutes with a five-second increment is now on the time control list for every variant, and xiangqi and jieqi start there. A full board runs thirty to forty moves a side, which three minutes does not cover. The faster paces are all still there.':

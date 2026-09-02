@@ -381,9 +381,14 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
-  // Leads the row: it is the newest, and it is the one page here that exists
-  // nowhere else in English. It sits directly above the two champion lists it
-  // explains, which is the order a reader wants them in.
+  // Leads the row: it is the newest, and it is the only page here that sends a
+  // reader straight into something they can do on this site rather than
+  // something to read about. The method it documents is not published anywhere
+  // else for xiangqi.
+  'how-puzzle-mining-works',
+  // The one page here that exists nowhere else in English. It sits directly
+  // above the two champion lists it explains, which is the order a reader
+  // wants them in.
   'xiangqi-match-fixing',
   'xiangqi-champions',
   'xiangqi-world-championship',

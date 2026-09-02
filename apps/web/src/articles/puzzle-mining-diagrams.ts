@@ -84,6 +84,139 @@ export const PM_MATE_LANDS = () =>
     }),
   );
 
+// A second real puzzle, for the section on what a puzzle turns out to be:
+// xq-mined-hxq_ecd6351bc9fa68d90a4e9a96-44, ply 44 of an ElephantChess game,
+// served as a mate in two. Line: d7-d10 (takes an advisor, check), c8-d10
+// (the horse takes the chariot), d5-d10 (the second chariot recaptures, mate).
+// Replayed through applyStandardXiangqiMove to confirm the mate before it was
+// described here.
+//
+// It replaces an earlier sacrifice example in which Red already had a chariot,
+// a cannon and a horse against a lone chariot. Winning from that is not a
+// tactic. Here Red is a horse and a cannon down at the start (3250 against
+// 4150) and is down 1150 at mate, having given a chariot for an advisor and a
+// horse. The material never comes back; the mate simply arrives first.
+const SACRIFICE: XiangqiGameState = {
+  id: 'pm-sacrifice',
+  board: {
+    a3: { role: 'chariot', color: 'black' },
+    a6: { role: 'soldier', color: 'black' },
+    c1: { role: 'elephant', color: 'red' },
+    c4: { role: 'soldier', color: 'red' },
+    c8: { role: 'horse', color: 'black' },
+    d1: { role: 'general', color: 'red' },
+    d5: { role: 'chariot', color: 'red' },
+    d7: { role: 'chariot', color: 'red' },
+    d10: { role: 'advisor', color: 'black' },
+    e2: { role: 'advisor', color: 'red' },
+    e4: { role: 'cannon', color: 'black' },
+    e6: { role: 'cannon', color: 'red' },
+    e8: { role: 'elephant', color: 'black' },
+    e9: { role: 'advisor', color: 'black' },
+    e10: { role: 'general', color: 'black' },
+    f1: { role: 'advisor', color: 'red' },
+    g1: { role: 'elephant', color: 'red' },
+    g10: { role: 'elephant', color: 'black' },
+    h5: { role: 'cannon', color: 'black' },
+    h6: { role: 'chariot', color: 'black' },
+    i4: { role: 'soldier', color: 'red' },
+    i7: { role: 'soldier', color: 'black' },
+  },
+  status: { type: 'playing', turn: 'red' },
+  moveNumber: 23,
+  progressClock: 0,
+  positionCounts: {},
+} as XiangqiGameState;
+
+export const PM_SACRIFICE_OFFER = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: SACRIFICE,
+      x: 0,
+      y: 0,
+      label: 'RED TO MOVE, A HORSE AND A CANNON DOWN',
+      perspective: 'red',
+      arrows: [{ from: 'd7' as XiangqiSquare, to: 'd10' as XiangqiSquare }],
+      dots: [{ square: 'd10' as XiangqiSquare, capture: true }],
+    }),
+  );
+
+// After d7-d10 and c8-d10: the horse has taken the chariot and is standing on
+// the square the second chariot recaptures on.
+const SACRIFICE_TAKEN: XiangqiGameState = {
+  ...SACRIFICE,
+  id: 'pm-sacrifice-taken',
+  board: (() => {
+    const board = { ...SACRIFICE.board } as Record<string, unknown>;
+    delete board.d7;
+    delete board.c8;
+    board.d10 = { role: 'horse', color: 'black' };
+    return board;
+  })() as XiangqiGameState['board'],
+} as XiangqiGameState;
+
+export const PM_SACRIFICE_TAKEN = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: SACRIFICE_TAKEN,
+      x: 0,
+      y: 0,
+      label: 'AND MATE ON d10',
+      perspective: 'red',
+      arrows: [{ from: 'd5' as XiangqiSquare, to: 'd10' as XiangqiSquare }],
+      dots: [{ square: 'd10' as XiangqiSquare, capture: true }],
+    }),
+  );
+
+// A REJECTED candidate, rebuilt by replaying its source game to the ply the
+// miner stopped at: xqpmc_622f3b168c41397cefbcfc43, ply 69 of a game played
+// 2026-05-27. The engine scores it as a forced mate against a second-best line
+// of +1407, and exactly one of Black's twenty legal moves mates (checked with
+// getStandardXiangqiLegalMoves, not by eye). The miner threw it out anyway,
+// with reason `too-short`, because the whole win is one move.
+const REJECTED_TOO_SHORT: XiangqiGameState = {
+  id: 'pm-reject-too-short',
+  board: {
+    a5: { role: 'soldier', color: 'black' },
+    d1: { role: 'general', color: 'red' },
+    d3: { role: 'soldier', color: 'black' },
+    d10: { role: 'advisor', color: 'black' },
+    e4: { role: 'horse', color: 'black' },
+    e9: { role: 'general', color: 'black' },
+    f1: { role: 'advisor', color: 'red' },
+    f10: { role: 'advisor', color: 'black' },
+    g4: { role: 'horse', color: 'red' },
+    g10: { role: 'elephant', color: 'black' },
+    i4: { role: 'soldier', color: 'red' },
+    i6: { role: 'soldier', color: 'black' },
+  },
+  status: { type: 'playing', turn: 'black' },
+  moveNumber: 35,
+  progressClock: 0,
+  positionCounts: {},
+} as XiangqiGameState;
+
+// Drawn from Black's side: the solver here would be Black, and an example
+// lands harder from the winning seat.
+export const PM_REJECT_TOO_SHORT = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    BOARD_BLOCK_H,
+    xqBoardSvg({
+      state: REJECTED_TOO_SHORT,
+      x: 0,
+      y: 0,
+      label: 'MATE IN ONE, AND NOT A PUZZLE',
+      perspective: 'black',
+      arrows: [{ from: 'e4' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
+      dots: [{ square: 'c3' as XiangqiSquare, capture: false }],
+    }),
+  );
+
 // ── Code excerpts for the article ────────────────────────────────────────────
 //
 // Condensed from the real source: types dropped, option names inlined, comments
@@ -178,7 +311,7 @@ while (remaining.length > 0) {
 // Pipeline overview. Stage boxes are uniform because this is a flow diagram,
 // not a bar chart: the counts are the data, and scaling boxes to them would
 // make the last four stages indistinguishable.
-export const PM_PIPELINE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 656 526" width="656" height="526" role="img" aria-label="The puzzle pipeline: import, scan, verify, audit, publish, serve, with the rate carried forward and what each stage discards"><rect x="0" y="8" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="29" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Import</text><text x="16" y="46" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">legality replay, content hash on the moves</text><path d="M146.0 58 L146.0 100" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="83" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">10,469 cleared games</text><path d="M294 79.0 L318 79.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="75" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="89" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">re-anonymised repeats and illegal games</text><rect x="0" y="100" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="121" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Scan</text><text x="16" y="138" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">60,000 nodes, every position after ply 8</text><path d="M146.0 150 L146.0 192" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="175" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">3 candidates per game<tspan font-weight="400" fill="var(--site-muted, #79766f)">  10,503</tspan></text><path d="M345 171.0 L318 171.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="167" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="181" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">already-decided positions, over 3 per game</text><rect x="0" y="192" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="213" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Verify</text><text x="16" y="230" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">depth 20, 600k nodes, per solver ply</text><path d="M146.0 242 L146.0 284" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="267" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">12% survive<tspan font-weight="400" fill="var(--site-muted, #79766f)">  1,294</tspan></text><path d="M276 263.0 L318 263.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="259" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="273" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">near-tie 35%, too short 32%, no mate 12%, not unique 9%</text><rect x="0" y="284" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="305" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Audit</text><text x="16" y="322" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">depth 22, uncapped, separate process</text><path d="M146.0 334 L146.0 376" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="359" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">94% hold<tspan font-weight="400" fill="var(--site-muted, #79766f)">  1,214</tspan></text><path d="M258 355.0 L318 355.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="351" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="365" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">6% disagreement at greater depth</text><rect x="0" y="376" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="397" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Publish</text><text x="16" y="414" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">cross-run dedup, hash-pinned write</text><path d="M146.0 426 L146.0 468" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="451" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">1,211 live</text><path d="M231 447.0 L318 447.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="443" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="457" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">positions already published</text><rect x="0" y="468" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="489" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Serve</text><text x="16" y="506" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">rating-matched, Glicko-2, daily by hash</text></svg>`;
+export const PM_PIPELINE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 656 526" width="656" height="526" role="img" aria-label="The puzzle pipeline: import, scan, verify, audit, publish, serve, with the rate carried forward and what each stage discards"><rect x="0" y="8" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="29" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Import</text><text x="16" y="46" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">legality replay, content hash on the moves</text><path d="M146.0 58 L146.0 100" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="83" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">10,469 cleared games</text><path d="M294 79.0 L318 79.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="75" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="89" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">re-anonymised repeats and illegal games</text><rect x="0" y="100" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="121" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Scan</text><text x="16" y="138" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">60,000 nodes, every position after ply 8</text><path d="M146.0 150 L146.0 192" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="175" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">3 candidates per game<tspan font-weight="400" fill="var(--site-muted, #79766f)">  10,503</tspan></text><path d="M345 171.0 L318 171.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="167" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="181" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">already-decided positions, over 3 per game</text><rect x="0" y="192" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="213" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Verify</text><text x="16" y="230" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">depth 20, 600k nodes, per solver ply</text><path d="M146.0 242 L146.0 284" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="267" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">12% survive<tspan font-weight="400" fill="var(--site-muted, #79766f)">  1,294</tspan></text><path d="M276 263.0 L318 263.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="259" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="273" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">near-tie 35%, too short 32%, mate not reached 12%, not unique 9%</text><rect x="0" y="284" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="305" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Audit</text><text x="16" y="322" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">depth 22, uncapped, separate process</text><path d="M146.0 334 L146.0 376" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="359" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">94% hold<tspan font-weight="400" fill="var(--site-muted, #79766f)">  1,214</tspan></text><path d="M258 355.0 L318 355.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="351" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="365" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">6% disagreement at greater depth</text><rect x="0" y="376" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="397" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Publish</text><text x="16" y="414" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">cross-run dedup, hash-pinned write</text><path d="M146.0 426 L146.0 468" stroke="var(--site-border, #d8d5cf)" stroke-width="2" fill="none"/><text x="156" y="451" font-family="Roboto, system-ui, sans-serif" font-size="11.5" font-weight="700" fill="var(--site-accent, #2f7d62)">1,211 live</text><path d="M231 447.0 L318 447.0" stroke="var(--site-border, #d8d5cf)" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/><text x="326" y="443" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">discarded</text><text x="326" y="457" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">positions already published</text><rect x="0" y="468" width="292" height="50" rx="9" fill="var(--site-panel-soft, #f4f2ee)" stroke="var(--site-border, #d8d5cf)"/><text x="16" y="489" font-family="Roboto, system-ui, sans-serif" font-size="14" font-weight="700" fill="var(--site-text, #4d4a47)">Serve</text><text x="16" y="506" font-family="Roboto, system-ui, sans-serif" font-size="10.5" fill="var(--site-muted, #79766f)">rating-matched, Glicko-2, daily by hash</text></svg>`;
 
 // The gate, drawn as the ordered list of tests it is. Green dots pass a move,
 // grey ones reject it, and the label on the right is the reason string stored
