@@ -42,6 +42,10 @@ export interface MoveTreeAnnotation {
    *  variation, shown on the LAST move of the grafted line like an opening book
    *  ends a line with its verdict. */
   assessment?: string;
+  /** Do not render the variation that STARTS at this node (retro mode hides the
+   *  engine's refutation of a mistake the reader has not solved yet, lichess
+   *  hideComputerLine). Only read on a variation's first node. */
+  hideLine?: boolean;
 }
 
 export interface MoveTree {
@@ -230,7 +234,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     while (node) {
       const parent = node.parent;
       // Alternatives to `node` itself (its later siblings under the same parent).
-      const variations = parent ? parent.children.slice(1) : [];
+      const variations = parent ? parent.children.slice(1).filter(visibleLine) : [];
       if (isRed(node.ply)) {
         row = document.createElement('li');
         row.className = 'review-move-list__row';
@@ -342,6 +346,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         start = true;
       }
       for (let i = 1; i < node.children.length; i++) {
+        if (!visibleLine(node.children[i]!)) continue;
         const sub = document.createElement('span');
         sub.className = 'move-tree__subvar';
         sub.append('(');
@@ -351,6 +356,11 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       }
       node = node.children[0] ?? null;
     }
+  }
+
+  /** A variation whose first node carries `hideLine` is left out entirely. */
+  function visibleLine(firstNode: GameTreeNode<M, T>): boolean {
+    return !annotations.get(pathKey(pathOf(firstNode)))?.hideLine;
   }
 
   function inlineNumber(text: string): HTMLElement {

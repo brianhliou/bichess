@@ -188,3 +188,28 @@ describe('advantage chart draw order', () => {
     expect(svg.querySelectorAll('.advantage-chart__axis .advantage-chart__phase').length).toBe(2);
   });
 });
+
+describe('advantage chart judgment marks', () => {
+  it('rings the asked plies in the judgment tone and clears on an empty list', () => {
+    const chart = createAdvantageChart(evals, { onJump: () => {} });
+    chart.setMarks([
+      { ply: 1, tone: 'blunder' },
+      { ply: 3, tone: 'inaccuracy' },
+      { ply: 9, tone: 'mistake' }, // off the end: ignored, not drawn
+    ]);
+    const rings = [...chart.el.querySelectorAll('.advantage-chart__mark')];
+    expect(rings.map((r) => r.getAttribute('class'))).toEqual([
+      'advantage-chart__mark advantage-chart__mark--blunder',
+      'advantage-chart__mark advantage-chart__mark--inaccuracy',
+    ]);
+    // Each ring sits ON the curve: same x as the ply's point.
+    const line = chart.el.querySelector('.advantage-chart__line')!.getAttribute('points')!;
+    const pointX = line.split(' ')[1]!.split(',')[0];
+    expect(Number(rings[0]!.getAttribute('cx'))).toBeCloseTo(Number(pointX), 0);
+    expect(chart.el.classList.contains('advantage-chart--marked')).toBe(true);
+
+    chart.setMarks([]);
+    expect(chart.el.querySelectorAll('.advantage-chart__mark').length).toBe(0);
+    expect(chart.el.classList.contains('advantage-chart--marked')).toBe(false);
+  });
+});

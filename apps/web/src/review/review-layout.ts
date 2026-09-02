@@ -170,6 +170,10 @@ export type ReviewScaffold = {
   refit(): void;
   /** Update the board width/height ratio after an appearance change, then refit. */
   setBoardAspect(aspect: number): void;
+  /** Host for a panel that rises over the BOTTOM of the moves box and sits on
+   *  the board's bottom line (the explorer's overlay grammar, sized to content):
+   *  retro mode's box lives here while it is open. Empty = nothing drawn. */
+  railFooter: HTMLElement;
 };
 
 /** Build the shared review layout into `root`. The caller renders board/move
@@ -280,6 +284,9 @@ export function createReviewScaffold(
     config.railPanel.classList.add('review-rail-overlay');
     railMainWrap.append(config.railPanel);
   }
+  const railFooter = document.createElement('div');
+  railFooter.className = 'review-rail-footer';
+  railMainWrap.append(railFooter);
   // Drop-variant pockets are part of the analysis box, not rail rows floating
   // above and below it: lichess fuses [pocket · tools · pocket] into one panel
   // whose top and bottom land on the board's top and bottom. Wrapping the three
@@ -378,7 +385,7 @@ export function createReviewScaffold(
     observer.observe(stage.el);
   }
 
-  return { stage, refit, setBoardAspect };
+  return { stage, refit, setBoardAspect, railFooter };
 }
 
 function reviewActionsWithFavorite(existing: HTMLElement | undefined, roomId: string): HTMLElement {

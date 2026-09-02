@@ -32,6 +32,12 @@ export interface EnginePanel {
   /** Drive the arrow toggle from outside the popover (the `a` shortcut), keeping
    *  the checkbox in sync. Fires onShowArrowsChange like a click would. */
   setShowArrows(next: boolean): void;
+  /** Switch the engine on or off from outside the head (retro mode needs a
+   *  search to grade a try). Fires onToggle like a click would; a no-op when
+   *  the engine is unsupported in this browser or already in that state. */
+  setOn(next: boolean): void;
+  /** Whether this browser can run the local engine at all (Safari cannot). */
+  supported: boolean;
   dispose(): void;
 }
 
@@ -364,6 +370,12 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       showArrowsToggle.checked = next;
       opts.onShowArrowsChange?.(next);
     },
+    setOn(next: boolean) {
+      if (!supported || on === next) return;
+      if (next) turnOn();
+      else turnOff();
+    },
+    supported,
     dispose() {
       clearTimeout(debounceId);
       document.removeEventListener('visibilitychange', onVisibilityChange);

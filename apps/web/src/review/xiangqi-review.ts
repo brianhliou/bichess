@@ -125,6 +125,8 @@ const xiangqiPresentation: TreePresentation<
   perspective: (flipped) => (flipped ? 'black' : 'red'),
   // Review plays BOTH sides: the interactive seat is the side to move.
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
+  // Learn from your mistakes: the played mistake draws as a from→to arrow.
+  retro: { moveSquares: (move) => ({ orig: move.from, dest: move.to }) },
   createBoard: (opts) => createXiangqiInteractiveBoard(opts),
   animateMove: animateXiangqiBoardMove,
   shapeToArrow: (s: NodeShape): XiangqiBoardArrow => ({

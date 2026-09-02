@@ -1,0 +1,175 @@
+/* "Learn from your mistakes" box (review/retro-panel.ts), lichess retro-box. Rises
+   over the bottom of the move list in the rail's footer host (review-shell.css
+   .review-rail-footer), so its bottom edge is the board's bottom line. */
+.retro-box {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--site-border);
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  background: var(--site-panel);
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.16);
+  font-size: 13px;
+}
+.retro-box__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, #2f8a4d 18%, transparent);
+  color: var(--site-text);
+  font-weight: 700;
+}
+.retro-box__counter {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+}
+.retro-box__close {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--site-muted);
+  cursor: pointer;
+}
+.retro-box__close:hover,
+.retro-box__close:focus-visible {
+  color: var(--site-text);
+  outline: none;
+}
+.retro-box__feedback {
+  display: flex;
+  flex-direction: column;
+  min-height: 7.5em;
+}
+.retro-box__player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  padding: 12px 14px;
+}
+.retro-box__instruction {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.retro-box__instruction strong {
+  color: var(--site-text);
+}
+.retro-box__instruction em {
+  font-style: normal;
+  color: var(--site-muted);
+}
+.retro-box__disc {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--site-border);
+}
+.retro-box__disc--red {
+  background: #c0563f;
+}
+.retro-box__disc--black {
+  background: #34302e;
+}
+.retro-box__icon {
+  flex: 0 0 auto;
+  width: 26px;
+  font-size: 26px;
+  line-height: 1;
+  text-align: center;
+  font-weight: 700;
+}
+.retro-box__icon--win {
+  color: #2f8a4d;
+}
+.retro-box__icon--fail {
+  color: #e5222c;
+}
+.retro-box__icon--off {
+  color: #eb7500;
+}
+.retro-box__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 4px;
+}
+.retro-box__choice {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #3b73c4;
+  cursor: pointer;
+}
+.retro-box__choice:hover,
+.retro-box__choice:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+/* The Next bar: the lower half of the box, uppercase, lichess blue. */
+.retro-box__continue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 50%;
+  min-height: 3em;
+  border: 0;
+  background: #3b73c4;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.retro-box__continue:hover,
+.retro-box__continue:focus-visible {
+  background: #2f62ab;
+  outline: none;
+}
+/* Indeterminate progress bar while the local engine grades a try. */
+.retro-box__progress {
+  position: relative;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--site-text) 12%, transparent);
+}
+.retro-box__progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 40%;
+  border-radius: 2px;
+  background: #3b73c4;
+  animation: retro-progress 1.1s ease-in-out infinite;
+}
+@keyframes retro-progress {
+  to {
+    transform: translateX(350%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .retro-box__progress::after {
+    animation: none;
+    inset: 0;
+    width: auto;
+    opacity: 0.5;
+  }
+}
+/* While the reader is solving, the local engine's readout would hand them the
+   answer: keep the switch, hide the numbers (tree-review toggles this). */
+.engine-panel--retro-hidden .engine-panel__eval,
+.engine-panel--retro-hidden .engine-panel__lines,
+.engine-panel--retro-hidden .engine-panel__sub {
+  visibility: hidden;
+}

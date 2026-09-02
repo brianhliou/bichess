@@ -23,8 +23,12 @@ import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
-import { type AdvantageChart, createAdvantageChart } from './advantage-chart.js';
-import { createAnalysisSummary } from './analysis-summary.js';
+import {
+  type AdvantageChart,
+  type AdvantageChartMark,
+  createAdvantageChart,
+} from './advantage-chart.js';
+import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
@@ -56,6 +60,8 @@ import {
 import { ADVICE_LABEL, defaultFormatBestMove, PRAISE_COMMENT } from './move-advice.js';
 import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
+import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
+import { createRetroPanel, type RetroPanel } from './retro-panel.js';
 import { createReviewControls, REVIEW_MENU_ICONS, type ReviewMenuItem } from './review-controls.js';
 import {
   createReviewScaffold,
@@ -263,6 +269,12 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  (a notation display-mode change): the tree relabels and the move list
    *  rebuilds. Omit for variants with a single fixed notation. */
   labelsEvent?: string;
+  /** Opt into "Learn from your mistakes" (review/retro.ts). The one thing the
+   *  flow needs from the variant is how to draw the played mistake as a warning
+   *  arrow, so the opt-in IS that mapping: a Move to the board squares it
+   *  travels. Omit for variants whose review has no retry loop (chance moves,
+   *  fog, no local engine). */
+  retro?: { moveSquares(move: Move): { orig: string; dest: string } | null };
 }
 
 export type AnalysisSource = {
@@ -571,6 +583,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     moveTree.rebuild();
     render();
     notifyChange();
+    afterNavigate();
     return true;
   };
   // Clicking a move in the opening explorer plays it, same as playing it on the
@@ -773,6 +786,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // list) + a per-move luck readout (the advice line) + a two-number summary block.
   let decisionOverlay: DecisionOverlay | null = null;
   let engineLines: CevalLine[] | null = null;
+  // Retro mode ("Learn from your mistakes"), open or not. Declared up here with
+  // the engine state because the engine panel's constructor fires onLines
+  // synchronously, and that callback reads it.
+  let retro: RetroController<Node> | null = null;
+  let retroPanel: RetroPanel | null = null;
   // Whether the local engine is switched on. The whole-game analysis best-move
   // arrow is PAIRED with it: the server already judged the game, but its arrow is
   // engine ink, so it shows only while the reader has the local engine on — an
@@ -790,6 +808,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   function engineArrows(): Arrow[] {
     const engine = presentation.engine;
     if (!engine || !engineOverlaysSupported || !showEngineArrows) return [];
+    if (retro?.hideEngineOutput()) return [];
     if (engineLines?.length && engine.engineArrowsFromLines) {
       return engine.engineArrowsFromLines(engineLines);
     }
@@ -805,6 +824,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   function engineMarkers(): Marker[] {
     const engine = presentation.engine;
     if (!engine || !engineOverlaysSupported || !showEngineArrows) return [];
+    if (retro?.hideEngineOutput()) return [];
     if (engineLines?.length && engine.engineMarkersFromLines) {
       return engine.engineMarkersFromLines(engineLines);
     }
@@ -836,6 +856,22 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return marker ? [marker] : [];
   }
 
+  /** Retro mode: the mistake that was played, drawn as a red arrow on the
+   *  position it was played from (lichess showBadNode, paleRed). */
+  function retroArrows(): Arrow[] {
+    const bad = retro?.showBadNode();
+    const squares = bad?.move ? presentation.retro?.moveSquares(bad.move) : null;
+    if (!squares) return [];
+    return [
+      presentation.shapeToArrow({
+        kind: 'arrow',
+        brush: 'red',
+        orig: squares.orig,
+        dest: squares.dest,
+      }),
+    ];
+  }
+
   // Paint BOTH the derived engine arrows and the node's user-drawn shapes. User
   // arrows layer over engine arrows; user circles ride the marker overlay.
   function paintOverlays(): void {
@@ -844,7 +880,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // Explorer-hover hint on top: it points at a candidate the reader is
     // considering, so it sits over engine ink and the user's own shapes.
     const hover = explorerHoverArrow ? [explorerHoverArrow] : [];
-    interactive.setArrows([...engineArrows(), ...userArrows, ...hover]);
+    interactive.setArrows([...engineArrows(), ...retroArrows(), ...userArrows, ...hover]);
     // Glyph first so a user's own circle on the same point draws over it: the
     // annotation they just made should not be hidden by a derived badge.
     interactive.setMarkers([
@@ -862,6 +898,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           evalBar,
           onLines: (lines) => {
             engineLines = lines?.length ? lines : null;
+            // The retro grader reads the same stream the panel renders; it may
+            // navigate (a verdict jumps back), so it runs before the repaint.
+            retro?.onEngineLines(lines);
             paintOverlays();
           },
           onToggle: (on) => {
@@ -986,9 +1025,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Board editor came back 2026-08-27 WITH its route (/editor/<variant>, via
   // `boardEditorHref`), alongside "Analyse from here" (`analyseFromHere`, the
   // position-input vertical: a postgame node continues on /analysis with its
-  // exact deal). Learn-from-mistakes, Continue-from-here (create a live game
-  // from a FEN), and Settings are still absent. Re-add an item WITH its
-  // implementation, not ahead of it.
+  // exact deal). Learn-from-mistakes came back 2026-09-01 as the bar between
+  // the two players in the accuracy summary (where lichess puts it), not as a
+  // menu item: it needs the analysis, and the summary only exists once the
+  // analysis does. Continue-from-here (create a live game from a FEN) and
+  // Settings are still absent. Re-add an item WITH its implementation, not
+  // ahead of it.
   const menuItems: ReviewMenuItem[] = [
     { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
   ];
@@ -1060,7 +1102,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : {}),
     onFirst: () => go(ROOT_PATH),
     onPrevious: () => go(tree.stepBack(currentPath)),
-    onNext: () => go(tree.stepForward(currentPath)),
+    onNext: () => {
+      if (retro?.preventGoingToNextMove()) return;
+      go(tree.stepForward(currentPath));
+    },
     onLast: () => go(lineEnd(currentPath)),
     menuItems,
   });
@@ -1143,6 +1188,146 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // line under the list on the tree surface.
   const formatBestForAdvice = presentation.formatBestMove ?? defaultFormatBestMove;
   let chart: AdvantageChart | null = null;
+
+  // ── Accuracy summary (rail) ──
+  // One renderer for every path that shows the summary (base analysis, the jieqi
+  // decision merge, its unavailable fallback, retro open/close), so the live
+  // judgment rows and the Learn button are wired exactly once.
+  type SummaryView = { analysis: GameAnalysis; hideAcpl?: boolean; trailing?: HTMLElement };
+  let summaryView: SummaryView | null = null;
+  function renderSummary(view?: SummaryView): void {
+    if (view) summaryView = view;
+    if (!summaryView) return;
+    const summary = createAnalysisSummary(summaryView.analysis, config.players, {
+      hideAcpl: summaryView.hideAcpl,
+      seatColors: config.seatColors,
+      phases: gamePhases,
+      onJudgment: { hover: markJudgment, jump: jumpToJudgment },
+      ...(retroSupported ? { onLearn: toggleRetro, learnActive: retro !== null } : {}),
+    });
+    analysisSummaryEl.replaceChildren(
+      ...[summary, summaryView.trailing].filter((el): el is HTMLElement => !!el),
+    );
+  }
+  /** Mainline plies of one side carrying one judgment, in game order. */
+  function judgedPlies(side: 'red' | 'black', judgment: SummaryJudgment): number[] {
+    return (summaryView?.analysis.moves ?? [])
+      .filter((move) => move.mover === side && move.judgment === judgment)
+      .map((move) => move.ply)
+      .sort((a, b) => a - b);
+  }
+  // Hover a count → those plies light up on the chart (lichess christmasTree).
+  function markJudgment(side: 'red' | 'black', judgment: SummaryJudgment | null): void {
+    const marks: AdvantageChartMark[] = judgment
+      ? judgedPlies(side, judgment).map((ply) => ({ ply, tone: judgment }))
+      : [];
+    chart?.setMarks(marks);
+  }
+  // Click a count → the next such ply after the current one, wrapping, so
+  // repeated clicks cycle through them (lichess jumpToGlyphSymbol).
+  function jumpToJudgment(side: 'red' | 'black', judgment: SummaryJudgment): void {
+    const plies = judgedPlies(side, judgment);
+    if (plies.length === 0) return;
+    const from = currentNode().ply;
+    const ply = plies.find((candidate) => candidate > from) ?? plies[0]!;
+    const target = mainlineNodes()[ply];
+    if (target) go(tree.pathTo(target));
+  }
+
+  // ── Learn from your mistakes (retro mode) ──
+  // The variant opts in with a move→squares mapping, and the flow needs a local
+  // engine to grade a free try; a study reads a document, it does not retry it.
+  const retroSupported = Boolean(
+    presentation.retro && presentation.engine && config.reviewSurface !== 'study',
+  );
+  /** "12. h3-e3" / "12… h8-e8": the move-tree's own numbering, reused by the
+   *  chart readout and the retro prompts so one move reads the same everywhere. */
+  function plyMoveLabel(node: Node): string {
+    const ply = node.ply;
+    const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
+    return `${number} ${node.label}`;
+  }
+  /** Which side sits at the bottom of the board: the side the reader is
+   *  looking from, and so the side whose mistakes they came to fix (lichess
+   *  bottomColor). */
+  function bottomSide(): RetroSide {
+    return orientation() === presentation.perspective(false) ? 'red' : 'black';
+  }
+  function openRetro(side: RetroSide): void {
+    if (!gameAnalysis) return;
+    const analysis = gameAnalysis;
+    retro = null;
+    retroPanel?.el.remove();
+    retroPanel = null;
+    const host: RetroHost<Node> = {
+      analysis,
+      mainline: mainlineNodes,
+      pathTo: (node) => tree.pathTo(node),
+      currentPath: () => currentPath,
+      currentNode,
+      go,
+      deleteAt: (path) => {
+        tree.deleteAt(path);
+        moveTree.rebuild();
+        moveTree.setCurrent(currentPath);
+        notifyChange();
+      },
+      isCompNode: (node) => compKeys.has(pathKey(tree.pathTo(node))),
+      // The seat policy already knows a finished position: nobody is to move.
+      isTerminal: (node) => {
+        const view = adapter.project(node.truth).find((v) => v.key === truthKey)?.view;
+        return view ? presentation.seatFor(view) === null : false;
+      },
+      engine: enginePanel
+        ? { supported: enginePanel.supported, ensureOn: () => enginePanel.setOn(true) }
+        : null,
+      redraw: syncRetro,
+    };
+    const controller = createRetro<Move, Truth>(host, side);
+    retro = controller;
+    retroPanel = createRetroPanel(controller, {
+      labelFor: plyMoveLabel,
+      onClose: closeRetro,
+      onFlip: () => {
+        // Look at the game from the other side, then start on its mistakes.
+        flipBoard();
+        openRetro(side === 'red' ? 'black' : 'red');
+      },
+    });
+    // The box rises over the bottom of the move list, on the board's bottom
+    // line (lichess puts its retro box at the foot of the tools column).
+    scaffold.railFooter.append(retroPanel.el);
+    renderSummary();
+    syncRetro();
+  }
+  function closeRetro(): void {
+    retro = null;
+    retroPanel?.el.remove();
+    retroPanel = null;
+    enginePanel?.el.classList.remove('engine-panel--retro-hidden');
+    renderSummary();
+    refreshMoveTreeAnnotations(); // hidden refutation lines come back
+    moveTree.setCurrent(currentPath);
+  }
+  function toggleRetro(): void {
+    if (retro) closeRetro();
+    else openRetro(bottomSide());
+  }
+  /** The panel, the engine readout and the move-list hiding all read retro
+   *  state; refresh them together after any retro transition. */
+  function syncRetro(): void {
+    syncRetroChrome();
+    refreshMoveTreeAnnotations();
+    moveTree.setCurrent(currentPath);
+  }
+  function syncRetroChrome(): void {
+    retroPanel?.update();
+    enginePanel?.el.classList.toggle(
+      'engine-panel--retro-hidden',
+      retro?.hideEngineOutput() ?? false,
+    );
+    paintOverlays();
+  }
 
   // ── Study annotation controls (glyph picker + comment editor) ──
   // Only editable studies show them; the read-only postgame/analysis surfaces omit
@@ -1269,6 +1454,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     currentPath = path;
     render();
     animateStep(fromPath, path);
+    afterNavigate();
+  }
+
+  /** Every cursor move (go or a played move) reaches retro mode, which may
+   *  change state on it (grade a try, notice the reader browsed away). */
+  function afterNavigate(): void {
+    if (!retro) return;
+    retro.onNavigate();
+    syncRetroChrome();
   }
 
   // ── Variation picker (keyboard grammar for branch points) ─────────────────
@@ -1332,6 +1526,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
 
   function stepForwardAction(): void {
+    // Solving a retro position: the way forward is a try on the board, not the
+    // played mistake (lichess preventGoingToNextMove).
+    if (retro?.preventGoingToNextMove()) return;
     if (variationPicker) {
       const child = currentNode().children[variationPicker.index];
       if (child) go(tree.pathTo(child)); // go() closes the picker
@@ -1549,9 +1746,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // two readings of one move agree.
       moveLabel: (ply) => {
         const node = nodes[ply];
-        if (!node?.parent) return null; // ply 0 is the starting position, not a move
-        const number = ply % 2 === 1 ? `${(ply + 1) / 2}.` : `${ply / 2}…`;
-        return `${number} ${node.label}`;
+        return node?.parent ? plyMoveLabel(node) : null; // ply 0 is the start, not a move
       },
       onJump: (ply) => {
         const target = nodes[ply];
@@ -1567,12 +1762,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       decisionSummaryEl.replaceChildren(decisionPendingNote());
       analysisSummaryEl.replaceChildren(decisionSummaryEl);
     } else {
-      analysisSummaryEl.replaceChildren(
-        createAnalysisSummary(analysis, config.players, {
-          seatColors: config.seatColors,
-          phases: gamePhases,
-        }),
-      );
+      renderSummary({ analysis });
     }
     refreshMoveTreeAnnotations(); // rebuilds the tree DOM (engine glyphs + user glyphs)
     render(); // re-highlight + re-apply move advice
@@ -1593,14 +1783,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ]),
       );
       const merged = mergeDecisionAnalysis(gameAnalysis, decisionByPly);
-      analysisSummaryEl.replaceChildren(
-        createAnalysisSummary({ ...gameAnalysis, ...merged }, config.players, {
-          hideAcpl: true,
-          seatColors: config.seatColors,
-          phases: gamePhases,
-        }),
-        decisionSummaryEl,
-      );
+      renderSummary({
+        analysis: { ...gameAnalysis, ...merged },
+        hideAcpl: true,
+        trailing: decisionSummaryEl,
+      });
       // The luck legend ("Accuracy grades your choices; 🎲 marks the luck of each
       // reveal.") used to sit here. Removed 2026-08-22: the 🎲 badges and the
       // luck-free accuracy carry the story without a caption under the summary.
@@ -1620,13 +1807,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // accuracy covers only non-reveal moves, so the caption keeps it from reading as a clean sheet.
   function showDecisionsUnavailable(): void {
     if (!gameAnalysis) return;
-    analysisSummaryEl.replaceChildren(
-      createAnalysisSummary(gameAnalysis, config.players, {
-        seatColors: config.seatColors,
-        phases: gamePhases,
-      }),
-      decisionSummaryEl,
-    );
+    renderSummary({ analysis: gameAnalysis, trailing: decisionSummaryEl });
     decisionSummaryEl.replaceChildren(revealsUngradedCaption());
   }
 
@@ -1643,6 +1824,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         if (!node) continue;
         const glyph = judgmentGlyph(move.judgment) ?? praiseGlyph(move.praise);
         const entry = evalByPly.get(move.ply);
+        // Retro mode: a mistake the reader has not solved yet keeps its glyph but
+        // loses the "… was best" text and its refutation line, or the move list
+        // would hand them the answer (lichess hideComputerLine).
+        const hidden = retro?.hidesPly(move.ply) ?? false;
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
         // refutation line).
@@ -1651,13 +1836,23 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           suffix: glyph?.suffix,
           suffixClass: glyph?.suffixClass,
           eval: entry ? formatEval(entry.cp, entry.mate) : undefined,
-          comment: move.judgment
-            ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestForAdvice(best)} was best.` : ''}`
-            : move.praise
-              ? PRAISE_COMMENT[move.praise]
-              : undefined,
+          comment: hidden
+            ? undefined
+            : move.judgment
+              ? `${ADVICE_LABEL[move.judgment]}.${best ? ` ${formatBestForAdvice(best)} was best.` : ''}`
+              : move.praise
+                ? PRAISE_COMMENT[move.praise]
+                : undefined,
           commentClass: move.judgment ?? move.praise ?? undefined,
         });
+        if (hidden) {
+          const parent = nodes[move.ply - 1];
+          const line = parent?.children.find((child) => compKeys.has(pathKey(tree.pathTo(child))));
+          if (line) {
+            const key = pathKey(tree.pathTo(line));
+            byPathKey.set(key, { ...byPathKey.get(key), hideLine: true });
+          }
+        }
       }
       // Decision overlay (jieqi): a reveal ply carries no eval-swing judgment (it is a chance
       // move), so its glyph comes from the DECISION quality, and its LUCK shows inline as a badge
