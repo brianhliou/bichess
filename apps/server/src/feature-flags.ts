@@ -152,3 +152,11 @@ export function botVsBotEnabled(): boolean {
 export function lobbyChatEnabled(): boolean {
   return process.env.MISTBOARD_LOBBY_CHAT_ENABLED === 'true';
 }
+
+// Translate buttons on forum topic titles and post bodies (129). Ships OFF.
+// Needs both the explicit flag and a model API key in the environment; the
+// key's presence is all this reads (never its value). The flag is the kill
+// switch: off in Railway and redeploy hides the buttons and 503s the route.
+export function forumTranslationEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.MISTBOARD_FORUM_TRANSLATION_ENABLED === 'true' && Boolean(env.ANTHROPIC_API_KEY);
+}

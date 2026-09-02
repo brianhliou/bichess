@@ -1,5 +1,7 @@
 import './forum.css';
+import { translationNeeded } from './forum-language.js';
 import { t } from './i18n/catalog.js';
+import { currentLocale, type Locale } from './i18n/locale.js';
 import { prependTitleBadge } from './player-titles.js';
 import { type AuthUser, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
@@ -77,6 +79,8 @@ type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
   // The signed-in reader's own watch state; null (or absent) when anonymous.
   viewer?: { watching: boolean } | null;
+  // Whether the server will translate titles and posts on request (129).
+  translation?: { available: boolean };
 };
 
 type ForumPostSearchResult = {
@@ -684,6 +688,20 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
     heading,
   );
   if (user) titleRow.append(topicWatchButton(topic));
+  if (topicTranslatable(topic, topic.title)) {
+    titleRow.append(
+      forumTranslateButton({ kind: 'topic', id: topic.id }, 'forum-topic-translate', {
+        showOriginal: () => {
+          heading.textContent = topic.title;
+          heading.removeAttribute('title');
+        },
+        showTranslation: (text) => {
+          heading.textContent = text;
+          heading.title = topic.title;
+        },
+      }),
+    );
+  }
   if (canReportForumContent(topic.author, user)) titleRow.append(topicReportButton(topic));
   const meta = document.createElement('p');
   meta.className = 'forum-sub';
@@ -1166,6 +1184,17 @@ function postList(
     const actions = document.createElement('span');
     actions.className = 'forum-post-actions';
     if (user && !topic.locked) actions.append(postQuoteButton(post));
+    if (topicTranslatable(topic, post.bodyText)) {
+      actions.append(
+        forumTranslateButton({ kind: 'post', id: post.id }, 'forum-post-translate', {
+          showOriginal: () => renderPostBodyInto(body, post.bodyText),
+          showTranslation: (text) => {
+            renderPostBodyInto(body, text);
+            body.append(machineTranslationNote());
+          },
+        }),
+      );
+    }
     if (canReportForumContent(post.author, user)) actions.append(postReportButton(post));
     header.append(postAuthorRail(post.author), time, edited);
     if (actions.childElementCount > 0) header.append(actions);
@@ -1245,6 +1274,71 @@ function postQuoteButton(post: ForumPost): HTMLButtonElement {
     insertPostQuote(post);
   });
   return button;
+}
+
+// ── Translate (129) ─────────────────────────────────────────────────────────
+//
+// A Translate button appears on a title or post only when the server offers
+// translation and the text's script differs from the viewer's locale. The
+// translation is fetched once per button and then toggled locally; the
+// server caches by content, so the second reader of a post never waits.
+
+type ForumTranslationTarget = { kind: 'topic' | 'post'; id: string };
+
+function topicTranslatable(topic: ForumTopicDetail, text: string): boolean {
+  return topic.translation?.available === true && translationNeeded(text, currentLocale());
+}
+
+function forumTranslateButton(
+  target: ForumTranslationTarget,
+  className: string,
+  view: { showOriginal: () => void; showTranslation: (text: string) => void },
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.textContent = t('forum.translate');
+  button.setAttribute('aria-pressed', 'false');
+  let translated: string | null = null;
+  let showing = false;
+  let busy = false;
+  button.addEventListener('click', async () => {
+    if (busy) return;
+    if (showing) {
+      view.showOriginal();
+      showing = false;
+      button.textContent = t('forum.translate');
+      button.setAttribute('aria-pressed', 'false');
+      return;
+    }
+    if (translated === null) {
+      busy = true;
+      button.disabled = true;
+      button.textContent = t('forum.translating');
+      const result = await fetchForumTranslation(target, currentLocale());
+      busy = false;
+      button.disabled = false;
+      if (!result.ok) {
+        // Leave the failure label in place; the next click retries.
+        const throttled = result.error === 'rate_limited' || result.error === 'daily_cap_reached';
+        button.textContent = t(throttled ? 'forum.translateRateLimited' : 'forum.translateFailed');
+        return;
+      }
+      translated = result.text;
+    }
+    view.showTranslation(translated);
+    showing = true;
+    button.textContent = t('forum.showOriginal');
+    button.setAttribute('aria-pressed', 'true');
+  });
+  return button;
+}
+
+function machineTranslationNote(): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'forum-post-translation-note';
+  note.textContent = t('forum.machineTranslation');
+  return note;
 }
 
 function postReportButton(post: ForumPost): HTMLButtonElement {
@@ -2418,6 +2512,27 @@ async function submitReportResolution(
   });
   if (!resp.ok) throw new Error(`report_resolution_failed_${resp.status}`);
   window.location.reload();
+}
+
+async function fetchForumTranslation(
+  target: ForumTranslationTarget,
+  locale: Locale,
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  try {
+    const resp = await fetch('/api/forum/translate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ kind: target.kind, id: target.id, locale }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as { text?: unknown; error?: unknown };
+    if (resp.ok && typeof data.text === 'string') return { ok: true, text: data.text };
+    return {
+      ok: false,
+      error: typeof data.error === 'string' ? data.error : `http_${resp.status}`,
+    };
+  } catch {
+    return { ok: false, error: 'network' };
+  }
 }
 
 async function fetchForumCategories(): Promise<ForumCategory[]> {

@@ -65,6 +65,7 @@
 
 .forum-topic-edit,
 .forum-topic-report,
+.forum-topic-translate,
 .forum-topic-watch {
   border: 0;
   background: transparent;
@@ -80,6 +81,8 @@
 .forum-topic-edit:focus-visible,
 .forum-topic-report:hover,
 .forum-topic-report:focus-visible,
+.forum-topic-translate:hover,
+.forum-topic-translate:focus-visible,
 .forum-topic-watch:hover,
 .forum-topic-watch:focus-visible {
   color: var(--site-link);
@@ -709,7 +712,8 @@ a.forum-post-author-name:focus-visible {
 
 .forum-post-quote,
 .forum-post-edit,
-.forum-post-report {
+.forum-post-report,
+.forum-post-translate {
   border: 0;
   background: transparent;
   color: var(--site-accent-strong);
@@ -724,9 +728,28 @@ a.forum-post-author-name:focus-visible {
 .forum-post-edit:hover,
 .forum-post-edit:focus-visible,
 .forum-post-report:hover,
-.forum-post-report:focus-visible {
+.forum-post-report:focus-visible,
+.forum-post-translate:hover,
+.forum-post-translate:focus-visible {
   color: var(--site-link);
   text-decoration: underline;
+}
+
+.forum-topic-translate {
+  white-space: nowrap;
+}
+
+.forum-post-translate:disabled,
+.forum-topic-translate:disabled {
+  color: var(--site-muted);
+  cursor: progress;
+  text-decoration: none;
+}
+
+.forum-post-translation-note {
+  margin: 8px 0 0;
+  color: var(--site-muted);
+  font-size: 12px;
 }
 
 .forum-post-edit-form {

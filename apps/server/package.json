@@ -68,6 +68,7 @@
     "rehash:historical-xiangqi": "tsx src/rehash-historical-xiangqi.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "@mistboard/board-render": "0.0.0",
     "@mistboard/game": "0.0.0",
     "@resvg/resvg-js": "^2.6.2",

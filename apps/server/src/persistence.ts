@@ -186,6 +186,17 @@ export {
   updateForumPost,
   updateForumTopic,
 } from './persistence-forum.js';
+export type {
+  ForumTranslationLocale,
+  ForumTranslationSource,
+  ForumTranslationSourceKind,
+  StoredForumTranslation,
+} from './persistence-forum-translations.js';
+export {
+  getForumTranslation,
+  getForumTranslationSource,
+  putForumTranslation,
+} from './persistence-forum-translations.js';
 export type { WatchForumTopicResult } from './persistence-forum-watches.js';
 export {
   isWatchingForumTopic,

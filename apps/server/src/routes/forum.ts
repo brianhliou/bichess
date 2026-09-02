@@ -1,10 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
-import { createAuthRateLimiter } from './../auth-rate-limit.js';
+import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
+import { forumTranslationEnabled } from './../feature-flags.js';
+import {
+  createAnthropicTranslationClient,
+  createForumTranslationService,
+  DEFAULT_BREAKER,
+  DEFAULT_DAILY_MISS_CAP,
+  type ForumTranslationService,
+  isTranslationLocale,
+} from './../forum-translation.js';
+import { logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { onlinePresence } from './../presence.js';
 import {
+  hashIp,
   readJsonBody,
   requireAdminSession,
   requireMethod,
@@ -24,6 +35,44 @@ const postLimitPerWindow = 12;
 // Watch toggles and topic read receipts: one click or one page view each. Per
 // account, in memory; generous for a human, tight enough to stop a toggle loop.
 const forumWatchLimiter = createAuthRateLimiter(120, 60 * 60 * 1000);
+// Translation cache MISSES only (a hit is a DB read and is free to serve).
+// Per account for signed-in readers, per client IP for anonymous ones; the
+// anonymous budget is the smaller because it is the one a script would use.
+const translationMissLimiterByAccount = createAuthRateLimiter(40, 60 * 60 * 1000);
+const translationMissLimiterByIp = createAuthRateLimiter(10, 60 * 60 * 1000);
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback;
+}
+
+let forumTranslationService: ForumTranslationService | null = null;
+function translationService(): ForumTranslationService {
+  forumTranslationService ??= createForumTranslationService({
+    client: createAnthropicTranslationClient({
+      model: process.env.MISTBOARD_FORUM_TRANSLATION_MODEL || undefined,
+    }),
+    loadSource: persistence.getForumTranslationSource,
+    getCached: persistence.getForumTranslation,
+    store: persistence.putForumTranslation,
+    dailyMissCap: envInt('MISTBOARD_FORUM_TRANSLATION_DAILY_CAP', DEFAULT_DAILY_MISS_CAP),
+    breaker: {
+      threshold: envInt('MISTBOARD_FORUM_TRANSLATION_BREAKER_THRESHOLD', DEFAULT_BREAKER.threshold),
+      cooldownMs: envInt(
+        'MISTBOARD_FORUM_TRANSLATION_BREAKER_COOLDOWN_MS',
+        DEFAULT_BREAKER.cooldownMs,
+      ),
+    },
+    // One line per model call: the spend ledger. Cache hits are silent.
+    onMiss: ({ kind: source, ...event }) => {
+      const log = event.outcome === 'ok' ? logger.info.bind(logger) : logger.warn.bind(logger);
+      log({ kind: 'forum_translation_miss', source, ...event }, 'forum translation model call');
+    },
+  });
+  return forumTranslationService;
+}
 
 type ForumTopicJson = {
   id: string;
@@ -262,6 +311,12 @@ export async function tryHandle(
     return updatePost(request, response, decodeURIComponent(postMatch[1]!));
   }
 
+  if (pathname === '/api/forum/translate') {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (!requirePersistence(response)) return true;
+    return translateForumText(request, response);
+  }
+
   const postRedirectMatch = pathname.match(/^\/api\/forum\/posts\/([^/]+)\/redirect$/);
   if (postRedirectMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -322,6 +377,58 @@ export async function tryHandle(
   }
 
   return false;
+}
+
+// POST /api/forum/translate { kind: 'topic' | 'post', id, locale }
+// Public like the reads it translates. Takes ids, never text: the source is
+// re-read from the forum tables with the same hidden-row gate as the page.
+async function translateForumText(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<boolean> {
+  if (!forumTranslationEnabled()) {
+    writeJson(response, 503, { error: 'translation_unavailable' });
+    return true;
+  }
+  const body = await readJsonBody(request);
+  const kind = body.kind === 'topic' || body.kind === 'post' ? body.kind : null;
+  const id =
+    typeof body.id === 'string' && body.id.length > 0 && body.id.length <= 80 ? body.id : null;
+  const locale = isTranslationLocale(body.locale) ? body.locale : null;
+  if (!kind || !id || !locale) {
+    writeJson(response, 400, { error: 'invalid_request' });
+    return true;
+  }
+  const user = await currentAccountUser(request);
+  const meter = user
+    ? () => translationMissLimiterByAccount.check(`acct:${user.id}`)
+    : () => translationMissLimiterByIp.check(`ip:${hashIp(clientIpForRateLimit(request))}`);
+
+  const result = await translationService().translate({ kind, id, target: locale, meter });
+  switch (result.status) {
+    case 'ok':
+      writeJson(response, 200, { text: result.text, cached: result.cached, locale });
+      return true;
+    case 'not_found':
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    case 'same_language':
+      writeJson(response, 409, { error: 'same_language' });
+      return true;
+    case 'rate_limited':
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    case 'capped':
+      writeJson(response, 429, { error: 'daily_cap_reached' });
+      return true;
+    case 'failed':
+      if (result.code === 'paused') {
+        writeJson(response, 503, { error: 'translation_paused' });
+        return true;
+      }
+      writeJson(response, 502, { error: 'translation_failed', code: result.code });
+      return true;
+  }
 }
 
 async function createTopic(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
@@ -751,12 +858,16 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
 function serializeTopicDetail(topic: persistence.ForumTopicDetail): ForumTopicJson & {
   posts: ForumPostJson[];
   viewer: { watching: boolean } | null;
+  // Whether the page should offer Translate buttons (129); the route itself
+  // 503s when this is false, so the client never has to guess.
+  translation: { available: boolean };
 } {
   const online = onlineHandleSet();
   return {
     ...serializeTopicSummary(topic),
     posts: topic.posts.map((post) => serializePost(post, online)),
     viewer: topic.viewer,
+    translation: { available: forumTranslationEnabled() },
   };
 }
 
