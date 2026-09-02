@@ -1,4 +1,4 @@
--- 129_forum_translations.sql
+-- 130_forum_translations.sql
 -- Cached machine translations of forum text (topic titles and post bodies).
 --
 -- Forum text is written once and read many times, so a translation is keyed

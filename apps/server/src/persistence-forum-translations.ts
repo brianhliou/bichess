@@ -1,6 +1,6 @@
 import { getPool } from './persistence-db.js';
 
-// Cached machine translations of forum text (129). Keyed by content, not by
+// Cached machine translations of forum text (130). Keyed by content, not by
 // row: see the migration header for why.
 
 export type ForumTranslationLocale = 'en' | 'zh-Hans' | 'zh-Hant';

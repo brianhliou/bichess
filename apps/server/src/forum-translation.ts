@@ -7,7 +7,7 @@ import type {
   StoredForumTranslation,
 } from './persistence-forum-translations.js';
 
-// Machine translation of forum text into the viewer's interface locale (129).
+// Machine translation of forum text into the viewer's interface locale (130).
 //
 // Shape: a content-addressed cache in front of a model. The route resolves a
 // topic/post id to its visible text, hashes the text, and serves a stored

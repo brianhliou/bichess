@@ -79,7 +79,7 @@ type ForumTopicDetail = ForumTopicSummary & {
   posts: ForumPost[];
   // The signed-in reader's own watch state; null (or absent) when anonymous.
   viewer?: { watching: boolean } | null;
-  // Whether the server will translate titles and posts on request (129).
+  // Whether the server will translate titles and posts on request (130).
   translation?: { available: boolean };
 };
 
@@ -1276,7 +1276,7 @@ function postQuoteButton(post: ForumPost): HTMLButtonElement {
   return button;
 }
 
-// ── Translate (129) ─────────────────────────────────────────────────────────
+// ── Translate (130) ─────────────────────────────────────────────────────────
 //
 // A Translate button appears on a title or post only when the server offers
 // translation and the text's script differs from the viewer's locale. The

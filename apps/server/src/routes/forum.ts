@@ -858,7 +858,7 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
 function serializeTopicDetail(topic: persistence.ForumTopicDetail): ForumTopicJson & {
   posts: ForumPostJson[];
   viewer: { watching: boolean } | null;
-  // Whether the page should offer Translate buttons (129); the route itself
+  // Whether the page should offer Translate buttons (130); the route itself
   // 503s when this is false, so the client never has to guess.
   translation: { available: boolean };
 } {
