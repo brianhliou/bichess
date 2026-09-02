@@ -41,6 +41,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   animalTreasureMarks,
@@ -259,7 +260,7 @@ export function renderFortressXiangqiPieceInline(
   return renderXiangqiPieceGlyphed(piece as unknown as XiangqiPiece, set, {
     ariaLabel: `${piece.color} ${piece.role}`,
     // Veteran soldiers draw promoted everywhere, including reserve/pocket tiles.
-    crossed: piece.role === 'soldier',
+    crossed: drawsVeteranSoldier(piece),
   });
 }
 
@@ -368,7 +369,7 @@ function renderFortressXiangqiPiece(
     // Fortress soldiers are veterans from the start (forward + sideways step, no
     // river gate — see variants-fortress-xiangqi.ts), so they always draw with
     // the promoted-soldier art rather than the base soldier.
-    crossed: piece.role === 'soldier',
+    crossed: drawsVeteranSoldier(piece),
   });
 }
 

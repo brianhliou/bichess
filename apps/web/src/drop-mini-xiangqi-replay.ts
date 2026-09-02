@@ -27,6 +27,7 @@ import './drop-mini-xiangqi.css';
 import { tokenPieceSize } from './board-metrics.js';
 import { dropMiniXiangqiMoveLabel, fillDropMiniXiangqiReserve } from './drop-mini-xiangqi-view.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 const CELL = 31;
@@ -204,6 +205,8 @@ function piecesSvg(board: MiniXiangqiBoard, perspective: MiniXiangqiColor): stri
         x: x - PIECE / 2,
         y: y - PIECE / 2,
         size: PIECE,
+        // Riverless board: every soldier is a veteran and draws promoted.
+        crossed: drawsVeteranSoldier(piece),
       });
     })
     .join('');

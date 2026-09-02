@@ -18,6 +18,7 @@ import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { type SvgBoardMarkerStyle, svgBoardCircleMarker } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import { xiangqiFogRegion } from './xiangqi-fog.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
@@ -117,6 +118,7 @@ export function miniXiangqiPieceGhostSvg(
     ariaLabel: `${piece.color} ${piece.role}`,
     className: 'mini-xq-piece',
     shrouded: false,
+    crossed: drawsVeteranSoldier(piece),
     x: 0,
     y: 0,
     size: DEFAULT_PIECE_SIZE,
@@ -217,6 +219,10 @@ function pieceLayer(
         ariaLabel: entry.shrouded ? `${entry.color} hidden piece` : `${piece.color} ${piece.role}`,
         className: dragSource ? 'mini-xq-piece mini-xq-piece--drag-source' : 'mini-xq-piece',
         shrouded: entry.shrouded,
+        // No river on the 7x7 board: every soldier has the sideways step from
+        // move one, so it draws promoted. Never a shrouded blocker, which is a
+        // soldier-shaped placeholder for a piece the viewer has not seen.
+        crossed: !entry.shrouded && drawsVeteranSoldier(piece),
         x: x - pieceSize / 2,
         y: y - pieceSize / 2,
         size: pieceSize,

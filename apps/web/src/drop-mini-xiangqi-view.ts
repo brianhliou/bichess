@@ -11,6 +11,7 @@ import {
   miniXiangqiSquareOf,
 } from '@mistboard/game';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 export type DropMiniXiangqiViewKey = 'truth';
@@ -123,6 +124,8 @@ export function fillDropMiniXiangqiReserve(
     );
     tile.innerHTML = renderXiangqiPieceGlyphed({ color: owner, role: entry.role }, pieceSet, {
       ariaLabel: `${owner} ${entry.role}`,
+      // Veteran soldiers draw promoted everywhere, reserve tiles included.
+      crossed: drawsVeteranSoldier(entry),
     });
     if (entry.count > 1) tile.append(countBadge(entry.count));
     if (entry.cooldown > 0) tile.append(cooldownBadge(entry.cooldown));

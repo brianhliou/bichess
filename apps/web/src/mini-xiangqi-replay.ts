@@ -21,6 +21,7 @@ import type { ArticleLang } from './article-i18n.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 // Geometry/colours mirror the static Mini Xiangqi diagrams in articles-data.ts
@@ -131,6 +132,8 @@ function piecesSvg(board: MiniXiangqiBoard, perspective: MiniXiangqiColor): stri
         x: x - PIECE / 2,
         y: y - PIECE / 2,
         size: PIECE,
+        // Riverless board: every soldier is a veteran and draws promoted.
+        crossed: drawsVeteranSoldier(piece),
       });
     })
     .join('');
@@ -211,6 +214,9 @@ function viewPiecesSvg(view: MiniXiangqiPlayerView): string {
         y: y - PIECE / 2,
         size: PIECE,
         shrouded: entry.shrouded,
+        // Promoted art for what the viewer can see, never for a shrouded
+        // blocker: that soldier stands in for a piece they have not seen.
+        crossed: !entry.shrouded && drawsVeteranSoldier(piece),
       });
     })
     .join('');

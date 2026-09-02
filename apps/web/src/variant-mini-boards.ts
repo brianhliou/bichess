@@ -27,6 +27,7 @@ import {
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import {
   animalTreasureMarks,
   cjkGlyphMark,
@@ -170,6 +171,9 @@ function fogCell(c: number, r: number, cell: number): string {
 // western/symbols), reusing the same renderer the live board + OG cards use so
 // every surface renders one identical glyph. Ink (cream disc, red/black) is
 // fixed inside that renderer by intent. `size` is the disc's bounding box.
+// `veteran` marks a board whose soldiers get the sideways step unconditionally
+// (the Mini Xiangqi family, Fortress Xiangqi), so their soldiers draw with the
+// promoted art here the same way they do on the live board.
 function xiangqiDisc(
   cx: number,
   cy: number,
@@ -177,11 +181,13 @@ function xiangqiDisc(
   color: XiangqiColor,
   role: XiangqiPieceRole,
   set: XiangqiPieceSet,
+  veteran = false,
 ): string {
   return renderXiangqiPieceGlyphed({ color, role }, set, {
     x: cx - size / 2,
     y: cy - size / 2,
     size,
+    crossed: veteran && drawsVeteranSoldier({ role }),
   });
 }
 
@@ -401,7 +407,7 @@ function miniXiangqiCutBody(showFog: boolean, ctx: MiniCtx): string {
     // soldiers sit in front of files d, e, g (the cannon file f stays open)
     ...[3, 4, 6].map((file) => {
       const p = at(file, 2);
-      return xiangqiDisc(p.x, p.y, disc, 'red', 'soldier', ctx.xqSet);
+      return xiangqiDisc(p.x, p.y, disc, 'red', 'soldier', ctx.xqSet, true);
     }),
   ].join('');
   // The visible (right) half of the general's palace: its centre (d2) sits on
@@ -452,8 +458,8 @@ function dropMiniXiangqiBody(ctx: MiniCtx): string {
     xiangqiDisc(px(0), py(2), disc, 'red', 'general', ctx.xqSet),
     xiangqiDisc(px(1), py(2), disc, 'red', 'horse', ctx.xqSet),
     xiangqiDisc(px(2), py(2), disc, 'red', 'cannon', ctx.xqSet),
-    xiangqiDisc(px(1), py(1), disc, 'red', 'soldier', ctx.xqSet),
-    xiangqiDisc(px(3), py(0), disc, 'black', 'soldier', ctx.xqSet),
+    xiangqiDisc(px(1), py(1), disc, 'red', 'soldier', ctx.xqSet, true),
+    xiangqiDisc(px(3), py(0), disc, 'black', 'soldier', ctx.xqSet, true),
   ];
   const handDisc = trayH * 0.78;
   const hand = [
@@ -541,9 +547,9 @@ function fortressXiangqiBody(ctx: MiniCtx): string {
     xiangqiDisc(px(1), py(1), disc, 'red', 'general', ctx.xqSet),
     xiangqiDisc(px(2), py(1), disc, 'red', 'advisor', ctx.xqSet),
     xiangqiDisc(px(3), py(1), disc, 'red', 'elephant', ctx.xqSet),
-    xiangqiDisc(px(0), py(2), disc, 'red', 'soldier', ctx.xqSet),
-    xiangqiDisc(px(1), py(2), disc, 'red', 'soldier', ctx.xqSet),
-    xiangqiDisc(px(3), py(2), disc, 'red', 'soldier', ctx.xqSet),
+    xiangqiDisc(px(0), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
+    xiangqiDisc(px(1), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
+    xiangqiDisc(px(3), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
   ];
   return [
     `<rect class="vm-xq-bg" x="${OX}" y="${OY}" width="${SIZE}" height="${SIZE}"/>`,

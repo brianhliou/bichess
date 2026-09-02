@@ -55,7 +55,7 @@ import {
   xiangqiBoardPoint,
 } from '../xiangqi-board-geometry.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
-import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
+import { drawsCrossedSoldier, drawsVeteranSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
   renderXiangqiPieceGlyphed,
@@ -1790,6 +1790,9 @@ export function mxqPiecesLayer(board: MiniXiangqiBoard): string {
         x: x - XQ_PIECE_SIZE / 2,
         y: y - XQ_PIECE_SIZE / 2,
         size: XQ_PIECE_SIZE,
+        // No river on the 7x7 board, so every soldier has the sideways step from
+        // move one and draws promoted.
+        crossed: drawsVeteranSoldier(piece),
       });
     })
     .join('');
@@ -1870,6 +1873,10 @@ export function mxqViewPiecesLayer(view: MiniXiangqiPlayerView): string {
         y: y - XQ_PIECE_SIZE / 2,
         size: XQ_PIECE_SIZE,
         shrouded: entry.shrouded,
+        // Same promoted art as the full-information layer, but never on a
+        // shrouded blocker: that soldier is a placeholder for an unseen piece,
+        // and promoting it would assert a role the viewer has not been shown.
+        crossed: !entry.shrouded && drawsVeteranSoldier(piece),
       });
     })
     .join('');

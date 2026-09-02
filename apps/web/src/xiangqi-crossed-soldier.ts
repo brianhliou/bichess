@@ -24,3 +24,18 @@ export function drawsCrossedSoldier(
 ): boolean {
   return piece.role === 'soldier' && hasCrossedRiver(piece.color, rank);
 }
+
+/**
+ * The same question for variants whose soldiers get the sideways step
+ * unconditionally, so every soldier is a veteran and there is no rank to test:
+ * the Mini Xiangqi family (7x7, no river at all) and Fortress Xiangqi (which
+ * has a river but grants the step from move one anyway, see the 2026-07-03
+ * VETERAN SOLDIERS note in variants-fortress-xiangqi.ts).
+ *
+ * Deliberately takes no rank: accepting one would invite a river test that does
+ * not apply on these boards. Same face-down caveat as above, so callers on a
+ * fog surface still gate this on `!shrouded`.
+ */
+export function drawsVeteranSoldier(piece: { readonly role: string }): boolean {
+  return piece.role === 'soldier';
+}
