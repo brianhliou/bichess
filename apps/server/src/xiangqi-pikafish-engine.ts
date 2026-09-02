@@ -20,7 +20,13 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { runUciEval, UciEnginePool, UciEngineSession, type UciEval } from './uci-engine-harness.js';
+import {
+  runUciEval,
+  UciEnginePool,
+  UciEngineSession,
+  type UciEval,
+  UciWarmSessionCache,
+} from './uci-engine-harness.js';
 
 // Xiangqi -> engine UCI now lives in @mistboard/game so the browser FSF-wasm
 // analysis engine and this server Pikafish path share one converter. Re-exported
@@ -289,22 +295,33 @@ export function xiangqiEngineMove(
   const movetimeMs = Math.max(1, Math.floor(opts.movetimeMs));
   const position =
     moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
-  const commands = [
-    'uci',
-    `setoption name EvalFile value ${net}`,
-    'ucinewgame',
-    'isready',
-    position,
-    // `go nodes N movetime T` halts at whichever binds first: the node budget is
-    // the reproducible strength anchor; the movetime is the latency ceiling.
-    `go nodes ${nodes} movetime ${movetimeMs}`,
-  ];
-  return runUciEval({
-    bin,
-    commands,
-    timeoutMs: movetimeMs + 4000,
-    timeoutMessage: 'pikafish-xiangqi move timed out',
-  });
+  // Warm session: mainline Pikafish reloads its ~40 MB net on every spawn
+  // (~2.8 s on prod, measured in the container 2026-09-02), which a
+  // spawn-per-move loop charged to the bot's clock on every ply.
+  return warmSessions.withSession(
+    {
+      bin,
+      initCommands: ['uci', `setoption name EvalFile value ${net}`, 'ucinewgame', 'isready'],
+      name: 'pikafish-xiangqi',
+    },
+    (session) =>
+      session.evalPosition({
+        positionCommand: position,
+        // `go nodes N movetime T` halts at whichever binds first: the node budget
+        // is the reproducible strength anchor; the movetime is the latency ceiling.
+        goCommand: `go nodes ${nodes} movetime ${movetimeMs}`,
+        timeoutMs: movetimeMs + 4000,
+        timeoutMessage: 'pikafish-xiangqi move timed out',
+      }),
+  );
+}
+
+// Parked live-move engine processes; enginePool above still caps concurrency.
+const warmSessions = new UciWarmSessionCache({ name: 'pikafish-xiangqi' });
+
+/** Point-in-time warm-session counters (spawned/reused/idle) for diagnostics. */
+export function pikafishXiangqiWarmSessionStats() {
+  return warmSessions.stats();
 }
 
 /** Fixed analysis depth: comparable evals across every ply of a game (P3). */

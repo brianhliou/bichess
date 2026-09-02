@@ -25,10 +25,11 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
-  fairyStockfishEval,
   fairyStockfishPath,
+  splitFairyStockfishCommands,
   UciEnginePool,
   type UciEval,
+  UciWarmSessionCache,
 } from './uci-engine-harness.js';
 
 // Bumped 0.1.0 -> 0.2.0 on 2026-09-02: new binary for every level, NNUE + node
@@ -154,6 +155,15 @@ const fsfPool = new UciEnginePool({
   queueTimeoutMessage: 'fairy-stockfish-xiangqi concurrency queue timed out',
 });
 
+// Parked engine processes between moves; the pool above still caps how many
+// searches run at once, so live sessions never exceed its slots.
+const warmSessions = new UciWarmSessionCache({ name: 'xiangqi-fsf' });
+
+/** Point-in-time warm-session counters (spawned/reused/idle) for diagnostics. */
+export function xiangqiFsfWarmSessionStats() {
+  return warmSessions.stats();
+}
+
 export function xiangqiFsfEngineTierFor(engineId: string | undefined): XiangqiFsfEngineTier | null {
   if (!engineId) return null;
   return XIANGQI_FSF_ENGINE_BY_ID.get(engineId) ?? null;
@@ -226,8 +236,8 @@ export async function xiangqiFsfLiveEngineMove(
   const release = await fsfPool.acquire();
   try {
     const bin = xiangqiFsfPath();
-    const evaluation = await fairyStockfishEval({
-      bin,
+    const movetimeMs = opts.movetimeMs ?? tier.movetimeMs;
+    const { init, position, go } = splitFairyStockfishCommands({
       moves: moves.map(pikafishUciToFsfXiangqiUci),
       variant: 'xiangqi',
       skill: tier.skill,
@@ -235,8 +245,22 @@ export async function xiangqiFsfLiveEngineMove(
       nodes: tier.nodes,
       hashMb: tier.hashMb,
       eval: tier.nnue ? { evalFile: xiangqiFsfNetPath(bin) } : 'classical',
-      movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
+      movetimeMs,
     });
+    // Warm session per tier: the prod build of this binary takes ~4.3 s to start
+    // (measured in the container 2026-09-02), which a spawn-per-move loop charged
+    // to the bot's clock on every ply. `init` is the cache key, so tiers never
+    // share a process (different Skill Level, Hash, net).
+    const evaluation = await warmSessions.withSession(
+      { bin, initCommands: init, name: `xiangqi-fsf:${tier.id}` },
+      (session) =>
+        session.evalPosition({
+          positionCommand: position,
+          goCommand: go,
+          timeoutMs: movetimeMs + 4000,
+          timeoutMessage: 'fsf move timed out',
+        }),
+    );
     return {
       ...evaluation,
       best: evaluation.best === null ? null : fsfXiangqiUciToPikafishUci(evaluation.best),
