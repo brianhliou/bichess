@@ -155,7 +155,7 @@ export const fortressXiangqiArticle: Article = {
           kind: 'raw-svg',
           svg: FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
           caption:
-            'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace. A point already occupied is never a drop target, which is why the general stands on a gap in its own palace.',
+            'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.',
         } as ArticleBlock,
         {
           kind: 'paragraph',

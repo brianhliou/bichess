@@ -102,6 +102,22 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
+  // this dictionary at render, but article-prose.ts gives a raw-svg block only
+  // its caption, so nothing demanded these and the figure shipped in English.
+  // The eight reason identifiers stay Latin: the caption calls them the value
+  // stored on the candidate, and they should match the database.
+  'THE GATE, IN EVALUATION ORDER': '判定关卡，按求值顺序',
+  'best mates, second does not or is slower': '最佳着法能将死，次佳不能或更慢',
+  unique: '唯一',
+  'win%(best) below 0.8': '最佳胜率低于 0.8',
+  rejected: '拒绝',
+  'no second move exists': '不存在第二选择',
+  'second move mates': '次佳着法也能将死',
+  'gap below 200cp': '差距低于 200cp',
+  'win%(second) at or below 0.6': '次佳胜率不高于 0.6',
+  'gap of 250cp or more': '差距达到 250cp 或以上',
+  'anything left over': '其余情况',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
@@ -316,8 +332,8 @@ const ZH_HANS: Record<string, string> = {
     '吃掉将帅以外的任何敌子后，它会变成你的颜色并进入持子。双方持子都是公开信息，没有数量上限，也可保留任意久。轮到你时，可以移动盘面棋子，也可以把一枚持子打入空点。将帅不会被吃，也不会进入持子。',
   'Chariots, Horses, Cannons, Soldiers, and Treasures may drop on any empty point. Advisors and Elephants keep their normal territory restrictions.':
     '车、马、炮、兵和宝可以打入任何空点。士和象仍须遵守各自通常的区域限制。',
-  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace. A point already occupied is never a drop target, which is why the general stands on a gap in its own palace.':
-    '被吃的棋子可以落在哪里。车、马、炮、兵和宝可以打入任何空点；象只能留在己方半场，士只能留在己方九宫。已被占据的点永远不是打入目标，所以将帅所在之处在自己九宫里留下一个缺口。',
+  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.':
+    '被吃的棋子可以落在哪里。车、马、炮、兵和宝可以打入任何空点；象只能留在己方半场，士只能留在己方九宫。',
   'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a dropped Soldier can step sideways wherever it lands. The one limit is the usual one: no move, drop included, may leave your own general in check.':
     '打入的棋子立即生效。打入可以将军或将死，打入的兵无论落在哪里都可以横走。唯一限制与平常相同：任何着法，包括打入，都不能让己方将帅处于被将军状态。',
   'How games end': '对局如何结束',
@@ -2036,6 +2052,22 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
+  // this dictionary at render, but article-prose.ts gives a raw-svg block only
+  // its caption, so nothing demanded these and the figure shipped in English.
+  // The eight reason identifiers stay Latin: the caption calls them the value
+  // stored on the candidate, and they should match the database.
+  'THE GATE, IN EVALUATION ORDER': '判定關卡，按求值順序',
+  'best mates, second does not or is slower': '最佳著法能將死，次佳不能或更慢',
+  unique: '唯一',
+  'win%(best) below 0.8': '最佳勝率低於 0.8',
+  rejected: '拒絕',
+  'no second move exists': '不存在第二選擇',
+  'second move mates': '次佳著法也能將死',
+  'gap below 200cp': '差距低於 200cp',
+  'win%(second) at or below 0.6': '次佳勝率不高於 0.6',
+  'gap of 250cp or more': '差距達到 250cp 或以上',
+  'anything left over': '其餘情況',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
@@ -2333,8 +2365,8 @@ const ZH_HANT: Record<string, string> = {
     '吃掉將帥以外的任何敵子後，它會變成你的顏色並進入持子。雙方持子都是公開資訊，沒有數量上限，也可保留任意久。輪到你時，可以移動盤面棋子，也可以把一枚持子打入空點。將帥不會被吃，也不會進入持子。',
   'Chariots, Horses, Cannons, Soldiers, and Treasures may drop on any empty point. Advisors and Elephants keep their normal territory restrictions.':
     '車、馬、炮、兵和寶可以打入任何空點。士和象仍須遵守各自通常的區域限制。',
-  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace. A point already occupied is never a drop target, which is why the general stands on a gap in its own palace.':
-    '被吃的棋子可以落在哪裡。車、馬、炮、兵和寶可以打入任何空點；象只能留在己方半場，士只能留在己方九宮。已被佔據的點永遠不是打入目標，所以將帥所在之處在自己九宮裡留下一個缺口。',
+  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.':
+    '被吃的棋子可以落在哪裡。車、馬、炮、兵和寶可以打入任何空點；象只能留在己方半場，士只能留在己方九宮。',
   'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a dropped Soldier can step sideways wherever it lands. The one limit is the usual one: no move, drop included, may leave your own general in check.':
     '打入的棋子立即生效。打入可以將軍或將死，打入的兵無論落在哪裡都可以橫走。唯一限制與平常相同：任何著法，包括打入，都不能讓己方將帥處於被將軍狀態。',
   'How games end': '對局如何結束',

@@ -110,8 +110,12 @@ async function loadFromDatabase(): Promise<PuzzleStoreSnapshot> {
     await ensureSeedSynced();
     seedSyncChecked = true;
   }
+  // hidden_reason IS NULL is the serving set. A puzzle is withheld rather than
+  // deleted (migration 129): the set this hides asks the solver nothing, which
+  // no rating can fix, but re-mining to recover one is expensive and the reason
+  // string is worth keeping. Clearing the column serves it again.
   const { rows } = await getPool().query<{ data: StoredPuzzle }>(
-    'SELECT data FROM puzzles ORDER BY seq, id',
+    'SELECT data FROM puzzles WHERE hidden_reason IS NULL ORDER BY seq, id',
   );
   const puzzles: StoredPuzzle[] = [];
   for (const row of rows) {
