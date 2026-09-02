@@ -43,10 +43,67 @@ export const VARIANT_SMOKE_CONFIGS = {
     // version-agnostic: any Dark Xiangqi engine id (python-fdx-*).
     engineSeat: { prefix: 'python-fdx-' },
   },
+  banqi: {
+    name: 'banqi',
+    label: 'Banqi',
+    usage: 'npm run prod:smoke:banqi -- [options]',
+    gameSpecId: 'banqi',
+    defaultTimeoutMs: 30_000,
+    // 'misty-banqi' carries no version suffix today. Prefix-matched anyway, so
+    // a later 'misty-banqi-v2' does not red a healthy engine (bfb02b95).
+    engineSeat: { prefix: 'misty-banqi' },
+  },
+  jieqi: {
+    name: 'jieqi',
+    label: 'Jieqi',
+    usage: 'npm run prod:smoke:jieqi -- [options]',
+    gameSpecId: 'jieqi',
+    // The strongest rung searches 4s behind an 8s hard timeout and retries
+    // once, so a slow-but-working engine can legitimately need ~17s. Measured
+    // healthy: 4.4s.
+    defaultTimeoutMs: 60_000,
+    // Any rung: 'pikafish-jieqi-strongest' fronts PvE today, with amateur and
+    // strong rungs behind it.
+    engineSeat: { prefix: 'pikafish-jieqi-' },
+  },
+  jungle: {
+    name: 'jungle',
+    label: 'Jungle',
+    usage: 'npm run prod:smoke:jungle -- [options]',
+    gameSpecId: 'jungle',
+    defaultTimeoutMs: 30_000,
+    // 'misty-jungle-level-', NOT 'misty-jungle': the shorter prefix also
+    // matches 'misty-jungle-flip', which is a different variant's engine.
+    engineSeat: { prefix: 'misty-jungle-level-' },
+  },
+  'jungle-flip': {
+    name: 'jungle-flip',
+    label: 'Flip Jungle',
+    usage: 'npm run prod:smoke:jungle-flip -- [options]',
+    gameSpecId: 'jungle-flip',
+    defaultTimeoutMs: 30_000,
+    engineSeat: { prefix: 'misty-jungle-flip' },
+  },
+  xiangqi: {
+    name: 'xiangqi',
+    label: 'Xiangqi',
+    usage: 'npm run prod:smoke:xiangqi -- [options]',
+    gameSpecId: 'xiangqi',
+    defaultTimeoutMs: 40_000,
+    // The ONLY variant served by two engine families: the Fairy-Stockfish
+    // ladder (what a bare PvE create resolves to today) and Pikafish Level 8.
+    // Both are accepted, because which one fronts the default is a product
+    // knob and pinning the current answer is the bfb02b95 failure mode.
+    engineSeat: { prefixes: ['fairy-stockfish-xiangqi-level-', 'pikafish-xiangqi-'] },
+  },
 };
 
 export function matchesEngineSeat(engineSeat, seatId) {
   if (typeof seatId !== 'string') return false;
   if (engineSeat.equals !== undefined) return seatId === engineSeat.equals;
+  // `prefixes` is for a variant served by more than one engine family (xiangqi).
+  if (engineSeat.prefixes !== undefined) {
+    return engineSeat.prefixes.some((prefix) => seatId.startsWith(prefix));
+  }
   return seatId.startsWith(engineSeat.prefix);
 }

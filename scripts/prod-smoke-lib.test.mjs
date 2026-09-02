@@ -215,6 +215,11 @@ test('variant configs: every entry is complete and self-consistent', () => {
     fortress: 'fortress-xiangqi',
     dmx: 'dark-mini-xiangqi',
     dxq: 'dark-xiangqi',
+    banqi: 'banqi',
+    jieqi: 'jieqi',
+    jungle: 'jungle',
+    'jungle-flip': 'jungle-flip',
+    xiangqi: 'xiangqi',
   };
   assert.deepEqual(Object.keys(VARIANT_SMOKE_CONFIGS).sort(), Object.keys(expected).sort());
   for (const [key, config] of Object.entries(VARIANT_SMOKE_CONFIGS)) {
@@ -224,8 +229,10 @@ test('variant configs: every entry is complete and self-consistent', () => {
     assert.match(config.usage, /^npm run prod:smoke:/);
     assert.ok(Number.isInteger(config.defaultTimeoutMs) && config.defaultTimeoutMs > 0);
     assert.ok(
-      config.engineSeat.equals !== undefined || config.engineSeat.prefix !== undefined,
-      `${key} engineSeat needs equals or prefix`,
+      config.engineSeat.equals !== undefined ||
+        config.engineSeat.prefix !== undefined ||
+        config.engineSeat.prefixes !== undefined,
+      `${key} engineSeat needs equals, prefix, or prefixes`,
     );
   }
 });
@@ -241,6 +248,27 @@ test('engine seat matching is version-agnostic for versioned engine ids', () => 
   assert.equal(matchesEngineSeat(dmx, 'python-dmx-v1.0'), true);
   assert.equal(matchesEngineSeat(dmx, 'python-dmx-v2.0'), true);
   assert.equal(matchesEngineSeat(dmx, 'python-fdx-v1.1'), false);
+
+  // Jieqi accepts any rung, not just the 'strongest' one that fronts PvE today.
+  const jieqi = VARIANT_SMOKE_CONFIGS.jieqi.engineSeat;
+  assert.equal(matchesEngineSeat(jieqi, 'pikafish-jieqi-strongest'), true);
+  assert.equal(matchesEngineSeat(jieqi, 'pikafish-jieqi-amateur'), true);
+  assert.equal(matchesEngineSeat(jieqi, 'pikafish-xiangqi-level-8'), false);
+
+  // Jungle must NOT accept Flip Jungle's engine: 'misty-jungle' is a prefix of
+  // 'misty-jungle-flip', so the shorter prefix would silently pass on the
+  // wrong variant's bot.
+  const jungle = VARIANT_SMOKE_CONFIGS.jungle.engineSeat;
+  assert.equal(matchesEngineSeat(jungle, 'misty-jungle-level-2'), true);
+  assert.equal(matchesEngineSeat(jungle, 'misty-jungle-level-9'), true);
+  assert.equal(matchesEngineSeat(jungle, 'misty-jungle-flip'), false);
+
+  // Xiangqi is served by two engine families; either is a healthy default.
+  const xiangqi = VARIANT_SMOKE_CONFIGS.xiangqi.engineSeat;
+  assert.equal(matchesEngineSeat(xiangqi, 'fairy-stockfish-xiangqi-level-1'), true);
+  assert.equal(matchesEngineSeat(xiangqi, 'fairy-stockfish-xiangqi-level-8'), true);
+  assert.equal(matchesEngineSeat(xiangqi, 'pikafish-xiangqi-level-8'), true);
+  assert.equal(matchesEngineSeat(xiangqi, 'misty-banqi'), false);
 
   // Fortress is prefix-matched across the whole ladder: the default rung is a
   // product knob (Level 4 since the bot consolidation), and the retired tier

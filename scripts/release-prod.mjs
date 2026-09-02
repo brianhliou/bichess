@@ -591,8 +591,15 @@ async function runSmoke({ deployRequired, headRevision }) {
   runTimed('prod ceval smoke', npmCommand('prod:smoke:ceval', baseArgs()));
   if (smoke !== 'full') return;
 
-  // The four engine-family smokes are independent (separate rooms, separate
-  // engines) and dominated by engine-turn latency, so run them concurrently.
+  // The engine-family smokes are independent (separate rooms, separate engines)
+  // and dominated by engine-turn latency, so run them concurrently: wall clock
+  // is the slowest one, not the sum.
+  //
+  // One row per variant that offers PvE in production. That list used to be
+  // four, and the five it was missing included jieqi — whose live engine broke
+  // on 2026-09-02 and resigned six real games before anyone knew, because
+  // nothing here ever asked it for a move. scripts/pve-smoke-coverage.test.ts
+  // fails the build if a PvE variant is added without landing in this list.
   await runParallelSmokes([
     {
       label: 'prod engine smoke',
@@ -606,6 +613,31 @@ async function runSmoke({ deployRequired, headRevision }) {
     },
     { label: 'prod DMX smoke', tag: 'dmx', command: npmCommand('prod:smoke:dmx', baseArgs()) },
     { label: 'prod DXQ smoke', tag: 'dxq', command: npmCommand('prod:smoke:dxq', baseArgs()) },
+    {
+      label: 'prod Jieqi smoke',
+      tag: 'jieqi',
+      command: npmCommand('prod:smoke:jieqi', baseArgs()),
+    },
+    {
+      label: 'prod Xiangqi smoke',
+      tag: 'xiangqi',
+      command: npmCommand('prod:smoke:xiangqi', baseArgs()),
+    },
+    {
+      label: 'prod Banqi smoke',
+      tag: 'banqi',
+      command: npmCommand('prod:smoke:banqi', baseArgs()),
+    },
+    {
+      label: 'prod Jungle smoke',
+      tag: 'jungle',
+      command: npmCommand('prod:smoke:jungle', baseArgs()),
+    },
+    {
+      label: 'prod Flip Jungle smoke',
+      tag: 'jungle-flip',
+      command: npmCommand('prod:smoke:jungle-flip', baseArgs()),
+    },
   ]);
 }
 
