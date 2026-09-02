@@ -20,7 +20,12 @@ import { applyMove, getLegalMoves, isLegalMove } from './variants-xiangqi.js';
 /** Motifs detectable from the line alone. Distinct from the miner's goal/phase
  *  themes (checkmate/winning/endgame), which describe WHAT the puzzle is;
  *  these describe what makes it hard. */
-export type XiangqiPuzzleMotif = 'quiet-move' | 'sacrifice' | 'forced-line' | 'wide-defense';
+export type XiangqiPuzzleMotif =
+  | 'quiet-move'
+  | 'sacrifice'
+  | 'forced-line'
+  | 'wide-defense'
+  | 'free-material';
 
 export type XiangqiPuzzleDifficulty = {
   /** Rating-scale prior, clamped to [DIFFICULTY_MIN, DIFFICULTY_MAX]. */
@@ -31,6 +36,15 @@ export type XiangqiPuzzleDifficulty = {
   quietFirstMove: boolean;
   /** Largest material concession the solver never recovers, in centipawns. */
   sacrificeCp: number;
+  /** Value of the piece the key move takes when nothing can recapture it, in
+   *  centipawns; 0 when the key move captures nothing or the capture is
+   *  answerable. A hanging piece is the easiest thing on a board to see, and
+   *  it is also the most uniquely-best move there is, so the miner's gate
+   *  admits these with its widest margins. Measured over the served corpus in
+   *  September 2026: 27% of mined puzzles open with one, and in 12% the solver
+   *  was ALSO already ahead by more than a horse, which is the set where the
+   *  puzzle asks nothing at all. */
+  freeCaptureCp: number;
   /** Mean legal replies available to the defender across the line. A line the
    *  defender can only answer one way is easier than one that branches. */
   meanDefenderReplies: number;
@@ -66,6 +80,12 @@ const QUIET_FIRST_MOVE_BONUS = 90;
 const CAPTURING_FIRST_MOVE_PENALTY = 45;
 /** A conceded chariot (900cp) is worth the full bonus; smaller gives less. */
 const SACRIFICE_BONUS_MAX = 200;
+// One rating point per centipawn of undefended material, capped at a chariot.
+// Deliberately steep next to CAPTURING_FIRST_MOVE_PENALTY: an ordinary capture
+// merely announces itself, while an unanswerable one removes the search. At a
+// four-ply base of 2200 a free chariot lands near the floor, which is where
+// "take the hanging piece" belongs however long the forced tail behind it runs.
+const FREE_CAPTURE_PENALTY_MAX = 900;
 const SACRIFICE_CP_PER_POINT = 4.5;
 // Calibrated against the corpus, not intuition: xiangqi defenders have far more
 // legal replies than chess ones (measured 14-53 across the seed corpus, median
@@ -86,6 +106,7 @@ export function deriveXiangqiPuzzleDifficulty(puzzle: XiangqiPuzzle): XiangqiPuz
   const motifs: XiangqiPuzzleMotif[] = [];
   if (walk.quietFirstMove) motifs.push('quiet-move');
   if (walk.sacrificeCp >= SACRIFICE_MIN_CP) motifs.push('sacrifice');
+  if (walk.freeCaptureCp > 0) motifs.push('free-material');
   if (walk.replyCounts.length > 0) {
     const maxReplies = Math.max(...walk.replyCounts);
     if (maxReplies <= FORCED_LINE_MAX_REPLIES) motifs.push('forced-line');
@@ -95,6 +116,9 @@ export function deriveXiangqiPuzzleDifficulty(puzzle: XiangqiPuzzle): XiangqiPuz
   let score = depthBase(solverPlies);
   if (walk.complete) {
     score += walk.quietFirstMove ? QUIET_FIRST_MOVE_BONUS : -CAPTURING_FIRST_MOVE_PENALTY;
+    // Stacks with the capture penalty rather than replacing it: the move both
+    // announces itself AND removes the search.
+    score -= Math.min(FREE_CAPTURE_PENALTY_MAX, walk.freeCaptureCp);
     if (walk.sacrificeCp > 0) {
       score += Math.min(SACRIFICE_BONUS_MAX, Math.round(walk.sacrificeCp / SACRIFICE_CP_PER_POINT));
     }
@@ -109,6 +133,7 @@ export function deriveXiangqiPuzzleDifficulty(puzzle: XiangqiPuzzle): XiangqiPuz
     solverPlies,
     quietFirstMove: walk.quietFirstMove,
     sacrificeCp: walk.sacrificeCp,
+    freeCaptureCp: walk.freeCaptureCp,
     meanDefenderReplies: walk.meanDefenderReplies,
     complete: walk.complete,
     motifs,
@@ -119,6 +144,7 @@ type SolutionWalk = {
   complete: boolean;
   quietFirstMove: boolean;
   sacrificeCp: number;
+  freeCaptureCp: number;
   meanDefenderReplies: number;
   replyCounts: number[];
 };
@@ -135,6 +161,7 @@ function walkSolution(puzzle: XiangqiPuzzle): SolutionWalk {
   // Squares where the defender took a solver piece, still awaiting recapture.
   let openConcessions: { square: string; valueCp: number }[] = [];
   let sacrificeCp = 0;
+  let freeCaptureCp = 0;
   let complete = true;
 
   for (const [index, move] of puzzle.solution.entries()) {
@@ -171,6 +198,15 @@ function walkSolution(puzzle: XiangqiPuzzle): SolutionWalk {
     }
 
     state = applyMove(state, move);
+
+    // Is the key move an unanswerable grab? Only the solver's first move, and
+    // only while the game is still running: a capture that MATES also leaves
+    // the opponent no legal moves, and reading that as "nothing can recapture"
+    // would penalise every mating capture in the corpus.
+    if (index === 0 && captured && state.status.type === 'playing') {
+      const recaptures = getLegalMoves(state).filter((reply) => reply.to === move.to);
+      if (recaptures.length === 0) freeCaptureCp = MATERIAL_CP[captured.role];
+    }
   }
 
   // Anything still open at the end of the line was never recovered.
@@ -183,7 +219,14 @@ function walkSolution(puzzle: XiangqiPuzzle): SolutionWalk {
       ? 0
       : Math.round((replyCounts.reduce((total, n) => total + n, 0) / replyCounts.length) * 10) / 10;
 
-  return { complete, quietFirstMove, sacrificeCp, meanDefenderReplies, replyCounts };
+  return {
+    complete,
+    quietFirstMove,
+    sacrificeCp,
+    freeCaptureCp,
+    meanDefenderReplies,
+    replyCounts,
+  };
 }
 
 function depthBase(solverPlies: number): number {
