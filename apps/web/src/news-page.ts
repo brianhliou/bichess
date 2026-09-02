@@ -4,12 +4,27 @@
 import './news-page.css';
 import { localizeAnnouncement } from './announcement-i18n.js';
 import { type Announcement, announcementSlug, announcements } from './announcements.js';
+import { localizedArticleHref } from './article-i18n.js';
+import { articles } from './articles-data.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { formatAnnouncementDate } from './landing-announcements.js';
 import { buildNav } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
 import { rulesHrefPublicSurfaceEnabled } from './variant-public-surfaces.js';
+
+// An announcement pointing at an article has to be localized through the
+// article's own rule, not the generic path helper. localizedHref prefixes any
+// internal path with the locale, which for an untranslated article invents
+// /zh-hant/blog/<slug>: a URL the prerenderer never emits, because it emits a
+// localized variant only when the translation is published. localizedArticleHref
+// already encodes that, and falls back to the English path. Everything that is
+// not an article (a play link, /watch, a broadcast) keeps the plain helper.
+function localizedFeedHref(href: string, locale: Locale): string {
+  const slug = /^\/(?:blog|rules)\/([a-z0-9-]+)$/.exec(href)?.[1];
+  const article = slug ? articles.find((candidate) => candidate.slug === slug) : undefined;
+  return article ? localizedArticleHref(article, locale) : localizedHref(href, locale);
+}
 
 export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
   const section = document.createElement('section');
@@ -77,7 +92,7 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
         const isExternal = /^https?:/.test(entry.href);
         const link = document.createElement('a');
         link.className = 'news-page-link';
-        link.href = isExternal ? entry.href : localizedHref(entry.href, locale);
+        link.href = isExternal ? entry.href : localizedFeedHref(entry.href, locale);
         link.textContent = announcementCtaLabel(entry, locale);
         if (isExternal) {
           link.target = '_blank';

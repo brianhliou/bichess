@@ -1,4 +1,9 @@
-import { ARBITER_ADJUDICATED_DRAWS, applyMove, createInitialXiangqiState } from '@mistboard/game';
+import {
+  ARBITER_ADJUDICATED_DRAWS,
+  applyMove,
+  createInitialXiangqiState,
+  parseStandardXiangqiFen,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { articles } from './articles-data.js';
 
@@ -19,7 +24,13 @@ const conv = (square: string) => `${square[0]}${Number(square[1]) + 1}`;
 const toMove = (token: string) =>
   ({ from: conv(token.slice(0, 2)), to: conv(token.slice(2, 4)) }) as never;
 
-type Board = { spec: { iccs: string; annotations?: { byPly: Record<string, { line?: string }> } } };
+type Board = {
+  spec: {
+    iccs: string;
+    startFen?: string;
+    annotations?: { byPly: Record<string, { line?: string }> };
+  };
+};
 
 const boards: Array<{ slug: string; index: number; board: Board }> = articles.flatMap((article) =>
   (article.sections ?? [])
@@ -28,20 +39,29 @@ const boards: Array<{ slug: string; index: number; board: Board }> = articles.fl
     .map((board, index) => ({ slug: article.slug, index, board })),
 );
 
-/** The widget's own loop, including the resume. */
-function statesFor(iccs: string) {
-  const moves = iccs.trim().split(/\s+/).filter(Boolean);
-  const states = [createInitialXiangqiState('test')];
+/** The widget's own loop, including the resume.
+ *
+ *  `startFen` has to be honoured here or this check silently stops testing any
+ *  board that does not begin from the opening. It replayed every spec from the
+ *  initial position until 2026-09-01, when the puzzle-mining article added six
+ *  mid-game boards and all six reported "stopped after 0 plies": the moves were
+ *  fine, the starting position was wrong. The widget parses startFen at
+ *  xiangqi-replay.ts and takes its first mover from the FEN, so this does too,
+ *  including the turn parity the adjudicated-draw resume depends on. */
+function statesFor(spec: { iccs: string; startFen?: string }) {
+  const moves = spec.iccs.trim().split(/\s+/).filter(Boolean);
+  const parsed = spec.startFen ? parseStandardXiangqiFen(spec.startFen, 'test') : null;
+  const start = parsed?.ok === true ? parsed.state : createInitialXiangqiState('test');
+  const firstMover = start.status.type === 'playing' ? start.status.turn : 'red';
+  const states = [start];
   moves.forEach((token, index) => {
     let state = states[states.length - 1] as { status: { type: string; reason?: string } };
     if (
       state.status.type === 'finished' &&
       ARBITER_ADJUDICATED_DRAWS.has(state.status.reason as never)
     ) {
-      state = {
-        ...state,
-        status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' },
-      } as never;
+      const mover = index % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
+      state = { ...state, status: { type: 'playing', turn: mover } } as never;
     }
     states.push(applyMove(state as never, toMove(token)));
   });
@@ -52,7 +72,7 @@ describe('replaying a record past an adjudicated draw', () => {
   it('reaches the last ply of every board in every article', () => {
     const truncated: string[] = [];
     for (const { slug, index, board } of boards) {
-      const { moves, states } = statesFor(board.spec.iccs);
+      const { moves, states } = statesFor(board.spec);
       // A frozen game repeats one state, so the tail is identical objects.
       const advanced = states.filter((s, i) => i === 0 || s !== states[i - 1]).length - 1;
       if (advanced < moves.length) {
@@ -67,7 +87,7 @@ describe('replaying a record past an adjudicated draw', () => {
   it('keeps every engine line, not just its first move', () => {
     const short: string[] = [];
     for (const { slug, index, board } of boards) {
-      const { states } = statesFor(board.spec.iccs);
+      const { states } = statesFor(board.spec);
       for (const [plyKey, annotation] of Object.entries(board.spec.annotations?.byPly ?? {})) {
         if (!annotation.line) continue;
         const ply = Number(plyKey);
