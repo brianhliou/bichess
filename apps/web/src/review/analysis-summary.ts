@@ -3,7 +3,13 @@
 // columns — judgment counts + ACPL on the left, Accuracy plus per-phase accuracy
 // (Opening / Middlegame / Endgame) on the right, tone-coloured by value. Anonymous
 // games have no names, so sides are labelled Red / Black.
+//
+// The judgment counts are LIVE (lichess roundTraining): hovering "4 Inaccuracies"
+// lights those plies on the advantage chart, clicking jumps to the next one after
+// the current position and cycles. Between the two players sits the "Learn from
+// your mistakes" button (retro mode) when the surface offers it.
 import './analysis-summary.css';
+import type { MoveJudgment } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import {
   type GameAnalysis,
@@ -17,6 +23,8 @@ import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.
 /** Optional real player names; fall back to the side colors for anonymous games. */
 export type AnalysisSummaryLabels = { red?: string; black?: string };
 
+export type SummaryJudgment = Exclude<MoveJudgment, null>;
+
 export type AnalysisSummaryOptions = {
   /** Hide the ACPL row. Chance/hidden-info variants (jieqi) set this: centipawn loss can't be
    *  luck-stripped, so it reads as noise next to the luck-free accuracy + counts. */
@@ -26,6 +34,17 @@ export type AnalysisSummaryOptions = {
   /** Phase boundaries → per-phase accuracy rows in the right column (lichess
    *  "96% Opening"). Omitted = the right column shows only the headline accuracy. */
   phases?: GamePhases;
+  /** Live judgment rows. `hover` fires with the row under the pointer and with
+   *  null on leave; `jump` fires on click. Rows with a zero count stay inert. */
+  onJudgment?: {
+    hover(side: 'red' | 'black', judgment: SummaryJudgment | null): void;
+    jump(side: 'red' | 'black', judgment: SummaryJudgment): void;
+  };
+  /** "Learn from your mistakes" button between the two players (lichess). Omitted =
+   *  no button (a variant with no retro mode, or a study). */
+  onLearn?: () => void;
+  /** Whether retro mode is currently open: the button renders pressed. */
+  learnActive?: boolean;
 };
 
 export function createAnalysisSummary(
@@ -44,18 +63,23 @@ export function createAnalysisSummary(
     playerBlock(
       labels?.red || colorLabel(firstColor),
       firstColor,
+      'red',
       analysis.red,
       hideAcpl,
       phasesFor('red'),
+      options?.onJudgment,
     ),
   );
+  if (options?.onLearn) el.append(learnButton(options.onLearn, options.learnActive ?? false));
   el.append(
     playerBlock(
       labels?.black || colorLabel(secondColor),
       secondColor,
+      'black',
       analysis.black,
       hideAcpl,
       phasesFor('black'),
+      options?.onJudgment,
     ),
   );
   return el;
@@ -65,12 +89,31 @@ function colorLabel(color: 'red' | 'black'): string {
   return color === 'red' ? t('summary.red') : t('summary.black');
 }
 
+function learnButton(onLearn: () => void, active: boolean): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'analysis-summary__learn';
+  button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  const icon = document.createElement('span');
+  icon.className = 'analysis-summary__learn-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const label = document.createElement('span');
+  label.textContent = t('summary.learnFromMistakes');
+  button.append(icon, label);
+  button.addEventListener('click', onLearn);
+  return button;
+}
+
 function playerBlock(
   label: string,
   color: 'red' | 'black',
+  side: 'red' | 'black',
   player: PlayerAnalysis,
   hideAcpl: boolean,
   phases: PhaseAccuracies,
+  onJudgment: AnalysisSummaryOptions['onJudgment'],
 ): HTMLElement {
   const block = document.createElement('div');
   block.className = 'analysis-summary__player';
@@ -87,25 +130,27 @@ function playerBlock(
   // Left column: judgment counts + ACPL (lichess order).
   const stats = document.createElement('div');
   stats.className = 'analysis-summary__stats';
+  const judgmentRow = (
+    count: number,
+    judgment: SummaryJudgment,
+    one: string,
+    many: string,
+  ): HTMLElement => {
+    const live = count > 0 && onJudgment ? { side, judgment, ...onJudgment } : null;
+    return statRow(String(count), plural(count, one, many), count > 0 ? judgment : null, live);
+  };
   stats.append(
-    statRow(
-      String(player.inaccuracies),
-      plural(player.inaccuracies, t('summary.inaccuracyOne'), t('summary.inaccuracyMany')),
-      player.inaccuracies > 0 ? 'inaccuracy' : null,
+    judgmentRow(
+      player.inaccuracies,
+      'inaccuracy',
+      t('summary.inaccuracyOne'),
+      t('summary.inaccuracyMany'),
     ),
-    statRow(
-      String(player.mistakes),
-      plural(player.mistakes, t('summary.mistakeOne'), t('summary.mistakeMany')),
-      player.mistakes > 0 ? 'mistake' : null,
-    ),
-    statRow(
-      String(player.blunders),
-      plural(player.blunders, t('summary.blunderOne'), t('summary.blunderMany')),
-      player.blunders > 0 ? 'blunder' : null,
-    ),
+    judgmentRow(player.mistakes, 'mistake', t('summary.mistakeOne'), t('summary.mistakeMany')),
+    judgmentRow(player.blunders, 'blunder', t('summary.blunderOne'), t('summary.blunderMany')),
   );
   if (!hideAcpl) {
-    stats.append(statRow(String(player.acpl), t('summary.acpl'), null));
+    stats.append(statRow(String(player.acpl), t('summary.acpl'), null, null));
   }
 
   // Right column: headline accuracy over the per-phase accuracies.
@@ -128,10 +173,36 @@ function playerBlock(
   return block;
 }
 
-function statRow(value: string, label: string, judgment: string | null): HTMLElement {
-  const row = document.createElement('div');
+type LiveRow = {
+  side: 'red' | 'black';
+  judgment: SummaryJudgment;
+  hover(side: 'red' | 'black', judgment: SummaryJudgment | null): void;
+  jump(side: 'red' | 'black', judgment: SummaryJudgment): void;
+};
+
+function statRow(
+  value: string,
+  label: string,
+  judgment: string | null,
+  live: LiveRow | null,
+): HTMLElement {
+  // A live row is a real button (keyboard reachable, announces as a control);
+  // an inert row stays a plain div so a "0 Blunders" line is not a dead control.
+  const row = document.createElement(live ? 'button' : 'div');
   row.className = 'analysis-summary__stat';
   if (judgment) row.classList.add(`analysis-summary__stat--${judgment}`);
+  if (live && row instanceof HTMLButtonElement) {
+    row.type = 'button';
+    row.classList.add('analysis-summary__stat--live');
+    row.dataset.side = live.side;
+    row.dataset.judgment = live.judgment;
+    row.title = t('summary.judgmentRowHint');
+    row.addEventListener('mouseenter', () => live.hover(live.side, live.judgment));
+    row.addEventListener('mouseleave', () => live.hover(live.side, null));
+    row.addEventListener('focus', () => live.hover(live.side, live.judgment));
+    row.addEventListener('blur', () => live.hover(live.side, null));
+    row.addEventListener('click', () => live.jump(live.side, live.judgment));
+  }
   const num = document.createElement('strong');
   num.className = 'analysis-summary__stat-value';
   num.textContent = value;

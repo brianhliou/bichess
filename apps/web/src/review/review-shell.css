@@ -1268,6 +1268,26 @@
   border-radius: 6px 6px 0 0;
   box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.16);
 }
+/* Footer host: the same "rose over the bottom of the list" grammar as the
+   explorer, but sized to its content and pinned to the box's bottom edge, which
+   is the board's bottom line. Retro mode's box mounts here. Transparent to
+   pointer input while empty so the move list underneath stays clickable. */
+.review-rail-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  /* Explicit: an ancestor rule centres the rail's flex children, which would
+     shrink the box to its text instead of spanning the column. */
+  align-items: stretch;
+  pointer-events: none;
+}
+.review-rail-footer > * {
+  pointer-events: auto;
+}
 
 /* Crosstable (lichess head-to-head): a surface box with one row per player. Game
    columns pack against the names from the left, each holding that player's point

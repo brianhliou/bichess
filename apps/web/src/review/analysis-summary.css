@@ -5,16 +5,16 @@
 .analysis-summary {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 6px 2px;
+  gap: 6px;
+  padding: 4px 2px;
   border: none;
   background: transparent;
 }
 .analysis-summary__player {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 8px;
+  gap: 3px;
+  padding: 5px 8px 6px;
   border: 1px solid var(--site-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--site-text) 3%, transparent);
@@ -56,18 +56,49 @@
   margin: 0 auto;
   padding: 0 4px;
 }
-/* lichess ACC block anatomy: right-aligned value column, then the label. */
+/* lichess ACC block anatomy: right-aligned value column, then the label. Each
+   row is its own box (not `display: contents` cells in a grid) because a live
+   row is a <button> that must take hover, focus and a click as one unit. */
 .analysis-summary__stats {
-  display: grid;
-  grid-template-columns: 2.2em 1fr;
-  column-gap: 8px;
-  row-gap: 2px;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: stretch;
 }
 .analysis-summary__stat {
-  display: contents;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: 1.35;
+  text-align: left;
+  color: inherit;
+}
+/* A live row answers a hover with ink only: the label underlines and the pair
+   darkens. No background, no outline (a box around a two-word row reads as a
+   form control, not a link into the game). */
+.analysis-summary__stat--live {
+  cursor: pointer;
+}
+.analysis-summary__stat--live:focus-visible {
+  outline: none;
+}
+.analysis-summary__stat--live:hover .analysis-summary__stat-label,
+.analysis-summary__stat--live:focus-visible .analysis-summary__stat-label {
+  text-decoration: underline;
+}
+.analysis-summary__stat--live:hover .analysis-summary__stat-label,
+.analysis-summary__stat--live:hover .analysis-summary__stat-value,
+.analysis-summary__stat--live:focus-visible .analysis-summary__stat-label,
+.analysis-summary__stat--live:focus-visible .analysis-summary__stat-value {
+  filter: brightness(0.72);
 }
 .analysis-summary__stat-value {
+  flex: 0 0 2.2em;
   text-align: right;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -93,13 +124,45 @@
   color: #e5222c;
   font-weight: 700;
 }
+/* "Learn from your mistakes" (lichess): a full-width blue bar between the two
+   players, pressed while retro mode is open. */
+.analysis-summary__learn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #3b73c4;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.analysis-summary__learn:hover,
+.analysis-summary__learn:focus-visible {
+  background: #2f62ab;
+  outline: none;
+}
+.analysis-summary__learn[aria-pressed="true"] {
+  background: #2f8a4d;
+}
+.analysis-summary__learn-icon {
+  display: inline-flex;
+}
 /* Right column: headline accuracy, then per-phase rows toned by value. */
 .analysis-summary__phases {
   display: grid;
   grid-template-columns: 2.6em 1fr;
   column-gap: 8px;
-  row-gap: 2px;
+  row-gap: 0;
   align-content: start;
+  line-height: 1.35;
 }
 .analysis-summary__phase {
   display: contents;

@@ -209,6 +209,27 @@
 .advantage-chart__dot--on {
   opacity: 1;
 }
+/* Judgment marks: rings on the curve at every ply of one class, lit while the
+   summary's matching row is hovered. Same palette as the move-list glyphs
+   (move-list.css) so a count, a glyph and a point on the curve agree. */
+.advantage-chart__mark {
+  fill: var(--site-bg);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.advantage-chart__mark--inaccuracy {
+  stroke: #c29100;
+}
+.advantage-chart__mark--mistake {
+  stroke: #eb7500;
+}
+.advantage-chart__mark--blunder {
+  stroke: #e5222c;
+}
+/* While marks are up, the curve steps back so the rings read as the subject. */
+.advantage-chart--marked .advantage-chart__line {
+  opacity: 0.55;
+}
 .advantage-chart__tip {
   position: absolute;
   top: 6px;

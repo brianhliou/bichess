@@ -35,7 +35,15 @@ export interface AdvantageChart {
    *  reveals ran average" line = realized minus cumulative luck, plus a shaded band whose gap is
    *  the cumulative luck, plus a legend. Safe to call once decisions load. */
   setLuckOverlay(redLuckByPly: ReadonlyMap<number, number>): void;
+  /** Ring the plies of one judgment class ON the curve (lichess: hovering "4
+   *  Inaccuracies" lights those four points in the inaccuracy colour). An empty
+   *  list clears the marks. The marks are transient hover ink, so they sit above
+   *  the curve and never persist past the hover that asked for them. */
+  setMarks(marks: readonly AdvantageChartMark[]): void;
 }
+
+/** One highlighted ply and the judgment tone that colours it. */
+export type AdvantageChartMark = { ply: number; tone: 'inaccuracy' | 'mistake' | 'blunder' };
 
 function svg(tag: string, attrs: Record<string, string>): SVGElement {
   const node = document.createElementNS(SVG_NS, tag);
@@ -215,10 +223,12 @@ export function createAdvantageChart(
   const dot = svg('circle', { r: '2.6', cx: '0', cy: '0', class: 'advantage-chart__dot' });
   const luckBand = svg('polygon', { points: '', class: 'advantage-chart__luck-band' });
   const ghostLine = svg('polyline', { points: '', class: 'advantage-chart__ghost' });
+  // Judgment marks (summary hover): a group of rings rewritten by setMarks.
+  const marks = svg('g', { class: 'advantage-chart__marks' });
   // The luck band sits OVER the fills for the same reason the axis does: it is a
   // translucent overlay meant to be read against them, and opaque fills would
   // swallow it where it matters most (jieqi, where the reveal swings are large).
-  chart.append(areaRed, areaBlack, luckBand, axis, ghostLine, line, cursor, dot);
+  chart.append(areaRed, areaBlack, luckBand, axis, ghostLine, line, cursor, marks, dot);
   plot.append(chart);
 
   // Hover readout (lichess: the chart scrubs under the pointer and names the move
@@ -334,5 +344,22 @@ export function createAdvantageChart(
     legend.hidden = false;
   }
 
-  return { el, setPly, setLuckOverlay };
+  function setMarks(next: readonly AdvantageChartMark[]): void {
+    marks.replaceChildren();
+    for (const mark of next) {
+      const point = evals[mark.ply];
+      if (!point) continue;
+      marks.append(
+        svg('circle', {
+          r: '2.4',
+          cx: xOf(point.ply).toFixed(2),
+          cy: yOf(point).toFixed(2),
+          class: `advantage-chart__mark advantage-chart__mark--${mark.tone}`,
+        }),
+      );
+    }
+    el.classList.toggle('advantage-chart--marked', next.length > 0);
+  }
+
+  return { el, setPly, setLuckOverlay, setMarks };
 }
