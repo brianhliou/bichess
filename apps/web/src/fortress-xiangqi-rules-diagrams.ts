@@ -28,10 +28,19 @@ import {
   type FortressXiangqiBoardRenderOptions,
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
+  renderFortressXiangqiPieceInline,
 } from './fortress-xiangqi-render.js';
+import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 const ROW_GAP = 30;
 const ROW_LABEL_H = 44;
+
+// The drop-region row carries a strip of piece discs above each board, naming
+// the pieces that share that region, then the region's name, then the board.
+const DROP_GLYPH = 84;
+const DROP_GLYPH_GAP = 14;
+const DROP_HEAD_H = DROP_GLYPH + 56;
 
 // The live renderer emits a viewBox-only <svg class="fxq-board"> whose global
 // CSS rule is width:100%. In an article figure there is no live-board container
@@ -121,6 +130,37 @@ function boardRow(items: Array<{ label: string; svg: string }>, maxWidth: number
     `<svg viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress movement diagram">${parts.join('')}</svg>`,
     maxWidth,
   );
+}
+
+// One board in the drop-region row: a strip of the piece discs that share the
+// region, the region's name, then the board with that region lit up.
+//
+// The discs are the point of the figure. The old pair of drop diagrams showed a
+// lit region over a board holding nothing but two generals, which said where a
+// piece could land without ever saying which piece, so the reader had to carry
+// the rule over from the paragraph above (reported unclear 2026-09-02).
+function dropRegionCell(
+  item: { roles: readonly FortressXiangqiDropRole[]; label: string; svg: string },
+  x: number,
+  set: XiangqiPieceSet,
+): { svg: string; width: number; height: number } {
+  const board = placeBoard(item.svg, x, DROP_HEAD_H);
+  const stripW = item.roles.length * DROP_GLYPH + (item.roles.length - 1) * DROP_GLYPH_GAP;
+  const stripX = x + (board.width - stripW) / 2;
+  const discs = item.roles
+    .map((role, index) => {
+      const gx = stripX + index * (DROP_GLYPH + DROP_GLYPH_GAP);
+      // The inline glyph is a bare 100x100 <svg>; wrapping it in a positioned
+      // <svg> places it without editing anyone else's markup.
+      return `<svg x="${gx}" y="0" width="${DROP_GLYPH}" height="${DROP_GLYPH}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${renderFortressXiangqiPieceInline({ color: 'red', role }, set)}</svg>`;
+    })
+    .join('');
+  const label = `<text x="${x + board.width / 2}" y="${DROP_HEAD_H - 16}" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="2.6" style="fill: var(--site-muted, #6b7280)">${item.label}</text>`;
+  return {
+    svg: discs + label + board.svg,
+    width: board.width,
+    height: DROP_HEAD_H + board.height,
+  };
 }
 
 // A minimal playing state around a hand-set board, for kernel target queries.
@@ -339,14 +379,37 @@ export const FORTRESS_XIANGQI_TREASURE_DIAGRAM = () => {
 
 // ── Drop-region diagrams ────────────────────────────────────────────────────
 
-// Defender drop region, advisor: only the empty points of its own palace.
-export const FORTRESS_XIANGQI_ADVISOR_DROP_DIAGRAM = () => {
-  const state = stateWith(GENERALS, { advisor: 1 });
-  return diagram(viewOf(state), { targets: dropTargets(state, 'advisor') }, 380);
-};
+// The pieces that drop anywhere. Ordered as the prose above the figure names
+// them; membership is asserted against the kernel by the diagram test rather
+// than trusted here, so a rules change that pulls a piece out of the free group
+// fails instead of drawing it under the wrong region.
+const FREE_DROP_ROLES = ['chariot', 'horse', 'cannon', 'soldier', 'treasure'] as const;
 
-// Defender drop region, elephant: any empty point in its own half.
-export const FORTRESS_XIANGQI_ELEPHANT_DROP_DIAGRAM = () => {
-  const state = stateWith(GENERALS, { elephant: 1 });
-  return diagram(viewOf(state), { targets: dropTargets(state, 'elephant') }, 380);
+// Three drop regions side by side: where each captured piece is allowed to
+// land, with the pieces themselves over the region they share.
+export const FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM = () => {
+  const set = readStoredXiangqiPieceSet();
+  const region = (role: FortressXiangqiDropRole) => {
+    const state = stateWith(GENERALS, { [role]: 1 });
+    return boardSvg(viewOf(state), { targets: dropTargets(state, role) });
+  };
+  const items = [
+    { roles: FREE_DROP_ROLES, label: 'ANY EMPTY POINT', svg: region('chariot') },
+    { roles: ['elephant'] as const, label: 'YOUR OWN HALF', svg: region('elephant') },
+    { roles: ['advisor'] as const, label: 'YOUR OWN PALACE', svg: region('advisor') },
+  ];
+
+  const parts: string[] = [];
+  let x = 0;
+  let tallest = 0;
+  for (const item of items) {
+    const cell = dropRegionCell(item, x, set);
+    parts.push(cell.svg);
+    x += cell.width + ROW_GAP;
+    tallest = Math.max(tallest, cell.height);
+  }
+  return responsive(
+    `<svg viewBox="0 0 ${x - ROW_GAP} ${tallest}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storm the Fortress drop regions">${parts.join('')}</svg>`,
+    900,
+  );
 };

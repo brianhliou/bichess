@@ -1,6 +1,12 @@
+import {
+  type FortressXiangqiDropRole,
+  getFortressXiangqiLegalMoves,
+  isFortressXiangqiDropMove,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   FORTRESS_XIANGQI_CANNON_DIAGRAM,
+  FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
   FORTRESS_XIANGQI_ELEPHANT_DIAGRAM,
   FORTRESS_XIANGQI_HORSE_DIAGRAM,
 } from './fortress-xiangqi-rules-diagrams.js';
@@ -77,5 +83,96 @@ describe.each(ROWS)('fortress %s rules row', (_name, diagram, labels) => {
     expect(wrapper).not.toBeNull();
     expect(Number(wrapper?.[1])).toBeGreaterThanOrEqual(rightEdge);
     expect(Number(wrapper?.[2])).toBeGreaterThanOrEqual(bottomEdge);
+  });
+});
+
+// ── Drop regions ────────────────────────────────────────────────────────────
+//
+// The drop figure draws ONE board for the five free-dropping pieces, rendered
+// from the chariot's targets. That is only honest while all five really share a
+// region, so the first test asks the kernel rather than trusting the grouping.
+
+function dropTargetsOf(role: FortressXiangqiDropRole): string[] {
+  const state = {
+    id: 'drop-region-test',
+    board: {
+      b2: { color: 'red', role: 'general' },
+      f7: { color: 'black', role: 'general' },
+    },
+    hands: { red: { [role]: 1 }, black: {} },
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 1,
+    positionCounts: {},
+  } as unknown as Parameters<typeof getFortressXiangqiLegalMoves>[0];
+  return getFortressXiangqiLegalMoves(state)
+    .filter((move) => isFortressXiangqiDropMove(move) && move.drop === role)
+    .map((move) => (move as unknown as { to: string }).to)
+    .sort();
+}
+
+describe('fortress drop regions', () => {
+  it('the five pieces drawn on the free-drop board really share one region', () => {
+    const chariot = dropTargetsOf('chariot');
+    for (const role of ['horse', 'cannon', 'soldier', 'treasure'] as const) {
+      expect(dropTargetsOf(role), `${role} does not share the chariot's drop region`).toEqual(
+        chariot,
+      );
+    }
+  });
+
+  it('holds the elephant to its own half and the advisor to its own palace', () => {
+    const free = dropTargetsOf('chariot');
+    const elephant = dropTargetsOf('elephant');
+    const advisor = dropTargetsOf('advisor');
+
+    // Own half is ranks 1-4; own palace is files a-c on ranks 1-3.
+    expect(elephant.every((sq) => Number(sq[1]) <= 4)).toBe(true);
+    expect(advisor.every((sq) => sq[0] <= 'c' && Number(sq[1]) <= 3)).toBe(true);
+    // Strictly nested, so the three boards show three different pictures.
+    expect(elephant.length).toBeLessThan(free.length);
+    expect(advisor.length).toBeLessThan(elephant.length);
+  });
+
+  it('occupied points are never drop targets', () => {
+    for (const role of ['chariot', 'elephant', 'advisor'] as const) {
+      const targets = dropTargetsOf(role);
+      expect(targets).not.toContain('b2');
+      expect(targets).not.toContain('f7');
+    }
+  });
+
+  it('lays out three boards, each under the pieces that use it', () => {
+    const svg = FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM();
+    const tags = boardTags(svg);
+    expect(tags).toHaveLength(3);
+
+    const xs = tags.map((tag) => Number(attr(tag, 'x')));
+    const widths = tags.map((tag) => Number(attr(tag, 'width')));
+    expect(xs[1]).toBeGreaterThanOrEqual(xs[0] + widths[0]);
+    expect(xs[2]).toBeGreaterThanOrEqual(xs[1] + widths[1]);
+    // Boards clear the piece strip and the region label above them.
+    for (const tag of tags) expect(Number(attr(tag, 'y'))).toBeGreaterThan(0);
+
+    for (const label of ['ANY EMPTY POINT', 'YOUR OWN HALF', 'YOUR OWN PALACE']) {
+      expect(svg).toContain(`>${label}</text>`);
+    }
+  });
+
+  it('names five pieces over the free-drop board and one over each restricted board', () => {
+    const svg = FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM();
+    const labels = (svg.match(/aria-label="red (?!general)[a-z]+"/g) ?? []).map((m) =>
+      m.replace('aria-label="red ', '').replace('"', ''),
+    );
+
+    // Five free droppers plus the elephant and the advisor, and nothing else.
+    expect(labels).toEqual([
+      'chariot',
+      'horse',
+      'cannon',
+      'soldier',
+      'treasure',
+      'elephant',
+      'advisor',
+    ]);
   });
 });
