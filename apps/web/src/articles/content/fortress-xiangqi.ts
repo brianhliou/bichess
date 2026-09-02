@@ -1,10 +1,9 @@
 import {
   FORTRESS_XIANGQI_ADVISOR_DIAGRAM,
-  FORTRESS_XIANGQI_ADVISOR_DROP_DIAGRAM,
   FORTRESS_XIANGQI_CANNON_DIAGRAM,
+  FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
   FORTRESS_XIANGQI_CHARIOT_DIAGRAM,
   FORTRESS_XIANGQI_ELEPHANT_DIAGRAM,
-  FORTRESS_XIANGQI_ELEPHANT_DROP_DIAGRAM,
   FORTRESS_XIANGQI_GENERAL_DIAGRAM,
   FORTRESS_XIANGQI_HORSE_DIAGRAM,
   FORTRESS_XIANGQI_SOLDIER_DIAGRAM,
@@ -154,13 +153,9 @@ export const fortressXiangqiArticle: Article = {
         },
         {
           kind: 'raw-svg',
-          svg: FORTRESS_XIANGQI_ADVISOR_DROP_DIAGRAM,
-          caption: 'A captured Advisor drops only onto an empty point of your own palace.',
-        } as ArticleBlock,
-        {
-          kind: 'raw-svg',
-          svg: FORTRESS_XIANGQI_ELEPHANT_DROP_DIAGRAM,
-          caption: 'A captured Elephant drops onto any empty point in your own half.',
+          svg: FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
+          caption:
+            'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace. A point already occupied is never a drop target, which is why the general stands on a gap in its own palace.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
