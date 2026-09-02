@@ -102,6 +102,29 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Replay headers and result lines. article-prose.ts extracts these as of
+  // 2026-09-02; before that only a stepper's caption counted, so these shipped
+  // in English beside translated prose with the coverage test green.
+  'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
+  'Sacrifice the Horse in 13': '弃马十三着',
+  'Classic manual, 1632': '古谱，1632 年',
+  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
+    '第 13 回合将死。红方双炮沿着打通的中路把将困死。',
+  'Engine self-play · depth 10': '引擎自对弈 · 深度 10',
+  'Red’s horse leaps to f5 and checkmates the black general on e7. Red wins.':
+    '红马跃到 f5，将死 e7 的黑将。红方胜。',
+  'Misty DMX · Fog of War self-play': 'Misty DMX · 迷雾自对弈',
+  'Black’s cannon takes the horse on c1; the Red general must recapture, and the waiting chariot runs the open c-file to capture it. Black wins.':
+    '黑炮吃掉 c1 的马；红将必须回吃，等在一旁的车顺着打开的 c 线冲下来把它吃掉。黑方胜。',
+  'PikaJieQi self-play': 'PikaJieQi 自对弈',
+  'Red works through the reveals and delivers checkmate on move 36.':
+    '红方在一次次揭子中推进，第 36 回合将死。',
+  'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
+    '黑方子力占优，五子对三子，却动不了红方的象，那是场上仅存的最大子，而它正一个一个地吃掉黑方的子。黑方认输。在暗棋里，大小压过纯粹的子力。',
+  'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
+  "Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black's own soldier on e6 and chariot on f7 take away the last two palace squares.":
+    '红方以 T@d8 打入宝，将死。宝攻击 e7 的将，同时控制 e8，而黑方自己在 e6 的兵和 f7 的车又占掉了九宫最后两个点。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -2015,6 +2038,29 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // Replay headers and result lines. article-prose.ts extracts these as of
+  // 2026-09-02; before that only a stepper's caption counted, so these shipped
+  // in English beside translated prose with the coverage test green.
+  'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
+  'Sacrifice the Horse in 13': '棄馬十三著',
+  'Classic manual, 1632': '古譜，1632 年',
+  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
+    '第 13 回合將死。紅方雙炮沿著打通的中路把將困死。',
+  'Engine self-play · depth 10': '引擎自對弈 · 深度 10',
+  'Red’s horse leaps to f5 and checkmates the black general on e7. Red wins.':
+    '紅馬躍到 f5，將死 e7 的黑將。紅方勝。',
+  'Misty DMX · Fog of War self-play': 'Misty DMX · 迷霧自對弈',
+  'Black’s cannon takes the horse on c1; the Red general must recapture, and the waiting chariot runs the open c-file to capture it. Black wins.':
+    '黑炮吃掉 c1 的馬；紅將必須回吃，等在一旁的車順著打開的 c 線衝下來把它吃掉。黑方勝。',
+  'PikaJieQi self-play': 'PikaJieQi 自對弈',
+  'Red works through the reveals and delivers checkmate on move 36.':
+    '紅方在一次次揭子中推進，第 36 回合將死。',
+  'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
+    '黑方子力佔優，五子對三子，卻動不了紅方的象，那是場上僅存的最大子，而它正一個一個地吃掉黑方的子。黑方認輸。在暗棋裡，大小壓過純粹的子力。',
+  'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
+  "Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black's own soldier on e6 and chariot on f7 take away the last two palace squares.":
+    '紅方以 T@d8 打入寶，將死。寶攻擊 e7 的將，同時控制 e8，而黑方自己在 e6 的兵和 f7 的車又佔掉了九宮最後兩個點。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry

@@ -59,6 +59,35 @@ function isMoveNotation(text: string): boolean {
   return /[→@]/.test(text);
 }
 
+// A game result written as score notation ("1-0", "0-1", "1/2-1/2") is
+// language-neutral, the same way a move arrow is.
+function isScoreNotation(text: string): boolean {
+  return /^\s*(1-0|0-1|1\/2-1\/2|\*)\s*$/.test(text);
+}
+
+// A replay block's narrative: its caption plus the header and result line the
+// widget renders around the board. Only `caption` used to count, so a stepper
+// could ship a translated caption under an English header and the coverage test
+// would call the article fully covered. The puzzle-mining article shipped
+// exactly that on 2026-09-02: "拒絕：太短 · Mate in one, thrown away".
+//
+// `red` and `black` stay out. They are player and engine names (Fairy-Stockfish,
+// PikaJieQi, a person), and a name is not translatable prose. Articles that DO
+// want a localized name, like the champion pages, still get one by adding the
+// key; they just are not forced to.
+function replay(block: {
+  caption?: string;
+  spec?: { title?: string; event?: string; resultText?: string };
+}): string[] {
+  const spec = block.spec ?? {};
+  return [
+    ...caption(block),
+    ...[spec.title, spec.event, spec.resultText].filter(
+      (t): t is string => typeof t === 'string' && t.trim().length > 0 && !isScoreNotation(t),
+    ),
+  ];
+}
+
 // Each block kind declares the prose it contributes. The mapped type is
 // exhaustive over ArticleBlock['kind'], so adding a new block kind is a compile
 // error here until someone decides what prose (if any) it carries.
@@ -81,17 +110,17 @@ const BLOCK_PROSE: {
       return n && !isMoveNotation(n) ? [n] : [];
     }),
   ],
-  'xq-replay': caption,
-  'mxq-replay': caption,
-  'drop-mini-xiangqi-replay': caption,
-  'fortress-xiangqi-replay': caption,
-  'shogi-replay': caption,
-  'chess-replay': caption,
-  'crossroads-replay': caption,
-  'jieqi-replay': caption,
-  'banqi-replay': caption,
-  'jungle-replay': caption,
-  'jungle-flip-replay': caption,
+  'xq-replay': replay,
+  'mxq-replay': replay,
+  'drop-mini-xiangqi-replay': replay,
+  'fortress-xiangqi-replay': replay,
+  'shogi-replay': replay,
+  'chess-replay': replay,
+  'crossroads-replay': replay,
+  'jieqi-replay': replay,
+  'banqi-replay': replay,
+  'jungle-replay': replay,
+  'jungle-flip-replay': replay,
   code: caption,
   // Headers, caption, and any cell carrying Latin script. Cells were once treated as
   // data because most of them are numbers, and the match-fixing article then
