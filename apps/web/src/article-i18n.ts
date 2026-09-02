@@ -102,6 +102,22 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
+  // this dictionary at render, but article-prose.ts gives a raw-svg block only
+  // its caption, so nothing demanded these and the figure shipped in English.
+  // The eight reason identifiers stay Latin: the caption calls them the value
+  // stored on the candidate, and they should match the database.
+  'THE GATE, IN EVALUATION ORDER': '判定关卡，按求值顺序',
+  'best mates, second does not or is slower': '最佳着法能将死，次佳不能或更慢',
+  unique: '唯一',
+  'win%(best) below 0.8': '最佳胜率低于 0.8',
+  rejected: '拒绝',
+  'no second move exists': '不存在第二选择',
+  'second move mates': '次佳着法也能将死',
+  'gap below 200cp': '差距低于 200cp',
+  'win%(second) at or below 0.6': '次佳胜率不高于 0.6',
+  'gap of 250cp or more': '差距达到 250cp 或以上',
+  'anything left over': '其余情况',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
@@ -2036,6 +2052,22 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
+  // this dictionary at render, but article-prose.ts gives a raw-svg block only
+  // its caption, so nothing demanded these and the figure shipped in English.
+  // The eight reason identifiers stay Latin: the caption calls them the value
+  // stored on the candidate, and they should match the database.
+  'THE GATE, IN EVALUATION ORDER': '判定關卡，按求值順序',
+  'best mates, second does not or is slower': '最佳著法能將死，次佳不能或更慢',
+  unique: '唯一',
+  'win%(best) below 0.8': '最佳勝率低於 0.8',
+  rejected: '拒絕',
+  'no second move exists': '不存在第二選擇',
+  'second move mates': '次佳著法也能將死',
+  'gap below 200cp': '差距低於 200cp',
+  'win%(second) at or below 0.6': '次佳勝率不高於 0.6',
+  'gap of 250cp or more': '差距達到 250cp 或以上',
+  'anything left over': '其餘情況',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
