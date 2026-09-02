@@ -339,15 +339,7 @@ export const puzzleMiningArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Writing this up turned up a hole in it. In 12% of the mined puzzles now served, the solver was already ahead by more than a horse before the blunder happened and the answer is to take a piece that nothing defends. The gate cannot catch those, because a hanging piece is the most uniquely best move on the board: uniqueness and difficulty point in opposite directions exactly there, and only one of them is measured.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'The difficulty prior made it worse. It is driven by how long the forced line runs, so one of those free captures was rated 2250 against a 2600 ceiling and served to the strongest solvers on the site. That much is now fixed: the prior checks whether anything can recapture the piece the key move takes, and drops the rating by the value of the material when nothing can. It reclassified 300 puzzles, and the ones that hang a chariot now average 1067. The gate that admits them is untouched, because tightening it means picking new thresholds with no solve-rate data to say whether the pick was right.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve those thresholds act on is steeper than the one this site calibrated for its own analysis, by a factor of about 1.56. Two constants for the same curve, in different parameterizations, and the miner is using the uncalibrated one. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists and has not been pointed at it.',
+          text: 'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve they act on is inherited from chess. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists.',
         },
         {
           kind: 'cta',
