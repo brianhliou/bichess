@@ -1,7 +1,10 @@
 import './app-base.css';
 import {
+  embedChannelFromSearch,
+  embedColorFromSearch,
   embedNotationFromSearch,
-  embedStudyRouteFromPath,
+  embedPlyFromSearch,
+  embedRouteFromPath,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
 import './board-fog.css';
@@ -77,7 +80,7 @@ if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSo
 // pageview for a visit to a third party's site. embed-route.ts is deliberately
 // import-free so this question can be answered before any of that runs.
 const isEmbedDocument =
-  embedStudyRouteFromPath(window.location.pathname.replace(/\/+$/, '') || '/') !== null;
+  embedRouteFromPath(window.location.pathname.replace(/\/+$/, '') || '/') !== null;
 
 // An embedder with one theme can pin the board to it. Applied after the theme
 // bootstrap above, so it overrides what that resolved from the reader's OS.
@@ -188,6 +191,7 @@ const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
 const wantsDevelopers = path === '/developers' || page === 'developers';
+const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
 const wantsAccount = path === '/account' || page === 'account';
@@ -217,9 +221,9 @@ const wantsLearnXiangqi = path === '/learn/xiangqi';
 // Learn levels are declarative positions graded by board asserts, and this is a
 // timed generator whose answer is a typed or tapped name. Parked: see #327.
 const wantsNotationTrainer = coordinateTrainerEnabled() && path === '/learn/coordinates';
-// The one route rendered inside someone else's page. Checked before everything
-// else so the embed never picks up site chrome.
-const embedStudyRoute = embedStudyRouteFromPath(path);
+// The routes rendered inside someone else's page. Checked before everything
+// else so an embed never picks up site chrome.
+const embedRoute = embedRouteFromPath(path);
 const wantsRulesIndex =
   path === '/rules' || path === '/zh-hans/rules' || path === '/zh-hant/rules' || page === 'rules';
 const articleSlug = articleSlugFromPath(path);
@@ -763,10 +767,40 @@ if (replaySample) {
       mountRulesIndex(appRoot, articleLang),
     ),
   );
-} else if (embedStudyRoute) {
+} else if (embedRoute?.kind === 'study') {
+  const studyRoute = embedRoute.route;
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, embedStudyRoute),
+      mountEmbedStudy(appRoot, studyRoute),
+    ),
+  );
+} else if (embedRoute?.kind === 'game') {
+  const gameRoute = embedRoute.route;
+  const startPly = embedPlyFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-game-page.js').then(({ mountEmbedGame }) =>
+      mountEmbedGame(appRoot, gameRoute, { startPly }),
+    ),
+  );
+} else if (embedRoute?.kind === 'tv') {
+  const channel = embedChannelFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-tv-page.js').then(({ mountEmbedTv }) =>
+      mountEmbedTv(appRoot, { channel }),
+    ),
+  );
+} else if (embedRoute?.kind === 'puzzle') {
+  const puzzleRoute = embedRoute.route;
+  void mountOrReport(() =>
+    import('./embed/embed-puzzle-page.js').then(({ mountEmbedPuzzle }) =>
+      mountEmbedPuzzle(appRoot, puzzleRoute),
+    ),
+  );
+} else if (embedRoute?.kind === 'analysis') {
+  const color = embedColorFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-analysis-page.js').then(({ mountEmbedAnalysis }) =>
+      mountEmbedAnalysis(appRoot, { color }),
     ),
   );
 } else if (wantsLearnXiangqi) {
@@ -828,6 +862,11 @@ if (replaySample) {
   setTitleKey('developers.heading');
   void mountOrReport(() =>
     import('./developers-page.js').then(({ mountDevelopers }) => mountDevelopers(appRoot)),
+  );
+} else if (wantsApiDocs) {
+  setTitleKey('apiDocs.heading');
+  void mountOrReport(() =>
+    import('./api-docs-page.js').then(({ mountApiDocs }) => mountApiDocs(appRoot)),
   );
 } else if (wantsThanks) {
   setTitleKey('thanks.heading');

@@ -291,6 +291,7 @@ export const ZH_HANS_CONTENT = {
   'patron.termsSuffix': '。',
   'contribute.heading': '参与贡献',
   'developers.heading': '开发者',
+  'apiDocs.heading': 'API 文档',
   'contribute.intro':
     'Mistboard 是免费开源的，由一个人公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
   'contribute.playHeading': '下棋并给出反馈',

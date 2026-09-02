@@ -51,6 +51,9 @@ export interface XiangqiAnalysisOptions {
   /** Hand-set start position (a FEN-seeded composition). The tree roots here,
    *  the engine replays from this base, and `moves` apply from this state. */
   startState?: XiangqiGameState;
+  /** Render the site nav above the board (default). The embed passes false:
+   *  it runs inside someone else's page and shows the board alone. */
+  nav?: boolean;
 }
 
 /** Mount the interactive analysis board for a standard-xiangqi move list. An empty
@@ -85,7 +88,7 @@ export function mountXiangqiAnalysis(
           : null,
     }).el;
 
-  root.replaceChildren(buildNav());
+  root.replaceChildren(...(opts.nav === false ? [] : [buildNav()]));
   mountXiangqiReview(root, {
     reviewSurface: 'analysis',
     pageClassName: 'xiangqi-review',

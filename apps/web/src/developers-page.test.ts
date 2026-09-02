@@ -6,13 +6,17 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  analysisSnippet,
   embedSnippet,
   exampleEmbedUrl,
   exampleStudyUrl,
+  gameSnippet,
   mountDevelopers,
   oembedRequestUrl,
+  puzzleSnippet,
+  tvSnippet,
 } from './developers-page.js';
-import { embedStudyRouteFromPath } from './embed/embed-route.js';
+import { embedRouteFromPath, embedStudyRouteFromPath } from './embed/embed-route.js';
 
 const ORIGIN = 'https://mistboard.com';
 
@@ -28,6 +32,28 @@ describe('the developers page documents something real', () => {
     const path = new URL(src as string).pathname;
     // The real matcher from the real route, not a copy of its regex.
     expect(embedStudyRouteFromPath(path), `${path} is not an embed route`).not.toBeNull();
+  });
+
+  it('writes one snippet per embed kind, each with a src the router accepts', () => {
+    const expected: Array<[string, string]> = [
+      [gameSnippet(ORIGIN), 'game'],
+      [tvSnippet(ORIGIN), 'tv'],
+      [tvSnippet(ORIGIN, 'xiangqi'), 'tv'],
+      [puzzleSnippet(ORIGIN), 'puzzle'],
+      [analysisSnippet(ORIGIN), 'analysis'],
+    ];
+    for (const [snippet, kind] of expected) {
+      const src = /src="([^"]+)"/.exec(snippet)?.[1];
+      expect(src, `${kind} snippet has no src`).toBeTruthy();
+      const url = new URL(src as string);
+      expect(embedRouteFromPath(url.pathname)?.kind, url.pathname).toBe(kind);
+      expect(snippet).toContain('loading="lazy"');
+    }
+    expect(
+      new URL(/src="([^"]+)"/.exec(tvSnippet(ORIGIN, 'xiangqi'))?.[1] as string).searchParams.get(
+        'channel',
+      ),
+    ).toBe('xiangqi');
   });
 
   it('points the oEmbed example at a URL the provider pattern matches', () => {
@@ -57,17 +83,33 @@ describe('the developers page documents something real', () => {
     const frame = root.querySelector<HTMLIFrameElement>('.developers-example iframe');
     expect(frame, 'no live example on the page').not.toBeNull();
     expect(embedStudyRouteFromPath(frame?.getAttribute('src') ?? '')).not.toBeNull();
+    // Every embed kind is proven by a real frame on the page, not just described.
+    const kinds = [...root.querySelectorAll<HTMLIFrameElement>('.developers-example iframe')].map(
+      (el) => embedRouteFromPath(new URL(el.getAttribute('src') ?? '', ORIGIN).pathname)?.kind,
+    );
+    expect(kinds).toEqual(['study', 'game', 'tv', 'puzzle', 'analysis']);
 
     const text = root.textContent ?? '';
     expect(text).toContain(String(EMBED_MIN_WIDTH));
     expect(text).toContain(String(EMBED_MAX_WIDTH));
+    // Every frameable surface has a section, and the API reference is linked.
+    for (const heading of [
+      'Embed a game',
+      'Embed Mistboard TV',
+      'Embed the daily puzzle',
+      'Embed the analysis board',
+      'HTTP API',
+    ]) {
+      expect(text).toContain(heading);
+    }
+    expect(root.querySelector('a[href="/api-docs"]')).not.toBeNull();
   });
 
   it('offers a copy button for every code block', () => {
     const root = document.createElement('div');
     mountDevelopers(root);
     const blocks = root.querySelectorAll('.developers-code');
-    expect(blocks.length).toBeGreaterThanOrEqual(3);
+    expect(blocks.length).toBeGreaterThanOrEqual(9);
     for (const block of blocks) {
       expect(
         block.querySelector('.developers-copy'),

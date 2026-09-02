@@ -54,10 +54,29 @@ test('a format other than json is 501, as the spec requires', async () => {
   assert.equal(r.status, 501);
 });
 
-test('a url that is not a study chapter is not embeddable', async () => {
-  const r = await call('/api/oembed?url=https://mistboard.com/blog/xiangqi-champions');
-  assert.equal(r.status, 404);
-  assert.deepEqual(r.body, { error: 'not_embeddable' });
+test('a url that is neither a study chapter nor a game is not embeddable', async () => {
+  for (const url of [
+    'https://mistboard.com/blog/xiangqi-champions',
+    'https://mistboard.com/watch',
+    'https://mistboard.com/game',
+    'https://mistboard.com/embed/tv',
+  ]) {
+    const r = await call(`/api/oembed?url=${encodeURIComponent(url)}`);
+    assert.equal(r.status, 404, url);
+    assert.deepEqual(r.body, { error: 'not_embeddable' }, url);
+  }
+});
+
+test('accepts the review permalink, a tenant game route, and the game embed path', async () => {
+  for (const url of [
+    'https://mistboard.com/game/abc-123',
+    'https://mistboard.com/xiangqi/game/abc-123',
+    'https://mistboard.com/embed/game/abc-123',
+  ]) {
+    const r = await call(`/api/oembed?url=${encodeURIComponent(url)}`);
+    // Without persistence these reach the store check: the URL parsed.
+    assert.notDeepEqual(r.body, { error: 'not_embeddable' }, url);
+  }
 });
 
 test('rejects a method that is not a read', async () => {

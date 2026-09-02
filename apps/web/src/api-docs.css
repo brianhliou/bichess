@@ -1,0 +1,121 @@
+/* /api-docs: the API reference, rendered from /api/openapi.json. */
+
+.api-docs-route .static-page-panel {
+  max-width: 980px;
+}
+
+.api-docs-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 12px 0 20px;
+  font-size: 14px;
+}
+
+.api-docs-tag {
+  margin-top: 28px;
+}
+
+.api-docs-tag h2 {
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+
+.api-docs-tag__description {
+  margin: 0 0 12px;
+  color: var(--site-muted);
+}
+
+.api-docs-op {
+  padding: 12px 14px;
+  margin: 0 0 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel, transparent);
+}
+
+.api-docs-op__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.api-docs-method {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: #2f7d5b;
+}
+
+.api-docs-path {
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.api-docs-try {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.api-docs-op__summary {
+  font-size: 16px;
+  margin: 8px 0 0;
+}
+
+.api-docs-op__description {
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+.api-docs-params {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.api-docs-params th,
+.api-docs-params td {
+  padding: 4px 8px 4px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+.api-docs-params th {
+  color: var(--site-muted);
+  font-weight: 600;
+}
+
+.api-docs-type {
+  color: var(--site-muted);
+  white-space: nowrap;
+}
+
+.api-docs-required {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #b3413a;
+}
+
+.api-docs-responses {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.api-docs-responses dt {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.api-docs-responses dd {
+  margin: 0;
+  color: var(--site-muted);
+}

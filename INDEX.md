@@ -1103,3 +1103,30 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/review/xiangqi-game-source.ts` | Resolve a Mistboard game link (played / archive / broadcast) into moves a study chapter can hold. |
 | `apps/web/src/review/xiangqi-pgn-chapter.ts` | Translate between a parsed PGN game and a study chapter tree, both directions, plus whole-study PGN export. |
 | `apps/web/src/study-chapter-dialog.ts` | The New Chapter dialog: name, an Empty/Position/Game/PGN source tab strip, and the create or import each one runs. |
+| `apps/server/src/analytics-server.ts` | _needs a one-line description_ |
+| `apps/server/src/banqi-luck-og-data.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/oembed.ts` | oEmbed provider (`GET /api/oembed?url=`): a study chapter permalink/embed path or a finished game's review/tenant/embed URL → `{type:'rich', html:<iframe>}`; anonymous by design, private study and unfinished game both 404 |
+| `apps/server/src/seed-riverbank-study.ts` | _needs a one-line description_ |
+| `apps/server/src/seed-xiangqi-champions-study.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/banqi-luck-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/derived-translation.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/puzzle-mining-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/riverbank-cannon-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/assessment-glyphs.ts` | _needs a one-line description_ |
+| `apps/web/src/developers-page.ts` | /developers: one paste-able iframe snippet per frameable surface (study chapter, game, TV, puzzle, analysis board), sizing/theme/notation/oEmbed prose, link to /api-docs; every path and size imported from `@mistboard/game` embed-contract so prose cannot drift |
+| `apps/web/src/embed/embed-route.ts` | Import-free embed matchers + the `EmbedRoute` union `main.ts` dispatches on before any site chrome (study/game/tv/puzzle/analysis), plus the `theme=`/`notation=`/`ply=`/`channel=`/`color=` parsers; must mirror server `isEmbedRoute` (pinned by embed-route.test.ts) |
+| `apps/web/src/embed/embed-study-page.ts` | /embed/study/:s/:c: one chapter as the xiangqi replay widget with a credit line, no nav/analytics/session |
+| `apps/web/src/embed/embed-game-page.ts` | /embed/game/:roomId: a finished game framed for third-party pages: /watch's per-variant renderer (tenant compact board, chess truth pane) beside a `createMoveList` rail with step buttons/arrow keys; board width from `fitBoardWidth` (frame box × variant aspect), `?ply=` start |
+| `apps/web/src/embed/embed-tv-page.ts` | /embed/tv?channel=: Mistboard TV framed: `mountLandingTv` follows the channel's featured live game, freezes on the last finished one; pool from /api/games/showcase (top) or /api/watch?channel=, refreshed every 60s |
+| `apps/web/src/embed/embed-puzzle-page.ts` | /embed/puzzle[/:id]: today's (or one) puzzle solvable in a frame via puzzles.ts `mountPuzzleSolver` (unrated, no queue); `--puzzle-page-height` set from the frame box |
+| `apps/web/src/embed/embed-analysis-page.ts` | /embed/analysis[/xiangqi]?fen=&color=&moves=: the xiangqi analysis board without nav (`mountXiangqiAnalysis({nav:false})`); `color=black` becomes `?flip=1`; no engine in a frame (needs cross-origin isolation) |
+| `apps/web/src/api-docs-page.ts` | /api-docs: renders `/api/openapi.json` in-house (tag index, method/path cards, parameter table, responses, Try-it links with example ids); `inlineCode` turns backtick spans into <code> |
+| `apps/server/src/openapi.ts` | Hand-written OpenAPI 3.1 document of the anonymous GET surface (games, watch, ratings, players, bots, puzzles, studies, xiangqi explorer/broadcasts, forum, coaches, oEmbed); version 0.1.0; openapi.test.ts walks every path through the real `routes[]` dispatch |
+| `apps/server/src/routes/openapi.ts` | `GET /api/openapi.json`: serves `buildOpenApiDocument(origin)` with a 5-minute public cache |
+| `apps/web/src/figure-export.ts` | _needs a one-line description_ |
+| `apps/web/src/figure-lightbox.ts` | _needs a one-line description_ |
+| `apps/web/src/jieqi-platform-game.ts` | _needs a one-line description_ |
+| `apps/web/src/replay-stepper-copy.ts` | _needs a one-line description_ |
+| `apps/web/src/study-chapter-spec.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-crossed-soldier.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-import-page.ts` | _needs a one-line description_ |

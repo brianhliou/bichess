@@ -41,6 +41,9 @@ export type LandingTvOptions = {
   onGameChange?: (info: { roomId: string; specId: string; mode: LandingTvMode }) => void;
   // Polling stops for good once this reports false (landing unmounted).
   isConnected: () => boolean;
+  // Which /api/watch/live channel to follow. The homepage follows 'top' (the
+  // cross-channel election); the TV embed can pin one variant's channel.
+  channel?: string;
 };
 
 export type LandingTvController = {
@@ -356,9 +359,10 @@ export async function mountLandingTv(
     }
     try {
       const following = mode === 'live' && currentRoomId !== null;
+      const channel = encodeURIComponent(options.channel ?? 'top');
       const query = following
-        ? `?channel=top&room=${encodeURIComponent(currentRoomId!)}&ply=${shownLivePly}`
-        : '?channel=top';
+        ? `?channel=${channel}&room=${encodeURIComponent(currentRoomId!)}&ply=${shownLivePly}`
+        : `?channel=${channel}`;
       const resp = await fetch(`/api/watch/live${query}`);
       if (resp.ok) {
         const data = (await resp.json()) as { featured: LiveFeatured | null };

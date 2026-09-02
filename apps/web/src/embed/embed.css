@@ -118,3 +118,272 @@ body.embed-body {
   height: 100%;
   max-width: 100%;
 }
+
+/* ── Game embed (/embed/game/:roomId) ─────────────────────────────────────────
+   Board beside a move list, stacked under STACK_BELOW_PX (embed-game-page.ts
+   keeps the same number for its board arithmetic). The board column's width is
+   set in JS from the frame's box and the variant's aspect ratio, because the
+   renderers are width-driven (svg height: auto) and the frame is a fixed box:
+   sizing by width alone overflows a short frame, sizing by height alone
+   overflows a narrow one. */
+.embed-game {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.embed-game-board {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.embed-game-rail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  max-width: 168px;
+  align-self: stretch;
+  gap: 6px;
+}
+
+.embed-game-moves {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  background: var(--site-panel, transparent);
+}
+
+.embed-game-moves .review-move-list {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+.embed-game-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.embed-game-control {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+  background: var(--site-panel, transparent);
+  color: var(--site-text, inherit);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.embed-game-control:hover {
+  border-color: var(--site-link);
+}
+
+.embed-game-status {
+  flex: 0 0 auto;
+  min-width: 52px;
+  color: var(--site-muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 479px) {
+  .embed-game {
+    flex-direction: column;
+    align-items: center;
+  }
+  .embed-game-rail {
+    max-width: none;
+    width: 100%;
+    align-self: auto;
+    flex: 1;
+  }
+}
+
+/* ── Shared board column (.embed-board: game and TV) ─────────────────────────
+   The tenant compact layout (.replay-layout-solo): the board fills the column
+   width and takes its height from its own aspect ratio, with the two seat rows
+   against it. Same rules the homepage widget applies, scoped to the embed. */
+.embed-board .replay-layout-solo {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.embed-board .replay-layout-solo .showcase-board-row,
+.embed-board .replay-layout-solo .replay-pane,
+.embed-board .replay-layout-solo .replay-board {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.embed-board .replay-layout-solo .replay-board svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.embed-board .replay-layout-solo .replay-pane-label,
+.embed-board .replay-layout-solo .replay-pane-name,
+.embed-board .replay-layout-solo .replay-pane-status,
+.embed-board .replay-layout-solo .replay-pane-clock-slot,
+.embed-board .replay-control-bar,
+.embed-board .replay-ply-line,
+.embed-board .replay-game-meta-card {
+  display: none;
+}
+
+.embed-board .showcase-seat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 4px;
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.embed-board .showcase-seat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.embed-board .showcase-seat-clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+}
+
+.embed-board .showcase-seat.active .showcase-seat-clock {
+  color: var(--site-text, inherit);
+}
+
+/* The chessground fallback (fog chess and its cousins) renders the review
+   triptych: white | truth | black. A finished game's truth board is public, so
+   the embed shows exactly that one and hides the two fogged views, the same
+   isolation /watch applies. */
+.embed-board .replay-page,
+.embed-board .replay-layout {
+  width: 100%;
+  max-width: 100%;
+}
+
+.embed-board .replay-layout:not(.replay-layout-solo) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.embed-board .replay-layout:not(.replay-layout-solo) .replay-pane-white,
+.embed-board .replay-layout:not(.replay-layout-solo) .replay-pane-black {
+  display: none;
+}
+
+.embed-board .replay-pane-truth {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── TV embed (/embed/tv) ───────────────────────────────────────────────────── */
+.embed-tv {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* ── Puzzle embed (/embed/puzzle) ───────────────────────────────────────────
+   The solver's board panel is display:contents, so .puzzle-board and
+   .puzzle-side-panel land directly in this grid. The trainer's own tokens
+   (--puzzle-surface-size and friends) are re-declared here because they live
+   on .puzzles-shell, which the embed does not mount; --puzzle-page-height is
+   set from the frame's box in JS. */
+.embed-puzzle {
+  --puzzle-nav-height: 0px;
+  --puzzle-page-height: 600px;
+  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 10px));
+  --puzzle-surface-size: calc(var(--puzzle-surface-fit) * var(--uni-board-scale, 1));
+  --puzzle-column-max-height: var(--puzzle-page-height);
+  --puzzle-drop-surface-size: min(
+    var(--puzzle-surface-size),
+    calc((var(--puzzle-page-height) - 58px) * 82 / 100)
+  );
+  display: grid;
+  /* The board column is the surface budget at the tallest board's aspect
+     (standard xiangqi, 552:612); the board rules below fit inside it. A bare
+     `auto` track collapsed to the board's min-width instead. */
+  grid-template-columns: minmax(0, calc(var(--puzzle-surface-size) * 552 / 612)) minmax(160px, 1fr);
+  gap: 10px;
+  align-items: start;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: transparent;
+}
+
+.embed-puzzle .puzzle-board .puzzle-xiangqi-board,
+.embed-puzzle .puzzle-board .mini-xq-board {
+  min-width: 0;
+}
+
+.embed-puzzle .puzzle-side-panel {
+  max-height: var(--puzzle-page-height);
+}
+
+.embed-puzzle-caption {
+  color: var(--site-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 559px) {
+  .embed-puzzle {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Analysis embed (/embed/analysis/xiangqi) ───────────────────────────────
+   The review shell is a page layout; inside a frame it keeps its own scroll,
+   so the frame's document does not grow a second scrollbar. */
+.embed-analysis {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.embed-analysis .review-shell {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-top: 0;
+}

@@ -205,6 +205,7 @@ export const EN_CONTENT = {
     'Forks and derivatives should present their own public brand, domain, and hosted service identity.',
   'contribute.heading': 'Contribute',
   'developers.heading': 'Developers',
+  'apiDocs.heading': 'API',
   'contribute.intro':
     'Mistboard is free and open source, built in the open by one person. There is a lot to do and many ways to help, whether or not you write code.',
   'contribute.playHeading': 'Play and give feedback',

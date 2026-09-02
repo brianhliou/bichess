@@ -188,12 +188,26 @@ export function legacyPageRedirect(pathname: string): string | null {
 
 /**
  * Paths served to be embedded in a third-party page. Everything else on this
- * site is same-origin only; these are deliberately frameable, so the pattern is
- * narrow on purpose: a study chapter, by id, and nothing else.
+ * site is same-origin only; these are deliberately frameable, so the patterns
+ * are narrow on purpose: a study chapter or a finished game by id, the live
+ * board, a puzzle, the analysis board, and nothing else. The web side mirrors
+ * this list in embed/embed-route.ts.
  */
 export function isEmbedRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(normalized);
+  return (
+    /^\/embed\/study\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/.test(normalized) ||
+    // A finished game, by room id. The page only ever shows what the public
+    // review page already shows (the summary and events endpoints apply the
+    // post-terminal reveal gate), so framing it widens nothing.
+    /^\/embed\/game\/[A-Za-z0-9_-]{1,64}$/.test(normalized) ||
+    // The live board (a channel's featured game, else its last finished one),
+    // today's puzzle or one by id, and the xiangqi analysis board. Each shows
+    // only what the anonymous public sees on /watch, /puzzles and /analysis.
+    normalized === '/embed/tv' ||
+    /^\/embed\/puzzle(?:\/[A-Za-z0-9_-]{1,64})?$/.test(normalized) ||
+    /^\/embed\/analysis(?:\/xiangqi)?$/.test(normalized)
+  );
 }
 
 export function isClientRoute(pathname: string): boolean {
@@ -228,6 +242,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/privacy' ||
     normalized === '/contribute' ||
     normalized === '/developers' ||
+    normalized === '/api-docs' ||
     normalized === '/thanks' ||
     normalized === '/lag' ||
     normalized === '/account' ||

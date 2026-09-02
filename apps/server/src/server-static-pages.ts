@@ -80,6 +80,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Embed a xiangqi board with engine annotations in your own page. A public study chapter runs in an iframe with no API key, and Mistboard is an oEmbed provider.',
   },
+  '/api-docs': {
+    title: 'API | Mistboard',
+    description:
+      'The public read API behind mistboard.com: games, watch feeds, puzzles, studies, ratings, the xiangqi opening explorer and the forum, as an OpenAPI 3.1 document.',
+  },
   '/forum': {
     title: 'Forum | Mistboard',
     description:
@@ -665,6 +670,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/developers',
+  '/api-docs',
 ];
 
 // Sitemap of public, indexable surfaces: static content routes plus every

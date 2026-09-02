@@ -76,6 +76,7 @@ describe('about page platform activity', () => {
       'Source code',
       'Contribute',
       'Developers',
+      'API',
       'Thank you',
       'Is Mistboard lagging?',
     ]);

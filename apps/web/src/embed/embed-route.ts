@@ -55,3 +55,93 @@ export function embedNotationFromSearch(
     ? value
     : null;
 }
+
+export type EmbedGameRoute = { roomId: string };
+
+/** `/embed/game/:roomId`, or null when the path is not one. */
+export function embedGameRouteFromPath(pathname: string): EmbedGameRoute | null {
+  const m = /^\/embed\/game\/([A-Za-z0-9_-]{1,64})\/?$/.exec(pathname);
+  if (!m) return null;
+  return { roomId: m[1] as string };
+}
+
+/**
+ * Every frameable route, as one discriminated union, so main.ts can ask "is this
+ * document an embed" once and never drift from the list of pages that render
+ * without the site chrome. Adding an embed means adding a member here AND to
+ * the server's isEmbedRoute (server-policy.ts), which decides what may be
+ * framed; the two are pinned against each other by embed-route.test.ts.
+ */
+export type EmbedRoute =
+  | { kind: 'study'; route: EmbedStudyRoute }
+  | { kind: 'game'; route: EmbedGameRoute }
+  | { kind: 'tv' }
+  | { kind: 'puzzle'; route: EmbedPuzzleRoute }
+  | { kind: 'analysis'; route: EmbedAnalysisRoute };
+
+/** `/embed/tv`: the live board, following the featured game of a channel. */
+export function isEmbedTvPath(pathname: string): boolean {
+  return /^\/embed\/tv\/?$/.test(pathname);
+}
+
+export type EmbedPuzzleRoute = { puzzleId: string | null };
+
+/** `/embed/puzzle` (today's puzzle) or `/embed/puzzle/:id`, or null. */
+export function embedPuzzleRouteFromPath(pathname: string): EmbedPuzzleRoute | null {
+  const m = /^\/embed\/puzzle(?:\/([A-Za-z0-9_-]{1,64}))?\/?$/.exec(pathname);
+  if (!m) return null;
+  return { puzzleId: m[1] ?? null };
+}
+
+export type EmbedAnalysisRoute = { variant: 'xiangqi' };
+
+/** `/embed/analysis` or `/embed/analysis/xiangqi`, or null. Xiangqi is the only
+ *  variant with a roomless analysis board that runs without the site's
+ *  cross-origin isolation, so it is the only one an embed can offer. */
+export function embedAnalysisRouteFromPath(pathname: string): EmbedAnalysisRoute | null {
+  return /^\/embed\/analysis(?:\/xiangqi)?\/?$/.test(pathname) ? { variant: 'xiangqi' } : null;
+}
+
+export function embedRouteFromPath(pathname: string): EmbedRoute | null {
+  const study = embedStudyRouteFromPath(pathname);
+  if (study) return { kind: 'study', route: study };
+  const game = embedGameRouteFromPath(pathname);
+  if (game) return { kind: 'game', route: game };
+  if (isEmbedTvPath(pathname)) return { kind: 'tv' };
+  const puzzle = embedPuzzleRouteFromPath(pathname);
+  if (puzzle) return { kind: 'puzzle', route: puzzle };
+  const analysis = embedAnalysisRouteFromPath(pathname);
+  if (analysis) return { kind: 'analysis', route: analysis };
+  return null;
+}
+
+/**
+ * `?channel=xiangqi` on the TV embed: which /api/watch channel to follow.
+ * Anything not channel-id-shaped falls back to 'top', the cross-channel
+ * election the homepage follows; the server answers 400 for an unknown id and
+ * the page then shows the frozen fallback, never someone else's game.
+ */
+export function embedChannelFromSearch(search: string): string {
+  const value = new URLSearchParams(search).get('channel');
+  return value && /^[a-z0-9-]{1,40}$/.test(value) ? value : 'top';
+}
+
+/**
+ * `?color=black` on the analysis embed: which side sits at the bottom. Mirrors
+ * lichess's parameter name; `red` is xiangqi's first mover and the default.
+ */
+export function embedColorFromSearch(search: string): 'red' | 'black' {
+  const value = new URLSearchParams(search).get('color');
+  return value === 'black' ? 'black' : 'red';
+}
+
+/**
+ * `?ply=N` on a game embed: the position to open on, instead of the final one.
+ * Clamped by the page once the game is loaded; here only a non-negative integer
+ * survives, and anything else means "the end".
+ */
+export function embedPlyFromSearch(search: string): number | null {
+  const raw = new URLSearchParams(search).get('ply');
+  if (raw === null || !/^\d{1,5}$/.test(raw)) return null;
+  return Number(raw);
+}

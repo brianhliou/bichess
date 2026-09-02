@@ -990,3 +990,60 @@ const ICON_PREV =
   '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M11 3.5v9L5 8z" fill="currentColor"/></svg>';
 const ICON_NEXT =
   '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M5 3.5v9L11 8z" fill="currentColor"/></svg>';
+
+/**
+ * One puzzle as a standalone solver: the board and the trainer panel (feedback,
+ * hint, reveal, replay arrows) and nothing else. No queue, no nav, no auto-next.
+ * It is what /embed/puzzle mounts inside someone else's page, and it is the
+ * same code path the trainer uses, so a fix to solving lands in both.
+ *
+ * Attempts are always UNRATED here: a frame on a third party's site must never
+ * move the viewer's rating, and the embed never asks who the viewer is.
+ */
+export function mountPuzzleSolver(
+  host: HTMLElement,
+  puzzle: PuzzleDetail,
+  opts: { onSolved?: (id: string) => void } = {},
+): { dispose(): void } {
+  for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
+  setBoardFamily('xiangqi');
+  setPuzzleRatedPref(false);
+  restoreBoardScale();
+  installPuzzleGripFit();
+  const session = createPuzzleSession(puzzle);
+  // An empty queue: the feedback panel then offers no previous/next.
+  const navigation = navigationFor([], null, async () => {});
+  const renderSession = (): void => {
+    renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id));
+  };
+  renderSession();
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (!host.isConnected) {
+      window.removeEventListener('keydown', onKeyDown);
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const action: PuzzleScrub | null =
+      event.key === 'ArrowUp'
+        ? 'first'
+        : event.key === 'ArrowDown'
+          ? 'last'
+          : event.key === 'ArrowLeft'
+            ? 'previous'
+            : event.key === 'ArrowRight'
+              ? 'next'
+              : null;
+    if (!action) return;
+    event.preventDefault();
+    scrubPuzzle(session, renderSession, action);
+  };
+  window.addEventListener('keydown', onKeyDown);
+
+  return {
+    dispose: () => {
+      session.analysis?.dispose();
+      window.removeEventListener('keydown', onKeyDown);
+    },
+  };
+}

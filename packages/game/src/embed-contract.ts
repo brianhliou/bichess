@@ -63,3 +63,25 @@ export function embedHeightForWidth(width: number): number {
 export function embedStudyPath(studyId: string, chapterId: string): string {
   return `/embed/study/${studyId}/${chapterId}`;
 }
+
+/** `/embed/game/:roomId`, a finished game rendered alone for framing. */
+export function embedGamePath(roomId: string): string {
+  return `/embed/game/${roomId}`;
+}
+
+/** `/embed/tv`, the live board; `channel` narrows it to one watch channel. */
+export function embedTvPath(channel?: string): string {
+  return channel && channel !== 'top'
+    ? `/embed/tv?channel=${encodeURIComponent(channel)}`
+    : '/embed/tv';
+}
+
+/** `/embed/puzzle`, today's puzzle, or one puzzle by id. */
+export function embedPuzzlePath(puzzleId?: string): string {
+  return puzzleId ? `/embed/puzzle/${puzzleId}` : '/embed/puzzle';
+}
+
+/** `/embed/analysis/xiangqi`, the free analysis board. */
+export function embedAnalysisPath(): string {
+  return '/embed/analysis/xiangqi';
+}

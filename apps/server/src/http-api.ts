@@ -44,6 +44,7 @@ import * as metaRoute from './routes/meta.js';
 import * as miniXiangqiGamesRoute from './routes/mini-xiangqi-games.js';
 import * as notificationsRoute from './routes/notifications.js';
 import * as oembedRoute from './routes/oembed.js';
+import * as openapiRoute from './routes/openapi.js';
 import * as patronRoute from './routes/patron.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
@@ -133,6 +134,7 @@ export const routes: RouteModule[] = [
   leaderboardRoute,
   studiesRoute,
   oembedRoute,
+  openapiRoute,
 ];
 
 export async function handleApiRequest(

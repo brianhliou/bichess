@@ -6,9 +6,16 @@ import { isEmbedRoute } from './server-policy.js';
 // IS the list of paths any site on the internet may put in a frame. It is worth
 // pinning precisely.
 
-test('exactly the study-chapter embed path is frameable', () => {
+test('exactly the embed paths are frameable', () => {
   assert.equal(isEmbedRoute('/embed/study/ytSzepET/Ue0EgpS7'), true);
   assert.equal(isEmbedRoute('/embed/study/ytSzepET/Ue0EgpS7/'), true);
+  assert.equal(isEmbedRoute('/embed/game/abc-123_X'), true);
+  assert.equal(isEmbedRoute('/embed/game/abc-123_X/'), true);
+  assert.equal(isEmbedRoute('/embed/tv'), true);
+  assert.equal(isEmbedRoute('/embed/puzzle'), true);
+  assert.equal(isEmbedRoute('/embed/puzzle/abc'), true);
+  assert.equal(isEmbedRoute('/embed/analysis'), true);
+  assert.equal(isEmbedRoute('/embed/analysis/xiangqi'), true);
 });
 
 test('nothing else on the site is', () => {
@@ -22,7 +29,15 @@ test('nothing else on the site is', () => {
     '/embed',
     '/embed/study',
     '/embed/study/only-one-id',
+    '/embed/game',
     '/embed/game/a/b',
+    '/game/abc',
+    '/embed/tv/xiangqi',
+    '/embed/puzzle/a/b',
+    '/embed/analysis/banqi',
+    '/watch',
+    '/puzzles',
+    '/analysis/xiangqi',
   ]) {
     assert.equal(isEmbedRoute(path), false, path);
   }
@@ -37,6 +52,9 @@ test('a traversal or injected path is not frameable', () => {
     '/embed/study/a/c?x=1',
     '/embed/study/a/c#f',
     `/embed/study/${'a'.repeat(65)}/b`,
+    '/embed/game/../../account/settings',
+    '/embed/game/a b',
+    `/embed/game/${'a'.repeat(65)}`,
   ]) {
     assert.equal(isEmbedRoute(path), false, path);
   }

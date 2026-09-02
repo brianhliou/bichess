@@ -60,6 +60,7 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       'source',
       'contribute',
       'developers',
+      'apiDocs',
       'thanks',
       'faq',
       'terms',
