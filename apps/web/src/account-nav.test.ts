@@ -177,7 +177,7 @@ describe('account nav', () => {
     // The bar always carries the menu; visibility reconciles off the account
     // role. The old dropdown admin group is gone for everyone.
     expect(adminMenu()).not.toBeNull();
-    expect(adminLinks()).toHaveLength(3);
+    expect(adminLinks()).toHaveLength(6);
 
     setAccountNavUser(testUser('misty'));
     expect(adminMenu()?.hidden).toBe(true);
@@ -189,6 +189,9 @@ describe('account nav', () => {
       '/database',
       '/engines',
       '/accounts',
+      '/titles',
+      '/metrics',
+      '/broadcast/xiangqi/ops',
     ]);
     expect(document.querySelector('.account-nav-admin')).toBeNull();
 

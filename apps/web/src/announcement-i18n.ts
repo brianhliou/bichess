@@ -35,6 +35,14 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-02 ── 翻译 / 显示原文 / 机器翻译 are the exact labels the
+  // forum buttons and badge render (forum.translate, forum.showOriginal,
+  // forum.machineTranslation in the community catalog).
+  'Read the forum in your language.': '用你的语言读论坛。',
+  'Forum titles and posts written in Chinese now carry a Translate button for English readers, and English posts carry one for Chinese readers. A language model does the translating. The result is marked as machine translation, and one click brings the original back. Each post is translated once and then served from a cache, so the second reader never waits.':
+    '中文写的论坛标题和帖子，现在为英文读者提供"翻译"按钮；英文帖子也为中文读者提供同样的按钮。翻译由语言模型完成，译文标为"机器翻译"，点一下就能切回原文。每个帖子只翻译一次，之后从缓存读取，第二位读者无需等待。',
+  'Open the forum': '打开论坛',
+
   // ── 2026-09-01 ── 题目 is the site's own word for a puzzle
   // (nav.puzzles, puzzle.heading), 漏着 is the move judgment the review page
   // already prints for a blunder, and Pikafish stays in Latin as it does in the
@@ -267,6 +275,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-02 ── Same terms as the Simplified entry above, in the
+  // Traditional forms the forum buttons render: 翻譯 / 顯示原文 / 機器翻譯.
+  'Read the forum in your language.': '用你的語言讀論壇。',
+  'Forum titles and posts written in Chinese now carry a Translate button for English readers, and English posts carry one for Chinese readers. A language model does the translating. The result is marked as machine translation, and one click brings the original back. Each post is translated once and then served from a cache, so the second reader never waits.':
+    '中文寫的論壇標題和帖子，現在為英文讀者提供「翻譯」按鈕；英文帖子也為中文讀者提供同樣的按鈕。翻譯由語言模型完成，譯文標為「機器翻譯」，點一下就能切回原文。每個帖子只翻譯一次，之後從快取讀取，第二位讀者無需等待。',
+  'Open the forum': '開啟論壇',
+
   // ── 2026-09-01 ── Same terms as the Simplified entry
   // above, in the Traditional forms this site publishes: 題目 and 漏著.
   'Where the puzzles come from.': '題目是怎麼來的。',

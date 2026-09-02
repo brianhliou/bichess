@@ -17,6 +17,11 @@
   margin-bottom: 0;
 }
 
+.contact-forum-note a {
+  color: var(--site-accent-strong);
+  text-decoration: underline;
+}
+
 .contact-reply-note {
   font-size: 13px;
   color: var(--site-muted);

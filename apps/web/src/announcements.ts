@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-02',
+    kind: 'release',
+    headline: 'Read the forum in your language.',
+    body: 'Forum titles and posts written in Chinese now carry a Translate button for English readers, and English posts carry one for Chinese readers. A language model does the translating. The result is marked as machine translation, and one click brings the original back. Each post is translated once and then served from a cache, so the second reader never waits.',
+    href: '/forum',
+    cta: 'Open the forum',
+  },
+  {
     // Dated to the day the article becomes readable, not the day it was drafted.
     date: '2026-09-02',
     kind: 'article',

@@ -127,8 +127,14 @@ export const EN_CONTENT = {
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',
   'contact.heading': 'Contact',
-  'contact.introAnon': 'Bug, idea, broken game, anything else. Add an email if you want a reply.',
-  'contact.introUser': 'Bug, idea, broken game, anything else.',
+  'contact.introAnon':
+    'A private line to the person who runs Mistboard. Bugs, broken games, account or billing trouble, anything you would rather not post in public. Add an email if you want a reply.',
+  'contact.introUser':
+    'A private line to the person who runs Mistboard. Bugs, broken games, account or billing trouble, anything you would rather not post in public.',
+  'contact.forumPrefix':
+    'Questions, ideas, and anything other players could weigh in on belong on the ',
+  'contact.forumLink': 'forum',
+  'contact.forumSuffix': '.',
   'contact.replyNote': 'Usually a reply within a day or two.',
   'contact.message': 'Message',
   'contact.messagePlaceholder': "What's on your mind?",
@@ -381,6 +387,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.heading',
   'contact.introAnon',
   'contact.introUser',
+  'contact.forumPrefix',
+  'contact.forumLink',
+  'contact.forumSuffix',
   'contact.replyNote',
   'contact.message',
   'contact.messagePlaceholder',
