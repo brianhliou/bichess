@@ -5,10 +5,16 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  FORTRESS_XIANGQI_ADVISOR_DIAGRAM,
   FORTRESS_XIANGQI_CANNON_DIAGRAM,
+  FORTRESS_XIANGQI_CHARIOT_DIAGRAM,
   FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
   FORTRESS_XIANGQI_ELEPHANT_DIAGRAM,
+  FORTRESS_XIANGQI_GENERAL_DIAGRAM,
   FORTRESS_XIANGQI_HORSE_DIAGRAM,
+  FORTRESS_XIANGQI_SOLDIER_DIAGRAM,
+  FORTRESS_XIANGQI_START_BOARD,
+  FORTRESS_XIANGQI_TREASURE_DIAGRAM,
 } from './fortress-xiangqi-rules-diagrams.js';
 
 // The three two-board rows on /rules/fortress-xiangqi shipped broken: the row
@@ -174,5 +180,58 @@ describe('fortress drop regions', () => {
       'elephant',
       'advisor',
     ]);
+  });
+});
+
+// ── Generals are state, not scenery ─────────────────────────────────────────
+//
+// Every position on this page carries both generals because the kernel scores a
+// side without one as having no legal moves at all, so dropping them from the
+// state would empty every target on the page. They are drawn only on the two
+// figures that are about the general.
+
+function generalGlyphs(svg: string): string[] {
+  return (svg.match(/aria-label="(red|black) general"/g) ?? []).map((m) =>
+    m.replace('aria-label="', '').replace('"', ''),
+  );
+}
+
+describe('fortress rules diagrams, general visibility', () => {
+  const hidden = [
+    ['chariot', FORTRESS_XIANGQI_CHARIOT_DIAGRAM],
+    ['cannon', FORTRESS_XIANGQI_CANNON_DIAGRAM],
+    ['horse', FORTRESS_XIANGQI_HORSE_DIAGRAM],
+    ['elephant', FORTRESS_XIANGQI_ELEPHANT_DIAGRAM],
+    ['advisor', FORTRESS_XIANGQI_ADVISOR_DIAGRAM],
+    ['soldier', FORTRESS_XIANGQI_SOLDIER_DIAGRAM],
+    ['treasure', FORTRESS_XIANGQI_TREASURE_DIAGRAM],
+    ['drop regions', FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM],
+  ] as const;
+
+  it.each(hidden)('the %s figure draws no general', (_name, diagram) => {
+    expect(generalGlyphs(diagram())).toEqual([]);
+  });
+
+  it('the opening position and the general figure still draw both', () => {
+    expect(generalGlyphs(FORTRESS_XIANGQI_START_BOARD())).toEqual(['red general', 'black general']);
+    expect(generalGlyphs(FORTRESS_XIANGQI_GENERAL_DIAGRAM()).sort()).toEqual([
+      'black general',
+      'red general',
+    ]);
+  });
+
+  // Hiding the generals removes the two holes their occupancy punched in each
+  // drop region, so the boards must now show whole territories: the full board,
+  // the full near half, the full palace. A hole here would read as a rendering
+  // fault, since there is no longer a piece on screen to explain it.
+  it('draws whole drop territories, with no hole where a general stands', () => {
+    const svg = FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM();
+    const perBoard = svg
+      .split('aria-label="Storm the Fortress board"')
+      .slice(1)
+      .map((chunk) => (chunk.split('</svg>')[0].match(/class="fxq-hint"/g) ?? []).length);
+
+    // 7x8 board, ranks 1-4 of it, and the 3x3 palace.
+    expect(perBoard).toEqual([56, 28, 9]);
   });
 });
