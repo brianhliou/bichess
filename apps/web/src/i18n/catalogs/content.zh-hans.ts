@@ -85,8 +85,13 @@ export const ZH_HANS_CONTENT = {
   'news.empty': '暂无内容。',
   'news.readMore': '阅读更多',
   'contact.heading': '联系',
-  'contact.introAnon': 'Bug、想法、坏掉的对局，或其他问题。想收到回复的话，可以留下邮箱。',
-  'contact.introUser': 'Bug、想法、坏掉的对局，或其他问题。',
+  'contact.introAnon':
+    '这是直接联系 Mistboard 运营者的私人渠道。Bug、坏掉的对局、账号或付费问题，以及任何不想公开发布的内容。想收到回复的话，可以留下邮箱。',
+  'contact.introUser':
+    '这是直接联系 Mistboard 运营者的私人渠道。Bug、坏掉的对局、账号或付费问题，以及任何不想公开发布的内容。',
+  'contact.forumPrefix': '提问、想法，以及其他玩家也能参与讨论的话题，请发到',
+  'contact.forumLink': '论坛',
+  'contact.forumSuffix': '。',
   'contact.replyNote': '通常一两天内回复。',
   'contact.message': '消息',
   'contact.messagePlaceholder': '你想说什么？',

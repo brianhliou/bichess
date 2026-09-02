@@ -43,6 +43,18 @@ export function buildContact(
   intro.className = 'contact-intro';
   intro.textContent = initialSignedIn ? introUser : introAnon;
 
+  // Public questions go to the forum; this page is the private lane only.
+  const forumNote = document.createElement('p');
+  forumNote.className = 'contact-forum-note';
+  const forumLink = document.createElement('a');
+  forumLink.href = localizedHref('/forum', locale);
+  forumLink.textContent = t('contact.forumLink', {}, locale);
+  forumNote.append(
+    document.createTextNode(t('contact.forumPrefix', {}, locale)),
+    forumLink,
+    document.createTextNode(t('contact.forumSuffix', {}, locale)),
+  );
+
   const replyNote = document.createElement('p');
   replyNote.className = 'contact-reply-note';
   replyNote.textContent = t('contact.replyNote', {}, locale);
@@ -227,6 +239,6 @@ export function buildContact(
   card.className = 'contact-card';
   card.append(form);
 
-  section.append(heading, intro, replyNote, card);
+  section.append(heading, intro, forumNote, replyNote, card);
   return { el: section, applyAuth };
 }

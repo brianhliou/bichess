@@ -13,7 +13,13 @@ describe('contact page', () => {
 
     expect(view.el.querySelector('.site-section-heading')?.textContent).toBe('聯絡');
     expect(view.el.querySelector('.contact-intro')?.textContent).toBe(
-      'Bug、想法、壞掉的對局，或其他問題。想收到回覆的話，可以留下信箱。',
+      '這是直接聯絡 Mistboard 營運者的私人管道。Bug、壞掉的對局、帳號或付費問題，以及任何不想公開發布的內容。想收到回覆的話，可以留下信箱。',
+    );
+    const forumLink = view.el.querySelector<HTMLAnchorElement>('.contact-forum-note a');
+    expect(forumLink?.getAttribute('href')).toBe('/forum');
+    expect(forumLink?.textContent).toBe('論壇');
+    expect(view.el.querySelector('.contact-forum-note')?.textContent).toBe(
+      '提問、想法，以及其他玩家也能參與討論的話題，請發到論壇。',
     );
     expect(view.el.querySelector('textarea')?.placeholder).toBe('你想說什麼？');
     expect(view.el.querySelector('label.contact-field span')?.textContent).toBe('訊息');

@@ -85,8 +85,13 @@ export const ZH_HANT_CONTENT = {
   'news.empty': '目前沒有內容。',
   'news.readMore': '閱讀更多',
   'contact.heading': '聯絡',
-  'contact.introAnon': 'Bug、想法、壞掉的對局，或其他問題。想收到回覆的話，可以留下信箱。',
-  'contact.introUser': 'Bug、想法、壞掉的對局，或其他問題。',
+  'contact.introAnon':
+    '這是直接聯絡 Mistboard 營運者的私人管道。Bug、壞掉的對局、帳號或付費問題，以及任何不想公開發布的內容。想收到回覆的話，可以留下信箱。',
+  'contact.introUser':
+    '這是直接聯絡 Mistboard 營運者的私人管道。Bug、壞掉的對局、帳號或付費問題，以及任何不想公開發布的內容。',
+  'contact.forumPrefix': '提問、想法，以及其他玩家也能參與討論的話題，請發到',
+  'contact.forumLink': '論壇',
+  'contact.forumSuffix': '。',
   'contact.replyNote': '通常一兩天內回覆。',
   'contact.message': '訊息',
   'contact.messagePlaceholder': '你想說什麼？',
