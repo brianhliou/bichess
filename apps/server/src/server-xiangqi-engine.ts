@@ -180,11 +180,7 @@ export async function playXiangqiEngineMoveIfReady(
       legalUci: getStandardXiangqiLegalMoves(room.projection.state).map(xiangqiMoveToPikafishUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'xiangqi_engine_failed_closed',
-      'Xiangqi engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'xiangqi_engine_failed_closed', 'Xiangqi');
     const resign: TenantRoomEvent<XiangqiColor, XiangqiMove, XiangqiSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),

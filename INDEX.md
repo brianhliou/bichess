@@ -229,7 +229,7 @@ Edit task → find file → open only that file.
 | `migrate.ts` | Schema migrations — run once on startup |
 | `python-pool.ts` | Persistent Python worker pool for live engines (size=4 in prod) |
 | `engine-service.ts` | Internal HTTP engine service and live engine reservation admission control |
-| `engine-alert-email.ts` | Engine alert email rendering/sending helpers |
+| `engine-alert-email.ts` | Engine alert email rendering/sending helpers. Throttles per (alert kind, severity, room) so separate incidents page separately and only a single flapping room is collapsed; a collapsed burst is reported as `suppressed_since_last_email` on the next email for that bucket |
 | `engine-boot-check.ts` | Boot-time deploy tripwire: for each ENABLED variant, verify its engine binary (Rust Misty*/Pikafish/FSF) is actually present; a missing one logs `engine_binary_missing` + fires a critical alert (`sendEngineAlertNotification`) instead of silently falling back. Wired into `main.ts` (prod-only); probes + deps injectable for tests |
 | `engine-move-guard.ts` | Shared engine-move boundary for variant PvE engines: bounded retry + kernel-validate loop, a complete replayable decision record, and fail-closed reporters (fallback counter + alert) so no engine can silently substitute an illegal or threat-blind move |
 | `engine-protocol/build.ts` | Server-side redacted `EngineTurnRequest` builder |

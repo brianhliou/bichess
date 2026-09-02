@@ -169,11 +169,7 @@ export async function playMiniXiangqiEngineMoveIfReady(
       legalUci: getMiniXiangqiOpenLegalMoves(room.projection.state).map(miniXiangqiMoveToUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'mini_xiangqi_engine_failed_closed',
-      'Mini Xiangqi engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'mini_xiangqi_engine_failed_closed', 'Mini Xiangqi');
     const resign: TenantRoomEvent<MiniXiangqiColor, MiniXiangqiMove, typeof MINI_XIANGQI_SPEC_ID> =
       {
         type: 'seat-resigned',

@@ -79,20 +79,30 @@ function engineToMove(room: BanqiEngineRoom, seat: BanqiSeat): boolean {
 // the window (a flip/capture would have reset the clock to 0); replaying the event prefix
 // before them yields the window-start state. Empty window (clock 0) => current FEN only,
 // i.e. prior behavior. The replayed moves are all quiet, which the engine replays safely.
-function banqiEngineRepWindow(room: BanqiEngineRoom): { fen: string; moves: string[] } {
+// `moves` is only the slice the engine replays; `gameMoves` is the whole game, and
+// the decision record needs BOTH. Reporting the window as the game's history is how
+// a twelve-ply game paged as a two-ply one on 2026-09-02.
+function banqiEngineRepWindow(room: BanqiEngineRoom): {
+  fen: string;
+  moves: string[];
+  gameMoves: string[];
+} {
   const state = room.projection.state;
-  const k = state.noProgressClock;
-  if (k <= 0) return { fen: banqiStateToEngineFen(state), moves: [] };
   const moveEvents = (room.events as readonly BanqiEvent[]).filter(
     (e): e is Extract<BanqiEvent, { type: 'move-played' }> => e.type === 'move-played',
   );
-  if (k >= moveEvents.length) return { fen: banqiStateToEngineFen(state), moves: [] };
+  const gameMoves = moveEvents.map((e) => banqiMoveToEngineUci(e.move));
+  const k = state.noProgressClock;
+  if (k <= 0 || k >= moveEvents.length) {
+    return { fen: banqiStateToEngineFen(state), moves: [], gameMoves };
+  }
   const firstWindowed = moveEvents[moveEvents.length - k]!;
   const cutoff = room.events.indexOf(firstWindowed);
   const startState = replayTenantEvents(banqiTenant, room.events.slice(0, cutoff)).state;
   return {
     fen: banqiStateToEngineFen(startState),
-    moves: moveEvents.slice(moveEvents.length - k).map((e) => banqiMoveToEngineUci(e.move)),
+    moves: gameMoves.slice(moveEvents.length - k),
+    gameMoves,
   };
 }
 
@@ -128,7 +138,7 @@ export async function playBanqiEngineMoveIfReady(
   const incrementMs = clock?.incrementMs ?? 0;
   if (remainingMs !== null && remainingMs <= 0) return;
 
-  const { fen, moves } = banqiEngineRepWindow(room);
+  const { fen, moves, gameMoves } = banqiEngineRepWindow(room);
   // Strength = the tier's NODE budget; this movetime is the latency CEILING + a
   // clock-aware time-pressure guard (shared allocator). Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink
@@ -185,19 +195,16 @@ export async function playBanqiEngineMoveIfReady(
       engineVersion: BANQI_ENGINE_VERSION,
       movetimeMs: movetimeCapMs,
       tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
-      ply: moves.length,
+      ply: gameMoves.length,
       toMove: seat,
       inCheck: false,
       fen,
-      history: moves,
+      history: gameMoves,
+      engineWindow: moves,
       legalUci: getBanqiLegalMoves(room.projection.state).map(banqiMoveToEngineUci),
       attempts,
     });
-    reportEngineFallback(
-      record,
-      'banqi_engine_failed_closed',
-      'Banqi engine failed closed: no kernel-legal move after retries; resigning the engine seat',
-    );
+    reportEngineFallback(record, 'banqi_engine_failed_closed', 'Banqi');
     const resign: TenantRoomEvent<BanqiSeat, BanqiMove, BanqiSpecId> = {
       type: 'seat-resigned',
       at: Date.now(),
