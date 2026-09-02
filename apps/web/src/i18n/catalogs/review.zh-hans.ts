@@ -405,6 +405,7 @@ export const ZH_HANS_REVIEW = {
   'engine.toggleLocal': '开关本地引擎',
   'engine.inLocalBrowser': '在本地浏览器中运行',
   'engine.bestMoveIndicators': '最佳着法提示',
+  'engine.shortcutHint': '快捷键：按 {key} 切换',
   'engine.multipleLines': '多路变着',
   'engine.searchEffort': '搜索强度',
   'engine.firstPlayerPerspective': '以先行方视角',

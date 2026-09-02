@@ -171,6 +171,9 @@ describe('createEnginePanel arrow toggle', () => {
     expect(checkbox(panel)).not.toBeNull();
     expect(checkbox(panel).checked).toBe(true);
     expect(panel.el.textContent).toContain('Best move indicators');
+    const key = panel.el.querySelector('kbd.engine-panel__setting-key') as HTMLElement;
+    expect(key.textContent).toBe('a');
+    expect(key.title).toBe('Keyboard shortcut: press a to toggle');
     panel.dispose();
   });
 

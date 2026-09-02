@@ -125,7 +125,8 @@ describe('PikaJieQi ceval dispatch', () => {
     });
     expect(FakeWorker.latest?.commands).toContain('setoption name MultiPV value 2');
     expect(FakeWorker.latest?.commands).toContain('go depth 4');
-    expect(updates).toEqual([4, 4]);
+    // One line at MultiPV 2 is an incomplete burst: it renders once, at bestmove.
+    expect(updates).toEqual([4]);
     handle.dispose();
   });
 

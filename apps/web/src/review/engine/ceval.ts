@@ -21,6 +21,7 @@ import type {
 } from './ceval-types.js';
 import { cevalSupportsInfinite, depthForEffort } from './ceval-types.js';
 import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
+import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-burst.js';
 import { isPikaJieqiCevalVariant, PikaJieQiCeval, pikaJieqiEngineName } from './pikajieqi-ceval.js';
 import { parseInfo } from './uci-info.js';
 
@@ -52,7 +53,7 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // that key was poisoned. Bump the suffix to mint a fresh, never-cached key that
 // fills from origin (which now always sends COEP) whenever the required response
 // headers change.
-const ENGINE_ASSET_VERSION = '1.1.11-coep1';
+const ENGINE_ASSET_VERSION = '1.1.12-coep1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 
 /** Human label for the engine, shown in the analysis panel. */
@@ -223,20 +224,25 @@ class Ceval implements CevalHandle {
       req.movesUci.length ? `position ${base} moves ${req.movesUci.join(' ')}` : `position ${base}`,
     );
 
-    const byPv = new Map<number, CevalLine>();
-    let depth = 0;
+    // Lines render only as complete bursts (see multipv-burst.ts): the engine
+    // re-prints every MultiPV line each time one PV finishes, and a snapshot
+    // taken mid-burst pairs the new best line with its own stale copy.
+    const bursts = createMultiPvBurstCollector(multiPv);
+    let lines: CevalLine[] = [];
     let seldepth = 0;
     let nodes = 0;
     let nps = 0;
-    let lastEmit = 0;
     let started = false;
 
     const snapshot = (): CevalUpdate => ({
-      depth,
+      depth: lines[0]?.depth ?? 0,
       seldepth,
       nodes,
       nps,
-      lines: [...byPv.values()].sort((a, b) => a.multipv - b.multipv),
+      lines,
+    });
+    const emitter = createThrottledEmitter(EMIT_THROTTLE_MS, () => {
+      if (this.token === myToken) req.onUpdate?.(snapshot());
     });
 
     return await new Promise<CevalUpdate>((resolve) => {
@@ -245,27 +251,20 @@ class Ceval implements CevalHandle {
         if (line.startsWith('info ')) {
           const info = parseInfo(line);
           if (!info) return;
-          if (info.depth) depth = info.depth;
           if (info.seldepth) seldepth = info.seldepth;
           if (info.nodes) nodes = info.nodes;
           if (info.nps) nps = info.nps;
-          if (info.pvUci.length) {
-            byPv.set(info.multipv, {
-              multipv: info.multipv,
-              depth: info.depth,
-              scoreCp: info.scoreCp,
-              mate: info.mate,
-              pvUci: info.pvUci,
-            });
-            const now = Date.now();
-            if (req.onUpdate && now - lastEmit > EMIT_THROTTLE_MS) {
-              lastEmit = now;
-              req.onUpdate(snapshot());
-            }
+          const burst = bursts.push(info);
+          if (burst) {
+            lines = burst;
+            if (req.onUpdate) emitter.schedule();
           }
         } else if (line.startsWith('bestmove')) {
           off();
           if (this.currentOff === off) this.currentOff = null;
+          emitter.cancel();
+          const tail = bursts.flush();
+          if (tail) lines = tail;
           const final = snapshot();
           req.onUpdate?.(final);
           resolve(final);
@@ -284,7 +283,7 @@ class Ceval implements CevalHandle {
   }
 
   stop(): void {
-    this.token++; // supersede: in-flight listeners bail
+    this.token++; // supersede: in-flight listeners and pending emits bail
     if (this.currentOff) {
       this.currentOff();
       this.currentOff = null;

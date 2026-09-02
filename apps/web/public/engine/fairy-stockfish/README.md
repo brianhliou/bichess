@@ -12,10 +12,10 @@ require a cross-origin-isolated context (`SharedArrayBuffer`).
 
 ## Provenance
 
-- npm: `fairy-stockfish-nnue.wasm@1.1.11`
+- npm: `fairy-stockfish-nnue.wasm@1.1.12`
 - source: https://github.com/fairy-stockfish/fairy-stockfish.wasm
   (upstream engine: https://github.com/fairy-stockfish/Fairy-Stockfish)
-- `stockfish.wasm` sha256: `91f78f226169ae0e08be3854e0b4de8f5461844d38f08eaae8e3f8ee0833831d`
+- `stockfish.wasm` sha256: `7cea742b8ca1a324fbc500f89112f168134cf68eb49475df23be6c42336255c6`
 
 No NNUE net is bundled; the engine uses its classical evaluation. That is enough
 for review-board analysis and keeps the payload lean. A variant net can be added
@@ -31,6 +31,6 @@ https://www.gnu.org/licenses/gpl-3.0.txt
 To re-vendor from a clean checkout:
 
 ```
-npm pack fairy-stockfish-nnue.wasm@1.1.11
+npm pack fairy-stockfish-nnue.wasm@1.1.12
 # extract stockfish.{js,wasm,worker.js} into this directory
 ```
