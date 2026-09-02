@@ -690,14 +690,16 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
   if (user) titleRow.append(topicWatchButton(topic));
   if (topicTranslatable(topic, topic.title)) {
     titleRow.append(
-      forumTranslateButton({ kind: 'topic', id: topic.id }, 'forum-topic-translate', {
+      forumTranslateControl({ kind: 'topic', id: topic.id }, 'forum-topic-translate', {
         showOriginal: () => {
           heading.textContent = topic.title;
           heading.removeAttribute('title');
+          heading.classList.remove('forum-translated');
         },
         showTranslation: (text) => {
           heading.textContent = text;
           heading.title = topic.title;
+          heading.classList.add('forum-translated');
         },
       }),
     );
@@ -1184,19 +1186,24 @@ function postList(
     const actions = document.createElement('span');
     actions.className = 'forum-post-actions';
     if (user && !topic.locked) actions.append(postQuoteButton(post));
+    if (canReportForumContent(post.author, user)) actions.append(postReportButton(post));
+    header.append(postAuthorRail(post.author), time, edited);
+    // Translate sits outside the hover-only actions: a reader who cannot read
+    // the post has to be able to see the way out without hunting for it.
     if (topicTranslatable(topic, post.bodyText)) {
-      actions.append(
-        forumTranslateButton({ kind: 'post', id: post.id }, 'forum-post-translate', {
-          showOriginal: () => renderPostBodyInto(body, post.bodyText),
+      header.append(
+        forumTranslateControl({ kind: 'post', id: post.id }, 'forum-post-translate', {
+          showOriginal: () => {
+            renderPostBodyInto(body, post.bodyText);
+            body.classList.remove('forum-translated');
+          },
           showTranslation: (text) => {
             renderPostBodyInto(body, text);
-            body.append(machineTranslationNote());
+            body.classList.add('forum-translated');
           },
         }),
       );
     }
-    if (canReportForumContent(post.author, user)) actions.append(postReportButton(post));
-    header.append(postAuthorRail(post.author), time, edited);
     if (actions.childElementCount > 0) header.append(actions);
     header.append(postPermalink(topic, post, page, `#${postNumber}`));
 
@@ -1289,16 +1296,27 @@ function topicTranslatable(topic: ForumTopicDetail, text: string): boolean {
   return topic.translation?.available === true && translationNeeded(text, currentLocale());
 }
 
-function forumTranslateButton(
+// The control is a Translate button plus a badge that stays on screen for as
+// long as the translation is showing, so machine text is never mistaken for
+// the author's own words. The badge and the tinted body rule are the same
+// signal twice: one in the header, one on the text itself.
+function forumTranslateControl(
   target: ForumTranslationTarget,
   className: string,
   view: { showOriginal: () => void; showTranslation: (text: string) => void },
-): HTMLButtonElement {
+): HTMLElement {
+  const control = document.createElement('span');
+  control.className = 'forum-translate-control';
   const button = document.createElement('button');
   button.type = 'button';
   button.className = className;
   button.textContent = t('forum.translate');
   button.setAttribute('aria-pressed', 'false');
+  const badge = document.createElement('span');
+  badge.className = 'forum-translate-badge';
+  badge.textContent = t('forum.machineTranslation');
+  badge.hidden = true;
+  control.append(badge, button);
   let translated: string | null = null;
   let showing = false;
   let busy = false;
@@ -1307,6 +1325,7 @@ function forumTranslateButton(
     if (showing) {
       view.showOriginal();
       showing = false;
+      badge.hidden = true;
       button.textContent = t('forum.translate');
       button.setAttribute('aria-pressed', 'false');
       return;
@@ -1328,17 +1347,11 @@ function forumTranslateButton(
     }
     view.showTranslation(translated);
     showing = true;
+    badge.hidden = false;
     button.textContent = t('forum.showOriginal');
     button.setAttribute('aria-pressed', 'true');
   });
-  return button;
-}
-
-function machineTranslationNote(): HTMLElement {
-  const note = document.createElement('p');
-  note.className = 'forum-post-translation-note';
-  note.textContent = t('forum.machineTranslation');
-  return note;
+  return control;
 }
 
 function postReportButton(post: ForumPost): HTMLButtonElement {

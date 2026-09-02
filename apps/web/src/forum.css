@@ -739,6 +739,10 @@ a.forum-post-author-name:focus-visible {
   white-space: nowrap;
 }
 
+.forum-post-translate {
+  font-size: 12px;
+}
+
 .forum-post-translate:disabled,
 .forum-topic-translate:disabled {
   color: var(--site-muted);
@@ -746,10 +750,36 @@ a.forum-post-author-name:focus-visible {
   text-decoration: none;
 }
 
-.forum-post-translation-note {
-  margin: 8px 0 0;
-  color: var(--site-muted);
-  font-size: 12px;
+.forum-translate-control {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Persistent while a translation is showing: header badge + a tinted rule
+   down the text, so machine text never reads as the author's own. */
+.forum-translate-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--site-accent-strong);
+  color: var(--site-on-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.forum-post-body.forum-translated {
+  border-left: 3px solid var(--site-accent-strong);
+  padding-left: 12px;
+}
+
+.site-section-heading.forum-translated {
+  box-shadow: inset 4px 0 0 var(--site-accent-strong);
+  padding-left: 12px;
 }
 
 .forum-post-edit-form {
