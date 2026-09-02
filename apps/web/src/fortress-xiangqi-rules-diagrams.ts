@@ -183,6 +183,27 @@ function viewOf(state: FortressXiangqiGameState): FortressXiangqiPlayerView {
   return getFortressXiangqiPlayerView(state, 'red');
 }
 
+// Draw the position without its generals.
+//
+// The generals cannot leave the STATE: the kernel scores a side with no general
+// as having no legal moves at all, so every target on this page would come back
+// empty. They can leave the PICTURE, and on a movement diagram they should. Two
+// royal pieces parked in opposite corners, involved in nothing the figure is
+// about, read as part of the example and pull the eye away from the one piece
+// that is (asked for 2026-09-02). The board furniture still shows both palaces,
+// so nothing about the geometry is lost.
+//
+// The two diagrams that are ABOUT the general keep it: the opening position and
+// the general's own movement figure.
+function withoutGenerals(view: FortressXiangqiPlayerView): FortressXiangqiPlayerView {
+  return {
+    ...view,
+    board: Object.fromEntries(
+      Object.entries(view.board).filter(([, piece]) => piece?.role !== 'general'),
+    ) as FortressXiangqiBoard,
+  };
+}
+
 function boardTargetsFrom(
   state: FortressXiangqiGameState,
   from: FortressXiangqiSquare,
@@ -217,7 +238,7 @@ function movesBoard(
   from: FortressXiangqiSquare,
   extra: Partial<FortressXiangqiBoardRenderOptions> = {},
 ): string {
-  return boardSvg(viewOf(state), {
+  return boardSvg(withoutGenerals(viewOf(state)), {
     selectedSquare: from,
     targets: boardTargetsFrom(state, from),
     ...extra,
@@ -244,7 +265,7 @@ export const FORTRESS_XIANGQI_CHARIOT_DIAGRAM = () => {
     d7: { color: 'black', role: 'soldier' },
   });
   return diagram(
-    viewOf(state),
+    withoutGenerals(viewOf(state)),
     { selectedSquare: 'd4', targets: boardTargetsFrom(state, 'd4') },
     380,
   );
@@ -268,7 +289,10 @@ export const FORTRESS_XIANGQI_CANNON_DIAGRAM = () => {
       { label: 'MOVES', svg: movesBoard(moves, 'd4') },
       {
         label: 'SCREEN CAPTURE',
-        svg: boardSvg(viewOf(captureState), { selectedSquare: 'd2', targets: captureOnly }),
+        svg: boardSvg(withoutGenerals(viewOf(captureState)), {
+          selectedSquare: 'd2',
+          targets: captureOnly,
+        }),
       },
     ],
     640,
@@ -330,7 +354,7 @@ export const FORTRESS_XIANGQI_ADVISOR_DIAGRAM = () => {
     f7: { color: 'black', role: 'general' },
   });
   return diagram(
-    viewOf(state),
+    withoutGenerals(viewOf(state)),
     { selectedSquare: 'b2', targets: boardTargetsFrom(state, 'b2') },
     380,
   );
@@ -352,7 +376,7 @@ export const FORTRESS_XIANGQI_SOLDIER_DIAGRAM = () => {
   // The cross behind it marks the one direction it can never take.
   const state = stateWith({ ...GENERALS, d4: { color: 'red', role: 'soldier' } });
   return diagram(
-    viewOf(state),
+    withoutGenerals(viewOf(state)),
     {
       selectedSquare: 'd4',
       targets: boardTargetsFrom(state, 'd4'),
@@ -371,7 +395,7 @@ export const FORTRESS_XIANGQI_TREASURE_DIAGRAM = () => {
     e5: { color: 'black', role: 'soldier' },
   });
   return diagram(
-    viewOf(state),
+    withoutGenerals(viewOf(state)),
     { selectedSquare: 'd4', targets: boardTargetsFrom(state, 'd4') },
     380,
   );
@@ -385,13 +409,45 @@ export const FORTRESS_XIANGQI_TREASURE_DIAGRAM = () => {
 // fails instead of drawing it under the wrong region.
 const FREE_DROP_ROLES = ['chariot', 'horse', 'cannon', 'soldier', 'treasure'] as const;
 
+// The TERRITORY a role may drop into, as opposed to the points open right now.
+//
+// The kernel can only answer the second question, and only from a position that
+// has both generals on it, so its answer always has two holes in it: the squares
+// the generals happen to stand on. The generals are not drawn on these boards,
+// which would leave those holes looking like a rendering fault instead of the
+// occupancy rule.
+//
+// So ask twice, with the generals standing somewhere else the second time, and
+// union the answers. A point is territory if a drop there is legal in EITHER
+// position, which is still the kernel's verdict on every point and never a
+// hand-drawn region. The two placements share no square, so the union has no
+// holes left. Nothing but occupancy differs between them: neither pair of
+// generals shares a file, so no flying-general check is in play, and a drop can
+// only block a line, never open one.
+const GENERAL_PLACEMENTS: readonly FortressXiangqiBoard[] = [
+  GENERALS,
+  { a1: { color: 'red', role: 'general' }, e6: { color: 'black', role: 'general' } },
+];
+
+function dropTerritory(
+  role: FortressXiangqiDropRole,
+  hand: Partial<Record<FortressXiangqiDropRole, number>>,
+): FortressXiangqiSquare[] {
+  const reachable = GENERAL_PLACEMENTS.flatMap((generals) =>
+    dropTargets(stateWith(generals, hand), role),
+  );
+  return [...new Set(reachable)];
+}
+
 // Three drop regions side by side: where each captured piece is allowed to
 // land, with the pieces themselves over the region they share.
 export const FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM = () => {
   const set = readStoredXiangqiPieceSet();
   const region = (role: FortressXiangqiDropRole) => {
-    const state = stateWith(GENERALS, { [role]: 1 });
-    return boardSvg(viewOf(state), { targets: dropTargets(state, role) });
+    const hand = { [role]: 1 };
+    return boardSvg(withoutGenerals(viewOf(stateWith(GENERALS, hand))), {
+      targets: dropTerritory(role, hand),
+    });
   };
   const items = [
     { roles: FREE_DROP_ROLES, label: 'ANY EMPTY POINT', svg: region('chariot') },
