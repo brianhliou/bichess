@@ -82,7 +82,7 @@ export const puzzleMiningArticle: Article = {
     'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.',
   thumbnail: { kind: 'svg', svg: PUZZLE_MINING_THUMBNAIL },
   status: 'published',
-  publishedAt: '2026-09-01',
+  publishedAt: '2026-09-02',
   audience:
     'Developers curious how an automated puzzle pipeline decides what counts as a puzzle, and players who want to know where the puzzles on this site come from.',
   boardFamily: 'xiangqi',
