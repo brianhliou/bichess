@@ -26,6 +26,14 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-02',
     kind: 'release',
+    headline: 'Put a Mistboard board in your own page.',
+    body: 'Any finished game, Mistboard TV, the daily puzzle and the xiangqi analysis board now run inside an iframe, the way a study chapter already could. Copy a snippet from the developers page; no key needed. The read API behind the site is documented too, as an OpenAPI document at /api/openapi.json: games, watch feeds, puzzles, studies and the ladders.',
+    href: '/developers',
+    cta: 'See the developers page',
+  },
+  {
+    date: '2026-09-02',
+    kind: 'release',
     headline: 'Read the forum in your language.',
     body: 'Forum titles and posts written in Chinese now carry a Translate button for English readers, and English posts carry one for Chinese readers. A language model does the translating. The result is marked as machine translation, and one click brings the original back. Each post is translated once and then served from a cache, so the second reader never waits.',
     href: '/forum',

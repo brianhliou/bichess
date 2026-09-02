@@ -35,6 +35,14 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-02 (embeds) ── 研习 / 题目 / 开发者 are the nav and footer
+  // labels the site already renders (nav.studies, nav.puzzles,
+  // footer.developers); Mistboard TV, iframe, API and OpenAPI stay in Latin.
+  'Put a Mistboard board in your own page.': '把 Mistboard 的棋盘放进你自己的网页。',
+  'Any finished game, Mistboard TV, the daily puzzle and the xiangqi analysis board now run inside an iframe, the way a study chapter already could. Copy a snippet from the developers page; no key needed. The read API behind the site is documented too, as an OpenAPI document at /api/openapi.json: games, watch feeds, puzzles, studies and the ladders.':
+    '任何已结束的对局、Mistboard TV、每日题目和象棋分析棋盘，现在都能以 iframe 嵌入网页，和此前的研习章节一样。从开发者页面复制一段代码即可使用，无需密钥。网站背后的只读 API 也有了文档，以 OpenAPI 文档的形式发布在 /api/openapi.json：对局、观看列表、题目、研习和排行榜。',
+  'See the developers page': '查看开发者页面',
+
   // ── 2026-09-02 ── 翻译 / 显示原文 / 机器翻译 are the exact labels the
   // forum buttons and badge render (forum.translate, forum.showOriginal,
   // forum.machineTranslation in the community catalog).
@@ -275,6 +283,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-02 (embeds) ── Same terms as the Simplified entry above, in
+  // the Traditional forms the site renders: 研習 / 題目 / 開發者.
+  'Put a Mistboard board in your own page.': '把 Mistboard 的棋盤放進你自己的網頁。',
+  'Any finished game, Mistboard TV, the daily puzzle and the xiangqi analysis board now run inside an iframe, the way a study chapter already could. Copy a snippet from the developers page; no key needed. The read API behind the site is documented too, as an OpenAPI document at /api/openapi.json: games, watch feeds, puzzles, studies and the ladders.':
+    '任何已結束的對局、Mistboard TV、每日題目和象棋分析棋盤，現在都能以 iframe 嵌入網頁，和此前的研習章節一樣。從開發者頁面複製一段程式碼即可使用，無需金鑰。網站背後的唯讀 API 也有了文件，以 OpenAPI 文件的形式發布在 /api/openapi.json：對局、觀看列表、題目、研習和排行榜。',
+  'See the developers page': '查看開發者頁面',
+
   // ── 2026-09-02 ── Same terms as the Simplified entry above, in the
   // Traditional forms the forum buttons render: 翻譯 / 顯示原文 / 機器翻譯.
   'Read the forum in your language.': '用你的語言讀論壇。',
