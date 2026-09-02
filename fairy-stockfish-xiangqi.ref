@@ -1,0 +1,27 @@
+1b5bdd40499bd5c7417bdc532d52fef8847bdf3f
+# ^ The Fairy-Stockfish commit the prod image builds for the xiangqi ladder
+# (railpack reads the first line; this comment is ignored). Upstream
+# fairy-stockfish/Fairy-Stockfish master, 2026-05-23, "Add Georgian chess (#1004)".
+#
+# Why a second FSF binary exists at all: the other FSF variants (fortress,
+# drop-mini, mini-xiangqi, crossroads) run the fairy_sf_14 release download, and
+# that binary refuses to load the 2025 xiangqi NNUE net (architecture mismatch,
+# "network file was not loaded successfully ... the engine will be terminated").
+# The xiangqi ladder therefore builds its own binary from this commit, with
+# largeboards=yes nnue=yes, and every xiangqi FSF rung runs on it (levels 1-7
+# with Use NNUE forced off; level 8 with the net).
+#
+# The net is fetched separately, pinned by repo commit AND sha256, on the next
+# railpack line: fairy-stockfish/Fairy-Stockfish-NNUE xiangqi-c07e94a5c7cb.nnue.
+# The name is its sha256 prefix, as FSF nets are; the build fails if the digest
+# does not match or the binary does not report "NNUE evaluation using" it.
+#
+# The short form of this SHA is XIANGQI_FSF_ENGINE_REF in
+# apps/server/src/xiangqi-fsf-engine.ts and is part of every xiangqi FSF rung's
+# engine configHash, so moving this pin creates new engine identities in the EvE
+# ladder rather than silently changing how a rated identity plays.
+# xiangqi-fsf-engine-ref.test.ts fails if the two drift apart.
+#
+# Bumping: change the SHA here and the constant there, then re-run the EvE
+# calibration (engine:enqueue --variant xiangqi) so the bot ratings are measured
+# on the new binary.

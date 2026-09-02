@@ -20,13 +20,7 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import {
-  runUciBestmove,
-  runUciEval,
-  UciEnginePool,
-  UciEngineSession,
-  type UciEval,
-} from './uci-engine-harness.js';
+import { runUciEval, UciEnginePool, UciEngineSession, type UciEval } from './uci-engine-harness.js';
 
 // Xiangqi -> engine UCI now lives in @mistboard/game so the browser FSF-wasm
 // analysis engine and this server Pikafish path share one converter. Re-exported
@@ -263,14 +257,15 @@ export type XiangqiEngineOptions = { movetimeMs?: number };
 /**
  * Ask mainline Pikafish for a move given the Pikafish-UCI move history since the
  * start position (built by the adapter via xiangqiMoveToPikafishUci). Returns the
- * bestmove in Pikafish UCI (e.g. "b0c2") or null. The history is server-built and
- * trusted.
+ * search summary: `best` is the bestmove in Pikafish UCI (e.g. "b0c2") or null,
+ * alongside the depth/nodes/time/score the live loop persists per move. The
+ * history is server-built and trusted.
  */
 export async function xiangqiLiveEngineMove(
   engineId: string,
   moves: string[],
   opts: XiangqiEngineOptions = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = xiangqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Xiangqi engine: ${engineId}`);
   const release = await enginePool.acquire();
@@ -287,7 +282,7 @@ export async function xiangqiLiveEngineMove(
 export function xiangqiEngineMove(
   moves: string[],
   opts: { nodes: number; movetimeMs: number },
-): Promise<string | null> {
+): Promise<UciEval> {
   const bin = pikafishXiangqiPath();
   const net = pikafishXiangqiNetPath(bin);
   const nodes = Math.max(1, Math.floor(opts.nodes));
@@ -304,7 +299,7 @@ export function xiangqiEngineMove(
     // the reproducible strength anchor; the movetime is the latency ceiling.
     `go nodes ${nodes} movetime ${movetimeMs}`,
   ];
-  return runUciBestmove({
+  return runUciEval({
     bin,
     commands,
     timeoutMs: movetimeMs + 4000,

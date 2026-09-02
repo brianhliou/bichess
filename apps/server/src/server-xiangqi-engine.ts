@@ -1,5 +1,6 @@
 /**
- * Server-side mainline-Pikafish loop for standard (open-information) Xiangqi PvE.
+ * Server-side engine loop for standard (open-information) Xiangqi PvE: mainline
+ * Pikafish and the Fairy-Stockfish ladder, dispatched by the engine catalog.
  *
  * Standard xiangqi is perfect-information, so this mirrors the Fortress Xiangqi
  * loop structurally — the only differences are: there are no drops (board moves
@@ -10,6 +11,13 @@
  *
  * Engine moves are injected through the same append+broadcast path as human
  * moves so clocks, persistence, reconnect, and review stay event-sourced.
+ *
+ * Every engine turn also persists a `live-engine-decision` debug artifact (the
+ * type the fog/chess path has written since #287): the budget it was given, the
+ * search it actually ran (depth, nodes, time, score), and the move it played.
+ * Until 2026-09-02 this loop recorded nothing on success, so when a human beat
+ * the top FSF rung there was no way to read how deep that bot had really
+ * searched on prod short of replaying the game offline.
  */
 
 import {
@@ -22,18 +30,23 @@ import {
 } from '@mistboard/game';
 import {
   buildEngineDecisionRecord,
+  type EngineMoveAttempt,
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
+import * as persistence from './persistence.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
+import type { UciEval } from './uci-engine-harness.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
 import {
   isXiangqiEngineClientId,
+  type XiangqiEngineTier,
   xiangqiEngineTierFor,
   xiangqiEngineVersion,
   xiangqiLiveEngineMove,
@@ -54,6 +67,8 @@ export {
 const CLOCK_SAFETY_MS = 1_000;
 const MIN_MOVETIME_MS = 50;
 const ENGINE_MOVE_MAX_ATTEMPTS = 2;
+/** Stored pv length in the per-move artifact; enough to read the engine's plan. */
+const DECISION_PV_MAX_PLIES = 8;
 
 type XiangqiSpecId = typeof XIANGQI_SPEC_ID;
 
@@ -102,11 +117,15 @@ export function scheduleXiangqiEngineMove(
   room.engineTimer.unref();
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the engine did. Tests inject a stub.
+ */
 export type XiangqiEngineMoveProvider = (
   engineId: string,
   moves: string[],
   opts: { movetimeMs?: number },
-) => Promise<string | null>;
+) => Promise<UciEval>;
 
 export async function playXiangqiEngineMoveIfReady(
   ctx: XiangqiEngineContext,
@@ -126,9 +145,10 @@ export async function playXiangqiEngineMoveIfReady(
   if (remainingMs !== null && remainingMs <= 0) return;
 
   const history = xiangqiUciHistory(room.events);
-  // Clock-aware per-move budget (shared allocator): the tier NODE budget is the
-  // strength anchor and binds first on a healthy clock; this movetime is the
-  // latency ceiling + time-pressure guard.
+  // Clock-aware per-move budget (shared allocator): on a node-anchored tier the
+  // NODE budget is the strength anchor and binds first on a healthy clock; this
+  // movetime is the latency ceiling + time-pressure guard. On the depth-capped
+  // FSF rungs (levels 1-7) the movetime is, in practice, the strength knob too.
   const { computeBudgetMs: movetimeMs } = budgetForMove({
     remainingMs,
     incrementMs,
@@ -137,13 +157,19 @@ export async function playXiangqiEngineMoveIfReady(
     floorMs: MIN_MOVETIME_MS,
   });
 
+  const startedAt = Date.now();
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () => moveProvider(engineId, history, { movetimeMs }),
+    requestMove: async () => {
+      const search = await moveProvider(engineId, history, { movetimeMs });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => legalMoveForUci(getStandardXiangqiLegalMoves(room.projection.state), uci),
     stillOnTurn: () => engineToMove(room, seat),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
@@ -162,6 +188,21 @@ export async function playXiangqiEngineMoveIfReady(
       ),
   });
   if (aborted || !engineToMove(room, seat)) return;
+  const thinkTimeMs = Date.now() - startedAt;
+
+  const decisionBase = {
+    engineId,
+    engineVersion: xiangqiEngineVersion(engineId) ?? 'unknown',
+    seat,
+    ply: history.length,
+    movetimeMs,
+    remainingMs,
+    incrementMs,
+    tier,
+    search: lastSearch,
+    thinkTimeMs,
+    attempts,
+  };
 
   if (validated === null) {
     const record = buildEngineDecisionRecord({
@@ -189,6 +230,10 @@ export async function playXiangqiEngineMoveIfReady(
     };
     const seq = await ctx.appendEvent(room, resign);
     ctx.broadcastEventAppended(room, resign, seq);
+    await recordXiangqiEngineDecision(
+      room.id,
+      buildXiangqiEngineDecisionPayload({ ...decisionBase, move: null, guardReplaced: false }),
+    );
     return;
   }
 
@@ -219,6 +264,123 @@ export async function playXiangqiEngineMoveIfReady(
   };
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
+  // After the broadcast, so the artifact write never sits on the move's latency.
+  await recordXiangqiEngineDecision(
+    room.id,
+    buildXiangqiEngineDecisionPayload({
+      ...decisionBase,
+      move: xiangqiMoveToPikafishUci(chosen),
+      guardReplaced: guarded !== validated,
+    }),
+  );
+}
+
+export type XiangqiEngineDecisionInput = {
+  engineId: string;
+  engineVersion: string;
+  seat: XiangqiColor;
+  /** The game's ply count when the engine was asked (the move played is ply+1). */
+  ply: number;
+  /** Budget handed to the engine as `movetime`. */
+  movetimeMs: number;
+  remainingMs: number | null;
+  incrementMs: number;
+  tier: XiangqiEngineTier;
+  /** Last search summary the provider returned; null when every attempt failed. */
+  search: UciEval | null;
+  /** Wall time from the first request to the validated result, all attempts. */
+  thinkTimeMs: number;
+  attempts: readonly EngineMoveAttempt[];
+  /** Move played, in Pikafish UCI; null when the engine failed closed (resigned). */
+  move: string | null;
+  /** The immediate-loss guard swapped the engine's move for a safer legal one. */
+  guardReplaced: boolean;
+};
+
+/**
+ * The `live-engine-decision` payload for one xiangqi engine turn. Flat, snake_case
+ * like the fog/chess writer's, and self-describing: the tier block says what the
+ * rung is configured to do, the search block says what it did. `search.nodes`
+ * well under `tier.nodes` with `search.time_ms` at the budget means the movetime
+ * ceiling bound (a slow box or time pressure), which is the first thing to check
+ * when a "strong" rung plays weak.
+ */
+export function buildXiangqiEngineDecisionPayload(
+  input: XiangqiEngineDecisionInput,
+): Record<string, unknown> {
+  const tier = input.tier as Partial<{
+    skill: number;
+    depth: number;
+    nodes: number;
+    movetimeMs: number;
+    hashMb: number;
+    nnue: boolean;
+  }>;
+  const last = input.attempts[input.attempts.length - 1];
+  return {
+    variant: 'xiangqi',
+    engine_id: input.engineId,
+    engine_version: input.engineVersion,
+    // The artifacts table's engine_color column is chess-typed (white/black), so
+    // the xiangqi seat travels in the payload instead.
+    engine_seat: input.seat,
+    ply: input.ply,
+    move: input.move,
+    engine_move: input.search?.best ?? null,
+    guard_replaced: input.guardReplaced,
+    failed_closed: input.move === null,
+    movetime_ms: input.movetimeMs,
+    remaining_ms: input.remainingMs,
+    increment_ms: input.incrementMs,
+    think_time_ms: input.thinkTimeMs,
+    attempts: input.attempts.length,
+    reject_reason: last?.reason ?? null,
+    tier: {
+      skill: tier.skill ?? null,
+      depth: tier.depth ?? null,
+      nodes: tier.nodes ?? null,
+      movetime_ms: tier.movetimeMs ?? null,
+      hash_mb: tier.hashMb ?? null,
+      nnue: tier.nnue ?? false,
+    },
+    search:
+      input.search === null
+        ? null
+        : {
+            depth: input.search.depth,
+            nodes: input.search.nodes ?? null,
+            time_ms: input.search.timeMs ?? null,
+            cp: input.search.cp,
+            mate: input.search.mate,
+            pv: (input.search.pv ?? []).slice(0, DECISION_PV_MAX_PLIES),
+          },
+  };
+}
+
+async function recordXiangqiEngineDecision(
+  roomId: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  if (!persistence.isInitialized()) return;
+  try {
+    await persistence.recordGameDebugArtifact({
+      gameId: roomId,
+      ply: typeof payload.ply === 'number' ? payload.ply : null,
+      engineColor: null,
+      artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
+      payload,
+    });
+  } catch (err) {
+    logger.error(
+      {
+        kind: 'xiangqi_engine_artifact_persistence_failed',
+        room_id: roomId,
+        ply: payload.ply,
+        error: (err as Error).message,
+      },
+      'Xiangqi engine decision artifact failed to persist',
+    );
+  }
 }
 
 function bothSeatsFilled(room: XiangqiEngineRoom): boolean {

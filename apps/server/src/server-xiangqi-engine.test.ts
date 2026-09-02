@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { XiangqiMove } from '@mistboard/game';
-import { legalMoveForUci } from './server-xiangqi-engine.js';
+import { buildXiangqiEngineDecisionPayload, legalMoveForUci } from './server-xiangqi-engine.js';
 import {
   xiangqiEngineVersion as catalogXiangqiEngineVersion,
   isXiangqiEngineClientId as isCatalogXiangqiEngineClientId,
@@ -103,7 +103,7 @@ test('xiangqi engine catalog exposes the honest FSF human ladder', () => {
     movetimeMs: 50,
   });
   assert.equal(isCatalogXiangqiEngineClientId(fsf?.id), true);
-  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.1.0');
+  assert.equal(catalogXiangqiEngineVersion(fsf?.id), '0.2.0');
   assert.equal(
     XIANGQI_ENGINE_CATALOG.filter((entry) => entry.id.startsWith('fairy-stockfish-xiangqi-level-'))
       .length,
@@ -168,4 +168,136 @@ test('retired xiangqi engine ids stay resolvable with their original parameters'
       `${legacy.id} must not be offered as a playable engine`,
     );
   }
+});
+
+// ── Per-move decision artifact ──────────────────────────────────────────────
+// The payload is what a "why did the bot play that" investigation reads first,
+// so the fields that distinguish "movetime ceiling bound on a slow box" from
+// "node anchor bound as designed" must survive exactly.
+
+test('decision payload records the tier contract and the search that actually ran', () => {
+  const payload = buildXiangqiEngineDecisionPayload({
+    engineId: 'fairy-stockfish-xiangqi-level-8',
+    engineVersion: '0.2.0',
+    seat: 'red',
+    ply: 0,
+    movetimeMs: 6_000,
+    remainingMs: 179_000,
+    incrementMs: 2_000,
+    tier: {
+      id: 'fairy-stockfish-xiangqi-level-8',
+      name: 'Fairy-Stockfish Level 8',
+      skill: 20,
+      nodes: 1_000_000,
+      movetimeMs: 6_000,
+      hashMb: 64,
+      nnue: true,
+    },
+    search: {
+      best: 'h2e2',
+      cp: 46,
+      mate: null,
+      depth: 20,
+      nodes: 1_000_785,
+      timeMs: 1_412,
+      pv: ['h2e2', 'h9g7', 'h0g2', 'i9h9', 'i0h0', 'b9c7', 'b0c2', 'a9a8', 'c3c4', 'c6c5'],
+    },
+    thinkTimeMs: 1_650,
+    attempts: [{ attempt: 1, uci: 'h2e2', error: null, reason: null }],
+    move: 'h2e2',
+    guardReplaced: false,
+  });
+  assert.equal(payload.variant, 'xiangqi');
+  assert.equal(payload.engine_seat, 'red');
+  assert.equal(payload.move, 'h2e2');
+  assert.equal(payload.failed_closed, false);
+  assert.equal(payload.attempts, 1);
+  assert.equal(payload.reject_reason, null);
+  assert.deepEqual(payload.tier, {
+    skill: 20,
+    depth: null,
+    nodes: 1_000_000,
+    movetime_ms: 6_000,
+    hash_mb: 64,
+    nnue: true,
+  });
+  assert.deepEqual(payload.search, {
+    depth: 20,
+    nodes: 1_000_785,
+    time_ms: 1_412,
+    cp: 46,
+    mate: null,
+    // Capped so the artifact stays small; eight plies read the plan.
+    pv: ['h2e2', 'h9g7', 'h0g2', 'i9h9', 'i0h0', 'b9c7', 'b0c2', 'a9a8'],
+  });
+});
+
+test('decision payload marks a fail-closed turn and a guard replacement', () => {
+  const failed = buildXiangqiEngineDecisionPayload({
+    engineId: 'pikafish-xiangqi-level-8',
+    engineVersion: '0.3.0',
+    seat: 'black',
+    ply: 11,
+    movetimeMs: 4_000,
+    remainingMs: null,
+    incrementMs: 0,
+    tier: { id: 'pikafish-xiangqi-level-8', name: 'Pikafish', nodes: 3_000_000, movetimeMs: 4_000 },
+    search: null,
+    thinkTimeMs: 8_100,
+    attempts: [
+      { attempt: 1, uci: null, error: 'pikafish-xiangqi move timed out', reason: 'request-failed' },
+      { attempt: 2, uci: null, error: 'pikafish-xiangqi move timed out', reason: 'request-failed' },
+    ],
+    move: null,
+    guardReplaced: false,
+  });
+  assert.equal(failed.failed_closed, true);
+  assert.equal(failed.move, null);
+  assert.equal(failed.engine_move, null);
+  assert.equal(failed.search, null);
+  assert.equal(failed.attempts, 2);
+  assert.equal(failed.reject_reason, 'request-failed');
+  // A Pikafish tier has no skill/depth/net: those read as null/false, not undefined,
+  // so the JSON column has the same shape for every engine family.
+  assert.deepEqual(failed.tier, {
+    skill: null,
+    depth: null,
+    nodes: 3_000_000,
+    movetime_ms: 4_000,
+    hash_mb: null,
+    nnue: false,
+  });
+
+  const guarded = buildXiangqiEngineDecisionPayload({
+    engineId: 'fairy-stockfish-xiangqi-level-3',
+    engineVersion: '0.2.0',
+    seat: 'red',
+    ply: 20,
+    movetimeMs: 150,
+    remainingMs: 60_000,
+    incrementMs: 0,
+    tier: {
+      id: 'fairy-stockfish-xiangqi-level-3',
+      name: 'Fairy-Stockfish Level 3',
+      skill: -1,
+      depth: 5,
+      movetimeMs: 150,
+    },
+    search: { best: 'e3e4', cp: -120, mate: null, depth: 5 },
+    thinkTimeMs: 300,
+    attempts: [{ attempt: 1, uci: 'e3e4', error: null, reason: null }],
+    move: 'a0a1',
+    guardReplaced: true,
+  });
+  assert.equal(guarded.engine_move, 'e3e4', 'what the engine wanted');
+  assert.equal(guarded.move, 'a0a1', 'what was played');
+  assert.equal(guarded.guard_replaced, true);
+  assert.deepEqual(guarded.search, {
+    depth: 5,
+    nodes: null,
+    time_ms: null,
+    cp: -120,
+    mate: null,
+    pv: [],
+  });
 });

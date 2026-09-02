@@ -1,6 +1,12 @@
 import type pg from 'pg';
 import { JIEQI_ENGINE_VERSION } from '../jieqi-engine.js';
-import { XIANGQI_FSF_ENGINE_VERSION, XIANGQI_FSF_PLAYABLE_ENGINES } from '../xiangqi-fsf-engine.js';
+import {
+  XIANGQI_FSF_ENGINE_REF,
+  XIANGQI_FSF_ENGINE_VERSION,
+  XIANGQI_FSF_NNUE_NET,
+  XIANGQI_FSF_PLAYABLE_ENGINES,
+  type XiangqiFsfEngineTier,
+} from '../xiangqi-fsf-engine.js';
 import { XIANGQI_ALL_ENGINE_TIERS, XIANGQI_ENGINE_VERSION } from '../xiangqi-pikafish-engine.js';
 import {
   XIANGQI_RANDOM_ENGINE_ID,
@@ -712,19 +718,33 @@ const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries
       name: tier.name,
       kind: 'container',
       gameSpecId: 'xiangqi',
-      configHash: `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-depth-${tier.depth}`,
-      playSignature: `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-depth-${tier.depth}`,
+      configHash: xiangqiFsfConfigHash(tier),
+      playSignature: xiangqiFsfConfigHash(tier),
       config: {
         kind: 'fairy-stockfish',
         skill: tier.skill,
-        depth: tier.depth,
         movetime_ms: tier.movetimeMs,
+        ...(tier.depth === undefined ? {} : { depth: tier.depth }),
+        ...(tier.nodes === undefined ? {} : { nodes: tier.nodes }),
+        ...(tier.hashMb === undefined ? {} : { hash_mb: tier.hashMb }),
+        ...(tier.nnue ? { nnue: XIANGQI_FSF_NNUE_NET } : {}),
       },
-      notes:
-        'Fairy-Stockfish standard-Xiangqi human-strength profile using the Lichess/PlayStrategy stochastic weakening policy.',
+      notes: tier.nnue
+        ? 'Fairy-Stockfish standard-Xiangqi top rung: official xiangqi NNUE net, node-anchored search, full Skill Level.'
+        : 'Fairy-Stockfish standard-Xiangqi human-strength profile using the Lichess/PlayStrategy stochastic weakening policy.',
     } satisfies EngineDefinition,
   ]),
 );
+
+// The hash names everything that decides the rung's play: build version, the
+// pinned FSF commit, skill, the search limit (depth cap or node anchor) and the
+// eval (classical unless a net is named). A binary or net move therefore reads
+// as a new engine identity in the EvE ladder instead of a silent strength change.
+function xiangqiFsfConfigHash(tier: XiangqiFsfEngineTier): string {
+  const search = tier.nodes === undefined ? `depth-${tier.depth}` : `nodes-${tier.nodes}`;
+  const evalTag = tier.nnue ? `-${XIANGQI_FSF_NNUE_NET.replace(/\.nnue$/, '')}` : '';
+  return `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-${XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-${search}${evalTag}`;
+}
 
 // Jieqi (揭棋) PvE engines — the Pikafish jieqi branch driven as a UCI subprocess
 // (Tier-B, server-jieqi-engine.ts). LAUNCH uses the no-net `jieqi_old` classical

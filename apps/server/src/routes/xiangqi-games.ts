@@ -12,6 +12,7 @@ import { xiangqiEnabled } from './../feature-flags.js';
 import { liveAnalysisProgressStore, resolveCachedComputation } from './../game-analysis-kernel.js';
 import { isVacuousAnalysis, VacuousAnalysisError } from './../game-analysis-sweep.js';
 import * as persistence from './../persistence.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
 import {
   applyTenantEvent,
@@ -28,7 +29,13 @@ import { xiangqiRooms } from './../xiangqi-registration.js';
 import type { XiangqiEvent, XiangqiRuntimeRoom } from './../xiangqi-runtime.js';
 import { xiangqiTenant } from './../xiangqi-tenant.js';
 import { createGameAnalysisRoutes } from './game-analysis-route.js';
-import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
+import {
+  type HttpApiContext,
+  isHttpAdminSession,
+  postgameGameSummary,
+  requireMethod,
+  writeJson,
+} from './lib.js';
 
 type XiangqiPostgameSnapshot = {
   ply: number;
@@ -86,9 +93,47 @@ export async function tryHandle(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
-  _parsedUrl: URL,
+  parsedUrl: URL,
 ): Promise<boolean> {
   if (await handleAnalysisRoutes(request, response, pathname)) return true;
+
+  // Per-move engine telemetry written by server-xiangqi-engine.ts. Admin-only,
+  // like the chess-side /api/games/:id/artifacts; that route cannot serve xiangqi
+  // games because its seat filter is chess-coloured, so the tenant has its own.
+  const artifactsMatch = pathname.match(/^\/api\/xiangqi\/games\/([^/]+)\/artifacts$/);
+  if (artifactsMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!xiangqiEnabled()) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const artifactType = parsedUrl.searchParams.get('type');
+    if (artifactType !== LIVE_ENGINE_DECISION_ARTIFACT_TYPE) {
+      writeJson(response, 400, { error: 'invalid_artifact_type' });
+      return true;
+    }
+    if (!(await isHttpAdminSession(request))) {
+      writeJson(response, 403, { error: 'forbidden' });
+      return true;
+    }
+    if (!persistence.isInitialized()) {
+      writeJson(response, 200, { artifacts: [] });
+      return true;
+    }
+    const roomId = decodeURIComponent(artifactsMatch[1]!);
+    const artifacts = await persistence.listGameDebugArtifactPayloads(roomId, { artifactType });
+    writeJson(response, 200, {
+      artifacts: artifacts.map((artifact) => ({
+        id: artifact.id,
+        gameId: artifact.gameId,
+        ply: artifact.ply,
+        artifactType: artifact.artifactType,
+        payload: artifact.payload,
+        createdAt: artifact.createdAt.toISOString(),
+      })),
+    });
+    return true;
+  }
 
   const postgameMatch = pathname.match(/^\/api\/xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;

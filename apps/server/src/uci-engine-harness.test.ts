@@ -522,3 +522,53 @@ test('runUciBestmove drains stderr, so a chatty engine cannot deadlock', async (
   });
   assert.equal(move, 'd2d3');
 });
+
+test('buildFairyStockfishCommands: eval, threads and hash options precede the variant', () => {
+  // Eval options must land before UCI_Variant: FSF (re)loads the net when the variant
+  // is set, and a net for the wrong variant is refused there rather than silently
+  // falling back to classical.
+  const nnue = buildFairyStockfishCommands({
+    moves: [],
+    variant: 'xiangqi',
+    skill: 20,
+    nodes: 1_000_000,
+    threads: 2,
+    hashMb: 64,
+    eval: { evalFile: '/nets/xiangqi-c07e94a5c7cb.nnue' },
+    movetimeMs: 6_000,
+  });
+  assert.deepEqual(nnue, [
+    'uci',
+    'setoption name Threads value 2',
+    'setoption name Hash value 64',
+    'setoption name Use NNUE value true',
+    'setoption name EvalFile value /nets/xiangqi-c07e94a5c7cb.nnue',
+    'setoption name UCI_Variant value xiangqi',
+    'setoption name Skill Level value 20',
+    'ucinewgame',
+    'isready',
+    'position startpos',
+    'go nodes 1000000 movetime 6000',
+  ]);
+  const classical = buildFairyStockfishCommands({
+    moves: [],
+    variant: 'xiangqi',
+    eval: 'classical',
+    movetimeMs: 100,
+  });
+  assert.deepEqual(classical.slice(0, 3), [
+    'uci',
+    'setoption name Use NNUE value false',
+    'setoption name UCI_Variant value xiangqi',
+  ]);
+  // Omitting every new field reproduces the pre-2026-09 block byte for byte.
+  const legacy = buildFairyStockfishCommands({ moves: [], variant: 'xiangqi', movetimeMs: 100 });
+  assert.deepEqual(legacy, [
+    'uci',
+    'setoption name UCI_Variant value xiangqi',
+    'ucinewgame',
+    'isready',
+    'position startpos',
+    'go movetime 100',
+  ]);
+});

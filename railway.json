@@ -16,6 +16,7 @@
       "/scripts/start.mjs",
       "/package.json",
       "/package-lock.json",
+      "/fairy-stockfish-xiangqi.ref",
       "/railpack.json",
       "/railway.engine-worker.json",
       "/railway.json",

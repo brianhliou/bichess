@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { buildFairyStockfishCommands } from './uci-engine-harness.js';
 import {
   fsfXiangqiUciToPikafishUci,
   pikafishUciToFsfXiangqiUci,
+  XIANGQI_FSF_NNUE_NET,
   XIANGQI_FSF_PLAYABLE_ENGINES,
   xiangqiFsfEngineTierFor,
 } from './xiangqi-fsf-engine.js';
 
-test('FSF Xiangqi ladder matches the Lichess/PlayStrategy weakening profiles', () => {
-  assert.deepEqual(XIANGQI_FSF_PLAYABLE_ENGINES, [
+test('FSF Xiangqi levels 1-7 keep the Lichess/PlayStrategy weakening profiles', () => {
+  assert.deepEqual(XIANGQI_FSF_PLAYABLE_ENGINES.slice(0, 7), [
     {
       id: 'fairy-stockfish-xiangqi-level-1',
       name: 'Fairy-Stockfish Level 1',
@@ -58,15 +60,90 @@ test('FSF Xiangqi ladder matches the Lichess/PlayStrategy weakening profiles', (
       depth: 13,
       movetimeMs: 500,
     },
-    {
-      id: 'fairy-stockfish-xiangqi-level-8',
-      name: 'Fairy-Stockfish Level 8',
-      skill: 20,
-      depth: 22,
-      movetimeMs: 1_000,
-    },
   ]);
   assert.equal(xiangqiFsfEngineTierFor('unknown'), null);
+});
+
+// 2026-09-02: a human beat the old Level 8 (skill 20, depth 22, 1 s, classical,
+// 16 MB hash) in 37 moves, and the EvE ladder had it ~500 Elo above a random
+// mover. The top rung is now node-anchored with the NNUE net. These pin the shape
+// so a "small tidy" cannot quietly put it back on a movetime-only classical search.
+test('FSF Xiangqi level 8 is the node-anchored NNUE rung', () => {
+  const top = XIANGQI_FSF_PLAYABLE_ENGINES[7]!;
+  assert.equal(top.id, 'fairy-stockfish-xiangqi-level-8');
+  assert.equal(top.name, 'Fairy-Stockfish Level 8');
+  assert.equal(top.skill, 20, 'full strength: no stochastic weakening on the top rung');
+  assert.equal(top.nnue, true);
+  assert.equal(top.depth, undefined, 'no depth cap: the node budget is the strength anchor');
+  assert.ok((top.nodes ?? 0) >= 1_000_000, 'node anchor at or above 1M');
+  assert.ok(top.movetimeMs >= 4_000, 'ceiling high enough for the node budget to bind on prod');
+  assert.ok((top.hashMb ?? 0) >= 64);
+});
+
+test('only the top rung runs the net; the calibrated rungs stay classical', () => {
+  const withNet = XIANGQI_FSF_PLAYABLE_ENGINES.filter((tier) => tier.nnue);
+  assert.deepEqual(
+    withNet.map((tier) => tier.id),
+    ['fairy-stockfish-xiangqi-level-8'],
+  );
+  for (const tier of XIANGQI_FSF_PLAYABLE_ENGINES.slice(0, 7)) {
+    assert.equal(tier.nodes, undefined, `${tier.id}: depth-capped rung has no node budget`);
+    assert.equal(typeof tier.depth, 'number');
+  }
+});
+
+test('the net is named by its sha256 prefix, as FSF nets are', () => {
+  assert.match(XIANGQI_FSF_NNUE_NET, /^xiangqi-[0-9a-f]{12}\.nnue$/);
+});
+
+test('level 8 command block: net on, hash set, node anchor + movetime ceiling, no depth', () => {
+  const top = XIANGQI_FSF_PLAYABLE_ENGINES[7]!;
+  const commands = buildFairyStockfishCommands({
+    moves: ['h3e3'],
+    variant: 'xiangqi',
+    skill: top.skill,
+    depth: top.depth,
+    nodes: top.nodes,
+    hashMb: top.hashMb,
+    eval: { evalFile: '/app/bin/xiangqi-c07e94a5c7cb.nnue' },
+    movetimeMs: 6_000,
+  });
+  assert.deepEqual(commands, [
+    'uci',
+    'setoption name Hash value 64',
+    'setoption name Use NNUE value true',
+    'setoption name EvalFile value /app/bin/xiangqi-c07e94a5c7cb.nnue',
+    'setoption name UCI_Variant value xiangqi',
+    'setoption name Skill Level value 20',
+    'ucinewgame',
+    'isready',
+    'position startpos moves h3e3',
+    'go nodes 1000000 movetime 6000',
+  ]);
+});
+
+test('level 1-7 command block forces classical eval so the new binary cannot pick up a net', () => {
+  const l7 = XIANGQI_FSF_PLAYABLE_ENGINES[6]!;
+  const commands = buildFairyStockfishCommands({
+    moves: [],
+    variant: 'xiangqi',
+    skill: l7.skill,
+    depth: l7.depth,
+    nodes: l7.nodes,
+    hashMb: l7.hashMb,
+    eval: 'classical',
+    movetimeMs: l7.movetimeMs,
+  });
+  assert.deepEqual(commands, [
+    'uci',
+    'setoption name Use NNUE value false',
+    'setoption name UCI_Variant value xiangqi',
+    'setoption name Skill Level value 16',
+    'ucinewgame',
+    'isready',
+    'position startpos',
+    'go depth 13 movetime 500',
+  ]);
 });
 
 test('translates between Pikafish and Fairy-Stockfish Xiangqi ranks', () => {

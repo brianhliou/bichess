@@ -57,7 +57,7 @@ function recordLatency(id: string, ms: number): void {
 
 async function moveFor(tier: Tier, history: string[]): Promise<string | null> {
   const started = performance.now();
-  const uci = await xiangqiEngineMove(history, {
+  const { best: uci } = await xiangqiEngineMove(history, {
     nodes: tier.nodes,
     movetimeMs: Math.min(tier.movetimeMs, movetimeCapMs),
   });

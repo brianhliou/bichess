@@ -1,3 +1,4 @@
+import type { UciEval } from './uci-engine-harness.js';
 import {
   XIANGQI_FSF_ENGINE_VERSION,
   XIANGQI_FSF_PLAYABLE_ENGINES,
@@ -77,11 +78,17 @@ export function xiangqiEngineVersion(clientId: string | undefined): string | nul
   return isPikafishXiangqiEngineClientId(clientId) ? XIANGQI_ENGINE_VERSION : null;
 }
 
+/**
+ * One move from whichever family owns `engineId`. Both providers return the full
+ * search summary (`best` plus depth/nodes/time/score/pv) so the live loop can
+ * persist what the engine actually did; callers that only want the move read
+ * `.best`.
+ */
 export function xiangqiLiveEngineMove(
   engineId: string,
   moves: string[],
   opts: { movetimeMs?: number } = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   // The random floor bot has no UCI subprocess; the EvE runner's move provider
   // picks its move directly. Reaching here means a caller mis-routed it.
   if (isXiangqiRandomEngine(engineId)) {

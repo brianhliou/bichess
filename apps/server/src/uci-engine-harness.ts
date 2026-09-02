@@ -1089,6 +1089,21 @@ export type FairyStockfishMoveRequest = {
   nodes?: number;
   /** Movetime cap in ms for `go`; also sets the hard timeout (movetime + 4000). */
   movetimeMs: number;
+  /**
+   * Evaluation selection. Omitted: the engine default (classical on a build with
+   * no embedded net). `{ evalFile }`: load that NNUE net and turn `Use NNUE` on
+   * explicitly, so a build that happens to embed a default net cannot silently
+   * substitute it. `'classical'`: turn `Use NNUE` off explicitly, for tiers whose
+   * calibration was done against the hand-written eval and must not drift when
+   * the binary underneath them gains a net.
+   */
+  eval?: { evalFile: string } | 'classical';
+  /** `Threads` option; omit for the engine default (1). */
+  threads?: number;
+  /** `Hash` option in MB; omit for the engine default (16). */
+  hashMb?: number;
+  /** Binary to run; omit for the shared `fairyStockfishPath()` resolution. */
+  bin?: string;
 };
 
 /**
@@ -1100,6 +1115,8 @@ export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): str
   const skill = req.skill === undefined ? null : Math.max(-20, Math.min(20, Math.floor(req.skill)));
   const nodes = req.nodes === undefined ? null : Math.max(1, Math.floor(req.nodes));
   const depth = req.depth === undefined ? null : Math.max(1, Math.floor(req.depth));
+  const threads = req.threads === undefined ? null : Math.max(1, Math.floor(req.threads));
+  const hashMb = req.hashMb === undefined ? null : Math.max(1, Math.floor(req.hashMb));
   const position =
     req.moves.length > 0 ? `position startpos moves ${req.moves.join(' ')}` : 'position startpos';
   // `go [nodes N] movetime M` stops at whichever limit is reached first: nodes pin
@@ -1109,8 +1126,23 @@ export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): str
     ...(depth === null ? [] : [`depth ${depth}`]),
     `movetime ${req.movetimeMs}`,
   ].join(' ');
+  // Eval options come before UCI_Variant: FSF (re)loads the net when the variant
+  // is set, and a net built for another variant is refused right there, which is
+  // the loud failure we want rather than a silent classical fallback.
+  const evalOptions =
+    req.eval === undefined
+      ? []
+      : req.eval === 'classical'
+        ? ['setoption name Use NNUE value false']
+        : [
+            'setoption name Use NNUE value true',
+            `setoption name EvalFile value ${req.eval.evalFile}`,
+          ];
   return [
     'uci',
+    ...(threads === null ? [] : [`setoption name Threads value ${threads}`]),
+    ...(hashMb === null ? [] : [`setoption name Hash value ${hashMb}`]),
+    ...evalOptions,
     ...(req.iniPath ? [`setoption name VariantPath value ${req.iniPath}`] : []),
     `setoption name UCI_Variant value ${req.variant}`,
     ...(skill === null ? [] : [`setoption name Skill Level value ${skill}`]),
@@ -1129,7 +1161,23 @@ export function buildFairyStockfishCommands(req: FairyStockfishMoveRequest): str
  */
 export function fairyStockfishBestmove(req: FairyStockfishMoveRequest): Promise<string | null> {
   return runUciBestmove({
-    bin: fairyStockfishPath(),
+    bin: req.bin ?? fairyStockfishPath(),
+    commands: buildFairyStockfishCommands(req),
+    timeoutMs: req.movetimeMs + 4000,
+    timeoutMessage: 'fsf move timed out',
+  });
+}
+
+/**
+ * Like fairyStockfishBestmove, but keeps the search's last exact `info` line so the
+ * caller can persist what the engine actually did (depth reached, nodes, time,
+ * score) next to the move it played. Live xiangqi PvE records this per move: until
+ * 2026-09-02 the bot persisted nothing, so "how deep did Level 8 really search on
+ * prod" had no answer short of an offline replay.
+ */
+export function fairyStockfishEval(req: FairyStockfishMoveRequest): Promise<UciEval> {
+  return runUciEval({
+    bin: req.bin ?? fairyStockfishPath(),
     commands: buildFairyStockfishCommands(req),
     timeoutMs: req.movetimeMs + 4000,
     timeoutMessage: 'fsf move timed out',

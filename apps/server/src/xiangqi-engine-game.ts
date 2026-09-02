@@ -158,9 +158,10 @@ async function defaultMoveProvider(request: XiangqiGameMoveRequest): Promise<str
   if (isXiangqiRandomEngine(request.engineId)) {
     return xiangqiRandomMoveUci(request.legalMoves);
   }
-  return xiangqiLiveEngineMove(request.engineId, request.history, {
+  const { best } = await xiangqiLiveEngineMove(request.engineId, request.history, {
     movetimeMs: request.tier.movetimeMs,
   });
+  return best;
 }
 
 export function legalMoveForUci(
