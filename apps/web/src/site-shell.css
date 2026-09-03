@@ -252,6 +252,47 @@ a.site-nav-link[hidden],
   color: #f3a6b8;
 }
 
+/* Desktop hover raises a pill behind the link (lichess's donate hover): a
+   low-alpha wash of the link's own rose, fully rounded, inset from the 60px
+   bar so it reads as a button surfacing out of the bar rather than a column
+   highlight. Painted by a pseudo-element so the hit area stays the full bar
+   height and the link's 9px padding (and its neighbours' spacing) is
+   untouched: the negative horizontal inset gives the pill its own breathing
+   room around the icon and label. */
+@media (min-width: 1101px) {
+  .site-nav-links > .site-nav-link-donate {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .site-nav-links > .site-nav-link-donate::before {
+    content: "";
+    position: absolute;
+    inset: 11px -5px;
+    z-index: -1;
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+    opacity: 0;
+    transform: scale(0.9);
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease;
+  }
+
+  .site-nav-links > .site-nav-link-donate:hover::before,
+  .site-nav-links > .site-nav-link-donate:focus-visible::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav-links > .site-nav-link-donate::before {
+      transform: none;
+      transition: opacity 140ms ease;
+    }
+  }
+}
+
 /* Register = filled accent (green) button, like lichess's filled blue Register. */
 .site-nav-link-register {
   min-height: 40px;
