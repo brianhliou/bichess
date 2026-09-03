@@ -376,15 +376,7 @@ export const FIXTURE_FORTRESS_XIANGQI_PUZZLES: readonly FortressXiangqiPuzzle[] 
       centipawns: 471,
     },
     themes: ['winning', 'cannon', 'drop', 'horse'],
-    sourceGame: {
-      gameId: 'fxq-selfplay-0001',
-      ply: 20,
-    },
   },
-  // fortress-xiangqi-tactic-002 was removed on 2026-09-02: its line depended on
-  // the veteran soldier and no longer validates under the river gate. The corpus
-  // wants a re-mine (scripts/variant-lab/fortress-xiangqi-puzzle-miner.ts) rather
-  // than a hand-patch, so it is dropped rather than repaired here.
 ];
 
 // Source games referenced by the tactic fixtures above (sourceGame.gameId).

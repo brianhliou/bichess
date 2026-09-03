@@ -46,8 +46,8 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
     hash: 'bdde546680983360109b733b2d209887ac6304aad89332e0954d1e8fbf40be50',
   },
   'fortress-xiangqi': {
-    count: 88,
-    hash: '817671d37dacb6dc37733f88990446a0e4a02335dcbea581f5849bf6e37f64f3',
+    count: 70,
+    hash: 'baf426c7dd4ecc728d5bcd024f31a283544f834ba730f8191cac68dea263cc27',
   },
   jungle: {
     count: 110,
