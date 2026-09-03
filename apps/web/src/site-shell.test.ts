@@ -96,11 +96,15 @@ describe('site shell nav', () => {
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Broadcasts', 'Video library']);
+    ).toEqual(['Mistboard TV', 'Current games', 'Broadcasts', 'Video library']);
+    expect(watchPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
+      'Current games',
+    );
 
     // Tools dropdown surfaces the analysis board, and the games database, which
-    // moved here out of Watch. It is reachable only by typing its URL if this
-    // entry goes missing, so assert the rendered link, not just the item list.
+    // moved here out of Watch (and to /games/search once /games became the
+    // current-games page). It is reachable only by typing its URL if this entry
+    // goes missing, so assert the rendered link, not just the item list.
     const toolsMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Tools',
     );
@@ -108,9 +112,10 @@ describe('site shell nav', () => {
     expect(
       toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/analysis/xiangqi"]')?.textContent,
     ).toBe('Analysis board');
-    expect(toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
-      'Games',
-    );
+    expect(
+      toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/games/search"]')?.textContent,
+    ).toBe('Advanced search');
+    expect(toolsPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')).toBeNull();
 
     const learnMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Learn',

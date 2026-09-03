@@ -9,7 +9,7 @@ import {
 
 describe('historical xiangqi search page', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/games');
+    window.history.replaceState(null, '', '/games/search');
   });
 
   afterEach(() => {
@@ -150,7 +150,7 @@ describe('historical xiangqi search page', () => {
   // Applying a filter used to rewrite the bar to `/historical-xiangqi/games`,
   // a retired path that 301s back here, so a copied or reloaded filtered URL
   // took a redirect hop and lost its query.
-  it('keeps the canonical /games path when filters are applied', async () => {
+  it('keeps the canonical /games/search path when filters are applied', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),
@@ -165,12 +165,12 @@ describe('historical xiangqi search page', () => {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await Promise.resolve();
 
-    expect(window.location.pathname).toBe('/games');
+    expect(window.location.pathname).toBe('/games/search');
     expect(window.location.search).toBe('?player=Hu+Ronghua');
   });
 
   it('round-trips a non-default sort through the URL and the API call', async () => {
-    window.history.replaceState(null, '', '/games?sort=longest');
+    window.history.replaceState(null, '', '/games/search?sort=longest');
     const requested: string[] = [];
     const fetchSpy = vi.fn(async (url: string) => {
       requested.push(url);
@@ -183,7 +183,7 @@ describe('historical xiangqi search page', () => {
 
     expect(requested[0]).toContain('sort=longest');
     expect(window.location.search).toContain('sort=longest');
-    // The default stays out of the URL so a plain /games link is still canonical.
+    // The default stays out of the URL so a plain /games/search link is still canonical.
     const select = [...root.querySelectorAll<HTMLSelectElement>('select')].find((el) =>
       [...el.options].some((option) => option.value === 'shortest'),
     );
@@ -195,7 +195,7 @@ describe('historical xiangqi search page', () => {
   // anything past the second position. Every result past "Red wins" rendered as
   // "Red wins" while the rows below were filtered correctly.
   it('renders the saved filter in every select, not just the first two options', async () => {
-    window.history.replaceState(null, '', '/games?result=1%2F2-1%2F2&sort=shortest');
+    window.history.replaceState(null, '', '/games/search?result=1%2F2-1%2F2&sort=shortest');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ total: 0, offset: 0, limit: 50, games: [] })),

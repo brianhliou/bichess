@@ -153,6 +153,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
       'Every Mistboard release, article, and status update, newest first: new variants, engine work, and changes to the site.',
   },
   '/games': {
+    title: 'Current Games | Mistboard',
+    description:
+      'Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.',
+  },
+  '/games/search': {
     // Unfiltered, this route lists the most recently finished games across
     // every lane, so it is a live content page rather than a search form. That
     // is what makes it worth indexing at all.
@@ -655,6 +660,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/editor',
   '/study',
   '/games',
+  '/games/search',
   '/import',
   '/feed',
   '/videos',

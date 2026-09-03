@@ -20,6 +20,7 @@ import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as crossroadsChessRoute from './routes/crossroads-chess.js';
+import * as currentGamesRoute from './routes/current-games.js';
 import * as darkCrazyhouseGamesRoute from './routes/dark-crazyhouse-games.js';
 import * as darkCrossroadsChessGamesRoute from './routes/dark-crossroads-chess-games.js';
 import * as darkMiniXiangqiGamesRoute from './routes/dark-mini-xiangqi-games.js';
@@ -105,6 +106,8 @@ export const routes: RouteModule[] = [
   roomsRoute,
   correspondenceGamesRoute,
   correspondenceSeeksRoute,
+  // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.
+  currentGamesRoute,
   lobbyRoute,
   xiangqiBroadcastsRoute,
   historicalXiangqiGamesRoute,

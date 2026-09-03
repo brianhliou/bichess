@@ -319,11 +319,15 @@ const analysisVariant = analysisVariantFromPath(path);
 // The board editor (lichess.org/editor) covers the same catalog: /editor opens
 // the flagship, /editor/<variant> any catalog variant, unknown slugs 404.
 const editorVariant = editorVariantFromPath(path);
-// The games database is canonically /games. The old /historical-xiangqi index
-// paths named one of the three sources the page lists rather than the page, and
-// server-http 301s them here, so this matcher stays single-valued: a route
-// literal here that isClientRoute does not know about is a conformance failure.
-const wantsHistoricalXiangqiSearch = path === '/games';
+// /games is the current-games page: everything in progress right now, live and
+// correspondence, across every variant (lichess's "Current games").
+const wantsCurrentGames = path === '/games';
+// The games database is canonically /games/search (lichess's advanced search).
+// The old /historical-xiangqi index paths named one of the three sources the
+// page lists rather than the page, and server-http 301s them here, so this
+// matcher stays single-valued: a route literal here that isClientRoute does not
+// know about is a conformance failure.
+const wantsHistoricalXiangqiSearch = path === '/games/search';
 const wantsXiangqiImport = path === '/import';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
@@ -467,6 +471,11 @@ if (replaySample) {
     import('./xiangqi-import-page.js').then(({ mountXiangqiImport }) =>
       mountXiangqiImport(appRoot),
     ),
+  );
+} else if (wantsCurrentGames) {
+  setTitleKey('nav.currentGames');
+  void mountOrReport(() =>
+    import('./current-games.js').then(({ mountCurrentGames }) => mountCurrentGames(appRoot)),
   );
 } else if (wantsHistoricalXiangqiSearch) {
   setTitle('Xiangqi game search');

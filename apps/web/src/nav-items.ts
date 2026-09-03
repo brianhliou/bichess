@@ -110,6 +110,9 @@ export function adminNavItems(): NavItem[] {
 export function watchNavItems(): NavItem[] {
   return [
     { label: 'Mistboard TV', labelKey: 'nav.tv', href: '/watch' },
+    // Every game in progress right now, live and correspondence (lichess's
+    // "Current games"). Distinct from the finished-games database under Tools.
+    { label: 'Current games', labelKey: 'nav.currentGames', href: '/games' },
     { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
     // Streamers appears only once the curated directory has someone in it.
     // Deriving the link from the data means an empty /streamer is never
@@ -131,18 +134,20 @@ export function utilityNavItems(): NavItem[] {
 // board editor sits beside it, and the games database closes the set the way
 // lichess's advanced search does, with Import beside them.
 //
-// Games moved here from Watch (2026-08-28) on live-vs-finished, not
-// browse-vs-query: Mistboard TV and Broadcasts are things happening now, and a
-// finished-games list between them reads as a third live surface. Note the page
-// is NOT lichess's empty search form. Unfiltered it lists the 50 most recently
-// finished games, so it browses as well as queries; that landing feed is the
-// part worth keeping if this ever gets rebuilt for parity.
+// The games database moved here from Watch (2026-08-28) on live-vs-finished, not
+// browse-vs-query: Mistboard TV and Current games are things happening now, and
+// a finished-games list between them reads as a third live surface. It lives at
+// /games/search (lichess: "Advanced search") since /games became the
+// current-games page (2026-09-02). Note the page is NOT lichess's empty search
+// form. Unfiltered it lists the 50 most recently finished games, so it browses
+// as well as queries; that landing feed is the part worth keeping if this ever
+// gets rebuilt for parity.
 export function toolsNavItems(): NavItem[] {
   return [
     { label: 'Analysis board', labelKey: 'nav.analysis', href: '/analysis/xiangqi' },
     { label: 'Board editor', labelKey: 'nav.editor', href: '/editor/xiangqi' },
     { label: 'Import game', labelKey: 'nav.import', href: '/import' },
-    { label: 'Games', labelKey: 'nav.games', href: '/games' },
+    { label: 'Advanced search', labelKey: 'nav.gamesSearch', href: '/games/search' },
     ...utilityNavItems(),
   ];
 }

@@ -7,6 +7,12 @@
 
 import { t } from './i18n/catalog.js';
 
+// "N games in play" links to the current-games page (lichess does the same).
+// The two agree by construction: /api/live-stats counts rooms by the deploy
+// gate's in-play rule plus the active correspondence index, and /games lists
+// exactly that set.
+const CURRENT_GAMES_HREF = '/games';
+
 type LiveStats = { playing: number; online: number };
 type PublicStats = { totalCompletedGames: number; last30dCompletedGames: number };
 
@@ -18,7 +24,7 @@ export function buildLandingActivity(options: { hydrate?: boolean } = {}): HTMLE
   body.className = 'landing-activity-body';
   body.append(
     activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]),
-    activityLiveLine([activityInlineStat('–', t('home.gamesInPlay'))]),
+    activityLiveLine([activityInlineStat('–', t('home.gamesInPlay'), CURRENT_GAMES_HREF)]),
   );
   box.append(body);
   if (options.hydrate !== false) void hydrateLandingActivity(box, body);
@@ -59,6 +65,7 @@ async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Prom
         activityInlineStat(
           formatCount(live.playing),
           t(live.playing === 1 ? 'home.gameInPlay' : 'home.gamesInPlay'),
+          CURRENT_GAMES_HREF,
         ),
       ]),
     );

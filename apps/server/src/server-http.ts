@@ -9,6 +9,7 @@ import { RequestBodyTooLargeError } from './routes/lib.js';
 import type { DrainController } from './server-drain.js';
 import {
   clientIpForRateLimit,
+  gamesSearchQueryRedirect,
   isClientRoute,
   isEmbedRoute,
   isReviewShellRoute,
@@ -434,7 +435,11 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 
     // Renamed page routes (see legacyPageRedirect): one permanent hop to the
     // canonical path so published links and crawler-cached URLs do not 404.
-    const legacyPageTarget = legacyPageRedirect(pathname);
+    // The games database's old filter links (/games?player=...) hop to
+    // /games/search with their query; a bare /games is the current-games page.
+    const search = url.includes('?') ? url.slice(url.indexOf('?')) : '';
+    const legacyPageTarget =
+      gamesSearchQueryRedirect(pathname, search) ?? legacyPageRedirect(pathname);
     if (legacyPageTarget) {
       response.writeHead(301, { location: legacyPageTarget });
       response.end();

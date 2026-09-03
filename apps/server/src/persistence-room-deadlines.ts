@@ -110,6 +110,31 @@ export async function listActiveCorrespondenceRoomIds(): Promise<string[]> {
   return rows.map((row) => row.room_id);
 }
 
+// The same active set with the deadline attached: which seat is on the move and
+// when it forfeits. Feeds the current-games page (current-games.ts), which
+// hydrates each room from this index and shows the deadline on the card.
+export type ActiveRoomDeadline = {
+  roomId: string;
+  gameSpecId: string;
+  seat: string;
+  dueAt: Date;
+};
+
+export async function listActiveRoomDeadlines(): Promise<ActiveRoomDeadline[]> {
+  const { rows } = await getPool().query<{
+    room_id: string;
+    game_spec_id: string;
+    seat: string;
+    due_at: Date;
+  }>('SELECT room_id, game_spec_id, seat, due_at FROM room_deadlines ORDER BY due_at');
+  return rows.map((row) => ({
+    roomId: row.room_id,
+    gameSpecId: row.game_spec_id,
+    seat: row.seat,
+    dueAt: row.due_at,
+  }));
+}
+
 export async function listDueRoomDeadlines(now: Date, limit = 50): Promise<DueRoomDeadline[]> {
   const { rows } = await getPool().query(
     `SELECT room_id, game_spec_id, seat, due_at

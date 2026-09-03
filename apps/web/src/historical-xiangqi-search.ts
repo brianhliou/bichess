@@ -140,9 +140,11 @@ async function fetchHistoricalXiangqiGames(
   return (await response.json()) as HistoricalXiangqiSearchResponse;
 }
 
-// The canonical route for this page. `/historical-xiangqi` and
-// `/historical-xiangqi/games` still 301 here for old links.
-const SEARCH_PATH = '/games';
+// The canonical route for this page (lichess: /games/search). It sat at /games
+// until 2026-09-02, when /games became the current-games page; the server 301s
+// `/historical-xiangqi`, `/historical-xiangqi/games`, and any `/games?<filter>`
+// link here.
+const SEARCH_PATH = '/games/search';
 
 function readFilters(): Filters {
   const params = new URLSearchParams(window.location.search);

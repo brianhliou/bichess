@@ -14,6 +14,7 @@ describe('watch nav', () => {
 
     expect(watchNavItems().map((item) => item.label)).toEqual([
       'Mistboard TV',
+      'Current games',
       'Broadcasts',
       'Video library',
     ]);
@@ -38,6 +39,7 @@ describe('watch nav', () => {
     const items = watchNavItems();
     expect(items.map((item) => item.label)).toEqual([
       'Mistboard TV',
+      'Current games',
       'Broadcasts',
       'Streamers',
       'Video library',
@@ -57,13 +59,18 @@ describe('tools nav', () => {
   });
 
   // The games database is the one nav entry that has moved menus, so assert it
-  // is HERE and not in Watch. A one-sided check would pass with it in both.
-  it('carries the games database, and Watch no longer does', async () => {
+  // is HERE (at /games/search) and not in Watch. A one-sided check would pass
+  // with it in both. Watch carries /games, which is now the current-games page.
+  it('carries the games database at /games/search, and Watch carries current games at /games', async () => {
     const { toolsNavItems, watchNavItems } = await import('./nav-items.js');
-    const games = toolsNavItems().find((item) => item.href === '/games');
-    expect(games?.label).toBe('Games');
-    expect(games?.labelKey).toBe('nav.games');
-    expect(watchNavItems().some((item) => item.href === '/games')).toBe(false);
+    const search = toolsNavItems().find((item) => item.href === '/games/search');
+    expect(search?.label).toBe('Advanced search');
+    expect(search?.labelKey).toBe('nav.gamesSearch');
+    expect(toolsNavItems().some((item) => item.href === '/games')).toBe(false);
+    const current = watchNavItems().find((item) => item.href === '/games');
+    expect(current?.label).toBe('Current games');
+    expect(current?.labelKey).toBe('nav.currentGames');
+    expect(watchNavItems().some((item) => item.href === '/games/search')).toBe(false);
   });
 
   it('offers the import door, which is otherwise reachable only by URL', async () => {
