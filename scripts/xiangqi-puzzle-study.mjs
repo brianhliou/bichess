@@ -325,15 +325,15 @@ const PICKS = [
   },
   {
     id: 'xq-mined-hxq_50982b077aec4bcae49c5832-86',
-    name: 'Endgame, four moves, no escape',
-    zhHans: '残局四回合，无处可逃',
-    zhHant: '殘局四回合，無處可逃',
+    name: 'Chariot and horse against the full defence',
+    zhHans: '车马对士象全',
+    zhHant: '車馬對士象全',
     comment:
-      'An endgame: chariot and horse against advisors and elephants. Every Black reply is forced and the chariot lands on d8. This is the shape the miner marks as a forced line.',
+      'Red is a chariot and a horse up on the full defence, a general with both advisors and both elephants, which is a standard win. Eighteen of Red\u2019s twenty-seven legal moves force mate from here; this one is the fastest at mate in four, and three others drop the position from mate to roughly level. It is here to show how the full defence comes apart, not as a find-the-only-move puzzle.',
     commentHans:
-      '残局：车马对士象。黑方每一步应着都是被迫的，最后车落d8。这正是挖掘程序标记为「强制线」的形态。',
+      '红方多一车一马，对方是士象全（将、双士、双象），这是标准的必胜局面。此局红方27着合法着法中有18着都能成杀，这一着最快，四步杀；另有三着会把杀局走成大致均势。收录它是为了展示士象全如何被拆开，而不是当作只有一个正解的习题。',
     commentHant:
-      '殘局：車馬對士象。黑方每一步應著都是被迫的，最後車落d8。這正是挖掘程式標記為「強制線」的形態。',
+      '紅方多一車一馬，對方是士象全（將、雙士、雙象），這是標準的必勝局面。此局紅方27著合法著法中有18著都能成殺，這一著最快，四步殺；另有三著會把殺局走成大致均勢。收錄它是為了展示士象全如何被拆開，而不是當作只有一個正解的習題。',
   },
   {
     id: 'xq-mined-hxq_395a0c2b3d05bc932c9a68ff-38',
