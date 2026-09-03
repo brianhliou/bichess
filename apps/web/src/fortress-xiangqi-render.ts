@@ -41,7 +41,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
-import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   animalTreasureMarks,
@@ -259,8 +259,9 @@ export function renderFortressXiangqiPieceInline(
   }
   return renderXiangqiPieceGlyphed(piece as unknown as XiangqiPiece, set, {
     ariaLabel: `${piece.color} ${piece.role}`,
-    // Veteran soldiers draw promoted everywhere, including reserve/pocket tiles.
-    crossed: drawsVeteranSoldier(piece),
+    // A reserve tile has no square, so it cannot answer the river question. Draw
+    // the base soldier: it is what the piece is until it lands and crosses.
+    crossed: false,
   });
 }
 
@@ -306,7 +307,14 @@ function pieceLayer(
       if (!piece) return '';
       const { file, rank } = fortressXiangqiCoordOf(square as FortressXiangqiSquare);
       const { x, y } = intersection(file, rank, perspective);
-      const pieceSvg = renderFortressXiangqiPiece(piece, pieceSet, x, y, square === draggingFrom);
+      const pieceSvg = renderFortressXiangqiPiece(
+        piece,
+        pieceSet,
+        x,
+        y,
+        square === draggingFrom,
+        rank,
+      );
       // Keyed slot: a <g> wrapper per occupied square so a post-render glide
       // (animateFortressXiangqiBoardMove) can find and transform the piece.
       return `<g class="fxq-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
@@ -352,6 +360,9 @@ function renderFortressXiangqiPiece(
   x: number,
   y: number,
   dragSource: boolean,
+  // Board rank, for the soldier's river question. The drag ghost has no square,
+  // so it passes 0 and draws the base soldier.
+  rank = 0,
 ): string {
   const className = dragSource ? 'fxq-piece fxq-piece--drag-source' : 'fxq-piece';
   const left = x - PIECE_SIZE / 2;
@@ -366,10 +377,9 @@ function renderFortressXiangqiPiece(
     x: left,
     y: top,
     size: PIECE_SIZE,
-    // Fortress soldiers are veterans from the start (forward + sideways step, no
-    // river gate — see variants-fortress-xiangqi.ts), so they always draw with
-    // the promoted-soldier art rather than the base soldier.
-    crossed: drawsVeteranSoldier(piece),
+    // River-gated again since 2026-09-02, so the promoted art is back to meaning
+    // what it means everywhere else: this soldier has crossed.
+    crossed: drawsCrossedSoldier(piece, rank),
   });
 }
 

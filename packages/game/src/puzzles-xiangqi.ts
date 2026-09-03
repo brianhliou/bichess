@@ -30,6 +30,10 @@
 
 import { type GameSpecId, XIANGQI_SPEC_ID } from './game-specs.js';
 import { FIXTURE_XIANGQI_PUZZLES } from './puzzles-xiangqi-fixtures.js';
+import {
+  XIANGQI_MATE_SEARCH_MAX_SOLVER_MOVES,
+  xiangqiMoveForcesMate,
+} from './puzzles-xiangqi-mate-search.js';
 import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import type {
   XiangqiColor,
@@ -148,6 +152,13 @@ export type XiangqiPuzzleAttemptResult =
       ply: number;
       state: XiangqiGameState;
       lastMove?: XiangqiMove;
+      /**
+       * The solver did not play the stored line, but their move forces mate
+       * anyway and the puzzle's goal is checkmate. Set only in that case, so a
+       * caller can say so instead of silently treating it as the stored
+       * solution. See puzzles-xiangqi-mate-search.ts for why this exists.
+       */
+      alternativeMate?: true;
     }
   | {
       ok: false;
@@ -335,7 +346,30 @@ export function attemptStandardXiangqiPuzzleLine(
       return attemptFailure(puzzle, 'line-too-long', playedMoves.length, state, move);
     }
     if (!standardXiangqiPuzzleMoveEquals(move, expected)) {
-      return attemptFailure(puzzle, 'incorrect-move', playedMoves.length, state, move);
+      // Not the stored move. On a checkmate puzzle it may still force mate, in
+      // which case the solver has done what was asked and the old code charged
+      // them rating for it.
+      const alternative = acceptAlternativeMate(puzzle, state, move);
+      if (!alternative) {
+        return attemptFailure(puzzle, 'incorrect-move', playedMoves.length, state, move);
+      }
+      playedMoves.push(move);
+      acceptedSolverMoves.push(move);
+      return {
+        ok: true,
+        puzzleId: puzzle.id,
+        variant: puzzle.variant,
+        playedMoves,
+        solverMoves: acceptedSolverMoves,
+        // Complete even though the board is not mated yet: the solver proved a
+        // forced mate, and there is no scripted continuation for a line we did
+        // not author. Ending here is what keeps this from becoming a tree.
+        complete: true,
+        alternativeMate: true,
+        ply: playedMoves.length,
+        state: alternative,
+        lastMove: move,
+      };
     }
     const applied = applyPuzzleMove(state, move);
     if (!applied) {
@@ -380,6 +414,27 @@ export function attemptStandardXiangqiPuzzleLine(
     state,
     ...(lastMove ? { lastMove } : {}),
   };
+}
+
+/**
+ * A move that is not the stored one, on a checkmate puzzle, that still forces
+ * mate. Returns the position after it, or null to grade strictly.
+ *
+ * The budget passed is the search cap rather than the stored line's length, on
+ * purpose: the solver was told to find a win, never told how fast. Requiring a
+ * mate as quick as the stored one accepts almost nothing — measured over forty
+ * corpus puzzles it accepted zero — because the complaint is precisely that a
+ * SLOWER mate is marked wrong.
+ */
+function acceptAlternativeMate(
+  puzzle: XiangqiPuzzle,
+  state: XiangqiGameState,
+  move: XiangqiMove,
+): XiangqiGameState | null {
+  if (puzzle.goal.type !== 'checkmate') return null;
+  const search = xiangqiMoveForcesMate(state, move, XIANGQI_MATE_SEARCH_MAX_SOLVER_MOVES);
+  if (!search.forcesMate) return null;
+  return applyPuzzleMove(state, move);
 }
 
 function applyPuzzleMove(state: XiangqiGameState, move: XiangqiMove): XiangqiGameState | null {

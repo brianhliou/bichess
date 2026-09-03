@@ -310,6 +310,9 @@ export const EN_PLAY = {
   'puzzle.findBestMove': 'Find the best move.',
   'puzzle.checkingMove': 'Checking move.',
   'puzzle.solved': 'Solved.',
+  // A solver who found a forced mate we did not store. Says so rather than
+  // reading as an ordinary solve, because the interesting thing just happened.
+  'puzzle.solvedAlternativeMate': 'Solved. That forces mate too.',
   'puzzle.correct': 'Correct.',
   'puzzle.tryAnotherMove': 'Try another move.',
   'puzzle.playDisabled': 'This account cannot solve puzzles. Sign in with your playing account.',
@@ -505,6 +508,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'puzzle.findBestMove',
   'puzzle.checkingMove',
   'puzzle.solved',
+  'puzzle.solvedAlternativeMate',
   'puzzle.correct',
   'puzzle.tryAnotherMove',
   'puzzle.fetchingHint',

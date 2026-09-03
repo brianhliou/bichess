@@ -146,6 +146,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.findBestMove': '找出最佳着法。',
   'puzzle.checkingMove': '正在检查着法。',
   'puzzle.solved': '已解开。',
+  'puzzle.solvedAlternativeMate': '已解开。这一手同样能成杀。',
   'puzzle.correct': '正确。',
   'puzzle.tryAnotherMove': '换一手试试。',
   'puzzle.playDisabled': '此账号无法解题。请改用你的对局账号登录。',

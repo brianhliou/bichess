@@ -614,16 +614,29 @@ function pseudoBoardMovesFrom(
     case 'soldier': {
       const forward = piece.color === 'red' ? 1 : -1;
       addStep(file, rank + forward);
-      // VETERAN SOLDIERS (2026-07-03): forward + sideways from the start, no river
-      // gate — soldiers are serious defenders, not just attackers (see the depth-16
-      // study in docs-private/fortress-soldier-study). Revert by wrapping the two
-      // sideways steps back in `if (fortressXiangqiCrossedRiver(piece.color, rank))`.
-      addStep(file - 1, rank);
-      addStep(file + 1, rank);
+      // RIVER SOLDIER (2026-09-02, reverting the 2026-07-03 veteran ship): forward
+      // only at home, sideways as well once across, exactly as in xiangqi. The
+      // veteran soldier took draws from 12% to 34% and the median game from 75
+      // plies to 131 at Modal depth 16 — measured five ways in the 2026-09-02
+      // section of docs-private/drop-game-lab/DESIGN-SPEC.md. It also deleted the
+      // one rule that defines the piece: crossing the river is the soldier's only
+      // irreversible commitment.
+      if (fortressXiangqiCrossedRiver(piece.color, rank)) {
+        addStep(file - 1, rank);
+        addStep(file + 1, rank);
+      }
       break;
     }
     case 'treasure':
-      for (const [df, dr] of ALL_STEPS) addStep(file + df, rank + dr);
+      // TREASURE HOME (2026-09-02): one step in any of the eight directions, but
+      // never across the river — the piece being stormed for stays in the fortress.
+      // Free once the soldier is river-gated: it costs no draws (12% -> 9%) and
+      // adds 43 plies a game. Under the veteran soldier it cost 12pp of draws,
+      // which is why this looked unaffordable until the soldier was fixed.
+      for (const [df, dr] of ALL_STEPS) {
+        if (fortressXiangqiCrossedRiver(piece.color, rank + dr)) continue;
+        addStep(file + df, rank + dr);
+      }
       break;
   }
   return moves;
@@ -709,6 +722,12 @@ function isDropRegionLegal(
   const { file, rank } = fortressXiangqiCoordOf(square);
   if (role === 'advisor') return fortressXiangqiInPalace(color, file, rank);
   if (role === 'elephant') return fortressXiangqiInOwnHalf(color, rank);
+  // The Treasure joined the defenders on 2026-09-02. It has to be listed HERE as
+  // well as in the move generator: FSF derives drop legality from the piece's
+  // mobility region, so confining it there confined its drops for free, and the
+  // kernel — which keeps the two rules apart — silently kept letting it
+  // parachute. The parity harness caught it as 20 mismatches in 3 games.
+  if (role === 'treasure') return fortressXiangqiInOwnHalf(color, rank);
   return true; // attackers drop anywhere
 }
 

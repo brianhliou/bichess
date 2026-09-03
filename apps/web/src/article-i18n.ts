@@ -139,8 +139,8 @@ const ZH_HANS: Record<string, string> = {
   'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
     '黑方子力占优，五子对三子，却动不了红方的象，那是场上仅存的最大子，而它正一个一个地吃掉黑方的子。黑方认输。在暗棋里，大小压过纯粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
-  "Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black's own soldier on e6 and chariot on f7 take away the last two palace squares.":
-    '红方以 T@d8 打入宝，将死。宝攻击 e7 的将，同时控制 e8，而黑方自己在 e6 的兵和 f7 的车又占掉了九宫最后两个点。',
+  'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.':
+    '红方以炮到 e4 将死。炮隔着己方 e5 的马沿 e 线开火，f5 的兵控制 f6，那是将在九宫内唯一还能去的点。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -320,23 +320,23 @@ const ZH_HANS: Record<string, string> = {
     '**士：**沿对角线走一点，并且始终留在九宫内。',
   '**General:** moves one point orthogonally and stays inside the palace. One xiangqi rule retires itself here: because the palaces sit in opposite corners, the two generals never share a file, so the facing-generals rule never comes into play.':
     '**将帅：**沿横向或纵向走一点，并且始终留在九宫内。有一条象棋规则在这里自然失效：两个九宫位于对角，两位将帅永远不会处于同一路，因此不会出现将帅照面的情况。',
-  '**Soldier:** moves one point forward or sideways, never backward. Unlike a standard xiangqi soldier, it can move sideways from the opening move.':
-    '**兵：**向前或横向走一点，不能后退。与标准象棋的兵不同，它从开局起就能横走。',
+  '**Soldier:** moves one point forward, never backward. Once it crosses the river it may also step one point sideways, exactly as in xiangqi. The Treasure is the other piece the river holds back: it never crosses at all.':
+    '**兵：**每次向前走一点，不能后退。过河之后还可以横走一点，与象棋完全相同。宝是另一个被河界挡住的棋子：它永远不能过河。',
   '**Treasure:** the one new piece. It steps one point in any of the eight directions, is not confined to the palace, and never promotes. It is a flexible defender near the palace and an attacker after it advances or returns as a drop.':
     '**宝：**唯一的新棋子。它可以向八个方向中的任一方向走一点，不受九宫限制，也不会升变。靠近九宫时它是灵活的守子，前进或打入后则可用于进攻。',
   'The Treasure steps one point in any of the eight directions. Here it has eight moves, including the capture on e5.':
     '「宝」可以向八个方向中的任一方向走一点。此处它有八种走法，包括吃掉 e5 的棋子。',
-  'There are no promotions and no past-river changes. Soldiers move the same on both sides of the river; the river only stops the Elephant, which never crosses it.':
-    '没有升变，也没有过河后的走法变化。兵在河界两侧的走法相同；河界只限制永远不能过河的象。',
+  'There are no promotions. The river matters three ways: the Soldier gains its sideways step by crossing it, and neither the Elephant nor the Treasure may cross it at all.':
+    '没有升变。河界有三重意义：兵过河后获得横走，而象和宝都完全不能过河。',
   'Capture, hold, drop': '吃子、持子、打入',
   'When you capture any piece other than the General, it changes to your color and enters your reserve. Both reserves are open information, have no size limit, and keep pieces for as long as needed. On your turn, either move a piece on the board or drop one piece from your reserve onto an empty point. Generals are never captured or held in reserve.':
     '吃掉将帅以外的任何敌子后，它会变成你的颜色并进入持子。双方持子都是公开信息，没有数量上限，也可保留任意久。轮到你时，可以移动盘面棋子，也可以把一枚持子打入空点。将帅不会被吃，也不会进入持子。',
-  'Chariots, Horses, Cannons, Soldiers, and Treasures may drop on any empty point. Advisors and Elephants keep their normal territory restrictions.':
-    '车、马、炮、兵和宝可以打入任何空点。士和象仍须遵守各自通常的区域限制。',
-  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.':
-    '被吃的棋子可以落在哪里。车、马、炮、兵和宝可以打入任何空点；象只能留在己方半场，士只能留在己方九宫。',
-  'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a dropped Soldier can step sideways wherever it lands. The one limit is the usual one: no move, drop included, may leave your own general in check.':
-    '打入的棋子立即生效。打入可以将军或将死，打入的兵无论落在哪里都可以横走。唯一限制与平常相同：任何着法，包括打入，都不能让己方将帅处于被将军状态。',
+  'Chariots, Horses, Cannons, and Soldiers may drop on any empty point. Advisors, Elephants, and Treasures keep their normal territory restrictions.':
+    '车、马、炮和兵可以打入任何空点。士、象和宝仍须遵守各自通常的区域限制。',
+  'Where a captured piece may land. The Chariot, Horse, Cannon and Soldier drop on any empty point; the Elephant and the Treasure are held to your own half, and the Advisor to your own palace.':
+    '被吃的棋子可以落在哪里。车、马、炮和兵可以打入任何空点；象和宝只能留在己方半场，士只能留在己方九宫。',
+  'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a Soldier dropped past the river arrives with its sideways step already earned. The one limit is the usual one: no move, drop included, may leave your own general in check.':
+    '打入的棋子立即生效。打入可以将军或将死，打入到河对岸的兵一落子就已经具备横走。唯一限制与平常相同：任何着法，包括打入，都不能让己方将帅处于被将军状态。',
   'How games end': '对局如何结束',
   'Checkmate wins. A player with no legal move also loses, even when not in check. There is no fifty-move or no-progress draw.':
     '将死获胜。即使没有被将军，一方若无合法着法也判负。这里没有五十回合规则或无进展和棋。',
@@ -344,8 +344,8 @@ const ZH_HANS: Record<string, string> = {
     '同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负。若双方都不是唯一的长将方，则重复局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '对局也可能因超时、认输或弃局而结束。',
-  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.':
-    '这盘引擎对局展示持子的两种用途：士先打回九宫防守，随后红方打入宝将死。',
+  'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.':
+    '这盘引擎对局展示了持子的两种用法：象打回己方半场防守，而红方的攻势大多由打入的棋子组成。注意 a1 的宝，它从未离开己方半场。',
   'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
     '这盘棋选自二十盘以同样方式生成的引擎对局。二十盘全部收录在[配套研究](/study/NUVBVjFf)里，每盘一章，并注明引擎评估认为局势发生转折的时刻。',
 
@@ -2090,8 +2090,8 @@ const ZH_HANT: Record<string, string> = {
   'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
     '黑方子力佔優，五子對三子，卻動不了紅方的象，那是場上僅存的最大子，而它正一個一個地吃掉黑方的子。黑方認輸。在暗棋裡，大小壓過純粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
-  "Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black's own soldier on e6 and chariot on f7 take away the last two palace squares.":
-    '紅方以 T@d8 打入寶，將死。寶攻擊 e7 的將，同時控制 e8，而黑方自己在 e6 的兵和 f7 的車又佔掉了九宮最後兩個點。',
+  'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.':
+    '紅方以炮到 e4 將死。炮隔著己方 e5 的馬沿 e 線開火，f5 的兵控制 f6，那是將在九宮內唯一還能去的點。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
@@ -2354,23 +2354,23 @@ const ZH_HANT: Record<string, string> = {
     '**士：**沿對角線走一點，並且始終留在九宮內。',
   '**General:** moves one point orthogonally and stays inside the palace. One xiangqi rule retires itself here: because the palaces sit in opposite corners, the two generals never share a file, so the facing-generals rule never comes into play.':
     '**將帥：**沿橫向或縱向走一點，並且始終留在九宮內。有一條象棋規則在這裡自然失效：兩個九宮位於對角，兩位將帥永遠不會處於同一路，因此不會出現將帥照面的情況。',
-  '**Soldier:** moves one point forward or sideways, never backward. Unlike a standard xiangqi soldier, it can move sideways from the opening move.':
-    '**兵：**向前或橫向走一點，不能後退。與標準象棋的兵不同，它從開局起就能橫走。',
+  '**Soldier:** moves one point forward, never backward. Once it crosses the river it may also step one point sideways, exactly as in xiangqi. The Treasure is the other piece the river holds back: it never crosses at all.':
+    '**兵：**每次向前走一點，不能後退。過河之後還可以橫走一點，與象棋完全相同。寶是另一個被河界擋住的棋子：它永遠不能過河。',
   '**Treasure:** the one new piece. It steps one point in any of the eight directions, is not confined to the palace, and never promotes. It is a flexible defender near the palace and an attacker after it advances or returns as a drop.':
     '**寶：**唯一的新棋子。它可以向八個方向中的任一方向走一點，不受九宮限制，也不會升變。靠近九宮時它是靈活的守子，前進或打入後則可用於進攻。',
   'The Treasure steps one point in any of the eight directions. Here it has eight moves, including the capture on e5.':
     '「寶」可以向八個方向中的任一方向走一點。此處它有八種走法，包括吃掉 e5 的棋子。',
-  'There are no promotions and no past-river changes. Soldiers move the same on both sides of the river; the river only stops the Elephant, which never crosses it.':
-    '沒有升變，也沒有過河後的走法變化。兵在河界兩側的走法相同；河界只限制永遠不能過河的象。',
+  'There are no promotions. The river matters three ways: the Soldier gains its sideways step by crossing it, and neither the Elephant nor the Treasure may cross it at all.':
+    '沒有升變。河界有三重意義：兵過河後獲得橫走，而象和寶都完全不能過河。',
   'Capture, hold, drop': '吃子、持子、打入',
   'When you capture any piece other than the General, it changes to your color and enters your reserve. Both reserves are open information, have no size limit, and keep pieces for as long as needed. On your turn, either move a piece on the board or drop one piece from your reserve onto an empty point. Generals are never captured or held in reserve.':
     '吃掉將帥以外的任何敵子後，它會變成你的顏色並進入持子。雙方持子都是公開資訊，沒有數量上限，也可保留任意久。輪到你時，可以移動盤面棋子，也可以把一枚持子打入空點。將帥不會被吃，也不會進入持子。',
-  'Chariots, Horses, Cannons, Soldiers, and Treasures may drop on any empty point. Advisors and Elephants keep their normal territory restrictions.':
-    '車、馬、炮、兵和寶可以打入任何空點。士和象仍須遵守各自通常的區域限制。',
-  'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.':
-    '被吃的棋子可以落在哪裡。車、馬、炮、兵和寶可以打入任何空點；象只能留在己方半場，士只能留在己方九宮。',
-  'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a dropped Soldier can step sideways wherever it lands. The one limit is the usual one: no move, drop included, may leave your own general in check.':
-    '打入的棋子立即生效。打入可以將軍或將死，打入的兵無論落在哪裡都可以橫走。唯一限制與平常相同：任何著法，包括打入，都不能讓己方將帥處於被將軍狀態。',
+  'Chariots, Horses, Cannons, and Soldiers may drop on any empty point. Advisors, Elephants, and Treasures keep their normal territory restrictions.':
+    '車、馬、炮和兵可以打入任何空點。士、象和寶仍須遵守各自通常的區域限制。',
+  'Where a captured piece may land. The Chariot, Horse, Cannon and Soldier drop on any empty point; the Elephant and the Treasure are held to your own half, and the Advisor to your own palace.':
+    '被吃的棋子可以落在哪裡。車、馬、炮和兵可以打入任何空點；象和寶只能留在己方半場，士只能留在己方九宮。',
+  'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a Soldier dropped past the river arrives with its sideways step already earned. The one limit is the usual one: no move, drop included, may leave your own general in check.':
+    '打入的棋子立即生效。打入可以將軍或將死，打入到河對岸的兵一落子就已經具備橫走。唯一限制與平常相同：任何著法，包括打入，都不能讓己方將帥處於被將軍狀態。',
   'How games end': '對局如何結束',
   'Checkmate wins. A player with no legal move also loses, even when not in check. There is no fifty-move or no-progress draw.':
     '將死獲勝。即使沒有被將軍，一方若無合法著法也判負。這裡沒有五十回合規則或無進展和棋。',
@@ -2378,8 +2378,8 @@ const ZH_HANT: Record<string, string> = {
     '同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負。若雙方都不是唯一的長將方，則重複局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '對局也可能因超時、認輸或棄局而結束。',
-  'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.':
-    '這盤引擎對局展示持子的兩種用途：士先打回九宮防守，隨後紅方打入寶將死。',
+  'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.':
+    '這盤引擎對局展示了持子的兩種用法：象打回己方半場防守，而紅方的攻勢大多由打入的棋子組成。注意 a1 的寶，它從未離開己方半場。',
   'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
     '這盤棋選自二十盤以同樣方式生成的引擎對局。二十盤全部收錄在[配套研究](/study/NUVBVjFf)裡，每盤一章，並註明引擎評估認為局勢發生轉折的時刻。',
 

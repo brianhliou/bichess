@@ -4,8 +4,8 @@ import { type AnnouncementKind, announcementSlug, announcements } from './announ
 import { localizedArticleHref } from './article-i18n.js';
 import { articles } from './articles-data.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
+import { newsDiscInkForKind, newsDiscMarkForKind } from './news-disc.js';
 import { buildNewsPage } from './news-page.js';
-import { uiIconForAnnouncementKind } from './ui-icon.js';
 import {
   rulesHrefPublicSurfaceEnabled,
   variantPublicSurfaceEnabled,
@@ -122,8 +122,12 @@ describe('landing announcements', () => {
 
   it('renders more rows than the box shows, and scrolls the rest', () => {
     const panel = buildLandingAnnouncements();
-    const rows = panel.querySelectorAll('.landing-news-update');
-    const visible = [...panel.querySelectorAll<HTMLElement>('.landing-news-headline')];
+    const rows = panel.querySelectorAll('.landing-news-update[data-announcement-kind]');
+    const visible = [
+      ...panel.querySelectorAll<HTMLElement>(
+        '.landing-news-update[data-announcement-kind] .landing-news-headline',
+      ),
+    ];
 
     // The box's height comes from the band beside it, so the cap is only there
     // to bound the DOM: it has to clear what any plausible box height shows.
@@ -135,7 +139,9 @@ describe('landing announcements', () => {
     const panel = buildLandingAnnouncements();
     const dates = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-date')];
 
-    expect(dates).toHaveLength(panel.querySelectorAll('.landing-news-update').length);
+    expect(dates).toHaveLength(
+      panel.querySelectorAll('.landing-news-update[data-announcement-kind]').length,
+    );
     for (const date of dates) {
       const stamp = date.querySelector('time')?.dateTime ?? '';
       expect(stamp).toMatch(/^2026-\d{2}-\d{2}$/);
@@ -155,12 +161,14 @@ describe('landing announcements', () => {
     const panel = buildLandingAnnouncements();
     const links = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')];
 
-    expect(links).toHaveLength(panel.querySelectorAll('.landing-news-update').length);
+    expect(links).toHaveLength(
+      panel.querySelectorAll('.landing-news-update[data-announcement-kind]').length,
+    );
     for (const link of links) {
       expect(link.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
     }
     // Every row's headline and its date agree on the target.
-    const rows = [...panel.querySelectorAll('.landing-news-update')];
+    const rows = [...panel.querySelectorAll('.landing-news-update[data-announcement-kind]')];
     for (const row of rows) {
       const headline = row.querySelector('a.landing-news-link')?.getAttribute('href');
       const date = row.querySelector('a.landing-news-date')?.getAttribute('href');
@@ -204,26 +212,45 @@ describe('landing announcements', () => {
     }
   });
 
-  it('marks feed rows by supported post type and renders icon markers', () => {
+  it('marks feed rows by supported post type and renders disc markers', () => {
     const firstRow = buildLandingAnnouncements().querySelector<HTMLElement>('.landing-news-update');
     const marker = firstRow?.querySelector<HTMLElement>('.landing-news-marker');
 
     // The invariant is that the marker agrees with the row's own kind and
-    // renders that kind's icon, whatever the newest announcement happens to be.
+    // renders that kind's mark, whatever the newest announcement happens to be.
     const kind = firstRow?.dataset.announcementKind;
     expect(kind).toBeTruthy();
     expect(marker?.dataset.announcementKind).toBe(kind);
     // Resolved through the same mapping the view uses, rather than assuming the
-    // icon is named after the kind, so the assertion survives a remap.
-    const icon = uiIconForAnnouncementKind(kind as AnnouncementKind);
-    expect(marker?.querySelector(`svg.ui-icon-${icon}`)).not.toBeNull();
+    // mark is named after the kind, so the assertion survives a remap.
+    const mark = newsDiscMarkForKind(kind as AnnouncementKind);
+    const disc = marker?.querySelector<SVGSVGElement>('svg.landing-news-disc');
+    expect(disc?.dataset.mark).toBe(mark);
+    expect(disc?.classList.contains(`landing-news-disc-${mark}`)).toBe(true);
+    // The disc carries its own ring and fill, so the marker needs no icon font
+    // or currentColor to render: nothing in it is a ui-icon.
+    expect(marker?.querySelector('svg.ui-icon')).toBeNull();
   });
 
-  it('gives every announcement kind its own glyph', () => {
-    const kinds: AnnouncementKind[] = ['release', 'update', 'article', 'status'];
-    const icons = kinds.map((kind) => uiIconForAnnouncementKind(kind));
+  it('ends the timeline on an archive disc that links to /feed', () => {
+    const box = buildLandingAnnouncements();
+    const rows = box.querySelectorAll<HTMLElement>('.landing-news-update');
+    const last = rows[rows.length - 1];
+    expect(last?.classList.contains('landing-news-more')).toBe(true);
+    expect(last?.tagName).toBe('A');
+    expect((last as HTMLAnchorElement).getAttribute('href')).toBe('/feed');
+    expect(last?.querySelector('svg.landing-news-disc-more')).not.toBeNull();
+    // The archive row is not an announcement: it carries no kind.
+    expect(last?.dataset.announcementKind).toBeUndefined();
+  });
 
-    expect(new Set(icons).size).toBe(kinds.length);
+  it('gives every announcement kind its own mark, and both inks a use', () => {
+    const kinds: AnnouncementKind[] = ['release', 'update', 'article', 'status'];
+    const marks = kinds.map((kind) => newsDiscMarkForKind(kind));
+    expect(new Set(marks).size).toBe(kinds.length);
+
+    const inks = new Set(kinds.map((kind) => newsDiscInkForKind(kind)));
+    expect(inks).toEqual(new Set(['red', 'black']));
   });
 
   it('localizes the News rail and feed chrome', () => {

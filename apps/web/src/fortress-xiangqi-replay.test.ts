@@ -18,10 +18,10 @@ describe('Fortress Xiangqi article replay', () => {
     const block = articleReplayBlock();
     const replay = replayFortressXiangqiNotation(block.spec.moves);
 
-    expect(replay.tokens).toHaveLength(87);
-    expect(replay.moves).toHaveLength(87);
-    expect(replay.states).toHaveLength(88);
-    expect(replay.moves.filter(isFortressXiangqiDropMove)).toHaveLength(20);
+    expect(replay.tokens).toHaveLength(75);
+    expect(replay.moves).toHaveLength(75);
+    expect(replay.states).toHaveLength(76);
+    expect(replay.moves.filter(isFortressXiangqiDropMove)).toHaveLength(19);
     expect(block.caption).toBeUndefined();
     expect(replay.states.at(-1)?.status).toMatchObject({
       type: 'finished',

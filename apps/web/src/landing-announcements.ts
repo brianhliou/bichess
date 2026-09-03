@@ -4,8 +4,8 @@ import { localizeAnnouncement } from './announcement-i18n.js';
 import { type Announcement, announcementSlug, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
+import { buildNewsDisc, buildNewsMoreDisc } from './news-disc.js';
 import { buildSiteBox } from './site-box.js';
-import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
 import { rulesHrefPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // All announcements render as one dated News feed box (lichess lobby__feed
@@ -50,6 +50,11 @@ export function buildLandingAnnouncements(locale: Locale = currentLocale()): HTM
   for (const entry of ordered.slice(0, MAX_FEED_ROWS)) {
     updates.append(renderFeedEntry(entry, locale));
   }
+  // The timeline ends on a disc that leads to the archive, so a reader who
+  // scrolls to the bottom finds the way on, in the same grammar as the rows.
+  // The header's "More »" stays: it is the affordance that is visible without
+  // scrolling (the reason a terminal row alone was retired on 2026-08-27).
+  updates.append(renderMoreRow(locale));
   body.append(updates);
 
   return box;
@@ -68,7 +73,8 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   marker.className = `landing-news-marker landing-news-marker-${entry.kind}`;
   marker.dataset.announcementKind = entry.kind;
   marker.setAttribute('aria-hidden', 'true');
-  marker.append(buildUiIcon(uiIconForAnnouncementKind(entry.kind), 'landing-news-marker-icon'));
+  // A xiangqi-style disc, not a line icon: see news-disc.ts.
+  marker.append(buildNewsDisc(entry.kind));
 
   const content = document.createElement('div');
   content.className = 'landing-news-content';
@@ -110,6 +116,30 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
     body.textContent = entry.body;
     content.append(body);
   }
+
+  row.append(marker, content);
+  return row;
+}
+
+function renderMoreRow(locale: Locale): HTMLElement {
+  const row = document.createElement('a');
+  row.className = 'landing-news-update landing-news-more';
+  row.href = localizedHref('/feed', locale);
+
+  const marker = document.createElement('span');
+  marker.className = 'landing-news-marker landing-news-marker-more';
+  marker.setAttribute('aria-hidden', 'true');
+  marker.append(buildNewsMoreDisc());
+
+  // One label, one hover: the row is a single link, and a date line over a
+  // headline (the entry-row shape) gave it two hover states and read as two
+  // targets.
+  const content = document.createElement('div');
+  content.className = 'landing-news-content landing-news-more-content';
+  const label = document.createElement('span');
+  label.className = 'landing-news-more-label';
+  label.textContent = t('site.more', {}, locale);
+  content.append(label);
 
   row.append(marker, content);
   return row;

@@ -120,7 +120,9 @@ body.embed-body {
 }
 
 /* ── Game embed (/embed/game/:roomId) ─────────────────────────────────────────
-   Board beside a move list, stacked under STACK_BELOW_PX (embed-game-page.ts
+   One card, the study embed's grammar (articles.css .xq-replay-annotated): a
+   bordered panel holding the board column and, behind a rule, the move sheet.
+   Board beside the sheet, stacked under STACK_BELOW_PX (embed-game-page.ts
    keeps the same number for its board arithmetic). The board column's width is
    set in JS from the frame's box and the variant's aspect ratio, because the
    renderers are width-driven (svg height: auto) and the frame is a fixed box:
@@ -128,87 +130,199 @@ body.embed-body {
    overflows a narrow one. */
 .embed-game {
   display: flex;
-  flex: 1;
-  min-height: 0;
-  gap: 10px;
-  align-items: flex-start;
-  justify-content: center;
+  /* The card is as tall as its board column and no taller: a stretched card
+     opened a gap between the bottom seat bar and the controls whenever the
+     board was bounded by width rather than height. The sheet's height follows
+     the column because its scroller is out of flow (below). */
+  flex: 0 0 auto;
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  background: var(--site-panel, transparent);
 }
 
 .embed-game-board {
+  display: flex;
   flex: 0 0 auto;
+  flex-direction: column;
   max-width: 100%;
   min-width: 0;
-}
-
-.embed-game-rail {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
   min-height: 0;
-  max-width: 168px;
-  align-self: stretch;
-  gap: 6px;
 }
 
-.embed-game-moves {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
-  border-radius: 6px;
-  background: var(--site-panel, transparent);
+.embed-game-board .embed-board {
+  flex: 0 0 auto;
 }
 
-.embed-game-moves .review-move-list {
-  margin: 0;
-  border: 0;
-  background: transparent;
+/* Seat bars, top and bottom of the board, the study card's own: the name in
+   heading ink, the clock or score beside it. Scoped to the game card so the TV
+   frame keeps its smaller rows. */
+.embed-game .showcase-seat {
+  padding: 9px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+  color: var(--site-heading, inherit);
 }
 
+.embed-game .showcase-seat-clock {
+  font-weight: 500;
+}
+
+/* Back, forward, and the two jumps, with the ply count between them. Under the
+   board, not under the sheet: the reader's eye is on the board when stepping. */
 .embed-game-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  align-items: stretch;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
 }
 
 .embed-game-control {
-  flex: 1;
-  min-width: 0;
-  padding: 4px 0;
-  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
-  border-radius: 4px;
-  background: var(--site-panel, transparent);
-  color: var(--site-text, inherit);
-  font-size: 13px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--site-muted);
   cursor: pointer;
 }
 
 .embed-game-control:hover {
-  border-color: var(--site-link);
+  background: var(--site-hover);
+  color: var(--site-heading, inherit);
+}
+
+.embed-game-control-icon {
+  display: block;
+  flex: none;
 }
 
 .embed-game-status {
-  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
   min-width: 52px;
+  padding: 0 10px;
   color: var(--site-muted);
-  font-size: 12px;
-  text-align: right;
+  font-size: 11px;
+  text-align: center;
+  justify-content: center;
   font-variant-numeric: tabular-nums;
 }
 
+/* Out of flow on purpose, the study card's own trick: in normal flow a 180-ply
+   list would set the card's height (a stretched flex item still contributes its
+   content height), so the sheet is absolutely positioned inside the rail and the
+   card's height comes from the board column alone. */
+.embed-game-rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+.embed-game-rail-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.embed-game-moves {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The shared review list arrives as a padded, bordered, self-capped panel (it
+   sits under a scrubber on the review page). Here it IS the column: no second
+   frame inside the card, and the rows fill the rail and scroll within it
+   rather than stopping at the list's own 52vh cap with dead space beneath. */
+.embed-game-moves .review-move-list {
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  margin: 0;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.embed-game-moves .review-move-list__rows {
+  flex: 1;
+  max-height: none;
+  gap: 1px;
+}
+
+/* A score sheet, the study's: number, then the two moves in fixed halves, so
+   moves line up down the column instead of drifting with label length. */
+.embed-game-moves .review-move-list__row {
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px;
+  background: transparent;
+}
+
+.embed-game-moves .review-move-list__number {
+  padding-left: 0;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.embed-game-moves .review-move-list__move {
+  padding: 3px 5px;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-heading, inherit);
+}
+
+.embed-game-moves .review-move-list__move:hover {
+  background: var(--site-hover);
+}
+
+.embed-game-moves .review-move-list__move--current,
+.embed-game-moves .review-move-list__move--current:hover {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.embed-game-result {
+  flex: none;
+  margin-top: 6px;
+  padding: 8px 4px 10px;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
 @media (max-width: 479px) {
+  /* Stacked, the card takes the whole frame again: the sheet is under the
+     board, so whatever height the board does not need is the sheet's. */
   .embed-game {
+    flex: 1;
     flex-direction: column;
     align-items: center;
   }
-  .embed-game-rail {
-    max-width: none;
+  .embed-game-board {
     width: 100%;
-    align-self: auto;
+  }
+  .embed-game-rail {
+    width: 100%;
     flex: 1;
+    min-height: 112px;
+    border-left: 0;
+    border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
   }
 }
 
@@ -283,11 +397,85 @@ body.embed-body {
 /* The chessground fallback (fog chess and its cousins) renders the review
    triptych: white | truth | black. A finished game's truth board is public, so
    the embed shows exactly that one and hides the two fogged views, the same
-   isolation /watch applies. */
+   isolation /watch applies. The renderer mounts onto the host itself, so the
+   host IS .replay-page: a page layout with a viewport-high minimum and 16px of
+   padding, neither of which belongs inside a card. */
+.embed-board.replay-page {
+  min-height: 0;
+  padding: 0;
+  gap: 0;
+}
+
 .embed-board .replay-page,
 .embed-board .replay-layout {
   width: 100%;
   max-width: 100%;
+}
+
+/* chessground is square and fills --cg-w; the base rule caps it at 380px, the
+   review's column width. Here the column is the board's width (set in JS), so
+   the board fills it, the same override /watch applies to its board box. */
+.embed-board .replay-pane-truth .replay-board.cg-wrap {
+  --cg-w: 100%;
+  width: 100%;
+  box-shadow: none;
+}
+
+/* The chess renderer's board-edge clock rows wear the seat bar's look inside
+   the game card: no box of their own, the name first in heading ink, the score
+   against the far edge. "to move" and the pane's status line are live-room
+   chrome a finished game has no use for. */
+/* Four classes deep on purpose: the compact review layout styles the same row
+   through three (.replay-compact .replay-pane-clock-slot .replay-clock-row),
+   and which chunk loads last is not ours to rely on. */
+.embed-game .embed-board .replay-pane .replay-clock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--site-heading, inherit);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+}
+
+.embed-game .embed-board .replay-pane .replay-clock-side {
+  order: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.embed-game .embed-board .replay-pane .replay-clock-time {
+  order: 1;
+  font-size: inherit;
+  font-weight: 500;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The slot and the rows are capped at the review's 380px column; the card's
+   column is the board's width. */
+.embed-game .embed-board .replay-pane .replay-pane-clock-slot,
+.embed-game .embed-board .replay-pane .replay-clock-row {
+  width: 100%;
+  max-width: none;
+}
+
+.embed-game .embed-board .replay-pane .replay-clock-to-move,
+.embed-game .embed-board .replay-pane .replay-pane-status {
+  display: none;
 }
 
 .embed-board .replay-layout:not(.replay-layout-solo) {

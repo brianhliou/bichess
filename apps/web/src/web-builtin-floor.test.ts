@@ -39,7 +39,7 @@ function repoRoot(): string {
   let dir = process.cwd();
   while (!existsSync(join(dir, 'apps/web/src'))) {
     const parent = dirname(dir);
-    if (parent === dir) throw new Error('repo root not found from ' + process.cwd());
+    if (parent === dir) throw new Error(`repo root not found from ${process.cwd()}`);
     dir = parent;
   }
   return resolve(dir);
