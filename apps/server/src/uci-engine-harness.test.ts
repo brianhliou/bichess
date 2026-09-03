@@ -688,3 +688,55 @@ test('UciWarmSessionCache discards a session whose request failed and spawns afr
     cache.closeAll();
   }
 });
+
+// ── A timeout names what the engine said before it went silent ───────────────
+//
+// The 2026-09-02/03 jieqi timeouts (#335) arrived as the bare "move timed out":
+// nothing could say whether the engine had reached `readyok` (a start-up stall)
+// or was inside a search that would not stop. Now the rejection carries the
+// handshake timestamps and the last info line, on both the one-shot and the
+// warm-session paths.
+
+test('runUciBestmove timeout reports the handshake it saw and the last line', async () => {
+  await assert.rejects(
+    runUciBestmove({
+      bin: warmMuteBin,
+      commands: ['uci', 'isready', 'go movetime 50'],
+      timeoutMs: 200,
+      timeoutMessage: 'engine move timed out',
+    }),
+    /engine move timed out after 200ms: uciok@\d+ms, readyok@\d+ms, 0 info line\(s\), last line "readyok"/,
+  );
+});
+
+test('runUciBestmove timeout says so when the engine never answered at all', async () => {
+  const silentBin = writeFakeEngine('silent.mjs', 'process.stdin.on("data", () => {});');
+  await assert.rejects(
+    runUciBestmove({
+      bin: silentBin,
+      commands: ['uci', 'isready', 'go movetime 50'],
+      timeoutMs: 150,
+      timeoutMessage: 'engine move timed out',
+    }),
+    /engine move timed out after 150ms: no output/,
+  );
+});
+
+test('a warm-session request timeout carries the request trace and the init cost', async () => {
+  const cache = new UciWarmSessionCache({ name: 'test-warm-trace' });
+  try {
+    await assert.rejects(
+      cache.withSession({ bin: warmMuteBin, initCommands: ['uci', 'isready'] }, (session) =>
+        session.evalPosition({
+          positionCommand: 'position startpos',
+          goCommand: 'go movetime 50',
+          timeoutMs: 200,
+          timeoutMessage: 'test move timed out',
+        }),
+      ),
+      /test move timed out after 200ms: no output; session init \d+ms/,
+    );
+  } finally {
+    cache.closeAll();
+  }
+});

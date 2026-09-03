@@ -167,17 +167,27 @@ export function reportEngineMoveOk(): void {
  * move after retries"), which is a lie when the engine never answered — and that is
  * the sentence the 2026-09-02 jieqi incident was triaged from.
  */
-function engineFallbackSummary(record: EngineDecisionRecord, displayName: string): string {
+/** What the caller does to the game after the engine failed: resign its seat (a
+ *  scored loss) or, when the bot never answered at the opening, void the game. */
+export type EngineFallbackOutcome = 'resign' | 'abort';
+
+function engineFallbackSummary(
+  record: EngineDecisionRecord,
+  displayName: string,
+  outcome: EngineFallbackOutcome,
+): string {
+  const action =
+    outcome === 'abort' ? 'aborting the game (no result)' : 'resigning the engine seat';
   return record.unreachable
-    ? `${displayName} engine unreachable: no response in ${record.attempts} attempt(s) (${record.last_output}); resigning the engine seat`
-    : `${displayName} engine failed closed: no kernel-legal move after retries; resigning the engine seat`;
+    ? `${displayName} engine unreachable: no response in ${record.attempts} attempt(s) (${record.last_output}); ${action}`
+    : `${displayName} engine failed closed: no kernel-legal move after retries; ${action}`;
 }
 
 /**
  * The engine could not produce an acceptable move. Count it as a fallback, log
  * the full record at error, and page immediately. For perfect-information
  * engines where a rejected move is unambiguously a bug. The caller still
- * performs the terminal action (resign / forfeit).
+ * performs the terminal action (resign / forfeit / abort), named by `outcome`.
  *
  * `displayName` is the variant's human name ("Flip Jungle"); the summary sentence
  * is built here so every variant reports the same two failure modes the same way.
@@ -186,9 +196,10 @@ export function reportEngineFallback(
   record: EngineDecisionRecord,
   logKind: string,
   displayName: string,
+  outcome: EngineFallbackOutcome = 'resign',
 ): void {
   engineCounters.recordMove(true);
-  logger.error({ kind: logKind, ...record }, engineFallbackSummary(record, displayName));
+  logger.error({ kind: logKind, ...record }, engineFallbackSummary(record, displayName, outcome));
   void sendEngineAlertNotification(engineFailClosedAlert(record)).catch(() => {});
 }
 

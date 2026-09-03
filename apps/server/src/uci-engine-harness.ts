@@ -281,6 +281,80 @@ function earlyExitError(
   return new Error(`UCI engine ${basename(bin)} ${how} before returning a result${detail}`);
 }
 
+/**
+ * What the engine said before it went silent. Every runner used to discard the
+ * child's output on a hard timeout and reject with the bare timeout message, so
+ * an alert could not say whether the engine ever reached `readyok` (a start-up
+ * stall: process spawn, hash allocation) or was deep in a search that would not
+ * stop (a search overrun). Prod, 2026-09-02 and 2026-09-03: the jieqi bot
+ * resigned eight games on "pikafish-jieqi move timed out" and nothing in the
+ * logs could separate those two, which is the difference between fixing the
+ * spawn path and fixing the search. The trace rides on the timeout error now.
+ *
+ * `spawn` traces cover a whole one-shot process (handshake + search); `request`
+ * traces cover one `position` + `go` round-trip on a warm session, where the
+ * handshake happened earlier and is reported separately.
+ */
+export class UciOutputTrace {
+  private readonly startedAt = Date.now();
+  private uciokMs: number | null = null;
+  private readyokMs: number | null = null;
+  private infoLines = 0;
+  private lastInfo: { depth: number; timeMs: number | null } | null = null;
+  private lastLine: string | null = null;
+
+  constructor(private readonly phase: 'spawn' | 'request') {}
+
+  note(line: string): void {
+    if (line === '') return;
+    this.lastLine = line;
+    const elapsed = Date.now() - this.startedAt;
+    if (line === 'uciok') {
+      this.uciokMs ??= elapsed;
+    } else if (line === 'readyok') {
+      this.readyokMs ??= elapsed;
+    } else if (line.startsWith('info ')) {
+      this.infoLines += 1;
+      const depth = line.match(/ depth (\d+)/);
+      if (depth) {
+        const time = line.match(/ time (\d+)/);
+        this.lastInfo = { depth: Number(depth[1]), timeMs: time ? Number(time[1]) : null };
+      }
+    }
+  }
+
+  describe(): string {
+    if (this.lastLine === null) return 'no output';
+    const parts: string[] = [];
+    if (this.phase === 'spawn') {
+      parts.push(this.uciokMs === null ? 'no uciok' : `uciok@${this.uciokMs}ms`);
+      parts.push(this.readyokMs === null ? 'no readyok' : `readyok@${this.readyokMs}ms`);
+    }
+    parts.push(`${this.infoLines} info line(s)`);
+    if (this.lastInfo) {
+      const at = this.lastInfo.timeMs === null ? '' : ` at ${this.lastInfo.timeMs}ms`;
+      parts.push(`last depth ${this.lastInfo.depth}${at}`);
+    }
+    const tail = this.lastLine.length > 80 ? `${this.lastLine.slice(0, 77)}...` : this.lastLine;
+    parts.push(`last line "${tail}"`);
+    return parts.join(', ');
+  }
+}
+
+function timeoutError(
+  message: string,
+  timeoutMs: number,
+  trace: UciOutputTrace,
+  extra: string,
+): Error {
+  const detail = extra === '' ? '' : `; ${extra}`;
+  return new Error(`${message} after ${timeoutMs}ms: ${trace.describe()}${detail}`);
+}
+
+function stderrDetail(tail: string): string {
+  return tail === '' ? '' : `stderr: ${tail}`;
+}
+
 export type RunUciBestmoveArgs = {
   /** Absolute path to the engine binary. */
   bin: string;
@@ -308,6 +382,7 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
       stdio: ['pipe', 'pipe', 'pipe'],
       ...(env ? { env: { ...process.env, ...env } } : {}),
     });
+    const trace = new UciOutputTrace('spawn');
     let buf = '';
     let settled = false;
     const advertisedOptions = new Set<string>();
@@ -324,15 +399,21 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
       run();
     };
 
-    const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
-
     const readStderrTail = captureStderrTail(child);
+    const timer = setTimeout(
+      () =>
+        finish(() =>
+          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
+        ),
+      timeoutMs,
+    );
     child.on('error', (err) => finish(() => reject(err)));
     const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
         buf = buf.slice(newline + 1);
+        trace.note(line);
         const option = parseUciOptionLine(line);
         if (option) advertisedOptions.add(option);
         const protocolError = uciProtocolError(line);
@@ -454,6 +535,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
   const { bin, commands, timeoutMs, timeoutMessage } = args;
   return new Promise<UciEval>((resolveEval, reject) => {
     const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const trace = new UciOutputTrace('spawn');
     let buf = '';
     let settled = false;
     let latest: ReturnType<typeof parseInfoScore> | null = null;
@@ -473,15 +555,21 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
       run();
     };
 
-    const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
-
     const readStderrTail = captureStderrTail(child);
+    const timer = setTimeout(
+      () =>
+        finish(() =>
+          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
+        ),
+      timeoutMs,
+    );
     child.on('error', (err) => finish(() => reject(err)));
     const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
         buf = buf.slice(newline + 1);
+        trace.note(line);
         const option = parseUciOptionLine(line);
         if (option) advertisedOptions.add(option);
         const protocolError = uciProtocolError(line);
@@ -619,6 +707,7 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
   const { bin, commands, timeoutMs, timeoutMessage } = args;
   return new Promise<UciMultiPvLine[]>((resolveTable, reject) => {
     const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const trace = new UciOutputTrace('spawn');
     let buf = '';
     let settled = false;
     const table = new Map<number, UciMultiPvLine>();
@@ -636,15 +725,21 @@ export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[
       run();
     };
 
-    const timer = setTimeout(() => finish(() => reject(new Error(timeoutMessage))), timeoutMs);
-
     const readStderrTail = captureStderrTail(child);
+    const timer = setTimeout(
+      () =>
+        finish(() =>
+          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
+        ),
+      timeoutMs,
+    );
     child.on('error', (err) => finish(() => reject(err)));
     const consume = (): void => {
       let newline = buf.indexOf('\n');
       while (newline >= 0) {
         const line = buf.slice(0, newline).trim();
         buf = buf.slice(newline + 1);
+        trace.note(line);
         const option = parseUciOptionLine(line);
         if (option) advertisedOptions.add(option);
         const protocolError = uciProtocolError(line);
@@ -726,6 +821,8 @@ export class UciEngineSession {
   private readonly advertisedOptions = new Set<string>();
   private chain: Promise<unknown> = Promise.resolve();
   private readonly readyPromise: Promise<void>;
+  private readonly spawnedAt = Date.now();
+  private initDurationMs: number | null = null;
 
   constructor(private readonly config: UciEngineSessionConfig) {
     this.child = spawn(config.bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -748,6 +845,13 @@ export class UciEngineSession {
    *  advertised; rejects on spawn failure, protocol error, or init timeout. */
   ready(): Promise<void> {
     return this.readyPromise;
+  }
+
+  /** Spawn-to-`readyok` wall time in ms, or null until the handshake completes.
+   *  This is the cost a per-move spawn paid on every ply (process start, hash
+   *  allocation, net load); a warm session pays it once. */
+  get initMs(): number | null {
+    return this.initDurationMs;
   }
 
   /**
@@ -781,12 +885,16 @@ export class UciEngineSession {
         let latest: ReturnType<typeof parseInfoScore> | null = null;
         // Only used when the whole search produced nothing but bounded lines.
         let fallback: ReturnType<typeof parseInfoScore> | null = null;
+        const trace = new UciOutputTrace('request');
         const timer = setTimeout(() => {
-          this.fail(new Error(args.timeoutMessage));
+          const init =
+            this.initDurationMs === null ? 'init pending' : `init ${this.initDurationMs}ms`;
+          this.fail(timeoutError(args.timeoutMessage, args.timeoutMs, trace, `session ${init}`));
         }, args.timeoutMs);
         timer.unref();
         this.consume({
           onLine: (line) => {
+            trace.note(line);
             const score = parseInfoScore(line);
             // A bounded line is an aborted iteration; keep it only as a last resort.
             if (score) {
@@ -854,12 +962,16 @@ export class UciEngineSession {
           if (row.bound === null) exact.set(row.index, row);
           else if (!exact.has(row.index)) bounded.set(row.index, row);
         };
+        const trace = new UciOutputTrace('request');
         const timer = setTimeout(() => {
-          this.fail(new Error(args.timeoutMessage));
+          const init =
+            this.initDurationMs === null ? 'init pending' : `init ${this.initDurationMs}ms`;
+          this.fail(timeoutError(args.timeoutMessage, args.timeoutMs, trace, `session ${init}`));
         }, args.timeoutMs);
         timer.unref();
         this.consume({
           onLine: (line) => {
+            trace.note(line);
             const row = parseInfoMultiPv(line);
             if (row) keep(row);
             else if (line.startsWith('info ') && !line.includes(' multipv ')) {
@@ -958,14 +1070,18 @@ export class UciEngineSession {
         reject(this.exitError);
         return;
       }
+      const initTimeoutMs = this.config.initTimeoutMs ?? 15_000;
+      const trace = new UciOutputTrace('spawn');
       const timer = setTimeout(() => {
-        this.fail(new Error(`${this.label()} init timed out`));
-      }, this.config.initTimeoutMs ?? 15_000);
+        this.fail(timeoutError(`${this.label()} init timed out`, initTimeoutMs, trace, ''));
+      }, initTimeoutMs);
       timer.unref();
       this.consume({
         onLine: (line) => {
+          trace.note(line);
           if (line === 'readyok') {
             clearTimeout(timer);
+            this.initDurationMs = Date.now() - this.spawnedAt;
             this.consumer = null;
             const unsupported = configuredUciOptionNames(this.config.initCommands).filter(
               (option) => !this.advertisedOptions.has(option),

@@ -112,9 +112,15 @@ export function isGameEndReason(value: unknown): value is GameEndReason {
   return typeof value === 'string' && (gameEndReasons as readonly string[]).includes(value);
 }
 
-export type AbortReason = 'pregame-timeout' | 'user-abort';
+// 'engine-unavailable': a PvE bot could not be reached for its opening move, so the
+// game is voided (no result) instead of scored as a resignation the human never earned.
+export type AbortReason = 'pregame-timeout' | 'user-abort' | 'engine-unavailable';
 
-export const abortReasons: readonly AbortReason[] = ['pregame-timeout', 'user-abort'] as const;
+export const abortReasons: readonly AbortReason[] = [
+  'pregame-timeout',
+  'user-abort',
+  'engine-unavailable',
+] as const;
 
 export function isAbortReason(value: unknown): value is AbortReason {
   return typeof value === 'string' && (abortReasons as readonly string[]).includes(value);

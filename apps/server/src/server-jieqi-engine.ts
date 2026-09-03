@@ -34,6 +34,7 @@ import {
   JIEQI_ENGINE_VERSION,
   jieqiEngineTierFor,
   jieqiLiveEngineMove,
+  pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
 import {
   jieqiMoveToPikafishUci,
@@ -182,13 +183,15 @@ export async function playJieqiEngineMoveIfReady(
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
   // than silently substituting a threat-blind legal move.
+  const startedAt = Date.now();
+  const newGame = gameMoves.length <= 1;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () => jieqiLiveEngineMove(engineId, fen, { movetimeMs, moves }),
+    requestMove: () => jieqiLiveEngineMove(engineId, fen, { movetimeMs, moves, newGame }),
     validate: (uci) => {
       const parsed = pikafishUciToJieqiMove(uci);
       return parsed && isJieqiLegalMove(room.projection.state, parsed) ? parsed : null;
@@ -231,19 +234,39 @@ export async function playJieqiEngineMoveIfReady(
       legalUci: getJieqiLegalMoves(room.projection.state).map(jieqiMoveToPikafishUci),
       attempts,
     });
-    reportEngineFallback(record, 'jieqi_engine_failed_closed', 'Jieqi');
-    const resign: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = {
-      type: 'seat-resigned',
-      at: Date.now(),
-      roomId: room.id,
-      color: seat,
-    };
-    const seq = await ctx.appendEvent(room, resign);
-    ctx.broadcastEventAppended(room, resign, seq);
+    // An engine that never answered at the opening is an infrastructure failure, not
+    // a game: void it instead of handing the human a win by "resignation" (#296).
+    // The tenant runtime only applies an abort while the full-move number is 1, so
+    // the same guard (at most one ply played) is what makes it a real abort here.
+    const abortable = record.unreachable && newGame;
+    reportEngineFallback(
+      record,
+      'jieqi_engine_failed_closed',
+      'Jieqi',
+      abortable ? 'abort' : 'resign',
+    );
+    const terminal: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = abortable
+      ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'engine-unavailable' }
+      : { type: 'seat-resigned', at: Date.now(), roomId: room.id, color: seat };
+    const seq = await ctx.appendEvent(room, terminal);
+    ctx.broadcastEventAppended(room, terminal, seq);
     return;
   }
 
   reportEngineMoveOk();
+  logger.info(
+    {
+      kind: 'jieqi_engine_move_ok',
+      room_id: room.id,
+      engine_id: engineId,
+      ply: gameMoves.length,
+      movetime_ms: movetimeMs,
+      elapsed_ms: Date.now() - startedAt,
+      attempts: attempts.length,
+      warm: pikafishJieqiWarmSessionStats(),
+    },
+    'Jieqi engine move accepted',
+  );
   const event: TenantRoomEvent<JieqiColor, JieqiMove, JieqiSpecId> = {
     type: 'move-played',
     at: Date.now(),

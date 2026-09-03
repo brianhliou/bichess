@@ -7,6 +7,8 @@ import { WebSocketServer } from 'ws';
 import './variant-tenant/register-tenants.js';
 import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
+import { prewarmJieqiEngine } from './jieqi-engine.js';
+import { jieqiTenant } from './jieqi-tenant.js';
 import { runMigrations } from './migrate.js';
 import * as persistence from './persistence.js';
 import type { RematchOrchestrator } from './rematch.js';
@@ -304,6 +306,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   const boundPort = typeof address === 'object' && address ? address.port : port;
   if (!options.port && port !== 0) {
     console.log(`mistboard server listening on http://localhost:${boundPort}`);
+    // Park a jieqi engine process now, so the first PvE move after a deploy does
+    // not pay the spawn and hash allocation on a player's clock (#335). Real boots
+    // only: the test harness passes an explicit port and must not spawn engines.
+    if (jieqiTenant.enabled()) void prewarmJieqiEngine();
   }
 
   return {
