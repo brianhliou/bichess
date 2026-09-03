@@ -5,15 +5,25 @@
    Row rhythm (reworked 2026-08-27): the markers were 48px rings with 22px
    glyphs at an 86px content indent and 24px between rows, which fit three
    entries in a box sized by the blog + video rows beside it. Halving the ring
-   and clamping the body to two lines roughly doubles what the same box holds. */
+   and clamping the body to two lines roughly doubles what the same box holds.
+
+   Markers (reworked 2026-09-02): the 26px accent ring with a 13px line icon
+   read as a ring with a smudge in it, and put the marker, the date and the rail
+   in one green. It is now a 36px xiangqi-style disc (news-disc.ts) with its own
+   cream fill and red or black ring, and the rail steps back to the soft border
+   colour so the discs carry the column. The wider disc costs about half a row
+   in the box. The column sits 14px in from the box edge and 14px clear of the
+   text, so the chain reads as its own object rather than a gutter. The rail
+   runs under the discs and touches each ring: a panel-coloured halo was tried
+   and read as a gap in the chain above and below every disc. */
 .landing-announcements {
   --landing-feed-accent: var(--site-accent);
-  --landing-feed-content-x: 40px;
+  --landing-feed-content-x: 64px;
   --landing-feed-line-half: 1px;
   --landing-feed-line-width: 2px;
-  --landing-feed-marker-half: 13px;
-  --landing-feed-marker-size: 26px;
-  --landing-feed-rail-x: 23px;
+  --landing-feed-marker-half: 18px;
+  --landing-feed-marker-size: 36px;
+  --landing-feed-rail-x: 32px;
 
   box-sizing: border-box;
   display: flex;
@@ -72,7 +82,7 @@
   bottom: var(--landing-feed-marker-half);
   left: calc(var(--landing-feed-rail-x) - var(--landing-feed-line-half));
   width: var(--landing-feed-line-width);
-  background: var(--landing-feed-accent);
+  background: var(--site-border-soft);
   content: "";
 }
 
@@ -81,7 +91,7 @@
   grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
   column-gap: 0;
   padding-inline-start: 0;
-  margin-top: 12px;
+  margin-top: 13px;
 }
 
 .landing-news-update:first-child {
@@ -99,22 +109,48 @@
   justify-content: center;
   width: var(--landing-feed-marker-size);
   height: var(--landing-feed-marker-size);
-  margin-top: -2px;
+  margin-top: -1px;
   margin-inline-start: calc(var(--landing-feed-rail-x) - var(--landing-feed-marker-half));
-  /* No white drop-shadow under the ring: it rendered as an offset white
-     under-circle that cut the gold timeline line just before it reached the
-     ring. The panel-colored fill still backs the icon for legibility. */
-  border: 2px solid var(--landing-feed-accent);
   border-radius: 50%;
-  background: var(--site-panel);
-  color: var(--landing-feed-accent);
-  overflow: hidden;
+  /* The disc paints its own cream fill and inked ring; the rail meets the ring
+     directly. No halo: it cut the chain. No drop shadow: the old ring's one
+     rendered as an offset under-circle. */
   line-height: 1;
 }
 
-.landing-news-marker .ui-icon {
-  width: 13px;
-  height: 13px;
+/* The terminal row is one link: the archive disc plus its label. */
+.landing-news-more {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-news-more-content {
+  display: flex;
+  align-items: center;
+  min-height: var(--landing-feed-marker-size);
+}
+
+.landing-news-more-label {
+  color: var(--site-heading);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.landing-news-more:hover .landing-news-more-label,
+.landing-news-more:focus-visible .landing-news-more-label {
+  color: var(--site-link);
+  text-decoration: underline;
+}
+
+.landing-news-more:focus-visible {
+  outline: none;
+}
+
+.landing-news-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .landing-news-content {
