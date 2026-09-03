@@ -401,6 +401,19 @@ async function main(): Promise<void> {
   }
 
   const suppliedCookie = process.env.MISTBOARD_SESSION_COOKIE?.trim();
+  // A cookie is an HTTP header value, so anything outside Latin-1 dies inside
+  // fetch with "Cannot convert argument to a ByteString", naming a character
+  // index and nothing else. The usual cause is pasting the placeholder from the
+  // usage block above, ellipsis and all, instead of the real value. Say that.
+  if (suppliedCookie && /[^\u0000-\u00ff]/.test(suppliedCookie)) {
+    const bad = [...suppliedCookie].find((ch) => ch.charCodeAt(0) > 255);
+    throw new Error(
+      `MISTBOARD_SESSION_COOKIE contains a non-Latin-1 character (${JSON.stringify(bad)}). ` +
+        'It looks like the placeholder was pasted rather than the real cookie. Copy the VALUE of ' +
+        'mistboard_session from DevTools > Application > Cookies and pass it as ' +
+        "MISTBOARD_SESSION_COOKIE='mistboard_session=<value>'.",
+    );
+  }
   if (!suppliedCookie && !email) {
     console.error('--email required (dev server), or set MISTBOARD_SESSION_COOKIE');
     process.exitCode = 1;
