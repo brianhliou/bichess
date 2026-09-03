@@ -1,13 +1,18 @@
-4f8577574a92f72735aee365af7b56ef28d708a4
+e75cee3a3698794b4b6f5574a8774f0575bc0c21
 # ^ The commit the prod image builds (railpack build step reads the first line; this
 # comment is ignored).
 #
-# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus exactly one
-# patch, carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
+# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus two
+# patches, carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
 # `jieqi_old-mistboard`, and railpack clones THAT repo rather than
-# official-pikafish/Pikafish. `git diff 23b9466c 4f857757` is a single hunk in
-# src/misc.h. The upstream base is unchanged, so moving to a newer upstream jieqi_old
-# is a cherry-pick, not a merge.
+# official-pikafish/Pikafish. The upstream base is unchanged, so moving to a newer
+# upstream jieqi_old is a cherry-pick, not a merge. The pinned commit must be
+# reachable from that branch: the build clones it --single-branch.
+#
+# e75cee3a (2026-09-03): a Threads.stop check and a main-thread check_time() at
+# qsearch entry (src/search.cpp). qsearch had neither, and the dark-piece recursion
+# re-enters it at depth 0, so `go movetime` could not stop a thread inside those
+# tails and bestmove waited on the slowest helper. Found while root-causing #335.
 #
 # The patch stops ScoreCalc averaging a forced loss away at dark-piece flip nodes: a
 # mate was clamped to +/-DARKVALRATE (2862) and then diluted by the other revealed

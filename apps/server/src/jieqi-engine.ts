@@ -36,7 +36,9 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // 0.3.0 (2026-08-31): new binary (ScoreCalc flip-node fix, pikafish-jieqi.ref 4f857757).
 // 0.3.1 (2026-09-03): live moves on warm sessions (hash allocated once per process, the
 // 8 s deadline covers only the search), `ucinewgame` at a game's first engine move.
-export const JIEQI_ENGINE_VERSION = '0.3.1';
+// 0.3.2 (2026-09-03): new binary (pikafish-jieqi.ref e75cee3a): qsearch honours
+// `go movetime` via a Threads.stop check and a main-thread check_time() at its entry.
+export const JIEQI_ENGINE_VERSION = '0.3.2';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -64,7 +66,10 @@ export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.4.0';
 // engines under one identical key. Version alone could not catch that, being hand-maintained.
 // jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
 // cannot land without moving the key and forcing a recompute.
-export const PIKAFISH_JIEQI_ENGINE_REF = '4f857757';
+// e75cee3a (2026-09-03): qsearch honours Threads.stop / movetime. A node- or
+// depth-limited analysis search now stops on the exact node it should, so evals can
+// differ from 4f857757 by the tail it used to overrun; hence the key moves.
+export const PIKAFISH_JIEQI_ENGINE_REF = 'e75cee3a';
 
 export type JieqiEngineTier = {
   id: string;
