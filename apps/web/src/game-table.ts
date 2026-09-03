@@ -10,6 +10,8 @@ export type GameTableRefs = {
   clockTop: HTMLDivElement;
   gameControls: HTMLDivElement;
   gameControlsSection: HTMLElement;
+  /** The flip variants' "still face-down" pool (hidden-pool-panel.ts); empty elsewhere. */
+  hiddenPool: HTMLDivElement;
   moveList: HTMLOListElement;
   movesRoot: HTMLDivElement;
   playerBottom: HTMLDivElement;
@@ -63,6 +65,7 @@ export function createGameTable(): GameTable {
     </div>
     <div data-clock-bottom class="clocks clock-slot"></div>
     <div data-captures class="captures-strip captures-strip-bottom rail-material" aria-label="Pieces captured by the bottom side"></div>
+    <div data-hidden-pool class="hidden-pool" aria-label="Pieces still face-down"></div>
     <p data-clocks-note class="clocks-pregame-note" hidden></p>
   `;
 
@@ -76,6 +79,7 @@ export function createGameTable(): GameTable {
     clockTop: el.querySelector<HTMLDivElement>('[data-clock-top]'),
     gameControls: el.querySelector<HTMLDivElement>('[data-game-controls]'),
     gameControlsSection: el.querySelector<HTMLElement>('[data-game-controls-section]'),
+    hiddenPool: el.querySelector<HTMLDivElement>('[data-hidden-pool]'),
     moveList: el.querySelector<HTMLOListElement>('[data-move-list]'),
     movesRoot: el.querySelector<HTMLDivElement>('[data-game-table-moves]'),
     playerBottom: el.querySelector<HTMLDivElement>('[data-player-bottom]'),

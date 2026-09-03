@@ -24,8 +24,10 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
+import { banqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
 import { banqiEnabled } from './feature-flags.js';
+import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { banqiClickResult } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
@@ -41,6 +43,7 @@ import {
 } from './live-banqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -376,26 +379,19 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
 }
 
-// ── Captured pool ─────────────────────────────────────────────────────────────
+// ── Material: captured pools + the face-down pool ────────────────────────────
 
 // Lichess convention: a player's captured material sits next to that player.
 // The bottom strip is the viewer's side, so it shows the pieces the viewer has
 // captured (the opponent's lost pieces); the top strip is the opponent's side,
 // so it shows the pieces the opponent has captured (the viewer's lost pieces).
-// fillCapturedPool filters by former owner, so top filters the viewer's ink and
-// bottom filters the opponent's ink. Captures are always REVEALED in banqi
-// (adjacency and cannon both require a revealed target), so every captured piece
-// has a known identity — there is no "?" case. Reuses the existing
-// .captures-strip / .mini-xq-capture-piece styling (no new CSS).
+// Captures are always REVEALED in banqi (adjacency and cannon both require a
+// revealed target), so every captured piece has a known identity and there is
+// no "?" case. Under the strips, the face-down pool lists what each ink still
+// has unrevealed: public arithmetic (start minus revealed minus captured) that
+// the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  liveRefs.capturesTop.replaceChildren();
-  liveRefs.capturesBottom.replaceChildren();
-  if (!view) return;
-  const viewerInk = viewerInkFor(view);
-  if (viewerInk === null) return; // no ink bound yet → nothing captured
-  const opponentInk = viewerInk === 'red' ? 'black' : 'red';
-  fillCapturedPool(liveRefs.capturesTop, view.captured, viewerInk);
-  fillCapturedPool(liveRefs.capturesBottom, view.captured, opponentInk);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to
@@ -406,47 +402,45 @@ function viewerInkFor(view: BanqiWireView): BanqiColor | null {
   return seat === 'red' ? view.firstColor : view.firstColor === 'red' ? 'black' : 'red';
 }
 
-// Exported for unit testing the captured-pool data path without a live socket —
-// same extraction rationale as live-banqi-render / live-banqi-interaction.
-export function fillCapturedPool(
-  host: HTMLElement,
-  captured: readonly BanqiWireCaptured[],
-  owner: BanqiColor,
+// Exported for unit testing the material data path without a live socket — same
+// extraction rationale as live-banqi-render / live-banqi-interaction. `viewerInk`
+// is null before the opening flip binds it: nothing can have been captured yet,
+// and the pool rows fall back to red-then-black since no seat owns an ink.
+export function renderBanqiMaterial(
+  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
+  view: BanqiWireView | null,
+  viewerInk: BanqiColor | null,
 ): void {
-  const mine = captured.filter((entry) => entry.owner === owner);
-  host.classList.toggle('has-captures', mine.length > 0);
-  if (mine.length === 0) return;
-  // Group repeats of the same role into one glyph + a count badge so a full pool
-  // (banqi tops out at 16 captures per side) stays inside the board width instead
-  // of overflowing the fixed-height strip. Keep first-capture order (no ladder
-  // sort) so the row reads as material taken over time.
-  const order: BanqiPieceRole[] = [];
-  const counts = new Map<BanqiPieceRole, number>();
-  for (const entry of mine) {
-    if (!counts.has(entry.role)) order.push(entry.role);
-    counts.set(entry.role, (counts.get(entry.role) ?? 0) + 1);
-  }
+  slots.capturesTop.replaceChildren();
+  slots.capturesBottom.replaceChildren();
+  slots.hiddenPool.replaceChildren();
+  // A spectator's view in a tenant room is an EMPTY board (/room/ never reveals),
+  // and an empty board must not read as "everything still face-down".
+  if (!view || Object.keys(view.board).length === 0) return;
   const pieceSet = readStoredXiangqiPieceSet();
-  const row = document.createElement('div');
-  row.className = 'captures-row mini-xq-captures-row';
-  for (const role of order) {
-    const count = counts.get(role) ?? 1;
-    const span = document.createElement('span');
-    span.className = count > 1 ? 'mini-xq-capture-piece has-count' : 'mini-xq-capture-piece';
-    span.setAttribute('aria-label', count > 1 ? `${owner} ${role} x${count}` : `${owner} ${role}`);
-    span.innerHTML = renderXiangqiPieceGlyphed({ color: owner, role }, pieceSet, {
-      ariaLabel: `${owner} ${role}`,
-    });
-    if (count > 1) {
-      const badge = document.createElement('span');
-      badge.className = 'captures-count-badge';
-      badge.textContent = String(count);
-      badge.setAttribute('aria-hidden', 'true');
-      span.append(badge);
-    }
-    row.append(span);
+  const glyph = (entry: { color: BanqiColor; role: BanqiPieceRole }): string =>
+    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
+  if (viewerInk !== null) {
+    const opponentInk: BanqiColor = viewerInk === 'red' ? 'black' : 'red';
+    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
+    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
   }
-  host.append(row);
+  // Rows follow the board: the opponent's ink on top, the viewer's below.
+  const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
+  const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
+  const pool = banqiHiddenPool(view);
+  renderHiddenPoolPanel(
+    slots.hiddenPool,
+    [
+      { color: top, label: banqiInkLabel(top), side: pool[top] },
+      { color: bottom, label: banqiInkLabel(bottom), side: pool[bottom] },
+    ],
+    glyph,
+  );
+}
+
+function banqiInkLabel(ink: BanqiColor): string {
+  return ink === 'red' ? 'Red' : 'Black';
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────

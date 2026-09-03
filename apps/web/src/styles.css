@@ -433,11 +433,13 @@
    per role (≤7), so they never need the horizontal clip the dense chess pool
    relies on — drop the clip on those rows so the full badge shows. Covers banqi /
    jieqi / DMX across live, postgame review, and watch surfaces. */
-.captures-row.mini-xq-captures-row {
+.captures-row.mini-xq-captures-row,
+.captures-row.review-captures-row {
   overflow: visible;
 }
 
-.captures-strip:has(.mini-xq-captures-row) {
+.captures-strip:has(.mini-xq-captures-row),
+.captures-strip:has(.review-captures-row) {
   overflow: visible;
 }
 

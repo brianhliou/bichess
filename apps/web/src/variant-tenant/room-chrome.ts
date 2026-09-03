@@ -198,6 +198,7 @@ export function createTenantRoomChrome<C extends string>(
     refs.boardPaused.hidden = true;
     refs.capturesBottom.replaceChildren();
     refs.capturesTop.replaceChildren();
+    refs.hiddenPool.replaceChildren();
     refs.clockTop.replaceChildren();
     refs.clockBottom.replaceChildren();
     refs.playerTop.replaceChildren();

@@ -4,7 +4,6 @@
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import type { BanqiPlayerView } from '@mistboard/game';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
-import { fillCapturedPool } from './live-banqi.js';
 import {
   type BanqiPostgameResponse,
   type BanqiPostgameViewKey,
@@ -19,7 +18,10 @@ import {
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
 import type { ReplayHandle } from './replay.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
+import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
+import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 export type BanqiWatchReplayOptions = TenantWatchReplayOptions;
 
@@ -55,7 +57,14 @@ export function mountBanqiWatchReplay(
         if (!move) return;
         animateBanqiBoardMove(boardEl, move, { reverse: direction === 'back' });
       },
-      fillCaptures: (host, view, owner) => fillCapturedPool(host, view.captured, owner),
+      // The same grouped pool the live room draws (review/captured-pool.ts); every
+      // banqi capture has a known identity, so no hidden renderer is needed.
+      fillCaptures: (host, view, owner) => {
+        const pieceSet = readStoredXiangqiPieceSet();
+        fillCapturedPoolWith(host, view.captured, owner, (entry) =>
+          renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: ` ` }),
+        );
+      },
       // Banqi seats (first/second mover) are decoupled from ink; the recorded
       // result is seat-keyed, so translate it to the bound ink for display.
       resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),

@@ -109,6 +109,7 @@ export type LiveRefs = {
   devViews: HTMLDivElement;
   devViewsSection: HTMLElement;
   gameInfo: HTMLDivElement;
+  hiddenPool: HTMLDivElement;
   moveList: HTMLOListElement;
   offerSection: HTMLElement;
   playerBottom: HTMLDivElement;

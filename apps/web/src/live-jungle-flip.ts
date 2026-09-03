@@ -22,9 +22,10 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
-import { jungleFlipLastMoverInk } from '@mistboard/game';
+import { jungleFlipHiddenPool, jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
+import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import {
   animateJungleFlipBoardMove,
   JUNGLE_FLIP_BOARD_VIEW,
@@ -40,6 +41,7 @@ import {
 } from './live-jungle-flip-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -193,7 +195,9 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     const undone = pending.prevView?.lastMove;
     if (undone) animateJungleFlipBoardMove(liveRefs.board, undone, perspective, { reverse: true });
   },
-  onDisabled: () => {
+  renderExtras: (refs, view) => renderCapturedPools(refs, view),
+  onDisabled: (refs) => {
+    renderCapturedPools(refs, core?.displayedView() ?? null);
     selectedSquare = null;
   },
   setup: (ctx) => {
@@ -235,6 +239,65 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
 
 export function bootstrapJungleFlipLiveRoom(): void {
   client.bootstrap();
+}
+
+// ── Material: captured pools + the face-down pool ────────────────────────────
+
+// Lichess convention: a player's captured material sits next to that player.
+// The bottom strip is the viewer's side, so it shows the animals the viewer has
+// captured (the opponent's lost ones); the top strip is the opponent's side.
+// Captures only ever remove REVEALED animals (a face-down tile cannot be taken),
+// so every captured animal has a known ink and rank, and a 同归于尽 trade puts
+// one animal in each strip. Under the strips, the face-down pool lists what each
+// ink still has unrevealed: public arithmetic (start minus revealed minus
+// captured) that the player would otherwise do by hand, and in a 16-tile game
+// with one of each animal it is most of the information there is.
+function renderCapturedPools(liveRefs: LiveRefs, view: JungleFlipWireView | null): void {
+  const seat = core?.state.seat;
+  const viewerSeat: JungleFlipSeat = isJungleFlipSeat(seat) ? seat : (view?.perspective ?? 'red');
+  renderJungleFlipMaterial(liveRefs, view, jungleFlipSeatInk(viewerSeat, view));
+}
+
+// Exported for unit testing the material data path without a live socket.
+// `viewerInk` is null before the opening flip binds it: nothing can have been
+// captured yet, and the pool rows fall back to red-then-blue since no seat owns
+// an ink.
+export function renderJungleFlipMaterial(
+  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
+  view: JungleFlipWireView | null,
+  viewerInk: JungleFlipColor | null,
+): void {
+  slots.capturesTop.replaceChildren();
+  slots.capturesBottom.replaceChildren();
+  slots.hiddenPool.replaceChildren();
+  // A spectator's view in a tenant room is an EMPTY board (/room/ never reveals),
+  // and an empty board must not read as "everything still face-down".
+  if (!view || Object.keys(view.board).length === 0) return;
+  const glyph = (entry: { color: JungleFlipColor; role: JungleFlipPieceRole }): string =>
+    jungleFlipPieceGhostSvg(entry);
+  if (viewerInk !== null) {
+    const opponentInk: JungleFlipColor = viewerInk === 'red' ? 'black' : 'red';
+    fillCapturedPoolWith(slots.capturesTop, view.captured, viewerInk, glyph);
+    fillCapturedPoolWith(slots.capturesBottom, view.captured, opponentInk, glyph);
+  }
+  // Rows follow the board: the opponent's ink on top, the viewer's below.
+  const top: JungleFlipColor =
+    viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
+  const bottom: JungleFlipColor = top === 'red' ? 'black' : 'red';
+  const pool = jungleFlipHiddenPool(view);
+  renderHiddenPoolPanel(
+    slots.hiddenPool,
+    [
+      { color: top, label: jungleFlipInkLabel(top), side: pool[top] },
+      { color: bottom, label: jungleFlipInkLabel(bottom), side: pool[bottom] },
+    ],
+    glyph,
+  );
+}
+
+// The Jungle family brands its navy ink "Blue" (internal ink id stays 'black').
+function jungleFlipInkLabel(ink: JungleFlipColor): string {
+  return ink === 'red' ? 'Red' : 'Blue';
 }
 
 function jungleFlipReasonPhrase(reason: string): string {

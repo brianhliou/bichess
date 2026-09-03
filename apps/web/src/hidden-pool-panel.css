@@ -1,0 +1,79 @@
+/* The "still face-down" panel (hidden-pool-panel.ts). Lives in the game table's
+   right rail under the bottom captures strip; sized like the capture strips so
+   the pool glyphs and the captured glyphs read as one material system. Empty
+   host = variant has no pool (every non-flip room) and the slot vanishes. */
+.hidden-pool {
+  --capture-piece-size: clamp(22px, calc((100cqw - 56px) / 8), 30px);
+  --capture-row-gap: 2px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px 0 2px;
+  border-top: 1px solid var(--site-border);
+}
+
+.hidden-pool:empty {
+  display: none;
+}
+
+.hidden-pool__caption {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.hidden-pool__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.hidden-pool__label {
+  flex: 0 0 auto;
+  min-width: 2.6em;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.hidden-pool__row[data-ink="red"] .hidden-pool__label {
+  color: #b91c1c;
+}
+
+.hidden-pool__pieces {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  overflow: visible;
+}
+
+.hidden-pool__pieces .review-capture-piece {
+  display: inline-block;
+  flex: 0 0 var(--capture-piece-size);
+  width: var(--capture-piece-size);
+  height: var(--capture-piece-size);
+}
+
+.hidden-pool__pieces .review-capture-piece.has-count {
+  position: relative;
+}
+
+.hidden-pool__pieces .review-capture-piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hidden-pool__none,
+.hidden-pool__note {
+  font-size: 0.75rem;
+  color: var(--site-muted);
+}
+
+.hidden-pool__note {
+  flex-basis: 100%;
+}

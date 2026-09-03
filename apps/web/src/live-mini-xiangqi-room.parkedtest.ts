@@ -638,6 +638,7 @@ function refsFixture(): LiveRefs {
     gameControls: el('div'),
     gameControlsSection: el('section'),
     gameInfo: el('div'),
+    hiddenPool: el('div'),
     moveList: el('ol'),
     offerSection: el('section'),
     playerBottom: el('div'),
