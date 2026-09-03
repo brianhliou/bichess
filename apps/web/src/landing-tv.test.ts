@@ -295,3 +295,29 @@ test('the live game is never cut by pool updates', async () => {
   expect(mounts).toHaveLength(1);
   tv.destroy();
 });
+
+test('a guest seat (null name on the live frame) is labelled Guest, matching the finished record', async () => {
+  const namesByRoomId: Record<string, { first: string; second: string }> = {};
+  const tv = await mountLandingTv(root, [entryA], {
+    isConnected: () => true,
+    loaderForId: async () => [],
+    metadataByRoomId: {},
+    namesByRoomId,
+  });
+  await flush();
+  featuredResponse = {
+    featured: {
+      roomId: 'liveG',
+      gameSpecId: 'jungle',
+      ply: 3,
+      players: [
+        { color: 'red', isEngine: true, name: 'Misty' },
+        { color: 'black', isEngine: false, name: null },
+      ],
+      payload: { marker: 'liveG@3' },
+    },
+  };
+  await tick();
+  expect(namesByRoomId.liveG).toEqual({ first: 'Misty', second: 'Guest' });
+  tv.destroy();
+});

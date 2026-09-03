@@ -817,8 +817,8 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0]!;
     const second = players.find((p) => p !== first) ?? players[1]!;
     namesByRoomId[featured.roomId] = {
-      first: displayLiveName(first.name, t('watch.anonymous')),
-      second: displayLiveName(second.name, t('watch.anonymous')),
+      first: displayLiveName(first.name, t('watch.guest')),
+      second: displayLiveName(second.name, t('watch.guest')),
     };
   };
 
@@ -835,7 +835,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const firstColor = liveFirstColor(featured);
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
-      name: displayLiveName(p.name, t('watch.anonymous')),
+      name: displayLiveName(p.name, t('watch.guest')),
       rating: null,
       isEngine: p.isEngine,
     }));

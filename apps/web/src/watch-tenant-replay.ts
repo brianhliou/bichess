@@ -23,6 +23,11 @@ import {
   showcaseResultMarks,
 } from './showcase-clock.js';
 import { pickCompactViewKey } from './showcase-compact-view.js';
+import {
+  clockRemainingMs,
+  readTenantWebClock,
+  type TenantWebClock,
+} from './variant-tenant/clock-projection.js';
 import { formatClock } from './web-utils.js';
 
 const AUTO_PLAY_PLY_MS = 1100;
@@ -49,7 +54,14 @@ export type WatchPostgameMeta = {
     incrementMs: number | null;
     startedAt?: number | string | null;
   };
-  state: { timeControl?: { initialMs: number; incrementMs: number } | null };
+  state: {
+    timeControl?: { initialMs: number; incrementMs: number } | null;
+    // The server's clock snapshot ({ activeColor, remainingMs, runningSince }). A LIVE
+    // frame (/api/watch/live) always carries it; it is the anchor the live follow
+    // projects to wall-clock time, so the mover's clock counts down between polls.
+    // Untyped on the wire; readTenantWebClock narrows it.
+    clock?: unknown;
+  };
   // Per-event wall-clock timestamps; present on every tenant postgame (move events
   // carry color + ply, terminal events may not). The compact showcase reconstructs
   // the players' real clocks from the move timestamps (the generic tenant postgames
@@ -373,6 +385,13 @@ export async function mountTenantWatchReplay<
     windowMs: number;
   } | null = null;
   let clockTickTimer: number | null = null;
+  // Live follow only: the server's authoritative clock from the latest live frame.
+  // The reconstruction above only knows about moves that have LANDED, so on its own
+  // the mover's clock froze between polls and both clocks jumped together when the
+  // next frame arrived. This snapshot is projected to Date.now() on every tick
+  // instead (the same arithmetic the live room uses). Null for finished games and
+  // untimed rooms.
+  let liveClock: TenantWebClock<'red' | 'black'> | null = null;
 
   // Red moves first, so an even ply leaves Red (first) to move; nobody is on the clock
   // once the game has ended. In live mode the final known ply is "caught up",
@@ -413,8 +432,27 @@ export async function mountTenantWatchReplay<
     return { side: clockAnim.side, ms };
   };
 
+  // The live clock, projected to now, or null when the reconstruction is the source
+  // (finished game, untimed, or scrubbed back from the newest ply: a past ply shows
+  // its recorded value).
+  const liveClockNow = (): ShowcaseClockPair | null => {
+    if (!liveClock || currentPly < maxPly) return null;
+    const now = Date.now();
+    return {
+      first: clockRemainingMs(liveClock, 'red', now),
+      second: clockRemainingMs(liveClock, 'black', now),
+    };
+  };
+
   const tickCompactClock = (): void => {
     if (!compactSeats) return;
+    const liveNow = liveClockNow();
+    if (liveNow) {
+      for (const seat of [compactSeats.top, compactSeats.bottom]) {
+        seat.clockEl.textContent = formatClock(liveNow[seat.side]);
+      }
+      return;
+    }
     const drained = drainedClockNow();
     if (!drained) return;
     const seat = compactSeats.top.side === drained.side ? compactSeats.top : compactSeats.bottom;
@@ -513,9 +551,12 @@ export async function mountTenantWatchReplay<
           : marks.first === '1'
             ? 'first'
             : 'second';
+      const liveNow = liveClockNow();
       for (const seat of [compactSeats.top, compactSeats.bottom]) {
         if (marks) {
           seat.clockEl.textContent = marks[seat.side];
+        } else if (liveNow) {
+          seat.clockEl.textContent = formatClock(liveNow[seat.side]);
         } else if (clockSeries) {
           const at = clockSeries[Math.min(currentPly, clockSeries.length - 1)]!;
           seat.clockEl.textContent = formatClock(at[seat.side]);
@@ -689,6 +730,13 @@ export async function mountTenantWatchReplay<
           })
         : null;
     clockIncrement = clockIncrementMs;
+    // Only an in-progress live frame anchors the projection: a finished game's stored
+    // clock may still carry a runningSince, and projecting it would count a frozen
+    // board down forever.
+    liveClock =
+      live && postgame.game.result === 'in-progress'
+        ? readTenantWebClock(postgame.state.clock, ['red', 'black'] as const)
+        : null;
     // Play each move at its real recorded duration (clamped), so a long think LINGERS and
     // a snap move flicks by — and the draining clock reads as thinking rather than as a
     // number spinning on a metronome. Also read by scheduleAuto for the playback pace.
@@ -759,7 +807,7 @@ export async function mountTenantWatchReplay<
       root.replaceChildren(layout);
       sync();
       scheduleAuto();
-      if (clockSeries && clockTickTimer === null) {
+      if ((clockSeries || liveClock) && clockTickTimer === null) {
         clockTickTimer = window.setInterval(tickCompactClock, SHOWCASE_CLOCK_TICK_MS);
       }
       return;
@@ -996,10 +1044,12 @@ export async function mountTenantWatchReplay<
     // interval ticks it down; the ply snapshots stay the anchor. Null (no clock) for an
     // untimed game.
     clockAtPly: () => {
+      const toMove = toMoveAtPly();
+      const liveNow = liveClockNow();
+      if (liveNow) return { ...liveNow, toMove };
       if (!clockSeries) return null;
       const at = clockSeries[Math.min(currentPly, clockSeries.length - 1)];
       if (!at) return null;
-      const toMove = toMoveAtPly();
       const drained = drainedClockNow();
       return {
         first: drained?.side === 'first' ? drained.ms : at.first,
