@@ -21,6 +21,16 @@
  *
  * --emit <path> writes the exact POST payloads to a file without posting, for a
  * client that already holds a session.
+ *
+ * --in-place rewrites the chapters of the EXISTING study, keeping its id. Use
+ * this once the study is published: a plain re-run refuses to create a second
+ * copy and does nothing, and --replace deletes the study so the new one gets a
+ * NEW id — which 404s the /study/<id> link the rules article hardcodes and every
+ * chapter URL under it.
+ *
+ *   MISTBOARD_SESSION_COOKIE='mistboard_session=...' npx tsx \
+ *     apps/server/src/seed-fortress-xiangqi-games-study.ts \
+ *     --base https://mistboard.com --in-place
  */
 import {
   applyFortressXiangqiMove,
@@ -428,6 +438,71 @@ async function main(): Promise<void> {
     fetch(`${base}${path}`, { headers: { ...(cookie ? { cookie } : {}) } });
   const del = async (path: string): Promise<Response> =>
     fetch(`${base}${path}`, { method: 'DELETE', headers: { ...(cookie ? { cookie } : {}) } });
+  const patch = async (path: string, body: unknown): Promise<Response> =>
+    fetch(`${base}${path}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+      body: JSON.stringify(body),
+    });
+
+  // --in-place rewrites the chapters of the EXISTING study instead of creating
+  // or replacing one. This is the mode to use once a study is published and
+  // linked: --replace deletes the study and the new one gets a NEW id, which
+  // 404s the /study/<id> link the rules article hardcodes, and every chapter
+  // URL with it. PATCHing each chapter keeps the study id, the chapter ids, and
+  // anyone's bookmark.
+  if (args['in-place'] === true) {
+    const lookup = await get(`/api/studies/mine?q=${encodeURIComponent(STUDY_NAME)}`);
+    if (!lookup.ok) throw new Error(`study lookup failed: ${lookup.status}`);
+    const studies = ((await lookup.json()) as { studies?: Array<{ id: string; name: string }> })
+      .studies;
+    const target = (studies ?? []).find((study) => study.name === STUDY_NAME);
+    if (!target) throw new Error(`no existing study named "${STUDY_NAME}" to edit in place`);
+
+    const detailResponse = await get(`/api/studies/${target.id}`);
+    if (!detailResponse.ok) throw new Error(`study fetch failed: ${detailResponse.status}`);
+    const existing = (await detailResponse.json()) as {
+      chapters: Array<{ id: string; root: { version?: number } }>;
+    };
+    console.log(
+      `editing ${target.id} in place: ${existing.chapters.length} chapters on the server`,
+    );
+
+    for (const [index, chapter] of chapters.entries()) {
+      const current = existing.chapters[index];
+      if (current) {
+        const response = await patch(`/api/studies/${target.id}/chapters/${current.id}`, {
+          name: chapter.name,
+          root: chapter.root,
+          ...(typeof current.root?.version === 'number'
+            ? { baseVersion: current.root.version }
+            : {}),
+        });
+        if (!response.ok) {
+          throw new Error(
+            `chapter ${index + 1} patch failed: ${response.status} ${await response.text()}`,
+          );
+        }
+      } else {
+        const response = await post(`/api/studies/${target.id}/chapters`, chapter);
+        if (!response.ok) {
+          throw new Error(
+            `chapter ${index + 1} add failed: ${response.status} ${await response.text()}`,
+          );
+        }
+      }
+    }
+    // More chapters on the server than games: drop the tail rather than leave
+    // stale ones behind the new set.
+    for (const stale of existing.chapters.slice(chapters.length)) {
+      const response = await del(`/api/studies/${target.id}/chapters/${stale.id}`);
+      if (!response.ok) throw new Error(`stale chapter delete failed: ${response.status}`);
+    }
+    console.log(
+      `done: ${chapters.length} chapters rewritten at ${base.replace(':3001', ':3000')}/study/${target.id}`,
+    );
+    return;
+  }
 
   // Do not create a second copy on a re-run (see seed-study-idempotency.ts).
   const decision = await resolveExistingStudy({ get, del }, STUDY_NAME, {
