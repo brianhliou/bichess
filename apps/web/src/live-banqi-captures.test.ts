@@ -1,74 +1,115 @@
-import type { BanqiColor, BanqiPieceRole } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { fillCapturedPool } from './live-banqi.js';
+import { type BanqiWireView, renderBanqiMaterial } from './live-banqi.js';
 
-// Locks the captured-pool data path the live room builds after a capture. Banqi
-// captures only ever remove REVEALED pieces (adjacency and cannon both require a
-// revealed target), so every captured piece has a known identity — there is no
-// "?" hidden case (the contrast with jieqi). This is the one visual the browser
-// smoke could not exercise without a captured position.
+// Locks the material picture the banqi room builds: which strip holds whose
+// losses, and the face-down pool under them. Banqi captures only ever remove
+// REVEALED pieces, so every captured piece has a known identity (no "?" case,
+// the contrast with jieqi) and the pool is exact for both seats.
 
-type Captured = { owner: BanqiColor; role: BanqiPieceRole };
-
-function host(): HTMLDivElement {
-  return document.createElement('div');
+function slots() {
+  return {
+    capturesTop: document.createElement('div'),
+    capturesBottom: document.createElement('div'),
+    hiddenPool: document.createElement('div'),
+  };
 }
 
-function pieces(el: HTMLElement): HTMLElement[] {
-  return [...el.querySelectorAll<HTMLElement>('.mini-xq-capture-piece')];
+function labels(el: HTMLElement): (string | null)[] {
+  return [...el.querySelectorAll<HTMLElement>('.review-capture-piece')].map((span) =>
+    span.getAttribute('aria-label'),
+  );
 }
 
-describe('fillCapturedPool', () => {
-  it('renders nothing and clears has-captures for an empty pool', () => {
-    const el = host();
-    el.classList.add('has-captures'); // stale from a prior render
-    fillCapturedPool(el, [], 'red');
-    expect(el.classList.contains('has-captures')).toBe(false);
-    expect(pieces(el)).toHaveLength(0);
-  });
+const midgame: BanqiWireView = {
+  id: 'banqi-material',
+  perspective: 'red',
+  board: {
+    a1: { color: 'red', role: 'chariot', faceDown: false },
+    b1: { color: 'black', role: 'horse', faceDown: false },
+    c1: { faceDown: true },
+    d1: { faceDown: true },
+  },
+  legalMoves: [],
+  captured: [
+    { owner: 'black', role: 'soldier' },
+    { owner: 'red', role: 'cannon' },
+    { owner: 'black', role: 'soldier' },
+  ],
+  status: { type: 'playing', turn: 'red' },
+  ply: 6,
+  firstColor: 'red',
+  moveNumber: 4,
+};
 
-  it('shows a captured piece by its true identity', () => {
-    const el = host();
-    const captured: Captured[] = [{ owner: 'red', role: 'chariot' }];
-    fillCapturedPool(el, captured, 'red');
-    expect(el.classList.contains('has-captures')).toBe(true);
-    const [span] = pieces(el);
-    expect(span.getAttribute('aria-label')).toBe('red chariot');
-  });
-
-  it('only renders pieces belonging to the named owner', () => {
-    const el = host();
-    const captured: Captured[] = [
-      { owner: 'red', role: 'soldier' },
-      { owner: 'black', role: 'horse' },
-      { owner: 'red', role: 'general' },
-    ];
-    fillCapturedPool(el, captured, 'red');
-    const labels = pieces(el).map((span) => span.getAttribute('aria-label'));
-    expect(labels).toEqual(['red soldier', 'red general']);
-  });
-
-  it('stacks repeats of a role into one glyph with a count badge', () => {
-    const el = host();
-    // Non-consecutive duplicates must collapse into a single glyph (a full banqi
-    // pool would otherwise overflow the strip).
-    const captured: Captured[] = [
-      { owner: 'red', role: 'soldier' },
-      { owner: 'red', role: 'cannon' },
-      { owner: 'red', role: 'soldier' },
-      { owner: 'red', role: 'soldier' },
-    ];
-    fillCapturedPool(el, captured, 'red');
-    const glyphs = pieces(el);
-    // One glyph per distinct role, in first-capture order.
-    expect(glyphs.map((span) => span.getAttribute('aria-label'))).toEqual([
-      'red soldier x3',
-      'red cannon',
+describe('renderBanqiMaterial', () => {
+  it('puts the viewer losses on top, the opponent losses below, and the pool under both', () => {
+    const s = slots();
+    renderBanqiMaterial(s, midgame, 'red');
+    expect(labels(s.capturesTop)).toEqual(['red cannon']);
+    expect(labels(s.capturesBottom)).toEqual(['black soldier x2']);
+    const rows = [...s.hiddenPool.querySelectorAll<HTMLElement>('.hidden-pool__row')];
+    expect(rows.map((row) => row.dataset.ink)).toEqual(['black', 'red']);
+    // Black: 16 minus the revealed horse minus two captured soldiers.
+    expect(labels(rows[0]!)).toEqual([
+      'Black general',
+      'Black advisor x2',
+      'Black elephant x2',
+      'Black chariot x2',
+      'Black horse',
+      'Black cannon x2',
+      'Black soldier x3',
     ]);
-    const soldier = glyphs[0]!;
-    expect(soldier.classList.contains('has-count')).toBe(true);
-    expect(soldier.querySelector('.captures-count-badge')?.textContent).toBe('3');
-    // A singleton role carries no badge.
-    expect(glyphs[1]!.querySelector('.captures-count-badge')).toBeNull();
+    // Red: 16 minus the revealed chariot minus the captured cannon.
+    expect(labels(rows[1]!)).toEqual([
+      'Red general',
+      'Red advisor x2',
+      'Red elephant x2',
+      'Red chariot',
+      'Red horse x2',
+      'Red cannon',
+      'Red soldier x5',
+    ]);
+    expect(s.hiddenPool.querySelectorAll('.hidden-pool__note')).toHaveLength(0);
+  });
+
+  it('flips the strips and the row order for the other seat', () => {
+    const s = slots();
+    renderBanqiMaterial(s, midgame, 'black');
+    expect(labels(s.capturesTop)).toEqual(['black soldier x2']);
+    expect(labels(s.capturesBottom)).toEqual(['red cannon']);
+    const rows = [...s.hiddenPool.querySelectorAll<HTMLElement>('.hidden-pool__row')];
+    expect(rows.map((row) => row.dataset.ink)).toEqual(['red', 'black']);
+  });
+
+  it('before the opening flip binds an ink, the strips stay empty and the full pool shows', () => {
+    const s = slots();
+    const opening: BanqiWireView = {
+      ...midgame,
+      board: { a1: { faceDown: true } },
+      captured: [],
+      ply: 0,
+      firstColor: null,
+    };
+    renderBanqiMaterial(s, opening, null);
+    expect(s.capturesTop.childElementCount).toBe(0);
+    expect(s.capturesBottom.childElementCount).toBe(0);
+    const rows = [...s.hiddenPool.querySelectorAll<HTMLElement>('.hidden-pool__row')];
+    expect(rows.map((row) => row.dataset.ink)).toEqual(['red', 'black']);
+    expect(labels(rows[0]!)).toHaveLength(7);
+  });
+
+  it('shows nothing for a spectator: an empty board is no information, not a full pool', () => {
+    const s = slots();
+    renderBanqiMaterial(s, { ...midgame, board: {}, captured: [] }, null);
+    expect(s.hiddenPool.childElementCount).toBe(0);
+  });
+
+  it('clears every slot when there is no view', () => {
+    const s = slots();
+    renderBanqiMaterial(s, midgame, 'red');
+    renderBanqiMaterial(s, null, null);
+    expect(s.capturesTop.childElementCount).toBe(0);
+    expect(s.capturesBottom.childElementCount).toBe(0);
+    expect(s.hiddenPool.childElementCount).toBe(0);
   });
 });
