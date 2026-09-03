@@ -87,7 +87,13 @@ export async function appendTenantEvent<
     if (writer.persistence.isInitialized()) {
       await writer.persistence.appendRoomEvent(room.id, seq, event);
     }
-    const appendedSeq = appendTenantRuntimeEvent(tenant, room, event);
+    // Commit the projection computed above rather than re-deriving it. Applying
+    // twice from the same projection gives the same answer while applyMove stays
+    // pure, so this is thrift, not a fix — but it removes a second apply whose
+    // correctness quietly depends on that purity.
+    room.events.push(event);
+    room.projection = projected;
+    const appendedSeq = room.events.length - 1;
     writer.scheduleLifecycleTimers(room);
     // PvE: free the engine seat reservation the moment the game ends, so a
     // finished/aborted game doesn't tie up a global engine seat until its TTL.
