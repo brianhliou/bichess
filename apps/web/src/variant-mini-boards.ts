@@ -547,9 +547,10 @@ function fortressXiangqiBody(ctx: MiniCtx): string {
     xiangqiDisc(px(1), py(1), disc, 'red', 'general', ctx.xqSet),
     xiangqiDisc(px(2), py(1), disc, 'red', 'advisor', ctx.xqSet),
     xiangqiDisc(px(3), py(1), disc, 'red', 'elephant', ctx.xqSet),
-    xiangqiDisc(px(0), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
-    xiangqiDisc(px(1), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
-    xiangqiDisc(px(3), py(2), disc, 'red', 'soldier', ctx.xqSet, true),
+    // River-gated since 2026-09-02: these sit on their own half, so base art.
+    xiangqiDisc(px(0), py(2), disc, 'red', 'soldier', ctx.xqSet),
+    xiangqiDisc(px(1), py(2), disc, 'red', 'soldier', ctx.xqSet),
+    xiangqiDisc(px(3), py(2), disc, 'red', 'soldier', ctx.xqSet),
   ];
   return [
     `<rect class="vm-xq-bg" x="${OX}" y="${OY}" width="${SIZE}" height="${SIZE}"/>`,

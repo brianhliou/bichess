@@ -7,9 +7,9 @@ import {
 } from './live-mini-xiangqi-render.js';
 import { renderVariantMiniBoard } from './variant-mini-boards.js';
 
-// The Mini Xiangqi family and Fortress Xiangqi give the soldier its sideways
-// step unconditionally, so every soldier is a veteran and draws with the
-// promoted-soldier art. This is the cross-surface guard: the article diagrams,
+// The Mini Xiangqi family gives the soldier its sideways step unconditionally,
+// so every soldier is a veteran and draws with the promoted-soldier art.
+// Fortress Xiangqi did too until 2026-09-02, when it reverted to the river gate. This is the cross-surface guard: the article diagrams,
 // the live board, the replay and the variant cards all have to agree, because
 // the last time this rule was open-coded per renderer the copies drifted and
 // the same soldier was a veteran on one surface and a recruit on another.
@@ -52,7 +52,7 @@ describe('mini xiangqi veteran soldier art', () => {
     expect(ghost).not.toMatch(PLAIN_SOLDIER);
   });
 
-  it.each(['mini-xiangqi', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'fortress-xiangqi'] as const)(
+  it.each(['mini-xiangqi', 'dark-mini-xiangqi', 'drop-mini-xiangqi'] as const)(
     'promotes soldiers on the %s variant card',
     (id) => {
       const svg = renderVariantMiniBoard(id, { xqSet: 'international' });
@@ -62,10 +62,15 @@ describe('mini xiangqi veteran soldier art', () => {
     },
   );
 
-  it('leaves the full-xiangqi card alone: its soldiers have not crossed a river', () => {
-    const svg = renderVariantMiniBoard('xiangqi', { xqSet: 'international' });
+  it.each(['xiangqi', 'fortress-xiangqi'] as const)(
+    'leaves the %s card alone: those soldiers are river-gated',
+    (id) => {
+      // Fortress joined this list on 2026-09-02 when its soldier was reverted
+      // from veteran to river-gated; its card soldiers sit on their own half.
+      const svg = renderVariantMiniBoard(id, { xqSet: 'international' });
 
-    expect(svg).toMatch(PLAIN_SOLDIER);
-    expect(svg).not.toContain('crossed-soldier.png');
-  });
+      expect(svg).toMatch(PLAIN_SOLDIER);
+      expect(svg).not.toContain('crossed-soldier.png');
+    },
+  );
 });

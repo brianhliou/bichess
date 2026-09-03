@@ -17,6 +17,7 @@ import {
   type XiangqiPuzzle,
 } from './index.js';
 import { loadSeedPuzzleRegistry } from './puzzle-seed.js';
+import { parseStandardXiangqiFen } from './xiangqi-position.js';
 
 function playingState(
   id: string,
@@ -206,14 +207,19 @@ test('attempt: the full solver line completes the mate', () => {
   }
 });
 
-test('attempt: a wrong solver move fails without advancing the state', () => {
+// Was 'a wrong solver move fails without advancing the state', asserting that
+// b1-b5 is graded incorrect. That premise stopped being true with #342 and the
+// test is more useful inverted: this fixture is two chariots against a lone
+// general, where b1-b5 forces mate in three just as the stored line does. It
+// was never "wrong", only "not the line we stored". The failing-move coverage
+// it used to provide now lives on a corpus position with a verified non-mating
+// move, below.
+test('attempt: a fixture move that also forces mate is accepted', () => {
   const attempt = attemptStandardXiangqiPuzzleLine(mateInTwoPuzzle(), [{ from: 'b1', to: 'b5' }]);
-  assert.equal(attempt.ok, false);
-  if (!attempt.ok) {
-    assert.equal(attempt.code, 'incorrect-move');
-    assert.equal(attempt.ply, 0);
-    assert.deepEqual(attempt.move, { from: 'b1', to: 'b5' });
-    assert.deepEqual(attempt.state.status, { type: 'playing', turn: 'red' });
+  assert.equal(attempt.ok, true);
+  if (attempt.ok) {
+    assert.equal(attempt.alternativeMate, true);
+    assert.equal(attempt.complete, true);
   }
 });
 
@@ -484,4 +490,79 @@ test('mined puzzles carry source-game attribution for the "From game" card', () 
     assert.ok(source.redName, `${puzzle.id}: missing sourceGame.redName`);
     assert.ok(source.blackName, `${puzzle.id}: missing sourceGame.blackName`);
   }
+});
+
+// ── Alternative forced mates (#342) ─────────────────────────────────────────
+//
+// The uniqueness gate admits a mate puzzle when the best move mates strictly
+// faster than the runner-up, which is not the same as one answer existing.
+// A solver who found a different forced mate used to be told "Try again" and
+// lost rating for a winning move.
+//
+// This is a REAL served puzzle, not a fixture: xq-mined-hxq_2326cfdc2aa04eef-
+// 6682486d-60, stored line h7-f8 e10-f10 e6-f6, goal checkmate. h7-g9 also
+// forces mate, one move slower. Both facts were established by enumerating
+// every legal first move through the kernel search, and the stored line itself
+// came from Pikafish at depth 20 with an independent depth-22 audit.
+const ALTERNATIVE_MATE_FEN = '1r1ak1b2/4a4/2n1b4/pcR4Np/1c2C4/1R7/9/N3B4/4A4/4KA3 r - - 0 31';
+
+function alternativeMatePuzzle(): XiangqiPuzzle {
+  const parsed = parseStandardXiangqiFen(ALTERNATIVE_MATE_FEN);
+  assert.ok(parsed.ok, 'corpus FEN must parse');
+  return {
+    id: 'xq-mined-hxq_2326cfdc2aa04eef6682486d-60',
+    variant: XIANGQI_SPEC_ID,
+    title: 'Red mate in 2',
+    initial: parsed.state,
+    solution: [
+      { from: 'h7', to: 'f8' },
+      { from: 'e10', to: 'f10' },
+      { from: 'e6', to: 'f6' },
+    ],
+    goal: { type: 'checkmate', winner: 'red' },
+    themes: ['checkmate', 'matein2', 'crushing', 'middlegame'],
+  };
+}
+
+test('attempt: the stored line still solves', () => {
+  const attempt = attemptStandardXiangqiPuzzleLine(alternativeMatePuzzle(), [
+    { from: 'h7', to: 'f8' },
+    { from: 'e6', to: 'f6' },
+  ]);
+  assert.equal(attempt.ok, true);
+  assert.equal(attempt.ok && attempt.complete, true);
+  assert.equal(attempt.ok && attempt.alternativeMate, undefined);
+});
+
+test('attempt: a different forced mate is accepted instead of failing', () => {
+  const attempt = attemptStandardXiangqiPuzzleLine(alternativeMatePuzzle(), [
+    { from: 'h7', to: 'g9' },
+  ]);
+  assert.equal(attempt.ok, true, 'a move that forces mate must not be graded incorrect');
+  assert.equal(attempt.ok && attempt.complete, true);
+  assert.equal(attempt.ok && attempt.alternativeMate, true);
+});
+
+test('attempt: a move that does not force mate fails without advancing the state', () => {
+  const attempt = attemptStandardXiangqiPuzzleLine(alternativeMatePuzzle(), [
+    { from: 'f6', to: 'f7' },
+  ]);
+  assert.equal(attempt.ok, false);
+  if (!attempt.ok) {
+    assert.equal(attempt.code, 'incorrect-move');
+    assert.equal(attempt.ply, 0);
+    assert.deepEqual(attempt.move, { from: 'f6', to: 'f7' });
+    assert.deepEqual(attempt.state.status, { type: 'playing', turn: 'red' });
+  }
+});
+
+test('attempt: a winning-advantage puzzle never accepts an alternative', () => {
+  // The escape hatch is scoped to checkmate goals. A winning-advantage puzzle
+  // has no forced mate to prove, so nothing here should change.
+  const puzzle = {
+    ...alternativeMatePuzzle(),
+    goal: { type: 'winning-advantage', winner: 'red', centipawns: 900 },
+  } as XiangqiPuzzle;
+  const attempt = attemptStandardXiangqiPuzzleLine(puzzle, [{ from: 'h7', to: 'g9' }]);
+  assert.equal(attempt.ok, false);
 });

@@ -146,6 +146,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.findBestMove': '找出最佳著法。',
   'puzzle.checkingMove': '正在檢查著法。',
   'puzzle.solved': '已解開。',
+  'puzzle.solvedAlternativeMate': '已解開。這一手同樣能成殺。',
   'puzzle.correct': '正確。',
   'puzzle.tryAnotherMove': '換一手試試。',
   'puzzle.playDisabled': '此帳號無法解題。請改用你的對局帳號登入。',

@@ -631,8 +631,14 @@ async function submitMove(
       session.focusNext = true;
       onSolved?.(session.puzzle.id);
     }
+    // A solve by a mate we did not store says so. Silently reading it as the
+    // stored solution would hide the one thing the solver would want to know.
+    const alternativeMate = 'alternativeMate' in attempt && attempt.alternativeMate === true;
     session.feedback = attempt.complete
-      ? { kind: 'good', text: t('puzzle.solved') }
+      ? {
+          kind: 'good',
+          text: alternativeMate ? t('puzzle.solvedAlternativeMate') : t('puzzle.solved'),
+        }
       : { kind: 'good', text: t('puzzle.correct') };
     // A solve gets its own warm confirmation cue. A correct-but-incomplete move
     // sounds like the move it was (capture if the line reduced piece count,

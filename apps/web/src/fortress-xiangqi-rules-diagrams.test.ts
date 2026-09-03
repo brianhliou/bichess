@@ -119,16 +119,18 @@ function dropTargetsOf(role: FortressXiangqiDropRole): string[] {
 describe('fortress drop regions', () => {
   it('the five pieces drawn on the free-drop board really share one region', () => {
     const chariot = dropTargetsOf('chariot');
-    for (const role of ['horse', 'cannon', 'soldier', 'treasure'] as const) {
+    for (const role of ['horse', 'cannon', 'soldier'] as const) {
       expect(dropTargetsOf(role), `${role} does not share the chariot's drop region`).toEqual(
         chariot,
       );
     }
   });
 
-  it('holds the elephant to its own half and the advisor to its own palace', () => {
+  it('holds the elephant and the treasure to their own half, the advisor to its palace', () => {
     const free = dropTargetsOf('chariot');
     const elephant = dropTargetsOf('elephant');
+    // The Treasure joined the Elephant's region on 2026-09-02.
+    expect(dropTargetsOf('treasure')).toEqual(elephant);
     const advisor = dropTargetsOf('advisor');
 
     // Own half is ranks 1-4; own palace is files a-c on ranks 1-3.
@@ -164,7 +166,7 @@ describe('fortress drop regions', () => {
     }
   });
 
-  it('names five pieces over the free-drop board and one over each restricted board', () => {
+  it('names four pieces over the free-drop board, two over the own-half board, one over the palace', () => {
     const svg = FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM();
     const labels = (svg.match(/aria-label="red (?!general)[a-z]+"/g) ?? []).map((m) =>
       m.replace('aria-label="red ', '').replace('"', ''),
@@ -176,8 +178,8 @@ describe('fortress drop regions', () => {
       'horse',
       'cannon',
       'soldier',
-      'treasure',
       'elephant',
+      'treasure',
       'advisor',
     ]);
   });
