@@ -55,21 +55,24 @@ describe('embedPlyFromSearch', () => {
 });
 
 describe('fitBoardWidth', () => {
-  it('is bounded by the room beside the rail in the wide layout', () => {
-    // 760 wide: the rail takes 178, leaving 582; the height allows more.
-    expect(fitBoardWidth({ width: 760, height: 900 }, 0.9, false)).toBe(582);
+  it('is bounded by the room beside the move sheet in the wide layout', () => {
+    // 760 wide: the sheet takes 226 and the card border 2, leaving 532; the
+    // height allows more.
+    expect(fitBoardWidth({ width: 760, height: 900 }, 0.9, false)).toBe(532);
   });
 
   it('is bounded by the height when the frame is short', () => {
-    // 700 tall minus the seat rows = 644, times a 9:10 board = 579.
-    expect(fitBoardWidth({ width: 1200, height: 700 }, 0.9, false)).toBe(579);
+    // 700 tall minus two seat bars (78), the control row (39) and the card
+    // border (2) = 581, times a 9:10 board = 522.
+    expect(fitBoardWidth({ width: 1200, height: 700 }, 0.9, false)).toBe(522);
   });
 
   it('keeps room for the move list when stacked', () => {
-    const wide = fitBoardWidth({ width: 400, height: 700 }, 1, false);
-    const stacked = fitBoardWidth({ width: 400, height: 700 }, 1, true);
-    expect(stacked).toBeLessThanOrEqual(400);
-    expect(stacked).toBeLessThan(wide + 200);
+    // 500 tall: bars, controls and border leave 381; the stacked layout also
+    // holds 112 back for the sheet under the board, so a square board gets 269.
+    expect(fitBoardWidth({ width: 400, height: 500 }, 1, true)).toBe(269);
+    // A tall frame is bounded by the width instead (398 = 400 minus the border).
+    expect(fitBoardWidth({ width: 400, height: 700 }, 1, true)).toBe(398);
   });
 
   it('never collapses to nothing', () => {

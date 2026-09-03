@@ -1,11 +1,12 @@
 // /embed/game/:roomId — one finished game, rendered alone, meant to be framed by
 // someone else's page.
 //
-// Board on the left, move list on the right, a row of step buttons under the
-// list, and a credit line back to the review page. That is the whole surface:
-// no nav, no engine, no sign-in state. The board is the same renderer /watch
-// uses for the same game, resolved by the game's own variant, so every variant
-// the site can replay is embeddable without a per-variant branch here.
+// One card, the same grammar as the study embed: the board column on the left
+// (seat bar, board, seat bar, step controls), the move sheet on the right, and
+// a credit line back to the review page under the card. That is the whole
+// surface: no nav, no engine, no sign-in state. The board is the same renderer
+// /watch uses for the same game, resolved by the game's own variant, so every
+// variant the site can replay is embeddable without a per-variant branch here.
 //
 // Only FINISHED games load. The summary endpoint answers 404 for anything still
 // in progress and the per-variant postgame endpoints apply the post-terminal
@@ -15,9 +16,12 @@
 import '../app-base.css';
 import '../review/move-list.css';
 import type { GameEvent } from '@mistboard/game';
+import { banqiResultLabel } from '../banqi-result-label.js';
 import { displayParticipantName, type FeaturedGame, matchupSeats } from '../game-display.js';
 import { gameMetaForGame, reviewUrlForGame } from '../game-meta.js';
+import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
+import { reviewResultLabel } from '../review/game-review-meta.js';
 import { createMoveList, type MoveList } from '../review/move-list.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
@@ -29,15 +33,23 @@ import './embed.css';
 // @media rule in embed.css; the two must agree or the board is sized for the
 // wrong layout).
 const STACK_BELOW_PX = 480;
-// Width the move column takes beside the board, and the gap between them.
-const RAIL_WIDTH_PX = 168;
-const RAIL_GAP_PX = 10;
-// Two seat rows (name + clock) frame the tenant boards; the chess renderer's
-// board-edge clock rows are the same height. Reserved out of the box height so
-// the board never pushes them off the bottom.
-const SEAT_ROWS_PX = 56;
-// In the stacked layout the move list keeps at least this much height.
-const STACKED_MOVES_MIN_PX = 72;
+// Width of the move sheet beside the board. The study widget's floor for the
+// same column (articles.css): a move pair at 15px, number included, fits on one
+// line. At 168px the shared list truncated every coordinate move to "g3-…".
+const RAIL_WIDTH_PX = 226;
+// The card's own border, left and right (or top and bottom when stacked).
+const CARD_BORDER_PX = 2;
+// Two seat bars (name + clock, 39px each) frame the tenant boards, and the
+// step-control row sits under the bottom bar. Reserved out of the box height so
+// the board never pushes them off the bottom. The chess renderer's board-edge
+// clock rows are shorter; the board simply gets a few spare pixels there.
+const SEAT_ROWS_PX = 78;
+const CONTROLS_PX = 39;
+// In the stacked layout the sheet keeps at least this much height: the result
+// foot (37px) and three rows of moves (embed.css keeps the same number).
+const STACKED_MOVES_MIN_PX = 112;
+// Gap between the card and the credit line (.embed-frame in embed.css).
+const FRAME_GAP_PX = 6;
 
 export type EmbedGameOptions = {
   /** `?ply=N`: open on this ply rather than the final position. */
@@ -104,29 +116,58 @@ async function mountBoard(
   });
 }
 
-function control(text: string, label: string, onClick: () => void): HTMLButtonElement {
+// Drawn, not typed, for the same reason the study widget draws its own: the
+// media glyphs and the arrows resolve from different fallback fonts, never match
+// in weight, and on some platforms the media pair renders as colour emoji.
+const ICON = {
+  first: '<rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/>',
+  prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
+  next: '<path d="M5 4.3v7.4L11.1 8z"/>',
+  last: '<rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/>',
+} as const;
+
+function control(icon: keyof typeof ICON, label: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'embed-game-control';
   button.setAttribute('aria-label', label);
-  button.textContent = text;
+  button.innerHTML =
+    '<svg class="embed-game-control-icon" viewBox="0 0 16 16" width="16" height="16" ' +
+    `aria-hidden="true" focusable="false" fill="currentColor">${ICON[icon]}</svg>`;
   button.addEventListener('click', onClick);
   return button;
 }
 
-/** Board width that fits the box: the narrower of the room beside the rail and
- *  the room under the seat rows, at the variant's aspect ratio. Exported so the
- *  arithmetic is testable without a layout engine. */
+/** "Black wins" rather than the raw `black-wins` token, by ink for the flip
+ *  variants (whose seat is not their colour) and by the variant's own seat
+ *  colour word for the rest. Same dispatch /watch uses for its queue. */
+export function embedResultLabel(
+  game: Pick<FeaturedGame, 'variant' | 'result' | 'firstColor'>,
+): string {
+  if (game.variant === 'banqi') return banqiResultLabel(game.result, game.firstColor ?? null);
+  if (game.variant === 'jungle-flip')
+    return jungleFlipResultLabel(game.result, game.firstColor ?? null);
+  return reviewResultLabel(game.result, game.variant);
+}
+
+/** Board width that fits the box: the narrower of the room beside the move
+ *  sheet and the room under the seat bars and controls, at the variant's aspect
+ *  ratio. Exported so the arithmetic is testable without a layout engine. */
 export function fitBoardWidth(
   frame: { width: number; height: number },
   aspect: number,
   stacked: boolean,
 ): number {
-  const availableWidth = stacked ? frame.width : frame.width - RAIL_WIDTH_PX - RAIL_GAP_PX;
-  const reservedHeight = stacked ? SEAT_ROWS_PX + STACKED_MOVES_MIN_PX : SEAT_ROWS_PX;
+  const availableWidth = frame.width - CARD_BORDER_PX - (stacked ? 0 : RAIL_WIDTH_PX);
+  const reservedHeight =
+    SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
   const availableHeight = frame.height - reservedHeight;
   return Math.max(120, Math.floor(Math.min(availableWidth, availableHeight * aspect)));
 }
+
+// The TV frame keeps the compact seat rows (28px each); only the game card
+// wears the study's taller bars.
+const TV_SEAT_ROWS_PX = 56;
 
 /** Board width for a board that stands alone in the box (the TV embed): the
  *  full width, or the height under the seat rows at the aspect ratio. */
@@ -134,7 +175,10 @@ export function fitSoloBoardWidth(
   frame: { width: number; height: number },
   aspect: number,
 ): number {
-  return Math.max(120, Math.floor(Math.min(frame.width, (frame.height - SEAT_ROWS_PX) * aspect)));
+  return Math.max(
+    120,
+    Math.floor(Math.min(frame.width, (frame.height - TV_SEAT_ROWS_PX) * aspect)),
+  );
 }
 
 export async function mountEmbedGame(
@@ -184,16 +228,25 @@ export async function mountEmbedGame(
   const stage = document.createElement('div');
   stage.className = 'embed-game';
   const boardCol = document.createElement('div');
-  boardCol.className = 'embed-board embed-game-board';
-  const rail = document.createElement('div');
-  rail.className = 'embed-game-rail';
-  const movesRoot = document.createElement('div');
-  movesRoot.className = 'embed-game-moves';
+  boardCol.className = 'embed-game-board';
+  const boardHost = document.createElement('div');
+  boardHost.className = 'embed-board';
   const controls = document.createElement('div');
   controls.className = 'embed-game-controls';
   const status = document.createElement('span');
   status.className = 'embed-game-status';
-  rail.append(movesRoot, controls);
+  boardCol.append(boardHost, controls);
+  const rail = document.createElement('div');
+  rail.className = 'embed-game-rail';
+  const railInner = document.createElement('div');
+  railInner.className = 'embed-game-rail-inner';
+  const movesRoot = document.createElement('div');
+  movesRoot.className = 'embed-game-moves';
+  const resultFoot = document.createElement('div');
+  resultFoot.className = 'embed-game-result';
+  resultFoot.textContent = embedResultLabel(game);
+  railInner.append(movesRoot, resultFoot);
+  rail.append(railInner);
   stage.append(boardCol, rail);
   frame.append(stage);
 
@@ -204,7 +257,7 @@ export async function mountEmbedGame(
   credit.rel = 'noopener';
   const first = namesByRoomId[roomId]?.first ?? '';
   const second = namesByRoomId[roomId]?.second ?? '';
-  credit.textContent = `${first} vs ${second} · ${game.result} · mistboard.com`;
+  credit.textContent = `${first} vs ${second} · mistboard.com`;
   frame.append(credit);
   root.replaceChildren(frame);
 
@@ -225,19 +278,22 @@ export async function mountEmbedGame(
 
   // Size the board to the box before the renderer paints, so the first frame
   // is already the right size, and again whenever the host resizes the frame.
+  // Measured from the frame, not the card: the card is only as tall as its
+  // board column, so its own rect is the answer, not the question.
   const fitBoard = (): void => {
-    const rect = stage.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const stacked = rect.width < STACK_BELOW_PX;
-    boardCol.style.width = `${fitBoardWidth(rect, aspect, stacked)}px`;
+    const rect = frame.getBoundingClientRect();
+    const box = { width: rect.width, height: rect.height - credit.offsetHeight - FRAME_GAP_PX };
+    if (box.width <= 0 || box.height <= 0) return;
+    const stacked = box.width < STACK_BELOW_PX;
+    boardCol.style.width = `${fitBoardWidth(box, aspect, stacked)}px`;
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(fitBoard).observe(stage);
+    new ResizeObserver(fitBoard).observe(frame);
   }
 
   try {
-    handle = await mountBoard(boardCol, specId, roomId, {
+    handle = await mountBoard(boardHost, specId, roomId, {
       metadataByRoomId,
       namesByRoomId,
       onPlyChange,
@@ -253,11 +309,11 @@ export async function mountEmbedGame(
   movesRoot.append(moveList.el);
 
   controls.append(
-    control('⏮', 'First move', () => jump(0)),
-    control('◀', 'Previous move', () => jump(currentPly - 1)),
-    control('▶', 'Next move', () => jump(currentPly + 1)),
-    control('⏭', 'Last move', () => jump(maxPly)),
+    control('first', 'First move', () => jump(0)),
+    control('prev', 'Previous move', () => jump(currentPly - 1)),
     status,
+    control('next', 'Next move', () => jump(currentPly + 1)),
+    control('last', 'Last move', () => jump(maxPly)),
   );
   document.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') jump(currentPly - 1);
