@@ -6,6 +6,7 @@ import {
   LOCALE_STORAGE_KEY,
   localeFromLanguageTag,
   localeFromPath,
+  localeSwitchNavigation,
   localizedHref,
   resolveLocale,
   stripLocalePrefix,
@@ -154,6 +155,34 @@ describe('locale helpers', () => {
   it('strips existing locale prefixes before rebuilding hrefs', () => {
     expect(stripLocalePrefix('/zh-hant/rules/banqi#top')).toBe('/rules/banqi#top');
     expect(localizedHref('/zh-hans/rules/banqi', 'zh-Hant')).toBe('/zh-hant/rules/banqi');
+  });
+
+  it('reloads instead of navigating when the localized URL differs only by fragment', () => {
+    // /feed has no locale prefix, so the target URL equals the current one;
+    // assigning it to location.href with a hash is a fragment navigation and
+    // never reloads, so the switcher must reload explicitly.
+    expect(localeSwitchNavigation('/feed#2026-09-02-embed', 'zh-Hant')).toEqual({ kind: 'reload' });
+    expect(localeSwitchNavigation('/learn/xiangqi#/openings/3', 'zh-Hans')).toEqual({
+      kind: 'reload',
+    });
+    expect(localeSwitchNavigation('/api-docs?x=1#tag-games', 'zh-Hant')).toEqual({
+      kind: 'reload',
+    });
+    expect(localeSwitchNavigation('/feed', 'zh-Hant')).toEqual({ kind: 'reload' });
+    expect(localeSwitchNavigation('/zh-hant/rules/banqi#setup', 'zh-Hant')).toEqual({
+      kind: 'reload',
+    });
+  });
+
+  it('navigates when the locale changes the path prefix, keeping the fragment', () => {
+    expect(localeSwitchNavigation('/rules/banqi#setup', 'zh-Hant')).toEqual({
+      kind: 'navigate',
+      href: '/zh-hant/rules/banqi#setup',
+    });
+    expect(localeSwitchNavigation('/zh-hans/blog/misty?ref=x#top', 'en')).toEqual({
+      kind: 'navigate',
+      href: '/blog/misty?ref=x#top',
+    });
   });
 });
 
