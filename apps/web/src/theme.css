@@ -1156,16 +1156,6 @@
   color: var(--site-muted);
 }
 
-:root[data-effective-theme="dark"] .landing-page #landing-replay {
-  border-color: var(--site-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--site-panel) 88%, var(--site-bg)),
-    var(--site-bg)
-  );
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
-}
-
 :root[data-effective-theme="dark"]
   .landing-page
   #landing-replay
@@ -1230,18 +1220,17 @@
 :root[data-effective-theme="dark"] .landing-games {
   border-color: var(--site-border);
   background: var(--site-panel);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 /* Dark mode reads elevation through surface lightness + a top highlight, not
-   drop shadows (which vanish against a near-black page). Give the homepage
-   panels a faint catch-light on the top edge plus a deeper, larger blur. */
-:root[data-effective-theme="dark"] :is(.site-box, .article-sheet) {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+   drop shadows (which vanish against a near-black page). Every panel gets the
+   same faint catch-light on its top edge and nothing else: the 32px blur that
+   used to sit here reached only .site-box, so news/studies/forum/chat floated
+   while the article cards, video cards and lobby card beside them sat flat.
+   Light mode has no shadow at all; this is the dark counterpart of that. */
+:root[data-effective-theme="dark"]
+:is(.site-box, .article-sheet, .landing-lobby-card, .landing-article-card) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 :root[data-effective-theme="dark"] .landing-games-heading,

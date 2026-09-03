@@ -7,8 +7,8 @@
 
 .landing-chat {
   --landing-chat-height: 292px;
-  --landing-chat-bg: #fff;
-  --landing-chat-border: rgba(0, 0, 0, 0.13);
+  --landing-chat-bg: var(--site-panel);
+  --landing-chat-border: var(--site-border-soft);
   --landing-chat-title: #5c5c5c;
   --landing-chat-text: #555;
   --landing-chat-handle: #7a7a7a;
@@ -257,8 +257,6 @@ a.landing-chat-token:focus-visible {
 }
 
 :root[data-effective-theme="dark"] .landing-chat {
-  --landing-chat-bg: #242320;
-  --landing-chat-border: rgba(255, 255, 255, 0.14);
   --landing-chat-title: #a9a9a4;
   --landing-chat-text: #c7c3bb;
   --landing-chat-handle: #d5d1c9;
