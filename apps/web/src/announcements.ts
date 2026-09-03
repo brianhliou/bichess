@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-03',
+    kind: 'release',
+    headline: 'Every game in progress, on one page.',
+    body: 'Current games lists everything being played right now, across every variant: live games with their clocks, and correspondence games waiting on a move, each as a small board you can click into. Fog games appear as cards without a board until they end. When nothing is running, the page shows the open correspondence seeks and the most recent finished games instead. The games database moved to Advanced search under Tools.',
+    href: '/games',
+    cta: 'See current games',
+  },
+  {
     date: '2026-09-02',
     kind: 'release',
     headline: 'Put a Mistboard board in your own page.',
@@ -87,7 +95,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'update',
     headline: 'Brilliant moves are marked now.',
     body: 'Xiangqi review adds !! and ! beside the mistake glyphs it already showed. A move earns !! when you give material up and the engine agrees it does not come back. Blunders were never the only thing worth seeing in your own game.',
-    href: '/games',
+    href: '/games/search',
     cta: 'Find a game',
   },
   {
@@ -123,7 +131,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'A head-to-head record on every finished game.',
     body: 'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.',
-    href: '/games',
+    href: '/games/search',
     cta: 'Find a game',
   },
   {
@@ -228,7 +236,7 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'A games database for xiangqi.',
     body: 'Search finished games from three sources in one place: the historical corpus, the tournament boards we broadcast, and games played here.',
-    href: '/games',
+    href: '/games/search',
     cta: 'Search the games',
   },
   {

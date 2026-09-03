@@ -34,8 +34,14 @@ describe('landing activity', () => {
     expect(activity.querySelector('.landing-activity-label')?.getAttribute('title')).toBe(
       'Completed games in the last 30 days',
     );
-    // Players-online is dropped; only games-in-play remains on the live line.
+    // Players-online is dropped; only games-in-play remains on the live line,
+    // and it links to the current-games page (the set it counts).
     expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('0 games in play');
+    expect(
+      activity
+        .querySelector<HTMLAnchorElement>('.landing-activity-live a.landing-activity-inline-stat')
+        ?.getAttribute('href'),
+    ).toBe('/games');
   });
 
   it('keeps live-only zeros in the secondary line when durable totals are unavailable', async () => {

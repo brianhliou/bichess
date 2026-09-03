@@ -485,6 +485,10 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'not_found' }));
       return true;
     }
+    // Flip-variant results are seat-keyed; attach the bound ink the same way the
+    // watch feed does, so a consumer of the summary alone (the game embed) can
+    // say "Black wins" rather than "First wins". No-op for every other variant.
+    await attachFlipFirstColors([game]);
     // Additively expose the shaped seat roster (name/rating/kind, with private-seat
     // redaction + corpus-name override) that every per-variant postgame endpoint
     // already returns, so the flagship /game/:id review left rail reads identical

@@ -1,0 +1,416 @@
+/* /games — current games grid (lichess "Current games" anatomy: channel rail on
+   the left, a responsive grid of game cards, each a board framed by two seat
+   rows with ticking clocks). */
+
+.current-games-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.current-games-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.current-games-subtitle {
+  margin: 0;
+  color: var(--site-muted);
+}
+
+.current-games-count {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--site-muted);
+}
+
+.current-games-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Channel rail: lichess TV anatomy, text block left, marker on the right. */
+.current-games-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 72px;
+}
+
+.current-games-rail-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--site-fg);
+  text-decoration: none;
+  --variant-marker-color: var(--site-muted);
+}
+
+.current-games-rail-link:hover,
+.current-games-rail-link:focus-visible {
+  background: var(--site-surface-2, rgba(0, 0, 0, 0.04));
+  outline: none;
+}
+
+.current-games-rail-link.active {
+  color: var(--site-accent-strong);
+  --variant-marker-color: var(--site-accent-strong);
+}
+
+.current-games-rail-link.is-quiet .current-games-rail-name {
+  color: var(--site-muted);
+}
+
+.current-games-rail-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 0;
+}
+
+.current-games-rail-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.current-games-rail-count {
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.current-games-rail-thumb {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-games-rail-thumb svg,
+.current-games-rail-thumb .variant-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.current-games-rail-crown {
+  width: 28px;
+  height: 28px;
+}
+
+/* Cards */
+.current-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+}
+
+.current-game-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.current-game-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 10px;
+}
+
+.current-game-link:hover .current-game-seat-name,
+.current-game-link:focus-visible .current-game-seat-name {
+  color: var(--site-accent-strong);
+}
+
+.current-game-link:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 4px;
+}
+
+.current-game-seat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  font-size: 0.92rem;
+}
+
+.current-game-seat-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-game-bot {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--site-accent-soft, rgba(0, 0, 0, 0.08));
+  color: var(--site-accent-strong);
+}
+
+.current-game-seat-clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+}
+
+.current-game-seat-clock.is-active {
+  color: var(--site-fg);
+  font-weight: 600;
+}
+
+.current-game-board {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--site-surface-2, rgba(0, 0, 0, 0.04));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The compact tenant renderer draws its own seat rows; the card has them. */
+  --showcase-seat-name-size: 0;
+  --showcase-seat-clock-size: 0;
+}
+
+.current-game-board .showcase-seat,
+.current-game-board .replay-game-meta-card,
+.current-game-board .replay-pane-label,
+.current-game-board .replay-pane-name,
+.current-game-board .replay-pane-status,
+.current-game-board .replay-captures,
+.current-game-board .captures-strip,
+.current-game-board .replay-control-bar,
+.current-game-board .replay-ply-line {
+  display: none;
+}
+
+.current-game-board.replay-page,
+.current-game-board .replay-page {
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.current-game-board .replay-layout-solo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+}
+
+.current-game-board .replay-layout-solo .replay-pane,
+.current-game-board .replay-layout-solo .replay-board {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.current-game-board .replay-layout-solo .replay-board svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.current-game-hidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  text-align: center;
+  color: var(--site-muted);
+  --variant-marker-color: var(--site-muted);
+}
+
+.current-game-hidden-marker {
+  width: 40%;
+  max-width: 96px;
+}
+
+.current-game-hidden-marker svg,
+.current-game-hidden-marker .variant-marker {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.current-game-hidden-label {
+  font-size: 0.85rem;
+}
+
+.current-game-meta {
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty state */
+.current-games-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
+  border-radius: 12px;
+}
+
+.current-games-empty h2,
+.current-games-seeks h2,
+.current-games-recent h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.current-games-empty p,
+.current-games-muted {
+  margin: 0;
+  color: var(--site-muted);
+}
+
+.current-games-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.current-games-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--site-accent-strong);
+  color: var(--site-on-accent, #fff);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.current-games-cta.is-secondary {
+  background: transparent;
+  color: var(--site-accent-strong);
+  border: 1px solid var(--site-accent-strong);
+}
+
+.current-games-seeks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.current-games-seek-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.current-games-seek {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
+  color: inherit;
+  text-decoration: none;
+}
+
+.current-games-seek:hover {
+  border-color: var(--site-accent-strong);
+}
+
+.current-games-seek-name {
+  font-weight: 600;
+}
+
+.current-games-seek-detail {
+  color: var(--site-muted);
+}
+
+.current-games-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.current-games-recent:empty {
+  display: none;
+}
+
+.current-games-search-link {
+  align-self: flex-start;
+  color: var(--site-accent-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .current-games-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .current-games-rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .current-games-rail-link {
+    grid-template-columns: minmax(0, 1fr) 24px;
+    padding: 4px 8px;
+    border: 1px solid var(--site-border, rgba(0, 0, 0, 0.1));
+  }
+
+  .current-games-rail-text {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .current-games-rail-thumb {
+    width: 24px;
+    height: 24px;
+  }
+
+  .current-games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+}

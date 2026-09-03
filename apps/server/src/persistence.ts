@@ -407,6 +407,7 @@ export {
   viewerRelationForHandle,
 } from './persistence-relations.js';
 export type {
+  ActiveRoomDeadline,
   CorrespondenceGameSummary,
   DeadlineWarningCandidate,
   DueRoomDeadline,
@@ -415,6 +416,7 @@ export type {
 export {
   deleteRoomDeadline,
   listActiveCorrespondenceRoomIds,
+  listActiveRoomDeadlines,
   listCorrespondenceGamesForUser,
   listDeadlineWarningCandidates,
   listDueRoomDeadlines,

@@ -802,20 +802,34 @@ test('the /games database carries its own route meta and sitemap entry', async (
   // recently finished games, so it is indexable content.
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
-  const response = captureResponse();
-  const served = await serveSpaShellWithRoutePreloads({
-    response,
+  // Since 2026-09-03 the database lives at /games/search and /games is the
+  // current-games page; each carries its own title and both are in the sitemap.
+  const search = captureResponse();
+  const servedSearch = await serveSpaShellWithRoutePreloads({
+    response: search,
+    staticDir,
+    pathname: '/games/search',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.equal(servedSearch, true);
+  assert.match(search.body, /<title>Xiangqi Game Database \| Mistboard<\/title>/);
+  assert.doesNotMatch(search.body, /noindex/);
+
+  const current = captureResponse();
+  const servedCurrent = await serveSpaShellWithRoutePreloads({
+    response: current,
     staticDir,
     pathname: '/games',
     publicHost: 'https://mistboard.com',
   });
-  assert.equal(served, true);
-  assert.match(response.body, /<title>Xiangqi Game Database \| Mistboard<\/title>/);
-  assert.doesNotMatch(response.body, /noindex/);
+  assert.equal(servedCurrent, true);
+  assert.match(current.body, /<title>Current Games \| Mistboard<\/title>/);
+  assert.doesNotMatch(current.body, /noindex/);
 
   const sitemap = captureResponse();
   await serveSitemap({ response: sitemap, publicHost: 'https://mistboard.com', staticDir });
   assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/games<\/loc>/);
+  assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/games\/search<\/loc>/);
 });
 
 test('the /study index carries its own route meta and sitemap entry', async () => {

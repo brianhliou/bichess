@@ -120,6 +120,9 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
     prefixes: [
       'replay',
       'watch',
+      // 'games' is the current-games page (/games), a watch surface whose
+      // cards mount the same live tenant renderers, so it rides this chunk.
+      'games',
       'study',
       'analysis',
       'historical',

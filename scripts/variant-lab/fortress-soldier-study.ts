@@ -66,6 +66,13 @@ const CONDITIONS = {
     ini: resolve(REPO, 'scripts', 'variant-lab', 'fortress-xiangqi-vet.ini'),
     variant: 'fortressxiangqivet',
   },
+  // 2026-09-02 treasure arm: the Treasure confined to its own half like the
+  // elephant, so it can neither move nor be dropped past the river. `base` is
+  // the shipped rule, so `base,treasure` is the A/B.
+  treasure: {
+    ini: resolve(REPO, 'scripts', 'variant-lab', 'fortress-xiangqi-treasure-home.ini'),
+    variant: 'fortressxiangqitreasurehome',
+  },
 } as const;
 type ConditionName = keyof typeof CONDITIONS;
 
@@ -350,6 +357,9 @@ type PerPly = {
   soldierRiverCross: boolean; // soldier board move that crossed into the enemy half
   soldierDropOwnHalf: boolean | null; // only for soldier drops
   soldierDropEnemyHalf: boolean | null; // only for soldier drops (attacking parachute)
+  // Drop geography for ANY role. The soldier pair above predates the treasure
+  // study and is kept so old .jsonl runs stay readable.
+  dropOwnHalf: boolean | null;
   piecesOnBoard: number;
 };
 
@@ -462,6 +472,7 @@ async function playGame(
         !Board.ownHalf(cls.mover, cls.toRank),
       soldierDropOwnHalf: cls.isDrop && cls.role === 'soldier' ? cls.ownHalfBefore : null,
       soldierDropEnemyHalf: cls.isDrop && cls.role === 'soldier' ? !cls.ownHalfBefore : null,
+      dropOwnHalf: cls.isDrop ? cls.ownHalfBefore : null,
       piecesOnBoard: board.squares.size,
     });
 
@@ -647,6 +658,34 @@ function summarize(cond: ConditionName, games: GameResult[]): Record<string, unk
       if (p.soldierRiverCross) soldierRiverCrossings += 1;
     }
 
+  // Treasure + drop-mate metrics (2026-09-02 study). The taste complaint this
+  // measures is "the finish is a parachuted piece next to a cornered general",
+  // so the headline is what share of decisive games END on a drop, and how much
+  // of that the treasure is responsible for. A game ends on a drop when the last
+  // ply was a drop and the loser then had no legal move.
+  let treasureDrops = 0;
+  let treasureDropsEnemyHalf = 0;
+  let treasureBoardMoves = 0;
+  let dropMates = 0;
+  let treasureDropMates = 0;
+  let soldierDropMates = 0;
+  for (const g of games) {
+    for (const p of g.perPly) {
+      if (p.role !== 'treasure') continue;
+      if (p.isDrop) {
+        treasureDrops += 1;
+        if (p.dropOwnHalf === false) treasureDropsEnemyHalf += 1;
+      } else treasureBoardMoves += 1;
+    }
+    if (g.reason !== 'no-legal-moves') continue;
+    const last = g.perPly.at(-1);
+    if (!last?.isDrop) continue;
+    dropMates += 1;
+    if (last.role === 'treasure') treasureDropMates += 1;
+    if (last.role === 'soldier') soldierDropMates += 1;
+  }
+  const mates = games.filter((g) => g.reason === 'no-legal-moves').length;
+
   const redScore = (redWins + 0.5 * draws) / n;
   const meanDepth = mean(games.flatMap((g) => g.perPly.map((p) => p.depth)));
   const meanNodes = mean(games.flatMap((g) => g.perPly.map((p) => p.searchNodes)));
@@ -678,6 +717,24 @@ function summarize(cond: ConditionName, games: GameResult[]): Record<string, unk
       decisive.length > 0
         ? wilson(comebacks, decisive.length).map((x) => Number(x.toFixed(3)))
         : [0, 0],
+    treasure: {
+      drops: treasureDrops,
+      dropsPerGame: Number((treasureDrops / n).toFixed(2)),
+      // 0 by construction in the treasure-home arm; the number the arm removes.
+      dropsEnemyHalf: treasureDropsEnemyHalf,
+      dropsEnemyHalfRate: treasureDrops ? treasureDropsEnemyHalf / treasureDrops : 0,
+      boardMoves: treasureBoardMoves,
+      boardMovesPerGame: Number((treasureBoardMoves / n).toFixed(2)),
+    },
+    finishes: {
+      mates,
+      dropMates,
+      // The 56% the design spec flagged as a taste call.
+      dropMateShareOfMates: mates ? Number((dropMates / mates).toFixed(3)) : 0,
+      treasureDropMates,
+      soldierDropMates,
+      treasureShareOfDropMates: dropMates ? Number((treasureDropMates / dropMates).toFixed(3)) : 0,
+    },
     soldier: {
       drops: soldierDrops,
       dropsOwnHalfRate: soldierDrops ? soldierDropsOwnHalf / soldierDrops : 0,

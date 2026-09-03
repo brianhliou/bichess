@@ -17,28 +17,37 @@ const move = (uci: string): FortressXiangqiMove => {
 };
 
 // Opening of the article's sample game, far enough in that both sides have
-// captured: by here Red holds a soldier and Black holds a chariot.
+// captured. Regenerated 2026-09-02 with the river soldier: the old prefix had a
+// black soldier stepping sideways at home, which that rule makes illegal.
 const MOVES = [
-  'b2b3',
-  'f7f6',
+  'e1e4',
+  'b7b6',
+  'e4f4',
+  'd8f6',
   'f2f3',
-  'c8c5',
-  'c1b2',
-  'b7c7',
-  'f1e3',
-  'g8f7',
-  'e3c4',
-  'c5f5',
-  'g2f2',
   'b8c6',
-  'a2a3',
-  'a7b7',
-  'g1g4',
-  'f6g6',
-  'a1a2',
-  'f7f6',
-  'g4e4',
-  'f5f2',
+  'f1e3',
+  'c8d8',
+  'e3c4',
+  'a8c8',
+  'g1e1',
+  'c8c7',
+  'e1e6',
+  'c6b4',
+  'c4b6',
+  'c7c6',
+  'e6c6',
+  'b4c6',
+  'R@c5',
+  'R@d6',
+  'P@f5',
+  'c6b8',
+  'f5f6',
+  'd6b6',
+  'f6e6',
+  'N@f6',
+  'e6f6',
+  'b6f6',
 ].map(move);
 
 function mount(moves: FortressXiangqiMove[]): HTMLElement {

@@ -118,7 +118,7 @@ export const fortressXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: '**Soldier:** moves one point forward or sideways, never backward. Unlike a standard xiangqi soldier, it can move sideways from the opening move.',
+          text: '**Soldier:** moves one point forward, never backward. Once it crosses the river it may also step one point sideways, exactly as in xiangqi. The Treasure is the other piece the river holds back: it never crosses at all.',
         },
         {
           kind: 'raw-svg',
@@ -136,7 +136,7 @@ export const fortressXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'There are no promotions and no past-river changes. Soldiers move the same on both sides of the river; the river only stops the Elephant, which never crosses it.',
+          text: 'There are no promotions. The river matters three ways: the Soldier gains its sideways step by crossing it, and neither the Elephant nor the Treasure may cross it at all.',
         },
       ],
     },
@@ -149,17 +149,17 @@ export const fortressXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Chariots, Horses, Cannons, Soldiers, and Treasures may drop on any empty point. Advisors and Elephants keep their normal territory restrictions.',
+          text: 'Chariots, Horses, Cannons, and Soldiers may drop on any empty point. Advisors, Elephants, and Treasures keep their normal territory restrictions.',
         },
         {
           kind: 'raw-svg',
           svg: FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM,
           caption:
-            'Where a captured piece may land. The Chariot, Horse, Cannon, Soldier and Treasure drop on any empty point; the Elephant is held to your own half and the Advisor to your own palace.',
+            'Where a captured piece may land. The Chariot, Horse, Cannon and Soldier drop on any empty point; the Elephant and the Treasure are held to your own half, and the Advisor to your own palace.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a dropped Soldier can step sideways wherever it lands. The one limit is the usual one: no move, drop included, may leave your own general in check.',
+          text: 'A dropped piece is live immediately. A drop may give check or deliver checkmate, and a Soldier dropped past the river arrives with its sideways step already earned. The one limit is the usual one: no move, drop included, may leave your own general in check.',
         },
       ],
     },
@@ -185,7 +185,7 @@ export const fortressXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows both uses of the reserve: an Advisor returns to defend its palace, then Red finishes with a mating Treasure drop.',
+          text: 'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.',
         },
         {
           kind: 'fortress-xiangqi-replay',
@@ -194,9 +194,9 @@ export const fortressXiangqiArticle: Article = {
             black: 'Fairy-Stockfish',
             event: 'Engine self-play · 2.5 s per move',
             moves:
-              'b2b3 f7f6 f2f3 c8c5 c1b2 b7c7 f1e3 g8f7 e3c4 c5f5 g2f2 b8c6 a2a3 a7b7 g1g4 f6g6 a1a2 f7f6 g4e4 f5f2 e1e8 a8a6 e4e2 f2f1 e2e1 f1f2 e8e6 a6a7 e6e4 P@d4 d2e2 f2g2 e4f4 f6e5 f4g4 e5f5 g4g3 d4c4 e1g1 g2b2 a2b2 A@f7 g3g7 f5f6 g7d7 c7d7 C@c8 d8b6 P@d8 f7e8 P@e6 f6e6 g1g6 N@f6 d8e8 f8f7 c8c4 c6d4 P@g7 f7e7 g6f6 C@f1 A@c1 f1f6 N@c8 e7e8 c8a7 P@f8 R@e4 R@e5 e4e5 e6e5 P@f7 R@d8 f7f8 e8e7 R@e3 P@a1 b2a1 d8f8 e3e5 P@e6 c4c7 b7c7 P@f7 f8f7 T@d8',
+              'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c8d8 e3c4 a8c8 g1e1 c8c7 e1e6 c6b4 c4b6 c7c6 e6c6 b4c6 R@c5 R@d6 P@f5 c6b8 f5f6 d6b6 f6e6 N@f6 e6f6 b6f6 c5c8 d8d2 N@c5 P@d8 c8b8 d2d5 N@e6 P@e7 e6c7 d5d4 c7d5 f6f4 d5f4 f7f6 R@d5 d4c4 b8d8 C@b5 E@b3 b5d5 f4d5 R@d6 d8d7 d6d7 c5d7 R@d8 C@f4 g8f7 d5f6 f8g8 f4g4 g8f8 R@f5 f7e6 P@g8 f8f7 P@g6 e6f5 f6d5 f5g6 g4f4 P@e5 d7e5 f7f6 P@f5 f6e6 f4e4',
             resultText:
-              'Red checkmates with the Treasure drop T@d8. The Treasure attacks the general on e7 and also covers e8, while Black\'s own soldier on e6 and chariot on f7 take away the last two palace squares.',
+              'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.',
           },
         } as ArticleBlock,
         {

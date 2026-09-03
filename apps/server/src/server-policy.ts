@@ -172,18 +172,47 @@ export function canServeLiveBoard(gameSpecId: string): boolean {
 // /historical-xiangqi named the historical corpus, which is one of the three
 // sources the games database lists (broadcast boards and games played here are
 // the others), so the old path read as a much narrower surface than the page is.
-// The per-game detail path is deliberately absent: /historical-xiangqi/game/:id
-// still serves the archive review shell and the opening explorer links into it.
+// The database sat at /games from 2026-08-13 until /games became the
+// current-games page (lichess: /games is what is being played now, /games/search
+// is the database), so the hop now lands on /games/search. The per-game detail
+// path is deliberately absent: /historical-xiangqi/game/:id still serves the
+// archive review shell and the opening explorer links into it.
 export function legacyPageRedirect(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   if (normalized === '/historical-xiangqi' || normalized === '/historical-xiangqi/games') {
-    return '/games';
+    return '/games/search';
   }
   // The announcement archive answers on two paths. /feed is canonical (every
   // internal link points there); /news served the identical page, so the pair
   // read as duplicates to a crawler. One permanent hop, no canonical tag.
   if (normalized === '/news') return '/feed';
   return null;
+}
+
+// The games database's filter links carried their query on /games for three
+// weeks (2026-08-13 to 2026-09-02). A hit on /games with any database parameter
+// is one of those links, not the current-games page, so it hops to
+// /games/search with the query intact. A bare /games, or /games with the
+// current-games page's own parameters, stays put.
+const GAMES_SEARCH_QUERY_KEYS: readonly string[] = [
+  'player',
+  'event',
+  'source',
+  'result',
+  'from',
+  'to',
+  'plyMin',
+  'plyMax',
+  'sort',
+  'offset',
+  'limit',
+];
+
+export function gamesSearchQueryRedirect(pathname: string, search: string): string | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  if (normalized !== '/games' || !search || search === '?') return null;
+  const params = new URLSearchParams(search);
+  return GAMES_SEARCH_QUERY_KEYS.some((key) => params.has(key)) ? `/games/search${search}` : null;
 }
 
 /**
@@ -270,10 +299,12 @@ export function isClientRoute(pathname: string): boolean {
     // (public detail). All three are SPA client routes (apps/web/src/coach.ts).
     normalized === '/coach' ||
     normalized.startsWith('/coach/') ||
-    // Games database. /games is canonical; the /historical-xiangqi index paths
-    // 301 to it in server-http and are not client routes any more. The per-game
+    // Current games (/games: everything in progress right now) and the games
+    // database (/games/search). The /historical-xiangqi index paths 301 to the
+    // database in server-http and are not client routes any more. The per-game
     // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
     normalized === '/games' ||
+    normalized === '/games/search' ||
     // Import: paste a game, land on the analysis board. Mints nothing, so it
     // needs no server route of its own beyond being served the SPA shell.
     normalized === '/import' ||
