@@ -37,13 +37,9 @@ export type TenantWebView<C extends string> = {
   moveNumber: number;
 };
 
-export type TenantWebClock<C extends string> = {
-  activeColor: C | null;
-  incrementMs: number;
-  initialMs: number;
-  remainingMs: Record<C, number>;
-  runningSince: number | null;
-};
+import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
+
+export type { TenantWebClock } from './clock-projection.js';
 
 export type WebVariantTenant<C extends string> = {
   displayName: string;
@@ -732,14 +728,4 @@ export function createTenantRoomChrome<C extends string>(
     renderGameControls,
     tickCountdowns,
   };
-}
-
-function clockRemainingMs<C extends string>(
-  clock: TenantWebClock<C>,
-  color: C,
-  at: number,
-): number {
-  const remaining = clock.remainingMs[color];
-  if (clock.activeColor !== color || clock.runningSince === null) return remaining;
-  return Math.max(0, remaining - Math.max(0, at - clock.runningSince));
 }

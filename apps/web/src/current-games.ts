@@ -506,7 +506,7 @@ function buildSeatRow(
   if (player) row.dataset.color = player.color;
   const name = document.createElement('span');
   name.className = 'current-game-seat-name';
-  name.textContent = displayLiveName(player?.name, t('games.anonymous'));
+  name.textContent = displayLiveName(player?.name, t('games.guest'));
   row.append(name);
   if (player?.isEngine) {
     const badge = document.createElement('span');
@@ -571,16 +571,16 @@ function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
 
 function matchupLabel(game: CurrentGame): string {
   const [top, bottom] = seatOrder(game);
-  const a = displayLiveName(bottom?.name, t('games.anonymous'));
-  const b = displayLiveName(top?.name, t('games.anonymous'));
+  const a = displayLiveName(bottom?.name, t('games.guest'));
+  const b = displayLiveName(top?.name, t('games.guest'));
   return `${a} vs ${b}`;
 }
 
 function namesFor(game: CurrentGame): { first: string; second: string } {
   const [top, bottom] = seatOrder(game);
   return {
-    first: displayLiveName(bottom?.name, t('games.anonymous')),
-    second: displayLiveName(top?.name, t('games.anonymous')),
+    first: displayLiveName(bottom?.name, t('games.guest')),
+    second: displayLiveName(top?.name, t('games.guest')),
   };
 }
 

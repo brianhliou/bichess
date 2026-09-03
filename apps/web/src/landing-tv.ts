@@ -14,6 +14,7 @@
 import type { GameEvent } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
 import { displayLiveName } from './game-display.js';
+import { t } from './i18n/catalog.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplayFailure } from './replay-skeleton.js';
 import { mountShowcaseBoard } from './showcase-board.js';
@@ -202,15 +203,17 @@ export async function mountLandingTv(
   };
 
   // First/second seat names from the featured players (red is the first mover
-  // for every live-capable tenant today; fall back to seat order).
+  // for every live-capable tenant today; fall back to seat order). A null name is
+  // a guest seat (live frames carry no privacy redaction), so it reads "Guest",
+  // matching what the finished record will say.
   const registerLiveNames = (featured: LiveFeatured): void => {
     const players = featured.players ?? [];
     if (players.length < 2 || options.namesByRoomId[featured.roomId]) return;
     const first = players.find((player) => player.color === 'red') ?? players[0]!;
     const second = players.find((player) => player !== first)!;
     options.namesByRoomId[featured.roomId] = {
-      first: displayLiveName(first.name, 'Anonymous'),
-      second: displayLiveName(second.name, 'Anonymous'),
+      first: displayLiveName(first.name, t('watch.guest')),
+      second: displayLiveName(second.name, t('watch.guest')),
     };
   };
 

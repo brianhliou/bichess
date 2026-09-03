@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { JUNGLE_LAST_MOVE } from './jungle-art.js';
 import type { JunglePostgameResponse } from './live-jungle-postgame.js';
 import { mountJungleWatchReplay } from './watch-jungle-replay.js';
+import { formatClock } from './web-utils.js';
 
 describe('Jungle watch replay', () => {
   afterEach(() => {
@@ -64,6 +65,98 @@ describe('Jungle watch replay', () => {
     ]);
 
     handle.destroy();
+  });
+
+  it("live follow (homepage): the mover's clock counts down from the server snapshot between polls", async () => {
+    // The reconstruction from move timestamps only knows about moves that have
+    // landed, so on its own the clock froze between polls. A live frame carries the
+    // server clock; the compact board projects it to now on every tick.
+    vi.useFakeTimers();
+    const base = 1_700_000_000_000;
+    vi.setSystemTime(base);
+    const fixture = postgameFixture('jgl_live');
+    const livePostgame: JunglePostgameResponse = {
+      ...fixture,
+      game: { ...fixture.game, result: 'in-progress', termination: 'in-progress' },
+      state: {
+        ...fixture.state,
+        clock: {
+          activeColor: 'black',
+          incrementMs: 2_000,
+          initialMs: 180_000,
+          remainingMs: { red: 178_000, black: 170_000 },
+          runningSince: base - 500,
+        },
+      },
+    };
+    const root = document.createElement('div');
+    // Keyed by seat name so the assertion holds whichever side the board seats at the bottom.
+    const clockText = (): Record<string, string> =>
+      Object.fromEntries(
+        [...root.querySelectorAll<HTMLElement>('.showcase-seat')].map((row) => [
+          row.querySelector('.showcase-seat-name')?.textContent ?? '',
+          row.querySelector('.showcase-seat-clock')?.textContent ?? '',
+        ]),
+      );
+
+    const handle = await mountJungleWatchReplay(root, 'jgl_live', {
+      autoplay: false,
+      compact: true,
+      live: true,
+      loadPostgameOverride: async () => ({ ok: true, postgame: livePostgame }),
+      namesByRoomId: { jgl_live: { first: 'RedSeat', second: 'BlackSeat' } },
+    });
+    handle.jumpToPly?.(1);
+    // Black is on the move and already 500ms into it when the frame lands.
+    expect(clockText()).toEqual({ RedSeat: formatClock(178_000), BlackSeat: formatClock(169_500) });
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(clockText()).toEqual({ RedSeat: formatClock(178_000), BlackSeat: formatClock(168_000) });
+    expect(handle.clockAtPly?.()).toEqual({ first: 178_000, second: 168_000, toMove: 'second' });
+
+    // Scrubbed back from the newest ply, the recorded value shows, not the projection.
+    handle.jumpToPly?.(0);
+    expect(clockText()).toEqual({ RedSeat: formatClock(180_000), BlackSeat: formatClock(180_000) });
+
+    handle.destroy();
+    vi.useRealTimers();
+  });
+
+  it('a finished game never projects a stored clock, even one left running', async () => {
+    vi.useFakeTimers();
+    const base = 1_700_000_000_000;
+    vi.setSystemTime(base);
+    const fixture = postgameFixture('jgl_done');
+    const finished: JunglePostgameResponse = {
+      ...fixture,
+      state: {
+        ...fixture.state,
+        clock: {
+          activeColor: 'black',
+          incrementMs: 2_000,
+          initialMs: 180_000,
+          remainingMs: { red: 178_000, black: 170_000 },
+          runningSince: base - 500,
+        },
+      },
+    };
+    const root = document.createElement('div');
+    const handle = await mountJungleWatchReplay(root, 'jgl_done', {
+      autoplay: false,
+      compact: true,
+      live: true,
+      loadPostgameOverride: async () => ({ ok: true, postgame: finished }),
+    });
+    handle.jumpToPly?.(1);
+    const before = [...root.querySelectorAll<HTMLElement>('.showcase-seat-clock')].map(
+      (el) => el.textContent,
+    );
+    await vi.advanceTimersByTimeAsync(3_000);
+    const after = [...root.querySelectorAll<HTMLElement>('.showcase-seat-clock')].map(
+      (el) => el.textContent,
+    );
+    expect(after).toEqual(before);
+    handle.destroy();
+    vi.useRealTimers();
   });
 });
 
