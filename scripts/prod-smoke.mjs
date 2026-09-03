@@ -4,7 +4,7 @@
 import WebSocket from 'ws';
 
 import { resolveBaseUrl, revisionMatches } from './lib/base-url.mjs';
-import { fetchJson, fetchText } from './lib/http.mjs';
+import { fetchJson, fetchText, fetchWithTimeout } from './lib/http.mjs';
 import { parseSmokeArgs } from './lib/smoke-args.mjs';
 import { reportResult } from './lib/smoke-report.mjs';
 
@@ -58,6 +58,51 @@ if (index.status !== 200) throw new Error(`/ failed: ${index.status}`);
 if (!index.body.includes('Mistboard'))
   throw new Error('homepage did not include Mistboard brand text');
 
+// Framing headers, against the DEPLOY rather than the source.
+//
+// server-framing.test.ts pins isEmbedRoute and embed-route.test.ts pins the
+// client union against it, and both were green through the 2026-09-02 incident:
+// /embed/puzzle joined the allowlist in a commit whose deploy went live
+// fourteen minutes later, and for that window every site framing it got a
+// blocked frame. No unit test can see that, because the thing that is wrong is
+// which build is running. This can.
+//
+// Cache-Control rides along because it is the reason that window did lasting
+// damage: with only Last-Modified on the shell, browsers replayed the blocked
+// response from disk for hours afterwards.
+const framing = { frameable: [], locked: [] };
+for (const path of ['/embed/study/ytSzepET/Ue0EgpS7', '/embed/tv', '/embed/puzzle']) {
+  const res = await fetchWithTimeout(new URL(path, baseUrl), timeoutMs);
+  if (res.status !== 200) throw new Error(`${path} failed: ${res.status}`);
+  for (const header of ['x-frame-options', 'content-security-policy']) {
+    const value = res.headers.get(header);
+    // frame-ancestors is the only CSP directive that would break a frame; any
+    // other CSP the site grows later is none of this check's business.
+    if (header === 'content-security-policy' && value && !value.includes('frame-ancestors')) {
+      continue;
+    }
+    if (value) throw new Error(`${path} is not frameable: ${header}: ${value}`);
+  }
+  const cacheControl = res.headers.get('cache-control');
+  if (!cacheControl || !/no-cache|no-store|max-age=0/.test(cacheControl)) {
+    throw new Error(
+      `${path} would be replayed from disk without revalidating: cache-control: ${cacheControl ?? 'missing'}`,
+    );
+  }
+  framing.frameable.push(path);
+}
+for (const path of ['/', '/puzzles']) {
+  const res = await fetchWithTimeout(new URL(path, baseUrl), timeoutMs);
+  if (res.status !== 200) throw new Error(`${path} failed: ${res.status}`);
+  const csp = res.headers.get('content-security-policy') ?? '';
+  if (res.headers.get('x-frame-options') !== 'SAMEORIGIN' || !csp.includes('frame-ancestors')) {
+    throw new Error(
+      `${path} is missing its framing lock: ${JSON.stringify(res.headers.get('x-frame-options'))} / ${JSON.stringify(csp)}`,
+    );
+  }
+  framing.locked.push(path);
+}
+
 const room = await createRoom(baseUrl, timeoutMs);
 const white = await connectSeat(baseUrl, room.roomId, 'white', timeoutMs);
 const black = await connectSeat(baseUrl, room.roomId, 'black', timeoutMs);
@@ -75,6 +120,7 @@ reportResult({
   baseUrl: baseUrl.href,
   health: health.body,
   serverStatus: serverStatus.body,
+  framing,
   roomId: room.roomId,
   seats: [white.hello.seat, black.hello.seat],
   abandoned,

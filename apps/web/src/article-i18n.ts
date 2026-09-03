@@ -233,6 +233,7 @@ const ZH_HANS: Record<string, string> = {
   'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve they act on is inherited from chess. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists.':
     '有一点我宁可说出来而不是藏着：这套判定关卡从来没有拿真人检验过。它的四个阈值来自翻看被拒绝的局面，而不是来自衡量它放行的题目到底好不好，而这些阈值所依据的胜率曲线是从国际象棋继承来的。每道题目的解出率和看答案率都有记录，所以用来给它打分的数据是存在的。',
   'Solve xiangqi puzzles': '做象棋题目',
+  'Play twelve of them': '试走其中十二题',
   'How Mistboard mines xiangqi puzzles from real games': 'Mistboard 如何从真实对局中挖掘象棋题目',
   // The xq-replay specs: title, event, resultText and the two seat labels.
   // article-prose.ts extracts only a stepper's caption, so these are invisible
@@ -2181,6 +2182,7 @@ const ZH_HANT: Record<string, string> = {
   'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve they act on is inherited from chess. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists.':
     '有一點我寧可說出來而不是藏著：這套判定關卡從來沒有拿真人檢驗過。它的四個閾值來自翻看被拒絕的局面，而不是來自衡量它放行的題目到底好不好，而這些閾值所依據的勝率曲線是從國際象棋繼承來的。每道題目的解出率和看答案率都有記錄，所以用來給它打分的數據是存在的。',
   'Solve xiangqi puzzles': '做象棋題目',
+  'Play twelve of them': '試走其中十二題',
   'How Mistboard mines xiangqi puzzles from real games': 'Mistboard 如何從真實對局中挖掘象棋題目',
   // The xq-replay specs: title, event, resultText and the two seat labels.
   // article-prose.ts extracts only a stepper's caption, so these are invisible

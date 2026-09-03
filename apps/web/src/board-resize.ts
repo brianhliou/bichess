@@ -5,11 +5,31 @@
 // room and review sizing formulas alike, and persisted per browser so every
 // board surface opens at the user's chosen size. Double-click resets to max.
 
+import { embedRouteFromPath } from './embed/embed-route.js';
 import './board-resize.css';
 
 const STORAGE_KEY = 'mistboard-board-scale';
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 1;
+
+/**
+ * An embed is sized by the page that frames it, not by the viewer.
+ *
+ * The grip and the persisted scale are both wrong inside someone else's
+ * document. The grip because the embedder chose the iframe's dimensions and a
+ * drag handle inside it fights them; the persisted scale because
+ * `mistboard-board-scale` is a value the visitor set on Mistboard proper, and
+ * restoring it renders the board at up to half size inside an iframe the
+ * embedder sized for a full one. Two of the five embed routes reach this
+ * module: /embed/puzzle (puzzles.ts) and /embed/analysis (review-layout.ts).
+ *
+ * Same import-free path check main.ts uses to gate analytics and the account
+ * nav, rather than `documentElement.dataset.embed`, which each embed page sets
+ * itself and is therefore order-dependent.
+ */
+function inEmbed(): boolean {
+  return embedRouteFromPath(window.location.pathname.replace(/\/+$/, '') || '/') !== null;
+}
 
 function clampScale(value: number): number {
   if (!Number.isFinite(value)) return MAX_SCALE;
@@ -42,6 +62,7 @@ function applyBoardScale(scale: number): void {
 
 /** Restore the persisted scale. Call once per page mount before boards render. */
 export function restoreBoardScale(): void {
+  if (inEmbed()) return;
   let raw: string | null = null;
   try {
     raw = localStorage.getItem(STORAGE_KEY);
@@ -72,6 +93,11 @@ export function attachBoardResizeGrip(
   grip.className = 'board-resize-grip';
   grip.title = 'Drag to resize the board (double-click to reset)';
   grip.setAttribute('aria-label', 'Resize board');
+  // Returned but never appended and never wired inside an embed. Callers
+  // either ignore the return value (puzzles.ts) or only reposition it
+  // (review-layout.ts, whose positionGrip tolerates an unmounted node), so
+  // neither needs to know.
+  if (inEmbed()) return grip;
   host.append(grip);
 
   let baseWidth = 0;

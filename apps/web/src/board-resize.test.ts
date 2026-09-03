@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { attachBoardResizeGrip } from './board-resize.js';
+import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 
 describe('board resize grip', () => {
   beforeEach(() => {
@@ -75,6 +75,62 @@ describe('board resize grip', () => {
     expect(document.documentElement.classList.contains('board-resizing')).toBe(false);
 
     window.removeEventListener('resize', onResize);
+  });
+});
+
+// An embed is sized by the page that frames it. The grip fights the iframe
+// dimensions the embedder chose, and the persisted scale is a number the
+// visitor set on Mistboard proper: restoring it renders the board at up to half
+// size inside a frame the embedder sized for a full one. Two embed routes reach
+// this module, /embed/puzzle and /embed/analysis, and both did all of the above
+// in production before this guard.
+describe('inside an embed', () => {
+  const realPath = window.location.pathname;
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', memoryStorage());
+    document.body.replaceChildren();
+    document.documentElement.style.removeProperty('--uni-board-scale');
+  });
+
+  afterEach(() => {
+    window.history.replaceState({}, '', realPath);
+    document.body.replaceChildren();
+    document.documentElement.style.removeProperty('--uni-board-scale');
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  for (const path of ['/embed/puzzle', '/embed/puzzle/xq-mined-abc-1', '/embed/analysis/xiangqi']) {
+    it(`mounts no grip on ${path}`, () => {
+      window.history.replaceState({}, '', path);
+      const host = document.createElement('div');
+      document.body.append(host);
+      const grip = attachBoardResizeGrip(host, document.createElement('div'));
+
+      expect(host.querySelector('.board-resize-grip')).toBeNull();
+      // Returned regardless, because review-layout.ts repositions what it gets
+      // back and must not have to care.
+      expect(grip.className).toBe('board-resize-grip');
+    });
+  }
+
+  it('ignores a scale the viewer persisted on the site itself', () => {
+    localStorage.setItem('mistboard-board-scale', '0.500');
+    window.history.replaceState({}, '', '/embed/puzzle');
+
+    restoreBoardScale();
+
+    expect(document.documentElement.style.getPropertyValue('--uni-board-scale')).toBe('');
+  });
+
+  it('still restores it on the site', () => {
+    localStorage.setItem('mistboard-board-scale', '0.500');
+    window.history.replaceState({}, '', '/puzzles');
+
+    restoreBoardScale();
+
+    expect(document.documentElement.style.getPropertyValue('--uni-board-scale')).toBe('0.500');
   });
 });
 

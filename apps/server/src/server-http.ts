@@ -97,6 +97,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (!isEmbedRoute(pathname)) {
       response.setHeader('X-Frame-Options', 'SAMEORIGIN');
       response.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
+    } else {
+      // An embed shell lives in OTHER PEOPLE'S pages, and the static fallback
+      // that serves it sets no Cache-Control and no ETag: only Last-Modified.
+      // Chrome then applies heuristic freshness, roughly a tenth of the
+      // Last-Modified age, and replays the response with no revalidation.
+      //
+      // That turns any momentarily-bad shell into a lasting one. On 2026-09-02
+      // /embed/puzzle joined the allowlist above fourteen minutes before the
+      // deploy carrying it went live; embedders who framed it inside that
+      // window kept being handed the framing-blocked response back from disk
+      // long after the fix shipped, through ordinary reloads. The same shape
+      // applies to a shell pointing at chunk hashes a later deploy replaced.
+      //
+      // no-cache is "revalidate", not "do not store": the browser still keeps
+      // it and still takes a 304, it just may not replay it unasked.
+      response.setHeader('Cache-Control', 'no-cache');
     }
 
     // The postgame review shell mounts an in-browser analysis engine that runs

@@ -343,7 +343,13 @@ export const puzzleMiningArticle: Article = {
         },
         {
           kind: 'cta',
-          buttons: [{ label: 'Solve xiangqi puzzles', href: '/puzzles', emphasis: 'primary' }],
+          buttons: [
+            { label: 'Solve xiangqi puzzles', href: '/puzzles', emphasis: 'primary' },
+            // Twelve mined positions with the solution as the mainline, chosen
+            // to span what the corpus contains rather than which puzzles score
+            // highest. Public, so it is readable without an account.
+            { label: 'Play twelve of them', href: '/study/E63eGK5V', emphasis: 'secondary' },
+          ],
           layout: 'single-row',
         },
       ],
