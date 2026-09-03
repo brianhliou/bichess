@@ -2,7 +2,8 @@
 // watch renderer (watch-tenant-replay.ts). Flip Jungle is SYMMETRIC hidden-identity
 // (the banqi pattern): one board, defaulting to the as-played masked replay with a
 // Reveal/Hide control (and the `h` key) that swaps in the full-reveal overlay. The
-// deal has no sides, so orientation is ignored; captured material lives on the board.
+// deal has no sides, so orientation is ignored. The compact TV product draws no
+// captures; the live room does (live-jungle-flip.ts renderJungleFlipMaterial).
 import './live-xiangqi.css';
 import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
 import {

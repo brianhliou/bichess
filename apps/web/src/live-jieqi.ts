@@ -22,8 +22,10 @@ import type {
   JieqiPieceRole,
   JieqiSquare,
 } from '@mistboard/game';
+import { jieqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -39,6 +41,7 @@ import {
 } from './live-jieqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -338,58 +341,60 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
 }
 
-// ── Captured pool ─────────────────────────────────────────────────────────────
+// ── Material: captured pools + the face-down pool ────────────────────────────
 
 // Lichess convention: a player's captured material sits next to that player.
 // The bottom strip is the viewer's side, so it shows the pieces the viewer has
 // captured (the opponent's lost pieces); the top strip is the opponent's side,
 // so it shows the pieces the opponent has captured (the viewer's lost pieces).
-// fillCapturedPool filters by former owner, so top filters the viewer's color
-// and bottom filters the opponent's color. A null role (a dark piece the viewer
-// did not capture, so cannot identify) renders face-down ("?"). Reuses the
-// existing .captures-strip / .mini-xq-capture-piece styling (no new CSS).
+// A null role (a dark piece the viewer did not capture, so cannot identify)
+// renders as a shrouded "?" tile. Under the strips, the face-down pool lists
+// what each side still has unrevealed AS THIS VIEWER KNOWS IT: the opponent's
+// pool is exact (the viewer was told every dark piece they took), the viewer's
+// own pool still holds the dark pieces the opponent took, noted as "already
+// taken, unknown which".
 function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): void {
-  liveRefs.capturesTop.replaceChildren();
-  liveRefs.capturesBottom.replaceChildren();
-  if (!view) return;
-  const viewer = orientationFor(view);
-  const opponent = viewer === 'red' ? 'black' : 'red';
-  fillCapturedPool(liveRefs.capturesTop, view.captured, viewer);
-  fillCapturedPool(liveRefs.capturesBottom, view.captured, opponent);
+  renderJieqiMaterial(liveRefs, view, orientationFor(view));
 }
 
-// Exported for unit testing the captured-pool data path (revealed identity vs
-// an unidentifiable "?" dark piece) without a live socket — same extraction
-// rationale as live-jieqi-render / live-jieqi-interaction.
-export function fillCapturedPool(
-  host: HTMLElement,
-  captured: readonly JieqiWireCaptured[],
-  owner: JieqiColor,
+// Exported for unit testing the material data path (revealed identity vs an
+// unidentifiable "?" dark piece, per-side pools) without a live socket — same
+// extraction rationale as live-jieqi-render / live-jieqi-interaction.
+export function renderJieqiMaterial(
+  slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
+  view: JieqiWireView | null,
+  viewer: JieqiColor,
 ): void {
-  const mine = captured.filter((entry) => entry.owner === owner);
-  host.classList.toggle('has-captures', mine.length > 0);
-  if (mine.length === 0) return;
+  slots.capturesTop.replaceChildren();
+  slots.capturesBottom.replaceChildren();
+  slots.hiddenPool.replaceChildren();
+  // A spectator's view in a tenant room is an EMPTY board (/room/ never reveals),
+  // and an empty board must not read as "everything still face-down".
+  if (!view || Object.keys(view.board).length === 0) return;
   const pieceSet = readStoredXiangqiPieceSet();
-  const row = document.createElement('div');
-  row.className = 'captures-row mini-xq-captures-row';
-  for (const entry of mine) {
-    const span = document.createElement('span');
-    span.className = 'mini-xq-capture-piece';
-    if (entry.role === null) {
-      span.setAttribute('aria-label', `${owner} hidden piece`);
-      span.innerHTML = renderXiangqiPieceGlyphed({ color: owner, role: 'soldier' }, pieceSet, {
-        ariaLabel: `${owner} hidden piece`,
-        shrouded: true,
-      });
-    } else {
-      span.setAttribute('aria-label', `${owner} ${entry.role}`);
-      span.innerHTML = renderXiangqiPieceGlyphed({ color: owner, role: entry.role }, pieceSet, {
-        ariaLabel: `${owner} ${entry.role}`,
-      });
-    }
-    row.append(span);
-  }
-  host.append(row);
+  const glyph = (entry: { color: JieqiColor; role: JieqiPieceRole }): string =>
+    renderXiangqiPieceGlyphed(entry, pieceSet, { ariaLabel: `${entry.color} ${entry.role}` });
+  const hidden = (color: JieqiColor): string =>
+    renderXiangqiPieceGlyphed({ color, role: 'soldier' }, pieceSet, {
+      ariaLabel: `${color} hidden piece`,
+      shrouded: true,
+    });
+  const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
+  fillCapturedPoolWith(slots.capturesTop, view.captured, viewer, glyph, hidden);
+  fillCapturedPoolWith(slots.capturesBottom, view.captured, opponent, glyph, hidden);
+  const pool = jieqiHiddenPool(view);
+  renderHiddenPoolPanel(
+    slots.hiddenPool,
+    [
+      { color: opponent, label: jieqiInkLabel(opponent), side: pool[opponent] },
+      { color: viewer, label: jieqiInkLabel(viewer), side: pool[viewer] },
+    ],
+    glyph,
+  );
+}
+
+function jieqiInkLabel(ink: JieqiColor): string {
+  return ink === 'red' ? 'Red' : 'Black';
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
