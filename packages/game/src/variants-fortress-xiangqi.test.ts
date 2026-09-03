@@ -197,6 +197,12 @@ test('soldier (river): forward only at home, sideways once across, never back', 
     'black',
   );
   assert.deepEqual(boardDestsFrom(blackCrossed, 'd4'), new Set(['d3', 'c4', 'e4']));
+  // Rank 5 is the boundary the renderer got wrong on 2026-09-03 by reusing the
+  // 9x10 river test, which splits at 5/6 instead of 4/5. Pin both colours on it.
+  const blackOnBank = stateWith(withGenerals({ d5: { color: 'black', role: 'soldier' } }), 'black');
+  assert.deepEqual(boardDestsFrom(blackOnBank, 'd5'), new Set(['d4']));
+  const redJustAcross = stateWith(withGenerals({ d5: { color: 'red', role: 'soldier' } }));
+  assert.deepEqual(boardDestsFrom(redJustAcross, 'd5'), new Set(['d6', 'c5', 'e5']));
 });
 
 test('treasure steps one in any of eight directions, but never past the river', () => {

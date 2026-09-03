@@ -140,24 +140,13 @@ test('a winning-advantage solution ending on a defender move is rejected', () =>
   assert.ok(!result.ok && result.issue.code === 'solution-must-end-on-solver-move');
 });
 
-test('a winning-advantage puzzle dominated by a mate-in-one is rejected', () => {
-  // Reuse a shipped mate-in-one position: relabeling it "winning-advantage" must be
-  // rejected, since the mate ends the game and dominates any material/positional payoff.
-  const matePuzzle = FORTRESS_XIANGQI_PUZZLES.find(
-    (p) => findFortressXiangqiMateInOneCandidates(p.initial).length > 0,
-  );
-  assert.ok(matePuzzle, 'expected a shipped mate-in-one position to reuse');
-  const disguised: FortressXiangqiPuzzle = {
-    ...matePuzzle,
-    id: 'dominated-fixture',
-    title: 'disguised advantage',
-    goal: { type: 'winning-advantage', winner: matePuzzle.goal.winner },
-    solution: [matePuzzle.solution[0] as FortressXiangqiMove],
-  };
-  const result = validateFortressXiangqiPuzzle(disguised);
-  assert.ok(!result.ok);
-  assert.ok(!result.ok && result.issue.code === 'dominated-by-mate-in-one');
-});
+// REMOVED 2026-09-03: 'a winning-advantage puzzle dominated by a mate-in-one is
+// rejected'. It worked by finding a mate-in-one among the SHIPPED Fortress
+// puzzles and relabelling it, and Fortress now ships none. The validator rule it
+// covered (goal 'winning-advantage' is rejected with code 'dominated-by-mate-in-one'
+// when the line is a forced mate) is still live in puzzles-fortress-xiangqi.ts and
+// still enforced on every mined candidate. Restore this test with the corpus if
+// Fortress puzzles come back.
 
 test('every puzzle sourceGame replays to its initial position', () => {
   for (const puzzle of FORTRESS_XIANGQI_PUZZLES) {

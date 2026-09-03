@@ -11,7 +11,7 @@
 // Only the `international` and `international-flat` piece sets have crossed art;
 // the rest ignore the flag, which is why passing it is always safe.
 
-import { hasCrossedRiver, type XiangqiColor } from '@mistboard/game';
+import { fortressXiangqiCrossedRiver, hasCrossedRiver, type XiangqiColor } from '@mistboard/game';
 
 /**
  * `rank` is the 1-10 board rank (red's back rank is 1), matching coordOf().
@@ -38,4 +38,25 @@ export function drawsCrossedSoldier(
  */
 export function drawsVeteranSoldier(piece: { readonly role: string }): boolean {
   return piece.role === 'soldier';
+}
+
+/**
+ * The same question on the Fortress Xiangqi board, which is 7x8 with the river
+ * between ranks 4 and 5 — NOT the 9x10 board hasCrossedRiver above assumes.
+ *
+ * They disagree on rank 5 for BOTH colours, and shipping drawsCrossedSoldier on
+ * a fortress board is exactly that bug: on 2026-09-03 black soldiers drew
+ * promoted a rank early (rank 5 is black's own bank there, but the 10-rank test
+ * says black owns 6-10) and red soldiers drew unpromoted a rank late. Art only —
+ * the kernel gates the sideways step on fortressXiangqiCrossedRiver — but the
+ * board told the player the opposite of the rule.
+ *
+ * The river belongs to the board family, so each family gets its own export
+ * rather than a rank argument callers can quietly pass the wrong scale to.
+ */
+export function drawsFortressCrossedSoldier(
+  piece: { readonly color: XiangqiColor; readonly role: string },
+  rank: number,
+): boolean {
+  return piece.role === 'soldier' && fortressXiangqiCrossedRiver(piece.color, rank);
 }

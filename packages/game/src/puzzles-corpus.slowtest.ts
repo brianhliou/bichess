@@ -40,8 +40,11 @@ test('every seeded Jungle puzzle validates as a forced win (full corpus)', () =>
 });
 
 test('every seeded Fortress Xiangqi puzzle validates (full corpus)', () => {
+  // Fortress ships NO puzzles as of 2026-09-03 (see the banner in
+  // puzzles-fortress-xiangqi-fixtures.ts), so there is no non-empty assertion
+  // here: an empty corpus is the intended state, and this loop is the guard for
+  // whatever a future re-mine puts back.
   const puzzles = loadSeedPuzzleRegistry('fortress-xiangqi') as readonly FortressXiangqiPuzzle[];
-  assert.ok(puzzles.length > 0, 'corpus is non-empty');
   for (const puzzle of puzzles) {
     const result = validateFortressXiangqiPuzzle(puzzle);
     assert.ok(result.ok, `${puzzle.id} invalid: ${result.ok ? '' : result.issue.message}`);

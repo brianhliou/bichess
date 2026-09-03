@@ -387,18 +387,27 @@ export const FORTRESS_XIANGQI_SOLDIER_DIAGRAM = () => {
   );
 };
 
-// The Treasure in the open: one step in any of the eight directions, all game.
-// The enemy soldier on e5 shows that it captures the same way it moves.
+// Treasure: one step in any of the eight directions, and it never crosses the
+// river (2026-09-02). Two boards, the same pairing the elephant figure uses: the
+// full eight steps with a capture, then the river closing three of them off.
 export const FORTRESS_XIANGQI_TREASURE_DIAGRAM = () => {
-  const state = stateWith({
+  // On d3 every neighbour is still inside Red's half, so all eight steps stand.
+  const open = stateWith({
     ...GENERALS,
-    d4: { color: 'red', role: 'treasure' },
-    e5: { color: 'black', role: 'soldier' },
+    d3: { color: 'red', role: 'treasure' },
+    e4: { color: 'black', role: 'soldier' },
   });
-  return diagram(
-    withoutGenerals(viewOf(state)),
-    { selectedSquare: 'd4', targets: boardTargetsFrom(state, 'd4') },
-    380,
+  // On d4, the last rank of its own half, the three squares over the water go.
+  const river = stateWith({ ...GENERALS, d4: { color: 'red', role: 'treasure' } });
+  return boardRow(
+    [
+      { label: 'MOVES', svg: movesBoard(open, 'd3') },
+      {
+        label: 'RIVER-LOCKED',
+        svg: movesBoard(river, 'd4', { blockedSquares: ['c5', 'd5', 'e5'] }),
+      },
+    ],
+    640,
   );
 };
 

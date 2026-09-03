@@ -25,6 +25,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-03',
+    kind: 'update',
+    headline: 'Storm the Fortress: the Soldier crosses the river again.',
+    body: 'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.',
+    href: '/rules/fortress-xiangqi',
+    cta: 'Read the updated rules',
+  },
+  {
+    date: '2026-09-03',
     kind: 'release',
     headline: 'Every game in progress, on one page.',
     body: 'Current games lists everything being played right now, across every variant: live games with their clocks, and correspondence games waiting on a move, each as a small board you can click into. Fog games appear as cards without a board until they end. When nothing is running, the page shows the open correspondence seeks and the most recent finished games instead. The games database moved to Advanced search under Tools.',

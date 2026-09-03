@@ -41,7 +41,7 @@ import {
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
-import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
+import { drawsFortressCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   animalTreasureMarks,
@@ -244,7 +244,7 @@ export function fortressXiangqiPieceGhostSvg(
   pieceSet?: XiangqiPieceSet,
 ): string {
   const set = pieceSet ?? readStoredXiangqiPieceSet();
-  const inner = renderFortressXiangqiPiece(piece, set, PIECE_SIZE / 2, PIECE_SIZE / 2, false);
+  const inner = renderFortressXiangqiPiece(piece, set, PIECE_SIZE / 2, PIECE_SIZE / 2, false, null);
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
@@ -360,9 +360,10 @@ function renderFortressXiangqiPiece(
   x: number,
   y: number,
   dragSource: boolean,
-  // Board rank, for the soldier's river question. The drag ghost has no square,
-  // so it passes 0 and draws the base soldier.
-  rank = 0,
+  // Board rank, for the soldier's river question. REQUIRED, and null means "not
+  // on a square" (the drag ghost): a numeric default is the trap, because 0
+  // reads as across-the-river for one of the two colours.
+  rank: number | null,
 ): string {
   const className = dragSource ? 'fxq-piece fxq-piece--drag-source' : 'fxq-piece';
   const left = x - PIECE_SIZE / 2;
@@ -377,9 +378,10 @@ function renderFortressXiangqiPiece(
     x: left,
     y: top,
     size: PIECE_SIZE,
-    // River-gated again since 2026-09-02, so the promoted art is back to meaning
-    // what it means everywhere else: this soldier has crossed.
-    crossed: drawsCrossedSoldier(piece, rank),
+    // River-gated again since 2026-09-02, so the promoted art means what it means
+    // everywhere else: this soldier has crossed. Fortress-specific predicate —
+    // the 9x10 one disagrees on rank 5 for both colours.
+    crossed: rank !== null && drawsFortressCrossedSoldier(piece, rank),
   });
 }
 

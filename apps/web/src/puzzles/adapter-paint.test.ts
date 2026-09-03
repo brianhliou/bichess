@@ -7,7 +7,8 @@
  */
 
 import {
-  FORTRESS_XIANGQI_PUZZLES,
+  createInitialFortressXiangqiState,
+  FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
   JUNGLE_PUZZLES,
   type JunglePuzzle,
@@ -84,7 +85,18 @@ describe('puzzle adapter board painting', () => {
   });
 
   it('paints the Fortress board inside its pocket shell', async () => {
-    const puzzle = FORTRESS_XIANGQI_PUZZLES[0]!;
+    // Built here, not taken from the corpus: Fortress ships no puzzles as of
+    // 2026-09-03. This test is about the adapter painting a board and its two
+    // pockets, so any well-formed puzzle serves — it never solves the line.
+    const puzzle: FortressXiangqiPuzzle = {
+      id: 'fortress-paint-fixture',
+      variant: FORTRESS_XIANGQI_SPEC_ID,
+      title: 'paint fixture',
+      initial: createInitialFortressXiangqiState('fortress-paint-fixture'),
+      solution: [{ from: 'e1', to: 'e4' }],
+      goal: { type: 'winning-advantage', winner: 'red', centipawns: 600 },
+      themes: ['chariot'],
+    } as FortressXiangqiPuzzle;
     stubPuzzleApi(puzzle);
     const root = document.createElement('div');
 

@@ -174,6 +174,10 @@ const ZH_HANS: Record<string, string> = {
   'Xiangqi has launched.': '象棋已上线。',
   'Forum and global chat have launched.': '论坛与全站聊天已上线。',
   'Fortress has launched.': '堡垒象棋已上线。',
+  'Read the updated rules': '阅读更新后的规则',
+  'Storm the Fortress: the Soldier crosses the river again.': '堡垒象棋：兵重新需要过河。',
+  'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
+    '两项规则改动。兵回到象棋本来的走法：在己方半场每次只向前走一点，过河之后才获得横走。过河是一次要付出代价的决断。宝从此留在家中，走子和打入都只限己方半场，被围攻的目标不能再空降到战场上。跨五套规则、上千局的引擎自战表明，真正让这个棋种变得锋利的是兵：和棋率从 34% 降到 9%，一局的长度增加约一半。',
   'Jungle Chess has launched.': '斗兽棋已上线。',
   'Flip Jungle has launched.': '翻翻棋已上线。',
   'Drop Mini Xiangqi has launched.': '投放迷你象棋已上线。',
@@ -420,6 +424,10 @@ const ZH_HANT: Record<string, string> = {
   'Xiangqi has launched.': '象棋已上線。',
   'Forum and global chat have launched.': '論壇與全站聊天已上線。',
   'Fortress has launched.': '堡壘象棋已上線。',
+  'Read the updated rules': '閱讀更新後的規則',
+  'Storm the Fortress: the Soldier crosses the river again.': '堡壘象棋：兵重新需要過河。',
+  'Two rule changes. The Soldier goes back to the xiangqi rule it should always have had: one point forward on your own half, and the sideways step only once it has crossed the river. Crossing is the commitment it costs something to make. The Treasure now stays home for good, moving and dropping only on its own half, so the piece you are storming for cannot parachute into the fight. Engine self-play across five rule sets and a thousand games says the Soldier is what makes this game sharp: draws fall from 34% to 9% and a typical game runs half again as long.':
+    '兩項規則改動。兵回到象棋本來的走法：在己方半場每次只向前走一點，過河之後才獲得橫走。過河是一次要付出代價的決斷。寶從此留在家中，走子和打入都只限己方半場，被圍攻的目標不能再空降到戰場上。跨五套規則、上千局的引擎自戰表明，真正讓這個棋種變得鋒利的是兵：和棋率從 34% 降到 9%，一局的長度增加約一半。',
   'Jungle Chess has launched.': '鬥獸棋已上線。',
   'Flip Jungle has launched.': '翻翻棋已上線。',
   'Drop Mini Xiangqi has launched.': '打入迷你象棋已上線。',

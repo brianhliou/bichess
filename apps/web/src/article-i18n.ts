@@ -322,10 +322,10 @@ const ZH_HANS: Record<string, string> = {
     '**将帅：**沿横向或纵向走一点，并且始终留在九宫内。有一条象棋规则在这里自然失效：两个九宫位于对角，两位将帅永远不会处于同一路，因此不会出现将帅照面的情况。',
   '**Soldier:** moves one point forward, never backward. Once it crosses the river it may also step one point sideways, exactly as in xiangqi. The Treasure is the other piece the river holds back: it never crosses at all.':
     '**兵：**每次向前走一点，不能后退。过河之后还可以横走一点，与象棋完全相同。宝是另一个被河界挡住的棋子：它永远不能过河。',
-  '**Treasure:** the one new piece. It steps one point in any of the eight directions, is not confined to the palace, and never promotes. It is a flexible defender near the palace and an attacker after it advances or returns as a drop.':
-    '**宝：**唯一的新棋子。它可以向八个方向中的任一方向走一点，不受九宫限制，也不会升变。靠近九宫时它是灵活的守子，前进或打入后则可用于进攻。',
-  'The Treasure steps one point in any of the eight directions. Here it has eight moves, including the capture on e5.':
-    '「宝」可以向八个方向中的任一方向走一点。此处它有八种走法，包括吃掉 e5 的棋子。',
+  '**Treasure:** the one new piece. It steps one point in any of the eight directions and never promotes. It roams its own half freely, but it never crosses the river, moving or dropping. It is the piece you are storming for, and it stays in the fortress.':
+    '**宝：**唯一的新棋子。它向八个方向各走一点，不会升变。它可以在己方半场自由活动，但无论是走子还是打入，都永远不能过河。它就是被围攻的目标，始终留在城中。',
+  'Left, the Treasure has all eight steps, including the capture on e4. Right, standing on the last rank of its own half, the three squares across the river are closed to it.':
+    '左图，宝有全部八种走法，包括吃 e4 的一步。右图，它站在己方半场最后一线，河对岸的三个点对它是封闭的。',
   'There are no promotions. The river matters three ways: the Soldier gains its sideways step by crossing it, and neither the Elephant nor the Treasure may cross it at all.':
     '没有升变。河界有三重意义：兵过河后获得横走，而象和宝都完全不能过河。',
   'Capture, hold, drop': '吃子、持子、打入',
@@ -2356,10 +2356,10 @@ const ZH_HANT: Record<string, string> = {
     '**將帥：**沿橫向或縱向走一點，並且始終留在九宮內。有一條象棋規則在這裡自然失效：兩個九宮位於對角，兩位將帥永遠不會處於同一路，因此不會出現將帥照面的情況。',
   '**Soldier:** moves one point forward, never backward. Once it crosses the river it may also step one point sideways, exactly as in xiangqi. The Treasure is the other piece the river holds back: it never crosses at all.':
     '**兵：**每次向前走一點，不能後退。過河之後還可以橫走一點，與象棋完全相同。寶是另一個被河界擋住的棋子：它永遠不能過河。',
-  '**Treasure:** the one new piece. It steps one point in any of the eight directions, is not confined to the palace, and never promotes. It is a flexible defender near the palace and an attacker after it advances or returns as a drop.':
-    '**寶：**唯一的新棋子。它可以向八個方向中的任一方向走一點，不受九宮限制，也不會升變。靠近九宮時它是靈活的守子，前進或打入後則可用於進攻。',
-  'The Treasure steps one point in any of the eight directions. Here it has eight moves, including the capture on e5.':
-    '「寶」可以向八個方向中的任一方向走一點。此處它有八種走法，包括吃掉 e5 的棋子。',
+  '**Treasure:** the one new piece. It steps one point in any of the eight directions and never promotes. It roams its own half freely, but it never crosses the river, moving or dropping. It is the piece you are storming for, and it stays in the fortress.':
+    '**寶：**唯一的新棋子。它向八個方向各走一點，不會升變。它可以在己方半場自由活動，但無論是走子還是打入，都永遠不能過河。它就是被圍攻的目標，始終留在城中。',
+  'Left, the Treasure has all eight steps, including the capture on e4. Right, standing on the last rank of its own half, the three squares across the river are closed to it.':
+    '左圖，寶有全部八種走法，包括吃 e4 的一步。右圖，它站在己方半場最後一線，河對岸的三個點對它是封閉的。',
   'There are no promotions. The river matters three ways: the Soldier gains its sideways step by crossing it, and neither the Elephant nor the Treasure may cross it at all.':
     '沒有升變。河界有三重意義：兵過河後獲得橫走，而象和寶都完全不能過河。',
   'Capture, hold, drop': '吃子、持子、打入',

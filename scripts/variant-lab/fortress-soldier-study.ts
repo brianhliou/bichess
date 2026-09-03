@@ -51,9 +51,11 @@ const START_FEN = 'rnceakq/pp1p1pp/7/7/7/7/PP1P1PP/QKAECNR';
 const RIVER_RED_MAX_RANK = 4; // red owns ranks 1-4, black 5-8
 
 const CONDITIONS = {
-  // NOTE: as of the 2026-07-04 veteran ship, apps/server/src/fortress-xiangqi.ini
-  // IS the veteran soldier, so `base` and `vet` are now the SAME rule. Use `river`
-  // (the reconstructed pre-ship river-gated soldier) vs `vet` for a real A/B.
+  // NOTE (updated 2026-09-03): the veteran ship was REVERTED, so
+  // apps/server/src/fortress-xiangqi.ini is the river-gated soldier again and
+  // `base` now equals `river`, not `vet`. Use `base` vs `vet` for a real A/B.
+  // The five-arm study that drove the revert is in the 2026-09-02 section of
+  // docs-private/drop-game-lab/DESIGN-SPEC.md.
   base: {
     ini: resolve(REPO, 'apps', 'server', 'src', 'fortress-xiangqi.ini'),
     variant: 'fortressxiangqi',

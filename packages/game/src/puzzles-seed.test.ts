@@ -46,8 +46,8 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
     hash: 'bdde546680983360109b733b2d209887ac6304aad89332e0954d1e8fbf40be50',
   },
   'fortress-xiangqi': {
-    count: 70,
-    hash: 'baf426c7dd4ecc728d5bcd024f31a283544f834ba730f8191cac68dea263cc27',
+    count: 0,
+    hash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
   },
   jungle: {
     count: 110,
@@ -81,10 +81,10 @@ test('seed integrity: source-games count + content hash', () => {
     sha256(games.jungle),
     'bf96a5e9d57b790b36211e90580e46fed07d90e826aba6b944503453888fb044',
   );
-  assert.equal(games.fortressXiangqi.length, 97);
+  assert.equal(games.fortressXiangqi.length, 0);
   assert.equal(
     sha256(games.fortressXiangqi),
-    '72a8cdfe6993d219c4b1bc3b8d9435ab1393b255a8307b03d508d0a470cb2d43',
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
   );
 });
 

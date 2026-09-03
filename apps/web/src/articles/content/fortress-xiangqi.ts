@@ -24,7 +24,7 @@ export const fortressXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-07-01',
-  updatedAt: '2026-07-23',
+  updatedAt: '2026-09-03',
   audience: 'Xiangqi and crazyhouse players who want a compact, decisive drop variant.',
   thumbnail: { kind: 'svg', svg: FORTRESS_XIANGQI_START_BOARD },
   intro: [
@@ -126,13 +126,13 @@ export const fortressXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: '**Treasure:** the one new piece. It steps one point in any of the eight directions, is not confined to the palace, and never promotes. It is a flexible defender near the palace and an attacker after it advances or returns as a drop.',
+          text: '**Treasure:** the one new piece. It steps one point in any of the eight directions and never promotes. It roams its own half freely, but it never crosses the river, moving or dropping. It is the piece you are storming for, and it stays in the fortress.',
         },
         {
           kind: 'raw-svg',
           svg: FORTRESS_XIANGQI_TREASURE_DIAGRAM,
           caption:
-            'The Treasure steps one point in any of the eight directions. Here it has eight moves, including the capture on e5.',
+            'Left, the Treasure has all eight steps, including the capture on e4. Right, standing on the last rank of its own half, the three squares across the river are closed to it.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
