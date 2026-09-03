@@ -182,16 +182,16 @@ test('general steps one orthogonally within the palace', () => {
   assert.deepEqual(boardDestsFrom(s, 'b2'), new Set(['a2', 'c2', 'b1', 'b3']));
 });
 
-test('soldier (veteran): forward + sideways everywhere, never back', () => {
-  // Veteran soldiers move forward and sideways from move one (no river gate), but
-  // still never step backward. See docs-private/fortress-soldier-study.
+test('soldier (river): forward only at home, sideways once across, never back', () => {
+  // Reverted from the veteran soldier on 2026-09-02: crossing the river is the
+  // soldier's one irreversible commitment and the veteran rule deleted it. The
+  // measured cost was draws 12% -> 34% (lab DESIGN-SPEC, 2026-09-02 section).
   const redHome = stateWith(withGenerals({ d2: { color: 'red', role: 'soldier' } }));
-  assert.deepEqual(boardDestsFrom(redHome, 'd2'), new Set(['d3', 'c2', 'e2']));
+  assert.deepEqual(boardDestsFrom(redHome, 'd2'), new Set(['d3']));
   const redCrossed = stateWith(withGenerals({ d5: { color: 'red', role: 'soldier' } }));
   assert.deepEqual(boardDestsFrom(redCrossed, 'd5'), new Set(['d6', 'c5', 'e5']));
-  // Black on its own half now gets the sideways step too (impossible pre-veteran).
   const blackHome = stateWith(withGenerals({ d7: { color: 'black', role: 'soldier' } }), 'black');
-  assert.deepEqual(boardDestsFrom(blackHome, 'd7'), new Set(['d6', 'c7', 'e7']));
+  assert.deepEqual(boardDestsFrom(blackHome, 'd7'), new Set(['d6']));
   const blackCrossed = stateWith(
     withGenerals({ d4: { color: 'black', role: 'soldier' } }),
     'black',
@@ -199,12 +199,22 @@ test('soldier (veteran): forward + sideways everywhere, never back', () => {
   assert.deepEqual(boardDestsFrom(blackCrossed, 'd4'), new Set(['d3', 'c4', 'e4']));
 });
 
-test('treasure steps one in any of eight directions', () => {
-  const s = stateWith(withGenerals({ d4: { color: 'red', role: 'treasure' } }));
+test('treasure steps one in any of eight directions, but never past the river', () => {
+  // Confined 2026-09-02: the piece being stormed for stays in the fortress. Free
+  // once the soldier is river-gated (draws 12% -> 9%); it cost 12pp under veteran.
+  const s = stateWith(withGenerals({ d3: { color: 'red', role: 'treasure' } }));
   assert.deepEqual(
-    boardDestsFrom(s, 'd4'),
-    new Set(['c3', 'c4', 'c5', 'd3', 'd5', 'e3', 'e4', 'e5']),
+    boardDestsFrom(s, 'd3'),
+    new Set(['c2', 'c3', 'c4', 'd2', 'd4', 'e2', 'e3', 'e4']),
   );
+  // On the last rank of its own half the three squares across the river are gone.
+  const atRiver = stateWith(withGenerals({ d4: { color: 'red', role: 'treasure' } }));
+  assert.deepEqual(boardDestsFrom(atRiver, 'd4'), new Set(['c3', 'c4', 'd3', 'e3', 'e4']));
+  const blackAtRiver = stateWith(
+    withGenerals({ d5: { color: 'black', role: 'treasure' } }),
+    'black',
+  );
+  assert.deepEqual(boardDestsFrom(blackAtRiver, 'd5'), new Set(['c5', 'c6', 'd6', 'e5', 'e6']));
 });
 
 // ── Drops ───────────────────────────────────────────────────────────────────
