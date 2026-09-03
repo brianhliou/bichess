@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { banqiHiddenPool, jieqiHiddenPool, jungleFlipHiddenPool } from './hidden-pool.js';
 import {
   applyBanqiMove,
@@ -16,9 +17,7 @@ import {
   getJieqiPlayerView,
   type JieqiColor,
   type JieqiGameState,
-  type JieqiPieceRole,
 } from './variants-jieqi.js';
-import type { JunglePieceRole } from './variants-jungle.js';
 import {
   applyJungleFlipMove,
   createInitialJungleFlipState,
@@ -72,24 +71,20 @@ function faceDownRoles(
 
 const SEEDS = [1, 2, 3, 5, 8, 13];
 const MAX_PLIES = 160;
+const INKS = ['red', 'black'] as const;
 
 describe('banqiHiddenPool', () => {
   it('starts as the full 16-per-ink multiset with nothing revealed', () => {
     const state = createInitialBanqiState('b0');
     const pool = banqiHiddenPool(getBanqiPlayerView(state, 'red'));
-    expect(pool.red.total).toBe(16);
-    expect(pool.black.total).toBe(16);
-    expect(pool.red.entries.map((e) => e.role)).toEqual([
-      'general',
-      'advisor',
-      'elephant',
-      'chariot',
-      'horse',
-      'cannon',
-      'soldier',
-    ]);
-    expect(pool.red.entries.find((e) => e.role === 'soldier')?.count).toBe(5);
-    expect(pool.red.unknownCaptured).toBe(0);
+    assert.equal(pool.red.total, 16);
+    assert.equal(pool.black.total, 16);
+    assert.deepEqual(
+      pool.red.entries.map((e) => e.role),
+      ['general', 'advisor', 'elephant', 'chariot', 'horse', 'cannon', 'soldier'],
+    );
+    assert.equal(pool.red.entries.find((e) => e.role === 'soldier')?.count, 5);
+    assert.equal(pool.red.unknownCaptured, 0);
   });
 
   it('matches the truth face-down multiset at every ply of a random playout, for both seats', () => {
@@ -98,21 +93,22 @@ describe('banqiHiddenPool', () => {
       let state: BanqiGameState = createInitialBanqiState(`b${seed}`, createBanqiDeal(rng));
       let sawCapture = false;
       for (let ply = 0; ply < MAX_PLIES && state.status.type === 'playing'; ply += 1) {
-        for (const seat of ['red', 'black'] as const) {
+        for (const seat of INKS) {
           const pool = banqiHiddenPool(getBanqiPlayerView(state, seat));
-          for (const ink of ['red', 'black'] as const) {
-            expect(multiset(poolRoles(pool[ink].entries))).toBe(
+          for (const ink of INKS) {
+            assert.equal(
+              multiset(poolRoles(pool[ink].entries)),
               multiset(faceDownRoles(state.board, ink)),
+              `seed ${seed} ply ${ply} seat ${seat} ink ${ink}`,
             );
-            expect(pool[ink].unknownCaptured).toBe(0);
+            assert.equal(pool[ink].unknownCaptured, 0);
           }
         }
-        const moves = getBanqiLegalMoves(state);
-        const next = applyBanqiMove(state, pick(moves, rng));
+        const next = applyBanqiMove(state, pick(getBanqiLegalMoves(state), rng));
         if (next.captures.length > state.captures.length) sawCapture = true;
         state = next;
       }
-      expect(sawCapture).toBe(true);
+      assert.ok(sawCapture, `seed ${seed} never captured`);
     }
   });
 });
@@ -121,17 +117,11 @@ describe('jungleFlipHiddenPool', () => {
   it('starts as one of each animal per ink, strongest first', () => {
     const state = createInitialJungleFlipState('j0');
     const pool = jungleFlipHiddenPool(getJungleFlipPlayerView(state, 'red'));
-    expect(pool.red.entries.map((e) => e.role)).toEqual<JunglePieceRole[]>([
-      'elephant',
-      'lion',
-      'tiger',
-      'leopard',
-      'wolf',
-      'dog',
-      'cat',
-      'rat',
-    ]);
-    expect(pool.black.total).toBe(8);
+    assert.deepEqual(
+      pool.red.entries.map((e) => e.role),
+      ['elephant', 'lion', 'tiger', 'leopard', 'wolf', 'dog', 'cat', 'rat'],
+    );
+    assert.equal(pool.black.total, 8);
   });
 
   it('matches the truth face-down multiset at every ply of a random playout, including trades', () => {
@@ -143,22 +133,23 @@ describe('jungleFlipHiddenPool', () => {
         createJungleFlipDeal(rng),
       );
       for (let ply = 0; ply < MAX_PLIES && state.status.type === 'playing'; ply += 1) {
-        for (const seat of ['red', 'black'] as const) {
+        for (const seat of INKS) {
           const pool = jungleFlipHiddenPool(getJungleFlipPlayerView(state, seat));
-          for (const ink of ['red', 'black'] as const) {
-            expect(multiset(poolRoles(pool[ink].entries))).toBe(
+          for (const ink of INKS) {
+            assert.equal(
+              multiset(poolRoles(pool[ink].entries)),
               multiset(faceDownRoles(state.board, ink)),
+              `seed ${seed} ply ${ply} seat ${seat} ink ${ink}`,
             );
-            expect(pool[ink].unknownCaptured).toBe(0);
+            assert.equal(pool[ink].unknownCaptured, 0);
           }
         }
-        const moves = getJungleFlipLegalMoves(state);
-        const next = applyJungleFlipMove(state, pick(moves, rng));
+        const next = applyJungleFlipMove(state, pick(getJungleFlipLegalMoves(state), rng));
         if (next.captures.length - state.captures.length === 2) sawTrade = true;
         state = next;
       }
     }
-    expect(sawTrade).toBe(true);
+    assert.ok(sawTrade, 'no playout produced a mutual-destruction trade');
   });
 });
 
@@ -166,17 +157,13 @@ describe('jieqiHiddenPool', () => {
   it('starts as the 15 dark pieces per side, general excluded', () => {
     const state = createInitialJieqiState('q0');
     const pool = jieqiHiddenPool(getJieqiPlayerView(state, 'red'));
-    expect(pool.red.total).toBe(15);
-    expect(pool.black.total).toBe(15);
-    expect(pool.red.entries.map((e) => e.role)).toEqual<JieqiPieceRole[]>([
-      'chariot',
-      'cannon',
-      'horse',
-      'elephant',
-      'advisor',
-      'soldier',
-    ]);
-    expect(pool.red.entries.find((e) => e.role === 'soldier')?.count).toBe(5);
+    assert.equal(pool.red.total, 15);
+    assert.equal(pool.black.total, 15);
+    assert.deepEqual(
+      pool.red.entries.map((e) => e.role),
+      ['chariot', 'cannon', 'horse', 'elephant', 'advisor', 'soldier'],
+    );
+    assert.equal(pool.red.entries.find((e) => e.role === 'soldier')?.count, 5);
   });
 
   it('is exact for the opponent and carries the unseen captures of your own ink', () => {
@@ -185,33 +172,33 @@ describe('jieqiHiddenPool', () => {
       const rng = mulberry32(seed);
       let state: JieqiGameState = createInitialJieqiState(`q${seed}`, createJieqiDeal(rng));
       for (let ply = 0; ply < MAX_PLIES && state.status.type === 'playing'; ply += 1) {
-        for (const viewer of ['red', 'black'] as const) {
-          const view = getJieqiPlayerView(state, viewer);
-          const pool = jieqiHiddenPool(view);
-          for (const ink of ['red', 'black'] as const) {
+        for (const viewer of INKS) {
+          const pool = jieqiHiddenPool(getJieqiPlayerView(state, viewer));
+          for (const ink of INKS) {
             // What this viewer was never told: captures of `ink` still dark when
             // taken by the other side (the viewer is the owner, not the capturer).
             const unseen = state.captures.filter(
               (c) => c.owner === ink && !c.revealedAtCapture && c.owner === viewer,
             );
             const expected = [...faceDownRoles(state.board, ink), ...unseen.map((c) => c.role)];
-            expect(multiset(poolRoles(pool[ink].entries))).toBe(multiset(expected));
-            expect(pool[ink].unknownCaptured).toBe(unseen.length);
-            expect(pool[ink].total - pool[ink].unknownCaptured).toBe(
+            assert.equal(
+              multiset(poolRoles(pool[ink].entries)),
+              multiset(expected),
+              `seed ${seed} ply ${ply} viewer ${viewer} ink ${ink}`,
+            );
+            assert.equal(pool[ink].unknownCaptured, unseen.length);
+            assert.equal(
+              pool[ink].total - pool[ink].unknownCaptured,
               faceDownRoles(state.board, ink).length,
             );
+            assert.ok(!pool[ink].entries.some((e) => e.role === 'general'));
             if (unseen.length > 0) sawDarkCapture = true;
           }
-          // The pool never names a general.
-          for (const ink of ['red', 'black'] as const) {
-            expect(pool[ink].entries.some((e) => e.role === 'general')).toBe(false);
-          }
         }
-        const moves = getJieqiLegalMoves(state);
-        state = applyJieqiMove(state, pick(moves, rng));
+        state = applyJieqiMove(state, pick(getJieqiLegalMoves(state), rng));
       }
     }
-    expect(sawDarkCapture).toBe(true);
+    assert.ok(sawDarkCapture, 'no playout produced a dark capture');
   });
 
   it('a capturer sees the opponent pool shrink; the owner still counts the piece', () => {
@@ -224,13 +211,13 @@ describe('jieqiHiddenPool', () => {
       capture = next.captures.find((c) => !c.revealedAtCapture);
       state = next;
     }
-    expect(capture).toBeDefined();
-    const owner = capture!.owner as JieqiColor;
+    assert.ok(capture, 'no dark capture within 400 plies');
+    const owner = capture.owner as JieqiColor;
     const capturer: JieqiColor = owner === 'red' ? 'black' : 'red';
     const asCapturer = jieqiHiddenPool(getJieqiPlayerView(state, capturer))[owner];
     const asOwner = jieqiHiddenPool(getJieqiPlayerView(state, owner))[owner];
-    expect(asCapturer.unknownCaptured).toBe(0);
-    expect(asOwner.unknownCaptured).toBeGreaterThan(0);
-    expect(asOwner.total).toBe(asCapturer.total + asOwner.unknownCaptured);
+    assert.equal(asCapturer.unknownCaptured, 0);
+    assert.ok(asOwner.unknownCaptured > 0);
+    assert.equal(asOwner.total, asCapturer.total + asOwner.unknownCaptured);
   });
 });
