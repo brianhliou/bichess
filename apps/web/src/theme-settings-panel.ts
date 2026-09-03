@@ -13,7 +13,7 @@ import {
   currentLocale,
   LOCALE_META,
   type Locale,
-  localizedHref,
+  localeSwitchNavigation,
   SUPPORTED_LOCALES,
   setStoredLocale,
 } from './i18n/locale.js';
@@ -299,7 +299,9 @@ function createLanguageField(
       if (optionLocale !== locale) trackLocaleChanged(locale, optionLocale);
       setStoredLocale(optionLocale);
       const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.href = localizedHref(currentHref, optionLocale);
+      const navigation = localeSwitchNavigation(currentHref, optionLocale);
+      if (navigation.kind === 'reload') window.location.reload();
+      else window.location.href = navigation.href;
     });
     list.append(option);
   }
