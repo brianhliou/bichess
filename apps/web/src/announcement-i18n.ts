@@ -35,6 +35,14 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-03 (current games) ── 进行中的对局 is the nav label the
+  // Watch menu renders (nav.currentGames), 通信对局 the correspondence
+  // catalog's own word, 高级搜索 the renamed Tools entry (nav.gamesSearch).
+  'Every game in progress, on one page.': '所有进行中的对局，都在一页上。',
+  'Current games lists everything being played right now, across every variant: live games with their clocks, and correspondence games waiting on a move, each as a small board you can click into. Fog games appear as cards without a board until they end. When nothing is running, the page shows the open correspondence seeks and the most recent finished games instead. The games database moved to Advanced search under Tools.':
+    '"进行中的对局"列出此刻正在进行的所有对局，涵盖每一种变体：带时钟的实时对局，以及等待走棋的通信对局，每局都是一张可以点进去的小棋盘。迷雾对局在结束前只显示为没有棋盘的卡片。没有对局进行时，页面转而显示公开的通信对局邀请和最近结束的对局。棋谱数据库移到了"工具"菜单下的"高级搜索"。',
+  'See current games': '查看进行中的对局',
+
   // ── 2026-09-02 (embeds) ── 研习 / 题目 / 开发者 are the nav and footer
   // labels the site already renders (nav.studies, nav.puzzles,
   // footer.developers); Mistboard TV, iframe, API and OpenAPI stay in Latin.
@@ -283,6 +291,13 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-03 (current games) ── Traditional forms of the Simplified
+  // entry above: 進行中的對局 (nav.currentGames), 通訊對局, 進階搜尋.
+  'Every game in progress, on one page.': '所有進行中的對局，都在一頁上。',
+  'Current games lists everything being played right now, across every variant: live games with their clocks, and correspondence games waiting on a move, each as a small board you can click into. Fog games appear as cards without a board until they end. When nothing is running, the page shows the open correspondence seeks and the most recent finished games instead. The games database moved to Advanced search under Tools.':
+    '「進行中的對局」列出此刻正在進行的所有對局，涵蓋每一種變體：帶時鐘的即時對局，以及等待走棋的通訊對局，每局都是一張可以點進去的小棋盤。迷霧對局在結束前只顯示為沒有棋盤的卡片。沒有對局進行時，頁面轉而顯示公開的通訊對局邀請和最近結束的對局。棋譜資料庫移到了「工具」選單下的「進階搜尋」。',
+  'See current games': '查看進行中的對局',
+
   // ── 2026-09-02 (embeds) ── Same terms as the Simplified entry above, in
   // the Traditional forms the site renders: 研習 / 題目 / 開發者.
   'Put a Mistboard board in your own page.': '把 Mistboard 的棋盤放進你自己的網頁。',
