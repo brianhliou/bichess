@@ -254,6 +254,41 @@ export function createTenantRuntimeRoomFromEvents<
   };
 }
 
+// Event types whose apply step has a REJECTION semantic: each guards on status
+// or turn and returns the projection unchanged when it refuses. For these, an
+// unchanged projection means "not part of the game" and the event must not be
+// recorded. Everything else (and any type added later that this list does not
+// know about) is appended unconditionally, so a new informational event cannot
+// be silently dropped by an identity check it was never designed for.
+const REJECTABLE_EVENT_TYPES = new Set([
+  'move-played',
+  'setup-submitted',
+  'clock-started',
+  'clock-expired',
+  'seat-resigned',
+  'game-aborted',
+  'seat-forfeited',
+]);
+
+/**
+ * Did the projection accept this event? Only meaningful for the types above.
+ *
+ * This exists because room.events and room.projection could disagree. The
+ * projection drops an out-of-turn move; the event array kept it anyway, and the
+ * event array is what the engine adapter replays into Fairy-Stockfish. On
+ * 2026-09-03 a double-submitted move in a Fortress room made those two differ by
+ * three plies, FSF searched a stale position, proposed a move illegal in the real
+ * one, and the guard resigned the bot's seat.
+ */
+export function tenantEventWasAccepted<C extends string, M, Spec extends string>(
+  before: unknown,
+  after: unknown,
+  event: TenantRoomEvent<C, M, Spec>,
+): boolean {
+  if (!REJECTABLE_EVENT_TYPES.has(event.type)) return true;
+  return after !== before;
+}
+
 export function appendTenantRuntimeEvent<
   Kind extends string,
   C extends string,
@@ -266,8 +301,12 @@ export function appendTenantRuntimeEvent<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   event: TenantRoomEvent<C, M, Spec>,
 ): number {
+  // Apply BEFORE pushing: a rejected event is not part of the game and must not
+  // enter room.events, which is the history the engine adapter replays.
+  const next = applyTenantEvent(tenant, room.projection, event);
+  if (!tenantEventWasAccepted(room.projection, next, event)) return -1;
   room.events.push(event);
-  room.projection = applyTenantEvent(tenant, room.projection, event);
+  room.projection = next;
   return room.events.length - 1;
 }
 

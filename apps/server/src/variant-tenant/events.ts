@@ -11,7 +11,7 @@ import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
 import { tenantDurableDeadlineFor } from './lifecycle.js';
-import { appendTenantRuntimeEvent } from './runtime.js';
+import { appendTenantRuntimeEvent, applyTenantEvent, tenantEventWasAccepted } from './runtime.js';
 import type {
   TenantGameStateLike,
   TenantRoomEvent,
@@ -73,6 +73,16 @@ export async function appendTenantEvent<
 ): Promise<number> {
   const writer = contextWithDefaults(tenant, ctx);
   const write = room.pendingWrites.then(async () => {
+    // Decide acceptance INSIDE the serialized write, before anything is durable.
+    // The WebSocket turn guard reads the projection synchronously and then
+    // awaits this write, so a double-submit or resend inside that window passes
+    // the guard; re-checking here against the up-to-date projection is what
+    // closes it. Persisting first meant a rejected move got a row and a seq of
+    // its own — (room, seq) is the primary key, so nothing downstream could
+    // reject it — and room.events outran the real game (2026-09-03: a Fortress
+    // bot resigned because Fairy-Stockfish replayed three phantom plies).
+    const projected = applyTenantEvent(tenant, room.projection, event);
+    if (!tenantEventWasAccepted(room.projection, projected, event)) return -1;
     const seq = room.events.length;
     if (writer.persistence.isInitialized()) {
       await writer.persistence.appendRoomEvent(room.id, seq, event);

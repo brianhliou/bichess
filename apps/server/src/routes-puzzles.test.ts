@@ -268,30 +268,10 @@ test('attempt and reveal routes accept a quality session without exposing the so
   assert.deepEqual(JSON.parse(reveal.body).move, puzzle.solution[0]);
 });
 
-test('Fortress puzzle attempts solve the mined mate and stay solution-hidden', async () => {
-  const response = await route('/api/puzzles/fortress-xiangqi-mined-v2-001/attempt', 'POST', {
-    moves: [{ drop: 'cannon', to: 'c8' }],
-  });
-  const body = JSON.parse(response.body) as {
-    attempt: {
-      ok: boolean;
-      complete: boolean;
-      state: { status: { type: string; winner?: string; reason?: string } };
-      solution?: unknown;
-    };
-  };
-
-  assert.equal(response.status, 200);
-  assert.equal(body.attempt.ok, true);
-  assert.equal(body.attempt.complete, true);
-  assert.deepEqual(body.attempt.state.status, {
-    type: 'finished',
-    winner: 'red',
-    reason: 'checkmate',
-  });
-  assert.equal(body.attempt.solution, undefined);
-});
-
+// REMOVED 2026-09-03: 'Fortress puzzle attempts solve the mined mate and stay
+// solution-hidden'. It drove fortress-xiangqi-mined-v2-001, and Fortress ships no
+// puzzles now (see the banner in puzzles-fortress-xiangqi-fixtures.ts). The attempt
+// flow it covered is still exercised by the jungle and mini-xiangqi cases here.
 test('Jungle puzzle attempts solve the mined forced win and stay solution-hidden', async () => {
   // Derive from the corpus so the test tracks regeneration. Submit only the solver
   // moves (even indices); the server auto-applies the scripted defender replies.
@@ -496,8 +476,12 @@ test('puzzle rating route returns null for an anonymous or unrated user', async 
 });
 
 test('attempts omit rating info when there is no rated session', async () => {
-  const response = await route('/api/puzzles/fortress-xiangqi-mined-v2-001/attempt', 'POST', {
-    moves: [{ drop: 'cannon', to: 'c8' }],
+  // Retargeted off Fortress on 2026-09-03: it ships no puzzles. Rating omission
+  // is variant-agnostic, so any shipped puzzle proves it.
+  const jungle = JUNGLE_PUZZLES[0];
+  assert.ok(jungle, 'expected a jungle puzzle');
+  const response = await route(`/api/puzzles/${jungle.id}/attempt`, 'POST', {
+    moves: [jungle.solution[0]],
   });
   const body = JSON.parse(response.body) as { attempt: { ok: boolean }; rating?: unknown };
 
@@ -574,7 +558,8 @@ test('reveal endpoint in hint mode returns only the next move, never the full li
 });
 
 test('reveal endpoint reads the solution generically across variants', async () => {
-  for (const puzzle of [FORTRESS_XIANGQI_PUZZLES[0], JUNGLE_PUZZLES[0], MINI_XIANGQI_PUZZLES[0]]) {
+  // Fortress left this list on 2026-09-03 when it stopped shipping puzzles.
+  for (const puzzle of [JUNGLE_PUZZLES[0], MINI_XIANGQI_PUZZLES[0]]) {
     assert.ok(puzzle, 'expected a puzzle in each variant registry');
     const reveal = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'solution' });
     const body = JSON.parse(reveal.body) as { solution: unknown[] };
