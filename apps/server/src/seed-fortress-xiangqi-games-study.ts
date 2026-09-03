@@ -171,13 +171,13 @@ function chapterPayload(game: SampleGame, ordinal: number) {
 const GAMES: SampleGame[] = [
   {
     seed: 0,
-    plies: 75,
-    winner: 'red',
+    plies: 86,
+    winner: 'black',
     reason: 'checkmate',
     comment:
-      'The game the rules article embeds. 19 drops (Red 11, Black 8). Red mates with the cannon to e4, firing up the e-file over its own horse on e5 while the soldier on f5 covers the general\u2019s last square. Comment written by hand rather than from an eval curve: this game predates the Modal batch the other nineteen come from.',
+      'The game the rules article embeds. Both new rules are visible: three soldiers cross the river and gain the sideways step, and Red drops its captured Treasure back on d1 because its own half is the only half it may enter. 17 drops (Red 10, Black 7). Black mates on move 43 with the soldier to b1.',
     moves:
-      'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c8d8 e3c4 a8c8 g1e1 c8c7 e1e6 c6b4 c4b6 c7c6 e6c6 b4c6 R@c5 R@d6 P@f5 c6b8 f5f6 d6b6 f6e6 N@f6 e6f6 b6f6 c5c8 d8d2 N@c5 P@d8 c8b8 d2d5 N@e6 P@e7 e6c7 d5d4 c7d5 f6f4 d5f4 f7f6 R@d5 d4c4 b8d8 C@b5 E@b3 b5d5 f4d5 R@d6 d8d7 d6d7 c5d7 R@d8 C@f4 g8f7 d5f6 f8g8 f4g4 g8f8 R@f5 f7e6 P@g8 f8f7 P@g6 e6f5 f6d5 f5g6 g4f4 P@e5 d7e5 f7f6 P@f5 f6e6 f4e4',
+      'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 d6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 T@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1',
   },
   {
     seed: 1100024,
@@ -360,14 +360,14 @@ const GAMES: SampleGame[] = [
       'e1e4 c8c5 d1f3 c5d5 b2b3 b7b6 e4a4 b8a6 d2d3 b6b5 a4f4 d8f6 d3d4 d5g5 f4g4 b5b4 f1d2 g5b5 a1b2 b4b3 d2b3 a6c5 g4g3 P@c2 P@c4 c5e4 c4c5 b5b2 c1b2 e4g3 g2g3 a8b8 d4d5 C@b4 N@d1 b4b2 d1b2 b8b3 C@c8 T@d8 c8c2 N@c4 C@e2 c4b2 e2d2 b3b4 d2b2 N@d3 c2c3 d3f2 N@a3 f2d3 P@d2 b4b3 d2d3 b3c3 b2b6 c3b3 b1a1 C@a6 N@b5 P@b4 g1b1 b3b1 a1b1 R@b3 b1c1 a6a2 b6b4 b3b4 P@b1 C@a1 b1b2 b4b2 d3d4 P@b1',
   },
   {
-    seed: 1100004,
-    plies: 86,
-    winner: 'black',
+    seed: 1,
+    plies: 75,
+    winner: 'red',
     reason: 'checkmate',
     comment:
-      'Black held the edge before the break, peaking at -132. The engine eval stayed inside a pawn of level through ply 11 of 86. The position broke open on ply 12. 17 drops (Red 10, Black 7). Black mates with b2–b1.',
+      'Formerly the article\u2019s game, kept for the finish: Red mates with the cannon to e4, firing up the e-file over its own horse on e5 while the soldier on f5 covers the general\u2019s last square. 19 drops (Red 11, Black 8). No soldier crosses the river in this one, which is why the article now embeds a different game.',
     moves:
-      'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 d6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 T@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1',
+      'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c8d8 e3c4 a8c8 g1e1 c8c7 e1e6 c6b4 c4b6 c7c6 e6c6 b4c6 R@c5 R@d6 P@f5 c6b8 f5f6 d6b6 f6e6 N@f6 e6f6 b6f6 c5c8 d8d2 N@c5 P@d8 c8b8 d2d5 N@e6 P@e7 e6c7 d5d4 c7d5 f6f4 d5f4 f7f6 R@d5 d4c4 b8d8 C@b5 E@b3 b5d5 f4d5 R@d6 d8d7 d6d7 c5d7 R@d8 C@f4 g8f7 d5f6 f8g8 f4g4 g8f8 R@f5 f7e6 P@g8 f8f7 P@g6 e6f5 f6d5 f5g6 g4f4 P@e5 d7e5 f7f6 P@f5 f6e6 f4e4',
   },
 ];
 
@@ -405,8 +405,11 @@ async function main(): Promise<void> {
   // fetch with "Cannot convert argument to a ByteString", naming a character
   // index and nothing else. The usual cause is pasting the placeholder from the
   // usage block above, ellipsis and all, instead of the real value. Say that.
-  if (suppliedCookie && /[^\u0000-\u00ff]/.test(suppliedCookie)) {
-    const bad = [...suppliedCookie].find((ch) => ch.charCodeAt(0) > 255);
+  const badChar = suppliedCookie
+    ? [...suppliedCookie].find((ch) => (ch.codePointAt(0) ?? 0) > 255)
+    : undefined;
+  if (badChar) {
+    const bad = badChar;
     throw new Error(
       `MISTBOARD_SESSION_COOKIE contains a non-Latin-1 character (${JSON.stringify(bad)}). ` +
         'It looks like the placeholder was pasted rather than the real cookie. Copy the VALUE of ' +

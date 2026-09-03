@@ -139,8 +139,8 @@ const ZH_HANS: Record<string, string> = {
   'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
     '黑方子力占优，五子对三子，却动不了红方的象，那是场上仅存的最大子，而它正一个一个地吃掉黑方的子。黑方认输。在暗棋里，大小压过纯粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
-  'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.':
-    '红方以炮到 e4 将死。炮隔着己方 e5 的马沿 e 线开火，f5 的兵控制 f6，那是将在九宫内唯一还能去的点。',
+  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
+    '黑方第 43 回合以兵到 b1 将死，正是第 4 回合过河的那个兵。红帅无处可走：己方的兵挡住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -344,8 +344,8 @@ const ZH_HANS: Record<string, string> = {
     '同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负。若双方都不是唯一的长将方，则重复局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '对局也可能因超时、认输或弃局而结束。',
-  'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.':
-    '这盘引擎对局展示了持子的两种用法：象打回己方半场防守，而红方的攻势大多由打入的棋子组成。注意 a1 的宝，它从未离开己方半场。',
+  'This engine game shows both new rules at work. Three soldiers cross the river and gain their sideways step, and on move 23 Red drops its captured Treasure on d1, back inside its own half, because that is the only half it may enter.':
+    '这盘引擎对局同时展示了两条新规则。三个兵过河并获得横走，第 23 回合红方把吃到的宝打回 d1，落在己方半场，因为那是它唯一能进入的一半。',
   'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
     '这盘棋选自二十盘以同样方式生成的引擎对局。二十盘全部收录在[配套研究](/study/NUVBVjFf)里，每盘一章，并注明引擎评估认为局势发生转折的时刻。',
 
@@ -2090,8 +2090,8 @@ const ZH_HANT: Record<string, string> = {
   'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
     '黑方子力佔優，五子對三子，卻動不了紅方的象，那是場上僅存的最大子，而它正一個一個地吃掉黑方的子。黑方認輸。在暗棋裡，大小壓過純粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
-  'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.':
-    '紅方以炮到 e4 將死。炮隔著己方 e5 的馬沿 e 線開火，f5 的兵控制 f6，那是將在九宮內唯一還能去的點。',
+  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
+    '黑方第 43 回合以兵到 b1 將死，正是第 4 回合過河的那個兵。紅帥無處可走：己方的兵擋住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
@@ -2378,8 +2378,8 @@ const ZH_HANT: Record<string, string> = {
     '同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負。若雙方都不是唯一的長將方，則重複局面判和。',
   'Games can also end by timeout, resignation, or abandonment.':
     '對局也可能因超時、認輸或棄局而結束。',
-  'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.':
-    '這盤引擎對局展示了持子的兩種用法：象打回己方半場防守，而紅方的攻勢大多由打入的棋子組成。注意 a1 的寶，它從未離開己方半場。',
+  'This engine game shows both new rules at work. Three soldiers cross the river and gain their sideways step, and on move 23 Red drops its captured Treasure on d1, back inside its own half, because that is the only half it may enter.':
+    '這盤引擎對局同時展示了兩條新規則。三個兵過河並獲得橫走，第 23 回合紅方把吃到的寶打回 d1，落在己方半場，因為那是它唯一能進入的一半。',
   'This game was chosen from twenty engine games played the same way. All twenty are in the [companion study](/study/NUVBVjFf), one chapter each, with a note on where the engine’s evaluation says the game turned.':
     '這盤棋選自二十盤以同樣方式生成的引擎對局。二十盤全部收錄在[配套研究](/study/NUVBVjFf)裡，每盤一章，並註明引擎評估認為局勢發生轉折的時刻。',
 

@@ -18,14 +18,14 @@ describe('Fortress Xiangqi article replay', () => {
     const block = articleReplayBlock();
     const replay = replayFortressXiangqiNotation(block.spec.moves);
 
-    expect(replay.tokens).toHaveLength(75);
-    expect(replay.moves).toHaveLength(75);
-    expect(replay.states).toHaveLength(76);
-    expect(replay.moves.filter(isFortressXiangqiDropMove)).toHaveLength(19);
+    expect(replay.tokens).toHaveLength(86);
+    expect(replay.moves).toHaveLength(86);
+    expect(replay.states).toHaveLength(87);
+    expect(replay.moves.filter(isFortressXiangqiDropMove)).toHaveLength(17);
     expect(block.caption).toBeUndefined();
     expect(replay.states.at(-1)?.status).toMatchObject({
       type: 'finished',
-      winner: 'red',
+      winner: 'black',
       reason: 'checkmate',
     });
   });

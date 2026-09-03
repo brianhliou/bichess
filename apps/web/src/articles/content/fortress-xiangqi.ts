@@ -185,7 +185,7 @@ export const fortressXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows both uses of the reserve: an Elephant drops back into its own half to defend, while most of Red’s attack is built from parachuted pieces. Note the Treasure on a1, which never leaves home.',
+          text: 'This engine game shows both new rules at work. Three soldiers cross the river and gain their sideways step, and on move 23 Red drops its captured Treasure on d1, back inside its own half, because that is the only half it may enter.',
         },
         {
           kind: 'fortress-xiangqi-replay',
@@ -194,9 +194,9 @@ export const fortressXiangqiArticle: Article = {
             black: 'Fairy-Stockfish',
             event: 'Engine self-play · 2.5 s per move',
             moves:
-              'e1e4 b7b6 e4f4 d8f6 f2f3 b8c6 f1e3 c8d8 e3c4 a8c8 g1e1 c8c7 e1e6 c6b4 c4b6 c7c6 e6c6 b4c6 R@c5 R@d6 P@f5 c6b8 f5f6 d6b6 f6e6 N@f6 e6f6 b6f6 c5c8 d8d2 N@c5 P@d8 c8b8 d2d5 N@e6 P@e7 e6c7 d5d4 c7d5 f6f4 d5f4 f7f6 R@d5 d4c4 b8d8 C@b5 E@b3 b5d5 f4d5 R@d6 d8d7 d6d7 c5d7 R@d8 C@f4 g8f7 d5f6 f8g8 f4g4 g8f8 R@f5 f7e6 P@g8 f8f7 P@g6 e6f5 f6d5 f5g6 g4f4 P@e5 d7e5 f7f6 P@f5 f6e6 f4e4',
+              'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 d6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 T@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1',
             resultText:
-              'Red mates with the cannon to e4. The cannon fires up the e-file over its own horse on e5, and the soldier on f5 covers f6, the only square the general could still reach inside its palace.',
+              'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.',
           },
         } as ArticleBlock,
         {
