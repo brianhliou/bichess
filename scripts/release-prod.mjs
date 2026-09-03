@@ -3,6 +3,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { hostname } from 'node:os';
+import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { DRAIN_TOKEN_KEYCHAIN_SERVICE, resolveDrainToken } from './lib/drain-token.mjs';
@@ -12,6 +13,7 @@ import {
   needsPersistenceGate,
   persistenceGateWarning,
 } from './persistence-gate.mjs';
+import { primaryWorktreeRoot } from './worktree-role.mjs';
 
 const DEFAULT_BASE_URL = 'https://mistboard.com';
 const DEFAULT_CI_WORKFLOW = 'ci.yml';
@@ -45,6 +47,13 @@ const CI_TRIGGER_PATTERNS = [
   'railpack.json',
 ];
 const VALID_SMOKE_TIERS = new Set(['full', 'web', 'lite', 'none']);
+
+// Every child is spawned with an explicit cwd. Before the push that is the
+// checkout the release runs from; after it, the control worktree (see
+// enterPostPushWorkdir). A child spawned without a cwd inherits ours, and if
+// that directory is gone the spawn itself dies with "process.cwd failed".
+const releaseRoot = process.cwd();
+let workdir = releaseRoot;
 
 const options = parseArgs(process.argv.slice(2));
 if (options.help) {
@@ -157,6 +166,7 @@ try {
     }
     runTimed('git push release head', pushCommand(release.headRevision));
     release.pushCompleted = true;
+    enterPostPushWorkdir();
   } else {
     console.log('skip: git push (pass --push to publish the current commit)');
   }
@@ -673,7 +683,10 @@ async function runParallelSmokes(smokes) {
 function runSmokeProcess({ label, tag, command }) {
   return new Promise((resolve) => {
     const startedAt = performance.now();
-    const child = spawn(command[0], command.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command[0], command.slice(1), {
+      cwd: workdir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     let output = '';
     child.stdout.on('data', (chunk) => {
       output += chunk;
@@ -790,9 +803,32 @@ function runTimed(label, command) {
   run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
 }
 
+// Once the push lands the branch reads as merged, and a merged task worktree
+// is fair game for a sweep: on 2026-09-03 one was removed between the
+// revision wait and the smokes, and the smoke spawn died on a cwd that no
+// longer existed, with the release already on production. Nothing after the
+// push needs THIS checkout (the CI wait reads the remote, the revision wait
+// and the smokes read production), only the repo's scripts and the network,
+// so the rest of the release runs from the control worktree, which holds the
+// shared .git directory and cannot be swept.
+function enterPostPushWorkdir() {
+  let primary;
+  try {
+    primary = primaryWorktreeRoot(releaseRoot);
+  } catch (error) {
+    console.log(`warn: could not resolve the control worktree (${error.message}); staying put`);
+    return;
+  }
+  if (path.resolve(primary) === path.resolve(releaseRoot)) return;
+  workdir = primary;
+  console.log(
+    `post-push steps run from ${primary}: this task worktree reads as merged now and may be swept`,
+  );
+}
+
 function run(command) {
   console.log(`\n$ ${quoteCommand(command)}`);
-  const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit' });
+  const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.signal) throw new Error(`${command[0]} exited with signal ${result.signal}`);
   if (result.status !== 0) throw new Error(`${command[0]} exited with ${result.status}`);
@@ -802,7 +838,7 @@ function cancelUnpublishedDrain() {
   if (!release.drainCommitted || release.pushCompleted) return;
   console.error('release stopped before push completed; cancelling production drain');
   const command = ['node', 'scripts/safe-deploy.mjs', '--cancel', '--yes', ...safeDeployBaseArgs()];
-  const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit' });
+  const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
     console.error('warning: automatic drain cancellation failed; cancel /admin/drain manually');
   }
@@ -811,6 +847,7 @@ function cancelUnpublishedDrain() {
 function runCapture(label, command, { quiet = false } = {}) {
   if (!quiet) console.log(`\n$ ${quoteCommand(command)}`);
   const result = spawnSync(command[0], command.slice(1), {
+    cwd: workdir,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
