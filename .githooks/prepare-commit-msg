@@ -1,0 +1,6 @@
+#!/bin/sh
+# Chain to the portfolio lesson-trailer hint. core.hooksPath=.githooks shadows
+# .git/hooks/prepare-commit-msg, so the installer symlink there never fires.
+HINT="$HOME/projects/tools/scripts/lesson-trailer-hint.sh"
+[ -x "$HINT" ] && exec "$HINT" "$@"
+exit 0
