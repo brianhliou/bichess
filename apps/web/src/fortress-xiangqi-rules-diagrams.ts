@@ -372,15 +372,16 @@ export const FORTRESS_XIANGQI_GENERAL_DIAGRAM = () => {
 
 // Soldier: one point forward before the river; forward or sideways after.
 export const FORTRESS_XIANGQI_SOLDIER_DIAGRAM = () => {
-  // Veteran soldier: forward and sideways from the opening move (no river gate).
-  // The cross behind it marks the one direction it can never take.
+  // River soldier (2026-09-02): on its own half it has the single forward step,
+  // and the crosses mark the sideways moves the river still withholds. Targets
+  // stay kernel-derived; only the annotation is authored.
   const state = stateWith({ ...GENERALS, d4: { color: 'red', role: 'soldier' } });
   return diagram(
     withoutGenerals(viewOf(state)),
     {
       selectedSquare: 'd4',
       targets: boardTargetsFrom(state, 'd4'),
-      blockedSquares: ['d3'],
+      blockedSquares: ['c4', 'e4'],
     },
     380,
   );
@@ -407,7 +408,7 @@ export const FORTRESS_XIANGQI_TREASURE_DIAGRAM = () => {
 // them; membership is asserted against the kernel by the diagram test rather
 // than trusted here, so a rules change that pulls a piece out of the free group
 // fails instead of drawing it under the wrong region.
-const FREE_DROP_ROLES = ['chariot', 'horse', 'cannon', 'soldier', 'treasure'] as const;
+const FREE_DROP_ROLES = ['chariot', 'horse', 'cannon', 'soldier'] as const;
 
 // The TERRITORY a role may drop into, as opposed to the points open right now.
 //
@@ -451,7 +452,7 @@ export const FORTRESS_XIANGQI_DROP_REGIONS_DIAGRAM = () => {
   };
   const items = [
     { roles: FREE_DROP_ROLES, label: 'ANY EMPTY POINT', svg: region('chariot') },
-    { roles: ['elephant'] as const, label: 'YOUR OWN HALF', svg: region('elephant') },
+    { roles: ['elephant', 'treasure'] as const, label: 'YOUR OWN HALF', svg: region('elephant') },
     { roles: ['advisor'] as const, label: 'YOUR OWN PALACE', svg: region('advisor') },
   ];
 
