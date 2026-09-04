@@ -524,6 +524,21 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The patron page, prerendered: it is the route that states what the site
+    // sells and at what price, so it has to be readable without running the
+    // SPA. Localized paths stay on the client-rendered shell below.
+    if (pathname === '/patron') {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: 'patron.html',
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // The puzzles landing page gets its prerendered explainer. Deep links
     // (/puzzles/:idOrShortCode) stay on the client-rendered shell: they open a
     // specific puzzle, so a baked landing frame would be wrong for them.

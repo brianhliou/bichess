@@ -633,7 +633,8 @@ export async function servePrerenderedPage(params: {
     | 'player.html'
     | 'learn-xiangqi.html'
     | 'feed.html'
-    | 'puzzles.html';
+    | 'puzzles.html'
+    | 'patron.html';
 }): Promise<void> {
   const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });

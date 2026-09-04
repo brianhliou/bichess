@@ -723,6 +723,36 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'puzzles.html'), puzzlesHtml, 'utf-8');
   console.log('prerendered /puzzles (puzzles.html)');
+
+  // Patron: bake the page that says what this site sells. It was serving a bare
+  // shell, so a fetch without JavaScript got the meta description and nothing
+  // else, on the one route whose whole job is to name the product and its price.
+  // The copy and the four monthly amounts are static; the live card (checkout
+  // state, "you are a Patron") stays a client fetch and replaces the baked one
+  // on boot. Asset links come from pages-static.ts because that module owns
+  // pages-static.css, where the patron styles live.
+  const { renderPatronShellForPrerender } = await server.ssrLoadModule('/src/patron-page.ts');
+  const patronAssetLinks = routeAssetLinks(manifest, 'src/pages-static.ts', shell);
+  const patronInner = renderPatronShellForPrerender();
+  let patronHtml = shell.replace(
+    '<div id="app"></div>',
+    `<div id="app" class="landing-page patron-route">${patronInner}</div>`,
+  );
+  // Same copy as the server's SPA_ROUTE_META['/patron'], which covers the
+  // fallback path when this file is missing. Full meta, not a title-only
+  // replace: servePrerenderedPage returns this file as-is.
+  patronHtml = injectPageMeta(patronHtml, {
+    title: 'Become a Patron | Mistboard',
+    description:
+      'Mistboard is independent and ad-free. Core play and learning stay free. Patron is an optional monthly subscription with a profile badge.',
+    url: `${host}/patron`,
+  });
+  patronHtml = patronHtml.replace(
+    '</head>',
+    `<link rel="canonical" href="${host}/patron" />${patronAssetLinks}</head>`,
+  );
+  await fs.writeFile(resolve(distDir, 'patron.html'), patronHtml, 'utf-8');
+  console.log('prerendered /patron (patron.html)');
 } catch (err) {
   console.error('prerender failed:', err);
   process.exitCode = 1;
