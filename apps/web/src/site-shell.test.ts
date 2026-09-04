@@ -18,12 +18,9 @@ describe('site shell nav', () => {
         '.site-nav-links > .site-nav-link:not([data-admin-only]), .site-nav-links > .site-nav-menu:not([data-admin-only]) > .site-nav-menu-toggle',
       ),
     ].map((link) => link.textContent);
-    // Correspondence sits between Puzzles and Learn and is signed-in-only: it is
-    // in the DOM (hidden) for a signed-out visitor, so it counts here.
     expect(primaryLabels).toEqual([
       'Play',
       'Puzzles',
-      'Correspondence',
       'Learn',
       'Watch',
       'Community',
@@ -51,7 +48,20 @@ describe('site shell nav', () => {
     expect(puzzleLink?.textContent).toBe('Puzzles');
     expect(puzzleLink?.classList.contains('active')).toBe(true);
     expect(puzzleLink?.getAttribute('aria-current')).toBe('page');
-    expect(nav.querySelector('.site-nav-menu-toggle')?.textContent).toBe('Learn');
+    // Identify the Learn toggle by its href, not by being the first toggle in
+    // the DOM: Play became a dropdown too, and a positional selector silently
+    // starts asserting against a different menu.
+    expect(
+      nav.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle[href="/rules"]')?.textContent,
+    ).toBe('Learn');
+    // Play is a split menu now: the title navigates to the lobby, the panel
+    // carries Correspondence (signed-in only, so hidden until auth resolves).
+    const playMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
+      (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Play',
+    );
+    const correspondence = playMenu?.querySelector<HTMLAnchorElement>('a[href="/correspondence"]');
+    expect(correspondence?.textContent).toBe('Correspondence');
+    expect(correspondence?.hidden).toBe(true);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
     // Community dropdown: Players (the leaderboard), Friends, Forum, Blog. The
     // title also links to /player, so scope item lookups to the panel.
@@ -145,16 +155,7 @@ describe('site shell nav', () => {
       ),
     ].map((link) => link.textContent);
 
-    expect(primaryLabels).toEqual([
-      '對弈',
-      '題目',
-      '通信對局',
-      '學習',
-      '觀看',
-      '社群',
-      '工具',
-      '支持',
-    ]);
+    expect(primaryLabels).toEqual(['對弈', '題目', '學習', '觀看', '社群', '工具', '支持']);
     expect(nav.getAttribute('aria-label')).toBe('主導覽');
     expect(nav.querySelector('.site-nav-language')).toBeNull();
     // The Learn dropdown's Rules item is the localized content link (規則).
