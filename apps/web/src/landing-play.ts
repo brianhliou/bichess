@@ -288,12 +288,32 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
   return tenant ? (tenant.gameSpecId as LandingGameSpecId) : DARK_CHESS_SPEC_ID;
 }
 
+// Fog Chess is the one picker row NOT sourced from the tenant registry:
+// enabledLandingVariantGameSpecs hardcodes it, because ordinary fog rooms ride
+// the pre-registry chess shell and the dark-chess tenant entry exists only for
+// correspondence rooms (no landing config, so no acceptsDeepLink). Mirror that
+// hardcode here or the picker offers a variant no link can name: without it,
+// ?variant=dark-chess resolved to undefined and the dialog fell through to
+// `storedPreference ?? fallback` below, so a player whose last PvP setup was
+// jieqi opened a Jieqi dialog from a Fog Chess link (measured 2026-09-04).
+//
+// The rest stays keyed on the tenant's own acceptsDeepLink, which is
+// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (DMX, Drop Mini
+// Xiangqi, Dark Shogi, Dark Crazyhouse) have no other door, and the soft-link
+// branch in the dialog exists to seat them. Collapsing the two lists makes
+// `npm run dev:lab` unable to reach any of them.
+/** Whether a play deep link can name this spec, i.e. whether the dialog will
+ *  actually open ON it rather than falling through to the player's stored
+ *  preference. The post-game invite gates on this so the two cannot disagree. */
+export function landingPlayDeepLinkAccepts(variant: string): boolean {
+  return deepLinkInitialVariant(variant, 'pvp') !== undefined;
+}
+
 function deepLinkInitialVariant(
   variant: string | null,
   _mode: LandingPlayMode,
 ): LandingGameSpecId | undefined {
-  // Each tenant's registry entry decides deep-link reachability (Dark Xiangqi
-  // never is: it has no playable runtime).
+  if (variant === DARK_CHESS_SPEC_ID) return DARK_CHESS_SPEC_ID;
   const tenant = variant ? webVariantTenantForSpecId(variant) : null;
   if (tenant?.landing?.acceptsDeepLink()) return tenant.gameSpecId as LandingGameSpecId;
   return undefined;

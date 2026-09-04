@@ -873,6 +873,16 @@
   opacity: 0.65;
 }
 
+/* Post-game "challenge a friend": the only action in the row that produces a
+   NEW human opponent, so it is tinted apart from Review/Play again without
+   outranking the primary Review action. */
+.room-actions a.room-invite-friend,
+.room-actions button.room-invite-friend {
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong, var(--site-accent));
+  background: transparent;
+}
+
 .room-actions button.danger {
   border-color: #c79898;
   color: #7a2f2f;

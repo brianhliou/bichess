@@ -4,6 +4,7 @@ import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
+import { postGameInviteButton } from './postgame-invite.js';
 import { rematchControls } from './rematch-controls.js';
 import { isColor, oppositeColor } from './web-utils.js';
 
@@ -40,6 +41,10 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
     actions.unshift(
       roomAction(t('live.reviewGame'), `/game/${encodeURIComponent(liveState.room)}`, 'primary'),
     );
+    // A rematch or another bot game reuses the opponent you already had; this is
+    // the only post-game action that produces a new human one.
+    const invite = postGameInviteButton(postGameVariant());
+    if (invite) actions.push(invite);
     refs.roomActions.replaceChildren(...actions);
     return;
   }
@@ -157,6 +162,12 @@ export function buildPlayAgainRoomRequestBody(opts: {
     // game silently started a 3+2 game (room 7bf718fa → b52b5221).
     ...(liveState.timeControl ? { timeControl: liveState.timeControl } : {}),
   };
+}
+
+function postGameVariant(): string | undefined {
+  return (
+    currentView()?.variant ?? liveState.state?.variant ?? liveState.variantRequested ?? undefined
+  );
 }
 
 function roomUrl(variant: PlayerView['variant'], dev?: 'engine'): string {

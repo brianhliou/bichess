@@ -32,6 +32,10 @@ export interface NavItem {
 export const DISCORD_BLOCKED_IN: readonly string[] = ['CN'];
 export const DISCORD_INVITE_URL = 'https://discord.gg/Qp6AZ6qAYm';
 
+// ORDER IS LOAD-BEARING: site-shell destructures this positionally
+// (`const [play, puzzles, watch] = primaryNavItems()`), so inserting an entry
+// silently displaces the ones after it out of the nav. Add standalone links as
+// their own export (see correspondenceNavItem) instead of growing this array.
 export function primaryNavItems(): NavItem[] {
   return [
     { label: 'Play', labelKey: 'nav.play', href: '/' },
@@ -50,6 +54,20 @@ export function primaryNavItems(): NavItem[] {
 // then out of the homepage footer and the forum home on 2026-08-31: not
 // defects, a decision to stop promoting the Discord while it is still empty.
 // No surface links it now (see the constants above).
+// Your correspondence games. Signed-in only, and top level on purpose: the page
+// has existed since correspondence shipped but was reachable ONLY from the
+// notification bell (which shows only when a game needs your move) and a footer
+// link on the page itself, so a player with several games in flight had no menu
+// path to them.
+export function correspondenceNavItem(): NavItem {
+  return {
+    label: 'Correspondence',
+    labelKey: 'nav.correspondence',
+    href: '/correspondence',
+    signedInOnly: true,
+  };
+}
+
 export function communityNavItems(): NavItem[] {
   return [
     { label: 'Players', labelKey: 'nav.players', href: '/player' },

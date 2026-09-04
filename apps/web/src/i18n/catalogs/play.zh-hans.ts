@@ -327,6 +327,10 @@ export const ZH_HANS_PLAY = {
   'correspondence.dueNow': '现在到期',
   'correspondence.timeLeft': '剩余 {time}',
   'correspondence.openGamesHeading': '公开对局 · 任何人都可加入',
+  'correspondence.yourOpenChallenges': '你发布的对局',
+  'correspondence.noOpenChallenges': '你还没有发布对局。发布一盘，任何人都可以从大厅加入。',
+  'correspondence.wantAnyOpponent': '想找对手？',
+  'correspondence.browseOpenGames': '浏览公开对局',
   'correspondence.openGamesUnavailable': '无法获取公开对局',
   'correspondence.openGamesUnavailableBody': '暂时无法加载求战板。',
   'correspondence.postAGame': '发布对局',
@@ -364,4 +368,7 @@ export const ZH_HANS_PLAY = {
   'live.newDebugRoom': '新建调试房间',
   'live.copyInviteLink': '复制邀请链接',
   'live.linkCopied': '链接已复制！',
+  'live.challengeFriend': '邀请好友对局',
+  'live.challengeFriendCreating': '正在创建邀请',
+  'live.challengeFriendRetry': '重试创建邀请',
 } satisfies Partial<Record<PlayI18nKey, string>>;

@@ -16,6 +16,7 @@ export const ZH_HANS_SHELL = {
   'nav.rules': '规则',
   'nav.articles': '文章',
   'nav.watch': '观看',
+  'nav.correspondence': '通信对局',
   'nav.broadcasts': '直播',
   'nav.import': '导入棋谱',
   'nav.gamesSearch': '高级搜索',

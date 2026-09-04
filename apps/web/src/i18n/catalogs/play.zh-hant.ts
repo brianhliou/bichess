@@ -327,6 +327,10 @@ export const ZH_HANT_PLAY = {
   'correspondence.dueNow': '現在到期',
   'correspondence.timeLeft': '剩餘 {time}',
   'correspondence.openGamesHeading': '公開對局 · 任何人都可加入',
+  'correspondence.yourOpenChallenges': '你發布的對局',
+  'correspondence.noOpenChallenges': '你還沒有發布對局。發布一盤，任何人都可以從大廳加入。',
+  'correspondence.wantAnyOpponent': '想找對手？',
+  'correspondence.browseOpenGames': '瀏覽公開對局',
   'correspondence.openGamesUnavailable': '無法取得公開對局',
   'correspondence.openGamesUnavailableBody': '暫時無法載入求戰板。',
   'correspondence.postAGame': '發布對局',
@@ -364,4 +368,7 @@ export const ZH_HANT_PLAY = {
   'live.newDebugRoom': '新增除錯房間',
   'live.copyInviteLink': '複製邀請連結',
   'live.linkCopied': '連結已複製！',
+  'live.challengeFriend': '邀請好友對局',
+  'live.challengeFriendCreating': '正在建立邀請',
+  'live.challengeFriendRetry': '重試建立邀請',
 } satisfies Partial<Record<PlayI18nKey, string>>;

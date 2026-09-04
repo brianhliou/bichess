@@ -56,12 +56,15 @@ export async function mountCorrespondence(root: HTMLElement): Promise<void> {
   }
   const data = (await resp.json()) as CorrespondenceGamesResponse;
   const section = buildCorrespondenceSection(data);
-  // The open-seek board is always shown to a signed-in player — with no games of
-  // your own it's the focus (no redirect-to-home card), so the page is
-  // self-sufficient for starting an async game against a stranger.
+  // One job per surface (2026-09-04): BROWSING other players' open seeks belongs
+  // to the homepage lobby's Correspondence tab, which already renders that feed.
+  // This page is "my correspondence" — my games, and my own outstanding
+  // challenges, which is the half of the board that carries a Cancel button and
+  // has nowhere else to live.
   const seekBoard = document.createElement('section');
   seekBoard.className = 'correspondence-group correspondence-seekboard';
   section.append(seekBoard);
+  section.append(buildBrowseOpenGamesLink());
   // The other way to start one — a specific opponent — lives on the home page.
   section.append(buildFriendLink());
   root.replaceChildren(buildNav(), section);
@@ -94,8 +97,10 @@ function buildCorrespondenceSection(data: CorrespondenceGamesResponse): HTMLElem
 
   // Your games — rendered only when there are any. With none, the open-seek
   // board below carries the page.
-  const yourMove = data.games.filter((game) => game.isYourMove);
-  const waiting = data.games.filter((game) => !game.isYourMove);
+  const byDeadline = (a: CorrespondenceGame, b: CorrespondenceGame): number =>
+    Date.parse(a.dueAt) - Date.parse(b.dueAt);
+  const yourMove = data.games.filter((game) => game.isYourMove).sort(byDeadline);
+  const waiting = data.games.filter((game) => !game.isYourMove).sort(byDeadline);
   if (yourMove.length > 0) section.append(buildGameGroup(t('correspondence.yourMove'), yourMove));
   if (waiting.length > 0)
     section.append(buildGameGroup(t('correspondence.waitingOnOpponent'), waiting));
@@ -110,6 +115,19 @@ function correspondenceStatus(data: CorrespondenceGamesResponse): string {
       : t('correspondence.gamesNeedYourMove', { count: data.yourMoveCount });
   }
   return t('correspondence.noGamesWaiting');
+}
+
+// Browsing lives on the homepage lobby's Correspondence tab; this page links
+// there rather than growing a second copy of that feed.
+function buildBrowseOpenGamesLink(): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'correspondence-friend-link';
+  note.append(document.createTextNode(t('correspondence.wantAnyOpponent')));
+  const link = document.createElement('a');
+  link.href = '/';
+  link.textContent = t('correspondence.browseOpenGames');
+  note.append(link);
+  return note;
 }
 
 function buildFriendLink(): HTMLElement {
@@ -180,7 +198,7 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
   headerRow.className = 'correspondence-seek-header';
   const heading = document.createElement('h2');
   heading.className = 'correspondence-group-heading';
-  heading.textContent = t('correspondence.openGamesHeading');
+  heading.textContent = t('correspondence.yourOpenChallenges');
   headerRow.append(heading);
 
   const resp = await fetch('/api/correspondence/seeks').catch(() => null);
@@ -208,7 +226,18 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
     );
     return;
   }
-  const { seeks } = (await resp.json()) as CorrespondenceSeeksResponse;
+  const { seeks: allSeeks } = (await resp.json()) as CorrespondenceSeeksResponse;
+  // Everyone else's open seeks are the lobby tab's job; keep only the rows this
+  // page can act on (isMine rows render a Cancel button, the rest a Join).
+  //
+  // NOTE this can only ever show PUBLIC posts: listOpenCorrespondenceSeeks is
+  // `visibility = 'public' AND target_user_id IS NULL`, so private link
+  // challenges (what "Create a link to share" and the post-game invite mint) are
+  // structurally absent. There is no endpoint for a player's outgoing private
+  // challenges — /seeks/incoming covers only directed ones aimed AT you — so a
+  // sent link currently has no record anywhere and cannot be cancelled. Hence
+  // "Your posted games" rather than "Your open challenges".
+  const seeks = allSeeks.filter((seek) => seek.isMine);
   const refresh = (): void => {
     void renderSeekBoard(container);
   };
@@ -231,7 +260,7 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
   if (seeks.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'correspondence-seek-empty';
-    empty.textContent = t('correspondence.noOpenGames');
+    empty.textContent = t('correspondence.noOpenChallenges');
     children.push(empty);
   } else {
     const list = document.createElement('ol');

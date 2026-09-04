@@ -178,8 +178,11 @@ describe('friends nav gating', () => {
     vi.unstubAllGlobals();
   });
 
+  // Select by href, not by "the first signed-in-only link": Correspondence is
+  // also signed-in-only and renders ahead of Friends, so a positional query
+  // silently starts asserting against the wrong link.
   function friendsLink(): HTMLAnchorElement | null {
-    return document.querySelector<HTMLAnchorElement>('[data-signed-in-only]');
+    return document.querySelector<HTMLAnchorElement>('[data-signed-in-only][href="/following"]');
   }
 
   it('points Friends at /following and hides it before any sign-in', async () => {

@@ -194,6 +194,14 @@
   gap: 8px;
 }
 
+/* `display: flex` above and the UA's `[hidden] { display: none }` have the same
+   specificity, so source order decided it and the form rendered even though the
+   script sets form.hidden = true. The "Post a game" toggle was inert and the
+   form was permanently expanded. Restate the hidden case after the display rule. */
+.correspondence-post-form[hidden] {
+  display: none;
+}
+
 .correspondence-post-field {
   padding: 8px 10px;
   border: 1px solid var(--site-border-soft);

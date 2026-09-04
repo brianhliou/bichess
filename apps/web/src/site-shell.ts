@@ -5,6 +5,7 @@ import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './
 import {
   adminNavItems,
   communityNavItems,
+  correspondenceNavItem,
   donateNavItem,
   learnNavItems,
   type NavItem,
@@ -82,6 +83,9 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   const [play, puzzles, watch] = primaryNavItems();
   if (play) links.append(navLink(play, locale));
   if (puzzles) links.append(navLink(puzzles, locale));
+  // Signed-in only, so it costs a visitor nothing and gives a player with games
+  // in flight a menu path to them.
+  links.append(navLink(correspondenceNavItem(), locale));
   // Rules are the Learn landing and lead its dropdown; the interactive xiangqi
   // course remains directly reachable as the second item.
   links.append(navMenu('nav.learn', learnNavItems(), locale, '/rules'));

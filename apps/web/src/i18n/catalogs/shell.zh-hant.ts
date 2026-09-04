@@ -16,6 +16,7 @@ export const ZH_HANT_SHELL = {
   'nav.rules': '規則',
   'nav.articles': '文章',
   'nav.watch': '觀看',
+  'nav.correspondence': '通信對局',
   'nav.broadcasts': '直播',
   'nav.import': '匯入棋譜',
   'nav.gamesSearch': '進階搜尋',

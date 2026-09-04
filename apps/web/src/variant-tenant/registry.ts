@@ -175,6 +175,10 @@ const alwaysEnabled = () => true;
 // so existing games + physical/kids deep links keep working, and the live client
 // + postgame gates (their own feature-flag helpers) are untouched.
 const hiddenFromMenu = () => false;
+// A variant that is no longer reachable from anywhere in the UI: not in the
+// picker, and no longer nameable in a play deep link. Distinct from
+// hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
+const retiredDeepLink = () => false;
 
 const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
@@ -650,7 +654,11 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: alwaysEnabled,
+      // RETIRED 2026-09-04 (Brian). Mini Xiangqi was hidden from the picker in
+      // the 2026-07-03 xiangqi pivot but kept an unconditional deep link, so a
+      // link was its only door. Closing that door is the decision; the variant
+      // itself stays enabled so existing rooms, postgames and replays survive.
+      acceptsDeepLink: retiredDeepLink,
       engineOptions: [
         {
           id: 'fairy-stockfish-mini-xiangqi-very-strong',

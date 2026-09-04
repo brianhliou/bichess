@@ -18,6 +18,7 @@ import { readAccountPreferences, shouldShowClockTenths } from '../account-prefer
 import { openConfirmDialog } from '../confirm-dialog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
+import { postGameInviteButton } from '../postgame-invite.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { formatClock } from '../web-utils.js';
@@ -447,6 +448,12 @@ export function createTenantRoomChrome<C extends string>(
       } else if (view.status.type === 'finished') {
         row.append(playAgainButton());
       }
+      // A rematch or another bot game reuses the opponent you already had; this
+      // is the only post-game action that produces a new human one.
+      if (view.status.type === 'finished') {
+        const invite = postGameInviteButton(tenantSpecId());
+        if (invite) row.append(invite);
+      }
       // No Home button (lichess parity): the site nav is the way out of the
       // room. An aborted room can end up with no actions at all — leave the
       // host empty so the wrapper row collapses instead of appending an empty
@@ -457,6 +464,17 @@ export function createTenantRoomChrome<C extends string>(
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
+  }
+
+  // The chrome is variant-erased, so the spec id comes off the play-again body
+  // the tenant already builds (tenants key it 'gameSpecId'; the chess-shell
+  // shape uses 'variant'). Unknown shapes yield undefined, which fails closed
+  // into no invite button.
+  function tenantSpecId(): string | undefined {
+    const body = ctx.playAgainRequestBody();
+    if (typeof body.gameSpecId === 'string') return body.gameSpecId;
+    if (typeof body.variant === 'string') return body.variant;
+    return undefined;
   }
 
   function copyInviteButton(): HTMLButtonElement {

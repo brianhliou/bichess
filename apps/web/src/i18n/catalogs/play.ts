@@ -276,6 +276,11 @@ export const EN_PLAY = {
   'correspondence.dueNow': 'due now',
   'correspondence.timeLeft': '{time} left',
   'correspondence.openGamesHeading': 'Open games · anyone can join',
+  'correspondence.yourOpenChallenges': 'Your posted games',
+  'correspondence.noOpenChallenges':
+    'You have not posted a game. Post one and anyone can join it from the lobby.',
+  'correspondence.wantAnyOpponent': 'Looking for an opponent? ',
+  'correspondence.browseOpenGames': 'Browse open games',
   'correspondence.openGamesUnavailable': 'Open games unavailable',
   'correspondence.openGamesUnavailableBody': 'The seek board could not be loaded right now.',
   'correspondence.postAGame': 'Post a game',
@@ -374,6 +379,9 @@ export const EN_PLAY = {
   'live.newDebugRoom': 'New Debug Room',
   'live.copyInviteLink': 'Copy invite link',
   'live.linkCopied': 'Link copied!',
+  'live.challengeFriend': 'Challenge a friend',
+  'live.challengeFriendCreating': 'Creating challenge',
+  'live.challengeFriendRetry': 'Try challenge again',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;

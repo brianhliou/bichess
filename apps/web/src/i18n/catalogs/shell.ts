@@ -10,6 +10,7 @@ export const EN_SHELL = {
   'nav.rules': 'Rules',
   'nav.articles': 'Articles',
   'nav.watch': 'Watch',
+  'nav.correspondence': 'Correspondence',
   'nav.broadcasts': 'Broadcasts',
   'nav.import': 'Import game',
   'nav.gamesSearch': 'Advanced search',
