@@ -92,8 +92,8 @@ export const luatCoUpArticle: Article = {
   summary:
     'Luật cờ úp đầy đủ: cách bày quân, cách đi quân úp trước và sau khi lật, ăn quân úp, chiếu bí và các trường hợp hòa.',
   showSummaryOnPage: false,
-  status: 'draft',
-  publishedAt: '2026-08-28',
+  status: 'published',
+  publishedAt: '2026-09-03',
   audience: 'Người mới chơi cờ úp, và người chơi cờ tướng muốn biết cờ úp khác ở chỗ nào.',
   intro: [
     {

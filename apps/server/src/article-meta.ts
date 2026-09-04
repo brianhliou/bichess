@@ -41,18 +41,11 @@ const RETIRED_RULES_SLUGS = new Set([
 // listed - so promoting an article to 'published' is what removes it, and
 // nobody has to remember this file exists.
 const UNPUBLISHED_ARTICLE_SLUGS = new Set([
-  // Published 2026-08-28 and pulled back the same evening. Reachable at
-  // /blog/<slug> for review, out of the sitemap and noindex until it goes back.
-  'jieqi-platform',
-  // The two Vietnamese pages are written and wired but NOT published: neither has
-  // had a native read, and rules copy that is subtly wrong is worse than none.
-  // That is a reviewer, not a task, and it is the real blocker on the Vietnamese
-  // search play rather than anything in the code.
-  'co-up',
-  'luat-co-up',
+  // The jieqi set (jieqi-platform, jieqi-openings and the three Vietnamese pages)
+  // published together on 2026-09-03. They came out as one batch because each of
+  // them links to another in prose, and a published page linking to a draft ships
+  // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
-  'jieqi-openings',
-  'khai-cuoc-co-up',
   'fog-chess-concepts',
   'shogi',
 ]);

@@ -78,8 +78,8 @@ export const jieqiPlatformArticle: Article = {
   summary:
     'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.',
   showSummaryOnPage: false,
-  status: 'draft',
-  publishedAt: '2026-09-06',
+  status: 'published',
+  publishedAt: '2026-09-03',
   audience: 'Jieqi players looking for somewhere to play and review their games.',
   thumbnail: { kind: 'svg', svg: JIEQI_PLATFORM_THUMBNAIL },
   intro: [

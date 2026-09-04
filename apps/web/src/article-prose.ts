@@ -77,12 +77,17 @@ function isScoreNotation(text: string): boolean {
 // key; they just are not forced to.
 function replay(block: {
   caption?: string;
-  spec?: { title?: string; event?: string; resultText?: string };
+  spec?: { title?: string; event?: string; resultText?: string; outcome?: string };
 }): string[] {
   const spec = block.spec ?? {};
   return [
     ...caption(block),
-    ...[spec.title, spec.event, spec.resultText].filter(
+    // `outcome` was missing here until 2026-09-03, and it is the line directly
+    // under the replay header: the jieqi platform page rendered "Black wins by
+    // checkmate · 73 moves" in English on both zh pages while this gate read
+    // green. deriveTranslation's own READABLE set already covered it, so the
+    // Vietnamese page had it translated and the Chinese ones did not.
+    ...[spec.title, spec.event, spec.resultText, spec.outcome].filter(
       (t): t is string => typeof t === 'string' && t.trim().length > 0 && !isScoreNotation(t),
     ),
   ];
@@ -129,7 +134,11 @@ const BLOCK_PROSE: {
   table: (block) => {
     const b = block as { headers?: string[]; rows?: string[][] };
     return [
-      ...(b.headers ?? []),
+      // A blank header is the corner cell of a comparison table, not copy. It
+      // reached the coverage gate as a string with no translation, which no
+      // dictionary can satisfy, and would have blocked the first locked article
+      // whose table has one.
+      ...(b.headers ?? []).filter((header) => header.trim().length > 0),
       ...(b.rows ?? []).flat().filter((cell) => /\p{Script=Latin}/u.test(cell)),
       ...caption(block),
     ];

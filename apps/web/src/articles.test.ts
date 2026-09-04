@@ -85,15 +85,15 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The four unpublished drafts, ahead of everything published and out of the
-      // sitemap until they ship. The mining explainer was pulled FORWARD past
-      // both jieqi pages (2026-08-23 to 09-03); the jieqi pair sits behind it
-      // keeping their own order and two-day gap, because the openings article
-      // links to the platform page and cannot land first. The match-fixing
-      // draft is dated a day past the champion pages, whose ruling column it is
-      // the long version of.
-      '/blog/jieqi-openings',
+      // The jieqi pair, published together on 2026-09-03 rather than two days
+      // apart: each of the five jieqi pages links another in prose, so they had
+      // to ship as one batch or a published page would link a draft. Sharing a
+      // date puts them on the comparator's alphabetical tie-break, which lands
+      // the platform page above the openings article. That happens to be the
+      // order the dependency wants anyway, since the openings article is the
+      // one that links to the platform page.
       '/blog/jieqi-platform',
+      '/blog/jieqi-openings',
       // jieqi-platform's Vietnamese derivation (co-up) inherits its date but
       // never appears here: a page with sourceLang set is out of the index by
       // rule, so moving that date still moves two articles, it just moves one
@@ -263,6 +263,8 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/jieqi-platform',
+      '/blog/jieqi-openings',
       '/blog/how-puzzle-mining-works',
       '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
@@ -1267,7 +1269,22 @@ describe('blog post read-next footer', () => {
     const listed = new Set(publishedBlogSlugs().map((slug) => `/blog/${slug}`));
     for (const slug of publishedBlogSlugs()) {
       const links = footerLinks(slug);
-      expect(links, `${slug} has no onward posts`).toHaveLength(3);
+      // A translated page walks its OWN language's ring, so its trio is capped by
+      // how many pages exist in that language. Three Vietnamese pages means two
+      // onward links, not a broken footer: asserting a flat 3 here would force
+      // the ring back to English and dead-end the reader it was built for.
+      const article = articles.find((a) => a.slug === slug);
+      const pool = articles.filter(
+        (a) =>
+          a.kind === 'article' &&
+          a.status === 'published' &&
+          a.publisher === 'mistboard' &&
+          a.sourceLang === article?.sourceLang &&
+          a.slug !== slug,
+      );
+      const expected = Math.min(3, pool.length);
+      expect(expected, `${slug} has no same-language siblings at all`).toBeGreaterThan(0);
+      expect(links, `${slug} has no onward posts`).toHaveLength(expected);
       expect(links, `${slug} links itself`).not.toContain(`/blog/${slug}`);
       for (const href of links) {
         expect(listed, `${slug} links ${href}, which the index does not list`).toContain(href);

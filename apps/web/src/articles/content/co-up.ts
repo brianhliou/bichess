@@ -15,7 +15,9 @@
 // because sending a Vietnamese reader to English rules is the leak this exists to
 // close.
 //
-// CAVEAT: this copy has NOT had a native read, and that is what keeps it a draft.
+// This copy has NOT had a native read. It ships anyway, on the standard set on
+// 2026-08-29: a translation does not wait for a read that is not coming. The page
+// now inherits its status from jieqi-platform, so the pair publishes together.
 
 import { deriveTranslation } from '../derived-translation.js';
 import { jieqiPlatformArticle } from './jieqi-platform.js';
@@ -76,6 +78,4 @@ export const coUpArticle = deriveTranslation(jieqiPlatformArticle, {
   slug: 'co-up',
   sourceLang: 'vi',
   dict: CO_UP_VI,
-  // The English page is published; this one waits on a native reader.
-  overrides: { status: 'draft' },
 });

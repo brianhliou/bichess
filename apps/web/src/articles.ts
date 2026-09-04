@@ -381,10 +381,15 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
-  // Leads the row: it is the newest, and it is the only page here that sends a
-  // reader straight into something they can do on this site rather than
-  // something to read about. The method it documents is not published anywhere
-  // else for xiangqi.
+  // Leads the row from 2026-09-03: newest, and the clearest case of a page that
+  // sends a reader straight into something they can do here. The openings
+  // article follows it because it is the piece that page's reader is sent to
+  // next, and because it exists in no other language than Chinese.
+  'jieqi-platform',
+  'jieqi-openings',
+  // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
+  // a reader into something they can do rather than something to read about,
+  // and the method it documents is not published anywhere else for xiangqi.
   'how-puzzle-mining-works',
   // The one page here that exists nowhere else in English. It sits directly
   // above the two champion lists it explains, which is the order a reader
