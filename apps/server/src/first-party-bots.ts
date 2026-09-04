@@ -214,6 +214,29 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
   return botByEngineId.get(engineId) ?? null;
 }
 
+/**
+ * The linkable profile identity behind a live seat, as the `handle`/`botId`
+ * fields the live feeds carry (LiveTvPlayer, CurrentGamePlayer). At most one is
+ * ever set.
+ *
+ * An engine seat resolves through the first-party bot table, so a raw engine
+ * version with no bot in front of it stays unlinked: /bot/:id would 404 for it,
+ * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
+ * cannot be linkable on /watch and plain on /games.
+ */
+export type LiveSeatProfile = { handle?: string; botId?: string };
+
+export function liveSeatProfileIdentity(
+  engineClientId: string | null,
+  userHandle: string | null,
+): LiveSeatProfile {
+  if (engineClientId) {
+    const bot = firstPartyBotForEngine(engineClientId);
+    return bot ? { botId: bot.id } : {};
+  }
+  return userHandle ? { handle: userHandle } : {};
+}
+
 /** The engine a first-party bot currently fronts for a variant, or null when it
  *  does not play that variant (or the bot is not first-party). */
 export function firstPartyBotEngineFor(botId: string, gameSpecId: string): string | null {

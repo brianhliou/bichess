@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LiveRefs } from '../live-state.js';
+import type { ProfileIdentity } from '../profile-link.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
@@ -37,6 +38,7 @@ type CtxOverrides = Partial<{
   closeReason: string;
   connectedSeats: Partial<Record<Color, boolean>>;
   seatDisplayNames: Partial<Record<Color, string>>;
+  seatProfiles: Partial<Record<Color, ProfileIdentity>>;
   clock: {
     activeColor: Color | null;
     incrementMs: number;
@@ -62,6 +64,7 @@ function chromeHarness(
     timeControl: () => overrides.timeControl ?? null,
     connectedSeats: () => overrides.connectedSeats ?? { white: true, red: true },
     seatDisplayNames: () => overrides.seatDisplayNames ?? {},
+    seatProfiles: () => overrides.seatProfiles ?? {},
     abortDeadline: () => null,
     forfeitDeadline: () => null,
     roomMode: () => 'pvp',

@@ -64,6 +64,13 @@ export type GameParticipant = {
   subjectType: GameParticipantSubjectType;
   subjectId: string | null;
   visibility: GameVisibility;
+  // The account handle behind a `user` seat, so game-derived surfaces can link the
+  // name to /@/<handle>. `subjectId` for a user is the internal user id, which the
+  // profile route cannot address. Present ONLY when the seat is safe to link:
+  // the account is open and its profile is not private. Null for every other
+  // subject type, and for a linkable-in-principle user whose profile is closed or
+  // private, so a client rule of "handle present => render a link" is fail-closed.
+  handle?: string | null;
   // Engine build version for engine-version seats whose subject_id is version-less (the
   // variant-tenant UCI engines — jieqi/banqi/crossroads, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
@@ -1494,12 +1501,25 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     engine_version: string | null;
     elo_before: number | null;
     elo_after: number | null;
+    handle: string | null;
   }>(
-    `SELECT game_id, color, subject_type, subject_id, display_name, visibility,
-            engine_version, elo_before, elo_after
+    // The users join resolves a `user` seat's linkable handle. It is filtered in
+    // the JOIN rather than in a WHERE so a private/closed account still yields its
+    // participant row (with a null handle) instead of dropping the seat entirely.
+    `SELECT game_participants.game_id, game_participants.color,
+            game_participants.subject_type, game_participants.subject_id,
+            game_participants.display_name, game_participants.visibility,
+            game_participants.engine_version, game_participants.elo_before,
+            game_participants.elo_after, users.handle
      FROM game_participants
-     WHERE game_id = ANY($1)
-     ORDER BY game_id, CASE color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
+     LEFT JOIN users
+       ON game_participants.subject_type = 'user'
+      AND users.id = game_participants.subject_id
+      AND users.closed_at IS NULL
+      AND users.profile_visibility <> 'private'
+     WHERE game_participants.game_id = ANY($1)
+     ORDER BY game_participants.game_id,
+              CASE game_participants.color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
     [roomIds],
   );
   const byGame = new Map<string, GameParticipant[]>();
@@ -1510,6 +1530,9 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       subjectType: row.subject_type,
       subjectId: row.subject_id,
       visibility: row.visibility,
+      // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
+      // participant shape, same convention as the fields below.
+      ...(row.handle != null ? { handle: row.handle } : {}),
       // Omitted-when-null so the participant shape is unchanged for games without a
       // recorded engine build (humans, pre-versioning rows, version-in-id engines).
       ...(row.engine_version != null ? { engineVersion: row.engine_version } : {}),

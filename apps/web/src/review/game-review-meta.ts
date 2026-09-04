@@ -21,6 +21,7 @@
 // room) is plain envelope data and lives here so it can't drift between variants.
 
 import { brandedEngineName } from '../game-display.js';
+import { profileTargetFor } from '../profile-link.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { seatColorWord } from '../variant-seat-label.js';
 import {
@@ -39,6 +40,10 @@ export type ReviewMetaPlayer = {
   name: string;
   rating?: number | null;
   kind?: 'account' | 'guest' | 'engine';
+  /** Linkable seat identity, at most one set. `kind` cannot substitute: it
+   *  collapses users and bots into 'account'. */
+  handle?: string | null;
+  botId?: string | null;
 };
 
 /** The subset of the postgame `game` envelope the meta card reads. Every variant
@@ -122,8 +127,11 @@ export function reviewMetaPlayers(
     // shows the brand, same as every list surface (see brandedEngineName).
     name: brandedEngineName(player.name) ?? player.name,
     rating: player.rating ?? null,
-    isEngine: player.kind === 'engine',
+    // `kind` merges bots into 'account', so a bot seat needs its own tell here or
+    // the BOT tag goes missing on every review page that faces one.
+    isEngine: player.kind === 'engine' || player.botId != null,
     score: scores[index] ?? null,
+    profile: profileTargetFor(player),
   }));
 }
 

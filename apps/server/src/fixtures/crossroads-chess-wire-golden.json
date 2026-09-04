@@ -59,6 +59,7 @@
               ],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -381,6 +382,7 @@
               ],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -654,6 +656,7 @@
               ],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -990,6 +993,7 @@
                 "white": "client-white"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -1321,6 +1325,7 @@
                 "white": "client-white"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -1603,6 +1608,7 @@
                 "white": "client-white"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -1970,6 +1976,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -2309,6 +2316,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -2599,6 +2607,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -2977,6 +2986,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -3282,6 +3292,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -3636,6 +3647,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -3992,6 +4004,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -4361,6 +4374,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -4677,6 +4691,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -5097,6 +5112,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -5424,6 +5440,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -5804,6 +5821,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -6182,6 +6200,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -6577,6 +6596,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -6915,6 +6935,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -7361,6 +7382,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -7710,6 +7732,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -8108,6 +8131,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -8508,6 +8532,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -8921,6 +8946,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -9281,6 +9307,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -9734,6 +9761,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -10147,6 +10175,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -10507,6 +10536,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -10925,6 +10955,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -11338,6 +11369,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -11698,6 +11730,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -12122,6 +12155,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -12489,6 +12523,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -12856,6 +12891,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -13248,6 +13284,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -13615,6 +13652,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -13982,6 +14020,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -14354,6 +14393,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -14721,6 +14761,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "red",
@@ -15088,6 +15129,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-a",
                 "perspective": "white",
@@ -15363,6 +15405,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "white",
@@ -15668,6 +15711,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "red",
@@ -15924,6 +15968,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "white",
@@ -16240,6 +16285,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "white",
@@ -16502,6 +16548,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "red",
@@ -16764,6 +16811,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-b",
                 "perspective": "white",
@@ -17079,6 +17127,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -17417,6 +17466,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "red",
@@ -17706,6 +17756,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -18060,6 +18111,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -18364,6 +18416,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "red",
@@ -18717,6 +18770,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -19072,6 +19126,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -19440,6 +19495,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "red",
@@ -19755,6 +19811,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -20179,6 +20236,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -20511,6 +20569,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "red",
@@ -20843,6 +20902,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-c",
                 "perspective": "white",
@@ -21191,6 +21251,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "white",
@@ -21524,6 +21589,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "red",
@@ -21807,6 +21877,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -22154,6 +22229,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "white",
@@ -22495,6 +22575,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "red",
@@ -22786,6 +22871,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -23167,6 +23257,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "white",
@@ -23473,6 +23568,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -23829,6 +23929,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -24187,6 +24292,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -24559,6 +24669,11 @@
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
               },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
+              },
               "state": {
                 "id": "dchess_golden-d",
                 "perspective": "red",
@@ -24876,6 +24991,11 @@
               },
               "seatDisplayNames": {
                 "white": "Fairy Stockfish - Strong"
+              },
+              "seatProfiles": {
+                "white": {
+                  "botId": "fairy-stockfish-crossroads"
+                }
               },
               "state": {
                 "id": "dchess_golden-d",
@@ -25240,6 +25360,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "white",
@@ -25545,6 +25666,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "red",
@@ -25801,6 +25923,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "white",
@@ -26122,6 +26245,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "white",
@@ -26393,6 +26517,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "red",
@@ -26713,6 +26838,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "dchess_golden-e",
                 "perspective": "white",

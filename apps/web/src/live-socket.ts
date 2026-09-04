@@ -20,6 +20,7 @@ import type {
   XiangqiFamilyClock,
 } from './live-state.js';
 import { isPlayableSeat, liveState, normalizedOffers, takeRematchCancel } from './live-state.js';
+import type { ProfileIdentity } from './profile-link.js';
 import {
   createTenantSocketClient,
   type TenantSocketClient,
@@ -66,6 +67,7 @@ type StateFrame = {
     finalizedRoomId: string | null;
   };
   seatDisplayNames?: Partial<Record<Color, string>>;
+  seatProfiles?: Partial<Record<Color, ProfileIdentity>>;
 };
 
 type RematchStateMessage = {
@@ -181,6 +183,7 @@ function applyFullFrame(message: StateFrame): void {
   if (message.connectedSeats) liveState.connectedSeats = message.connectedSeats;
   if (message.rematch) liveState.rematch = message.rematch;
   if (message.seatDisplayNames) liveState.seatDisplayNames = message.seatDisplayNames;
+  if (message.seatProfiles) liveState.seatProfiles = message.seatProfiles;
 }
 
 function applyRematchState(message: RematchStateMessage): void {

@@ -14,6 +14,7 @@ import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { jungleFlipResultLabel, jungleFlipSeatInk } from './jungle-flip-result-label.js';
+import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
@@ -198,6 +199,7 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: playerNames,
+    playerProfiles: reviewSeatProfiles(gamePlayers),
     seatColors,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs. The analysis link carries the DEALT fen (the exact

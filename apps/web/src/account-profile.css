@@ -1980,21 +1980,48 @@
   transition:
     background 120ms ease,
     box-shadow 120ms ease;
+  /* Anchors the stretched overlay link below. The row is a DIV, not an <a>, so
+     the opponent name inside it can be its own link to their profile — an <a>
+     inside an <a> is invalid and breaks the outer one. See buildProfileGameRow. */
+  position: relative;
+}
+
+/* The row's click target: covers the whole row and carries the game href. Sits
+   under the content in paint order (it is appended first and has no z-index), so
+   only the elements that opt out with a z-index — the opponent link — take
+   clicks away from it. */
+.profile-game-row-open {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* The opponent name link, lifted above the overlay so it is clickable and
+   hoverable in its own right. */
+.profile-game-opponent-name {
+  position: relative;
+  z-index: 1;
 }
 
 .profile-game-list li:last-child .profile-game-row {
   border-bottom: 0;
 }
 
+/* Focus now lands on the overlay link rather than the row, so the row's own
+   affordances key off it. */
 .profile-game-row:hover,
-.profile-game-row:focus-visible {
+.profile-game-row:has(.profile-game-row-open:focus-visible) {
   background: var(--site-hover);
   box-shadow: inset 4px 0 0 var(--profile-game-tone, var(--site-accent));
 }
 
-.profile-game-row:focus-visible {
+.profile-game-row:has(.profile-game-row-open:focus-visible) {
   outline: 2px solid var(--site-focus);
   outline-offset: -2px;
+}
+
+.profile-game-row-open:focus-visible {
+  outline: none;
 }
 
 .profile-game-row-win {

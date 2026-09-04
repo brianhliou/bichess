@@ -17,6 +17,7 @@ import './account-profile.css';
 import { displayLiveName, type FeaturedGame, variantDisplayLabel } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { t } from './i18n/catalog.js';
+import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { buildProfileGameRow } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -34,7 +35,11 @@ const CHANNEL_ALL = 'all';
 type CurrentGamePlayer = {
   color: string;
   name: string | null;
+  // Linkable seat identity, at most one set: `handle` for a signed-in account,
+  // `botId` for a first-party bot. Both null for guests and for raw engine
+  // versions, neither of which has a public page.
   handle: string | null;
+  botId?: string | null;
   isEngine: boolean;
 };
 
@@ -504,10 +509,13 @@ function buildSeatRow(
   const row = document.createElement('div');
   row.className = 'current-game-seat';
   if (player) row.dataset.color = player.color;
-  const name = document.createElement('span');
-  name.className = 'current-game-seat-name';
-  name.textContent = displayLiveName(player?.name, t('games.guest'));
-  row.append(name);
+  row.append(
+    playerNameEl(
+      displayLiveName(player?.name, t('games.guest')),
+      profileTargetFor(player),
+      'current-game-seat-name',
+    ),
+  );
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';

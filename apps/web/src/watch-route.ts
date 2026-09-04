@@ -23,6 +23,7 @@ import {
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
 import { initLiveSound, playSound } from './live-sound.js';
+import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import {
@@ -126,7 +127,15 @@ type LiveFeatured = {
   roomId: string;
   gameSpecId: string;
   ply: number;
-  players?: Array<{ color: string; name: string | null; isEngine: boolean }>;
+  // `handle`/`botId` are the seat's linkable identity (LiveTvPlayer on the
+  // server); at most one is ever set, and both are absent for a guest seat.
+  players?: Array<{
+    color: string;
+    name: string | null;
+    isEngine: boolean;
+    handle?: string | null;
+    botId?: string | null;
+  }>;
   payload?: Record<string, unknown>;
 };
 
@@ -838,6 +847,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       name: displayLiveName(p.name, t('watch.guest')),
       rating: null,
       isEngine: p.isEngine,
+      profile: profileTargetFor(p),
     }));
   };
 
@@ -1587,6 +1597,7 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
       rating: watchParticipantRating(participant),
       isEngine: participant?.subjectType === 'engine-version' || participant?.subjectType === 'bot',
       score: scores[index] ?? null,
+      profile: participantProfileTarget(participant),
     };
   });
 }
@@ -1722,11 +1733,7 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   // render the neutral ring rather than guessing a side.
   disc.className = `watch-player-disc watch-player-disc--${player.color ?? 'unbound'}`;
   disc.setAttribute('aria-hidden', 'true');
-  const name = document.createElement('span');
-  name.className = 'clock-name';
-  name.textContent = player.name;
-  name.title = player.name;
-  row.append(disc, name);
+  row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');
     bot.className = 'watch-player-bot';

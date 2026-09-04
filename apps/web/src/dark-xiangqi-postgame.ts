@@ -6,6 +6,7 @@ import {
 } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -169,6 +170,7 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: playerNames,
+    playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('dark-xiangqi', standardXiangqiFen(truth)),

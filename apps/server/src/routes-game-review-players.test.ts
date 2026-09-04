@@ -96,11 +96,12 @@ test('the review endpoint carries the shaped seat roster, not just raw whiteName
   // The raw columns are null, so a payload without `players` renders a postgame
   // with no seat rows at all.
   assert.deepEqual(payload.game.players, [
-    { color: 'white', name: 'Guest', rating: null, kind: 'guest' },
+    { color: 'white', name: 'Guest', rating: null, kind: 'guest', handle: null, botId: null },
     // 'account', not 'engine': a first-party bot has a profile page, so
     // postgameParticipantKind groups it with users. 'engine' is reserved for raw
-    // engine-version subjects (EvE games).
-    { color: 'black', name: 'Misty', rating: null, kind: 'account' },
+    // engine-version subjects (EvE games). `botId` is what actually addresses
+    // that page: `kind` cannot, since it merges bots and users into one value.
+    { color: 'black', name: 'Misty', rating: null, kind: 'account', handle: null, botId: 'misty' },
   ]);
 });
 
@@ -111,11 +112,12 @@ test('the summary endpoint carries the same shaped seat roster', async () => {
     game: { players?: Array<{ color: string; name: string; kind: string }> };
   };
   assert.deepEqual(payload.game.players, [
-    { color: 'white', name: 'Guest', rating: null, kind: 'guest' },
+    { color: 'white', name: 'Guest', rating: null, kind: 'guest', handle: null, botId: null },
     // 'account', not 'engine': a first-party bot has a profile page, so
     // postgameParticipantKind groups it with users. 'engine' is reserved for raw
-    // engine-version subjects (EvE games).
-    { color: 'black', name: 'Misty', rating: null, kind: 'account' },
+    // engine-version subjects (EvE games). `botId` is what actually addresses
+    // that page: `kind` cannot, since it merges bots and users into one value.
+    { color: 'black', name: 'Misty', rating: null, kind: 'account', handle: null, botId: 'misty' },
   ]);
 });
 

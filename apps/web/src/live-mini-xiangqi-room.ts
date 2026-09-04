@@ -134,6 +134,7 @@ const chrome = createTenantRoomChrome(darkMiniXiangqiWebTenant, {
   timeControl: () => liveState.timeControl,
   connectedSeats: () => liveState.connectedSeats,
   seatDisplayNames: () => liveState.seatDisplayNames,
+  seatProfiles: () => liveState.seatProfiles,
   abortDeadline: () => liveState.abortDeadline,
   forfeitDeadline: () => liveState.forfeitDeadline,
   roomMode: () => liveState.roomMode,

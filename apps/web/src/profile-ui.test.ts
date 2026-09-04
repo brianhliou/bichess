@@ -87,7 +87,9 @@ describe('profile game rows', () => {
     );
     document.body.append(row);
 
-    row.querySelector('.profile-game-opponent')?.dispatchEvent(new MouseEvent('mouseenter'));
+    // The card hangs off the NAME, not the whole 'vs X' span: the name is also
+    // the profile link, so hover target and click target are the same element.
+    row.querySelector('.profile-game-opponent-name')?.dispatchEvent(new MouseEvent('mouseenter'));
     await vi.advanceTimersByTimeAsync(220);
 
     expect(fetchMock).toHaveBeenCalledWith('/api/bots/misty');

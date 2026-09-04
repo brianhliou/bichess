@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildCrosstable,
+  type CrosstablePlayer,
   type CrosstableTenantLookup,
   crosstableOutcome,
   crosstableReviewUrl,
@@ -74,8 +75,8 @@ test('crosstable pair: two public accounts resolve in seat order', () => {
       b: { subjectType: 'user', subjectId: 'bob' },
     },
     players: [
-      { name: 'User alice', kind: 'account' },
-      { name: 'User bob', kind: 'account' },
+      { name: 'User alice', kind: 'account', handle: null, botId: null },
+      { name: 'User bob', kind: 'account', handle: null, botId: null },
     ],
   });
 });
@@ -93,6 +94,9 @@ test('crosstable pair: an engine seat against an account is fine, a bot is an ac
   assert.deepEqual(vsEngine.ok && vsEngine.players[1], {
     name: 'Engine misty-banqi',
     kind: 'engine',
+    // A raw engine version has no public page, so it stays unlinkable.
+    handle: null,
+    botId: null,
   });
   assert.deepEqual(vsEngine.ok && vsEngine.pair.b, {
     subjectType: 'engine-version',
@@ -116,7 +120,14 @@ test('crosstable pair: an engine seat against an account is fine, a bot is an ac
     },
     LOOKUP,
   );
-  assert.deepEqual(vsBot.ok && vsBot.players[1], { name: 'Misty', kind: 'account' });
+  // 'account' merges the bot with human seats; botId is what actually addresses
+  // its /bot/:id page, which is why the row carries it separately from `kind`.
+  assert.deepEqual(vsBot.ok && vsBot.players[1], {
+    name: 'Misty',
+    kind: 'account',
+    handle: null,
+    botId: 'misty',
+  });
 });
 
 test('crosstable pair: a guest, manual, imported or subject-less seat is reason guest', () => {
@@ -264,9 +275,9 @@ test('crosstable review url: chess stack, tenant room, legacy room id, unknown v
 });
 
 test('crosstable build: score tallies the whole record from a side, games list newest first', () => {
-  const players: [{ name: string; kind: 'account' }, { name: string; kind: 'account' }] = [
-    { name: 'Alice', kind: 'account' },
-    { name: 'Bob', kind: 'account' },
+  const players: [CrosstablePlayer, CrosstablePlayer] = [
+    { name: 'Alice', kind: 'account', handle: null, botId: null },
+    { name: 'Bob', kind: 'account', handle: null, botId: null },
   ];
   const body = buildCrosstable({
     variant: 'xiangqi',

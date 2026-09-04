@@ -5,6 +5,7 @@ import './game-route.css';
 // Reuse the shared dxq-postgame scaffold (.dxq-postgame__*) the other fog
 // variants ride; the board renderer + its fog theme live in our own files.
 import './dark-xiangqi-postgame.css';
+import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { mountDarkChessReview } from './review/dark-chess-review.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
@@ -130,6 +131,7 @@ export function mountDarkChessPostgame(
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: reviewPlayers(game),
+    playerProfiles: reviewSeatProfiles(game.players, 'white'),
     result: { score: resultScore(game.result), label: status },
     ...crosstableConfig(game.roomId, game.players),
     // Draft960 is absent from the export table (its PGN needs [SetUp]/[FEN]), so
