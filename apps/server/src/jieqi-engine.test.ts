@@ -1,14 +1,20 @@
 import assert from 'node:assert/strict';
-import { availableParallelism } from 'node:os';
-import test from 'node:test';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { availableParallelism, tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test, { after } from 'node:test';
 import { firstPartyBotEngineFor } from './first-party-bots.js';
 import {
   buildJieqiAnalysisCommands,
+  buildJieqiGoCommand,
   buildJieqiLiveCommands,
+  buildJieqiLiveInitCommands,
   JIEQI_DEFAULT_ENGINE_ID,
   JIEQI_PLAYABLE_ENGINES,
   jieqiAnalysisResourceOptions,
+  jieqiEngineMove,
   jieqiEngineTierFor,
+  pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
 
 const FEN =
@@ -157,4 +163,75 @@ test('analysis resource options ignore the live env knobs', () => {
     if (prevThreads === undefined) delete process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS;
     else process.env.MISTBOARD_PIKAFISH_JIEQI_THREADS = prevThreads;
   }
+});
+
+// ── Live moves ride a warm session ───────────────────────────────────────────
+//
+// The spawn-per-move loop paid the handshake and two 256 MB hash allocations on
+// every ply; on the prod host those allocations are transparent-huge-page faults
+// that can stall in direct compaction for seconds (#335). Two consecutive moves
+// must therefore hit the SAME process, and only the first pays the handshake.
+
+const fixtureDir = mkdtempSync(join(tmpdir(), 'jieqi-engine-'));
+after(() => rmSync(fixtureDir, { recursive: true, force: true }));
+
+// Advertises the options the live init block sets, answers the handshake, and
+// answers every `go` with a fixed move. Counts `ucinewgame` on stderr-free stdout
+// as an `info string`, which the eval reader ignores.
+const fakePikaJieqi = (() => {
+  const path = join(fixtureDir, 'pikafish-jieqi.mjs');
+  writeFileSync(
+    path,
+    `#!/usr/bin/env node
+let buf = '';
+process.stdin.on('data', (chunk) => {
+  buf += chunk;
+  let nl;
+  while ((nl = buf.indexOf('\\n')) >= 0) {
+    const line = buf.slice(0, nl).trim();
+    buf = buf.slice(nl + 1);
+    if (line === 'uci') {
+      process.stdout.write('option name Hash type spin default 16 min 1 max 4096\\n');
+      process.stdout.write('option name Threads type spin default 1 min 1 max 16\\n');
+      process.stdout.write('option name EvalFile type string default\\n');
+      process.stdout.write('uciok\\n');
+    }
+    if (line === 'isready') process.stdout.write('readyok\\n');
+    if (line.startsWith('go')) process.stdout.write('info depth 3 score cp 12 nodes 30 time 2 pv b2e2\\nbestmove b2e2\\n');
+  }
+});
+`,
+  );
+  chmodSync(path, 0o755);
+  return path;
+})();
+
+test('jieqiEngineMove reuses one parked process across moves', async () => {
+  const prior = process.env.MISTBOARD_PIKAFISH_PATH;
+  process.env.MISTBOARD_PIKAFISH_PATH = fakePikaJieqi;
+  try {
+    const before = pikafishJieqiWarmSessionStats();
+    const first = await jieqiEngineMove(FEN, { movetimeMs: 50, newGame: true });
+    const second = await jieqiEngineMove(FEN, { movetimeMs: 50 });
+    assert.equal(first, 'b2e2');
+    assert.equal(second, 'b2e2');
+    const after = pikafishJieqiWarmSessionStats();
+    assert.equal(after.spawned - before.spawned, 1, 'one process for two moves');
+    assert.equal(after.reused - before.reused, 1, 'the second move reused it');
+    assert.equal(after.idle, 1, 'and it is parked for the next one');
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_PIKAFISH_PATH;
+    else process.env.MISTBOARD_PIKAFISH_PATH = prior;
+  }
+});
+
+test('the live block is the session handshake followed by position and go', () => {
+  const commands = buildJieqiLiveCommands(FEN, { movetimeMs: 4_000, moves: ['h2e2'] });
+  assert.deepEqual(
+    commands.slice(0, buildJieqiLiveInitCommands().length),
+    buildJieqiLiveInitCommands(),
+  );
+  assert.equal(commands.at(-2), `position fen ${FEN} moves h2e2`);
+  assert.equal(commands.at(-1), buildJieqiGoCommand({ movetimeMs: 4_000 }));
+  assert.equal(buildJieqiGoCommand({ movetimeMs: 1_200, depth: 10 }), 'go depth 10 movetime 1200');
 });

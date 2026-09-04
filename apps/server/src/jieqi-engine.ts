@@ -5,8 +5,11 @@
 // NOT the redaction-shaped Obscuro engine-worker (the fog engine). Unlike crossroads
 // (perfect information, replayed from `position startpos moves ...`), jieqi has hidden
 // identities that the engine must NOT learn, so we hand it a redacted CURRENT-position
-// FEN built by jieqi-fen.ts. One process per request (stateless, robust); promote to a
-// persistent pool only under real load.
+// FEN built by jieqi-fen.ts. Live moves run on WARM sessions (UciWarmSessionCache) since
+// 2026-09-03: the spawn-per-move loop re-allocated the 256 MB hash twice on every ply
+// (`Hash`, then `Threads` re-sizes it), each a transparent-huge-page fault that stalls
+// in direct compaction whenever the prod host runs out of free huge pages (#335). A
+// parked process pays that once, and its 8 s deadline covers only the search.
 //
 // LAUNCH config is the no-net `jieqi_old` classical-eval build (handcrafted eval, no
 // NNUE weights — clean GPL-3 with no net-licensing problem). The strength track swaps in
@@ -18,20 +21,24 @@ import { resolve } from 'node:path';
 import { logger } from './obs.js';
 import {
   boundedEnvInt,
-  runUciBestmove,
   runUciEval,
   runUciMultiPv,
   UciEnginePool,
   UciEngineSession,
   type UciEval,
   type UciMultiPvLine,
+  UciWarmSessionCache,
 } from './uci-engine-harness.js';
 
 export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // Engine BUILD version recorded per PvE game (subject_id encodes only the tier). The shipped
 // engine is the no-net classical Pikafish jieqi_old build; bump on any engine/config change.
 // 0.3.0 (2026-08-31): new binary (ScoreCalc flip-node fix, pikafish-jieqi.ref 4f857757).
-export const JIEQI_ENGINE_VERSION = '0.3.0';
+// 0.3.1 (2026-09-03): live moves on warm sessions (hash allocated once per process, the
+// 8 s deadline covers only the search), `ucinewgame` at a game's first engine move.
+// 0.3.2 (2026-09-03): new binary (pikafish-jieqi.ref e75cee3a): qsearch honours
+// `go movetime` via a Threads.stop check and a main-thread check_time() at its entry.
+export const JIEQI_ENGINE_VERSION = '0.3.2';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -59,7 +66,10 @@ export const JIEQI_ANALYSIS_ENGINE_VERSION = '0.4.0';
 // engines under one identical key. Version alone could not catch that, being hand-maintained.
 // jieqi-engine-ref.test.ts fails if this drifts from the .ref file, so swapping the engine
 // cannot land without moving the key and forcing a recompute.
-export const PIKAFISH_JIEQI_ENGINE_REF = '4f857757';
+// e75cee3a (2026-09-03): qsearch honours Threads.stop / movetime. A node- or
+// depth-limited analysis search now stops on the exact node it should, so evals can
+// differ from 4f857757 by the tail it used to overrun; hence the key moves.
+export const PIKAFISH_JIEQI_ENGINE_REF = 'e75cee3a';
 
 export type JieqiEngineTier = {
   id: string;
@@ -472,6 +482,9 @@ export type JieqiEngineOptions = {
   movetimeMs?: number;
   depth?: number;
   moves?: readonly string[];
+  /** True for a game's first engine move: a parked process still carries the previous
+   *  game's hash table, and `ucinewgame` clears it before the search. */
+  newGame?: boolean;
 };
 
 export function buildJieqiPositionCommand(fen: string, moves: readonly string[] = []): string {
@@ -486,7 +499,7 @@ export function buildJieqiPositionCommand(fen: string, moves: readonly string[] 
 export async function jieqiLiveEngineMove(
   engineId: string,
   fen: string,
-  opts: { movetimeMs?: number; moves?: readonly string[] } = {},
+  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean } = {},
 ): Promise<string | null> {
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Jieqi engine: ${engineId}`);
@@ -496,28 +509,51 @@ export async function jieqiLiveEngineMove(
       depth: tier.depth,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
       moves: opts.moves,
+      newGame: opts.newGame,
     });
   } finally {
     release();
   }
 }
 
-/** The exact UCI block a live bot move sends. Exported so the resource options and
- *  go-limit wiring are unit-testable without spawning the binary. */
-export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
+/** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
+ *  set here, once per process lifetime. */
+export function buildJieqiLiveInitCommands(): string[] {
+  return ['uci', ...netOption(), ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+}
+
+/** The `go` line for a live move: a depth cap (if any) stops the search early for the
+ *  weaker tiers; movetime bounds latency on the deep tiers. `go depth N movetime T`
+ *  halts at whichever hits first. */
+export function buildJieqiGoCommand(opts: JieqiEngineOptions = {}): string {
   const movetimeMs = opts.movetimeMs ?? 500;
   const depth = opts.depth !== undefined ? Math.max(1, Math.floor(opts.depth)) : null;
+  return depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`;
+}
+
+/** The exact UCI block a live bot move amounts to, in the order a warm session sends
+ *  it over its lifetime (handshake once, then position + go per move). Exported so the
+ *  resource options and go-limit wiring are unit-testable without spawning the binary. */
+export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
   return [
-    'uci',
-    ...netOption(),
-    ...jieqiLiveResourceOptions(),
-    'ucinewgame',
-    'isready',
+    ...buildJieqiLiveInitCommands(),
     buildJieqiPositionCommand(fen, opts.moves),
-    // depth cap (if any) stops the search early for weaker tiers; movetime bounds
-    // latency on the deep tiers. `go depth N movetime T` halts at whichever hits first.
-    depth === null ? `go movetime ${movetimeMs}` : `go depth ${depth} movetime ${movetimeMs}`,
+    buildJieqiGoCommand(opts),
   ];
+}
+
+// Parked live-move processes. enginePool above still caps how many run at once, so at
+// most that many are ever parked. The idle TTL is long on purpose: a reaped session
+// means the next player pays the spawn + hash allocation on their clock, which is the
+// exact cost this cache exists to keep off the move path.
+const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
+
+function jieqiLiveSessionSpec() {
+  return {
+    bin: pikaJieqiPath(),
+    initCommands: buildJieqiLiveInitCommands(),
+    name: 'pikafish-jieqi',
+  };
 }
 
 export function jieqiEngineMove(
@@ -525,11 +561,45 @@ export function jieqiEngineMove(
   opts: JieqiEngineOptions = {},
 ): Promise<string | null> {
   const movetimeMs = opts.movetimeMs ?? 500;
-  const commands = buildJieqiLiveCommands(fen, opts);
-  return runUciBestmove({
-    bin: pikaJieqiPath(),
-    commands,
-    timeoutMs: movetimeMs + 4000,
-    timeoutMessage: 'pikafish-jieqi move timed out',
+  const position = buildJieqiPositionCommand(fen, opts.moves);
+  return warmSessions.withSession(jieqiLiveSessionSpec(), async (session) => {
+    const evaluated = await session.evalPosition({
+      // `ucinewgame` on a game's first move clears the previous game's hash: a memset of
+      // pages already resident, ~50 ms, no allocation.
+      positionCommand: opts.newGame ? `ucinewgame\n${position}` : position,
+      goCommand: buildJieqiGoCommand(opts),
+      timeoutMs: movetimeMs + 4000,
+      timeoutMessage: 'pikafish-jieqi move timed out',
+    });
+    return evaluated.best;
   });
+}
+
+/**
+ * Spawn and park one live session so the first jieqi move after a deploy does not pay
+ * the handshake (and, on a fragmented host, the hash allocation stall) on a player's
+ * clock. Best-effort: a failure is logged and the first move spawns on demand.
+ */
+export async function prewarmJieqiEngine(): Promise<void> {
+  if (!jieqiEngineBinaryAvailable()) return;
+  try {
+    await warmSessions.withSession(jieqiLiveSessionSpec(), (session) => session.ready());
+    logger.info(
+      { kind: 'jieqi_engine_prewarmed', ...warmSessions.stats() },
+      'Jieqi live engine session parked',
+    );
+  } catch (err) {
+    logger.warn(
+      {
+        kind: 'jieqi_engine_prewarm_failed',
+        error: err instanceof Error ? err.message : String(err),
+      },
+      'Jieqi live engine prewarm failed; the first move will spawn on demand',
+    );
+  }
+}
+
+/** Point-in-time warm-session counters (spawned/reused/idle) for diagnostics. */
+export function pikafishJieqiWarmSessionStats() {
+  return warmSessions.stats();
 }
