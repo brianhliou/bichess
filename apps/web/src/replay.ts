@@ -592,12 +592,6 @@ export async function mountReplay(
   let lastNotifiedPly: number | null = null;
   let renderedClockState: GameState | null = null;
   let renderedClockEvents: GameEvent[] | null = null;
-  // The historical instant the docked clock panel is currently showing. The playback tick
-  // walks this from the mover's clock start toward the next move's timestamp across the
-  // move's (recorded, clamped) window, so reading it gives a live-draining clock rather
-  // than the ply's frozen value. Null when no tick is armed (paused/scrubbed/ended), which
-  // parks clockAtPly on the ply's own value.
-  let tickDisplayAt: number | null = null;
   // Per-move budget recovered from a clockless game's move events when its
   // stored metadata carries no time control (e.g. imported engine bakeoff
   // games). Cached per sample so the count-up denominator is the run's real
@@ -1021,7 +1015,6 @@ export async function mountReplay(
       window.clearInterval(clockTickTimer);
       clockTickTimer = null;
     }
-    tickDisplayAt = null;
   }
 
   function startClockTickTimer(nextPly: number, delay: number): void {
@@ -1033,7 +1026,6 @@ export async function mountReplay(
     const meta = currentMeta();
     if (state.status.type !== 'playing') return;
     const activeColor = state.status.turn;
-    const clock = state.clock;
     const nextEvent = moveEventAtPly(events, nextPly);
     if (nextEvent?.type !== 'move-played') return;
     const startWall = performance.now();
@@ -1042,25 +1034,14 @@ export async function mountReplay(
       return Math.min(elapsedWall / delay, 1);
     };
 
-    if (clock && clock.runningSince !== null) {
-      const startDisplay = clock.runningSince;
-      const endDisplay =
-        typeof nextEvent.at === 'number' && Number.isFinite(nextEvent.at)
-          ? nextEvent.at
-          : startDisplay + delay;
-      const gap = Math.max(0, endDisplay - startDisplay);
-      const tick = (): void => {
-        const fraction = tickElapsed();
-        const displayAt = startDisplay + gap * fraction;
-        // Published for clockAtPly (the /watch rail polls it) as well as the docked panel,
-        // so both read the same instant.
-        tickDisplayAt = displayAt;
-        renderClockPanel(clockPanel, clock, state, meta, displayAt);
-      };
-      tick();
-      clockTickTimer = window.setInterval(tick, 100);
-      return;
-    }
+    // A timed game's clock is NOT animated during playback: render() parks it on the ply's
+    // recorded value and it stays there until the next move lands. This used to walk the
+    // displayed instant from the mover's clock start to the next move's timestamp across
+    // `delay` — but clampPace squeezes `delay` into [700, 2500] ms while the timestamps span
+    // the real think, so the countdown ran at gap/delay rather than at one second per second
+    // (measured 1.00x-7.60x on one homepage game). See the doctrine note in
+    // watch-tenant-replay.ts before reinstating anything here.
+    if (state.clock) return;
 
     const budgetMs = thinkingBudgetMsFromMeta(meta?.timeControl);
     const thinkMs = thinkingDurationForPly(events, nextPly) ?? delay;
@@ -1452,19 +1433,13 @@ export async function mountReplay(
     plyCount: () => moveCount,
     moveEntries: () => buildChessMoveEntries(events),
     // The clocks read off the same state (and the same instant) the docked clock panel
-    // draws from. While a move is playing back, tickDisplayAt walks toward the next move's
-    // real timestamp, so polling this drains the mover's clock and lands exactly on the
-    // recorded value; paused/scrubbed it parks on the ply's own value. Null for an untimed
-    // game (no ClockState) so the rail shows no clock rather than a bogus zero.
+    // draws from: the ply's recorded value, which holds until the next move lands. Null for
+    // an untimed game (no ClockState) so the rail shows no clock rather than a bogus zero.
     clockAtPly: () => {
       const state = renderedClockState;
       const clock = state?.clock;
       if (!state || !clock) return null;
-      const at =
-        tickDisplayAt ??
-        replayClockDisplayAt(renderedClockEvents ?? [], state) ??
-        clock.runningSince ??
-        0;
+      const at = replayClockDisplayAt(renderedClockEvents ?? [], state) ?? clock.runningSince ?? 0;
       return {
         first: clockRemainingMs(clock, 'white', at),
         second: clockRemainingMs(clock, 'black', at),
