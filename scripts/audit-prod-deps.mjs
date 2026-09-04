@@ -38,8 +38,14 @@ export function classifyAuditOutput(stdout) {
     return { kind: 'unavailable', detail: firstLine(stdout) || 'audit produced no JSON' };
   }
   if (report && typeof report === 'object' && report.error) {
-    const { code, summary, detail } = report.error;
-    return { kind: 'unavailable', detail: [code, summary, detail].filter(Boolean).join(': ') };
+    // npm's error shape is not guaranteed. The first CI run of this script hit
+    // one whose code/summary/detail were all absent and logged a bare "audit:"
+    // with nothing after it, which is the one thing this branch exists to avoid:
+    // the retry line is only useful if it says what went wrong. So fall back to
+    // the raw error, and never return an empty detail.
+    const { code, summary, detail } = typeof report.error === 'object' ? report.error : {};
+    const parts = [code, summary, detail].filter(Boolean).join(': ');
+    return { kind: 'unavailable', detail: parts || describeUnknownError(report.error) };
   }
   const counts = report?.metadata?.vulnerabilities;
   if (!counts) {
@@ -51,6 +57,17 @@ export function classifyAuditOutput(stdout) {
   const total =
     (counts.low ?? 0) + (counts.moderate ?? 0) + (counts.high ?? 0) + (counts.critical ?? 0);
   return { kind: total > 0 ? 'vulnerable' : 'clean', counts, total };
+}
+
+function describeUnknownError(error) {
+  if (typeof error === 'string' && error.trim()) return error.trim();
+  try {
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== '{}') return serialized.slice(0, 500);
+  } catch {
+    // Fall through to the generic line below.
+  }
+  return 'npm reported an audit error with no description';
 }
 
 function firstLine(text) {

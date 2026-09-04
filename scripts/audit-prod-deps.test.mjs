@@ -58,3 +58,20 @@ test('JSON with neither error nor metadata is transient', () => {
   assert.equal(verdict.kind, 'unavailable');
   assert.match(verdict.detail, /neither error nor metadata/);
 });
+
+test('a registry error always carries a description, whatever shape npm sent', () => {
+  // The first CI run of this script logged a bare "audit:" line: npm returned an
+  // error object none of whose expected fields were present, and the retry told
+  // nobody what had gone wrong.
+  const empty = classifyAuditOutput(JSON.stringify({ error: {} }));
+  assert.equal(empty.kind, 'unavailable');
+  assert.equal(empty.detail, 'npm reported an audit error with no description');
+
+  const stringError = classifyAuditOutput(JSON.stringify({ error: 'ETIMEDOUT' }));
+  assert.equal(stringError.kind, 'unavailable');
+  assert.equal(stringError.detail, 'ETIMEDOUT');
+
+  const oddShape = classifyAuditOutput(JSON.stringify({ error: { statusCode: 400 } }));
+  assert.equal(oddShape.kind, 'unavailable');
+  assert.match(oddShape.detail, /statusCode/);
+});
