@@ -112,6 +112,7 @@ export function allowsAnonymousAccess(pathname: string, method: string): boolean
 // public board's GET (see allowsAnonymousAccess).
 //   GET    /api/correspondence/seeks             list open board seeks (+ isMine), no account needed
 //   GET    /api/correspondence/seeks/incoming    directed challenges to me
+//   GET    /api/correspondence/seeks/mine         challenges I sent (any visibility)
 //   POST   /api/correspondence/seeks             post a seek or a challenge
 //   GET    /api/correspondence/seeks/:id         view one seek (challenge landing)
 //   POST   /api/correspondence/seeks/:id/accept  accept → create + seat a game
@@ -162,6 +163,11 @@ export async function tryHandle(
   if (pathname === '/api/correspondence/seeks/incoming') {
     if (!requireMethod(request, response, 'GET')) return true;
     return listIncomingChallenges(user, response);
+  }
+
+  if (pathname === '/api/correspondence/seeks/mine') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    return listOutgoingChallenges(user, response);
   }
 
   const acceptMatch = pathname.match(/^\/api\/correspondence\/seeks\/([^/]+)\/accept$/);
@@ -237,6 +243,35 @@ async function listIncomingChallenges(
       daysPerMove: seek.daysPerMove,
       preferredColor: seek.preferredColor,
       challengerName: seek.creatorName,
+      createdAt: seek.createdAt.toISOString(),
+    })),
+  });
+  return true;
+}
+
+// Everything this player has standing, so a private link is visible to whoever
+// made it and can be cancelled. Carries the cap so the client can say WHY a
+// create was refused instead of only reporting a number back (#353).
+async function listOutgoingChallenges(
+  user: UserAccount,
+  response: ServerResponse,
+): Promise<boolean> {
+  const seeks = await persistence.listOutgoingSeeksForUser(user.id);
+  writeJson(response, 200, {
+    limit: MAX_OPEN_SEEKS_PER_USER,
+    seeks: seeks.map((seek) => ({
+      id: seek.id,
+      gameSpecId: seek.gameSpecId,
+      daysPerMove: seek.daysPerMove,
+      preferredColor: seek.preferredColor,
+      visibility: seek.visibility,
+      // Present only for a directed challenge; a link challenge has no target.
+      targetName: seek.targetName,
+      // The share URL for a link challenge, so a creator can re-copy a link they
+      // already sent. Public board posts have no private URL.
+      challengeUrl:
+        seek.visibility === 'private' ? `/challenge/${encodeURIComponent(seek.id)}` : null,
+      expiresAt: seek.expiresAt?.toISOString() ?? null,
       createdAt: seek.createdAt.toISOString(),
     })),
   });

@@ -6,6 +6,7 @@
  */
 
 import { clockPolicyKindFor } from '@mistboard/game';
+import { engineFailureAbort } from '../engine-failure-abort.js';
 import { firstPartyBotForEngine, firstPartyBotForId } from '../first-party-bots.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
@@ -258,6 +259,12 @@ export function buildTenantGameSummary<
     rated,
     visibility,
     participants,
+    // An engine cannot abandon: record the failure, not a win for the human.
+    abortedAs: engineFailureAbort({
+      engineSeat,
+      winner: status.winner,
+      reason: status.reason,
+    }),
   };
 }
 

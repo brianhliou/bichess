@@ -54,18 +54,27 @@ export function primaryNavItems(): NavItem[] {
 // then out of the homepage footer and the forum home on 2026-08-31: not
 // defects, a decision to stop promoting the Discord while it is still empty.
 // No surface links it now (see the constants above).
-// Your correspondence games. Signed-in only, and top level on purpose: the page
-// has existed since correspondence shipped but was reachable ONLY from the
-// notification bell (which shows only when a game needs your move) and a footer
-// link on the page itself, so a player with several games in flight had no menu
-// path to them.
-export function correspondenceNavItem(): NavItem {
-  return {
-    label: 'Correspondence',
-    labelKey: 'nav.correspondence',
-    href: '/correspondence',
-    signedInOnly: true,
-  };
+// Play dropdown. The title itself navigates to the lobby (lichess split-menu
+// behavior, same as Watch and Community), and the panel repeats it explicitly:
+// on touch / no-hover devices tapping the title opens the panel instead of
+// navigating, so without the explicit item there would be no way to reach the
+// lobby from this menu.
+//
+// Correspondence is here because the page has existed since correspondence
+// shipped but was reachable ONLY from the notification bell (which shows only
+// when a game already needs your move) and a footer link on the page itself, so
+// a player with several games in flight had no menu path to them. Signed-in
+// only, so it costs a visitor nothing.
+export function playNavItems(): NavItem[] {
+  return [
+    { label: 'Lobby', labelKey: 'nav.lobby', href: '/' },
+    {
+      label: 'Correspondence',
+      labelKey: 'nav.correspondence',
+      href: '/correspondence',
+      signedInOnly: true,
+    },
+  ];
 }
 
 export function communityNavItems(): NavItem[] {
