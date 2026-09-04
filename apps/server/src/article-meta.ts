@@ -52,6 +52,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'luat-co-up',
   'fog-openings',
   'jieqi-openings',
+  'khai-cuoc-co-up',
   'fog-chess-concepts',
   'shogi',
 ]);
@@ -131,6 +132,12 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.',
+  },
+  'khai-cuoc-co-up': {
+    title: 'Người chơi cờ úp giỏi tin gì về khai cuộc',
+    kind: 'article',
+    description:
+      'Cờ úp không có sách khai cuộc. Nó chỉ có một cuộc tranh luận về nước đi đầu tiên, chạy nhiều năm trên các diễn đàn Trung Quốc giữa những người chơi hàng nghìn ván, chưa từng được viết ra bằng tiếng Anh hay tiếng Việt. Vì sao một quân úp là quyền chọn dùng đúng một lần mà bạn có thể phí đi, năm khai cuộc được xếp hạng, và thế tiến tốt đặt lên bàn cân với pháo qua sông trên cả sáu khả năng lật.',
   },
   'fog-openings': {
     title: 'An Opening System for Fog Chess',

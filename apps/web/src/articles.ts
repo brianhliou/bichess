@@ -950,13 +950,23 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // page. A real topic signal needs a field that means topic; until the schema has
 // one, recency is the honest answer.
 function relatedArticles(article: BlogArticle): BlogArticle[] {
+  // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
+  // rejects everything with `sourceLang` set, so an unqualified pool leaves a
+  // Vietnamese reader a footer of three English cards, one of which is this page's
+  // own English source: the reader dead-ends and the two pages read as duplicates
+  // of each other rather than as a pair. Same-language candidates only need to be
+  // visible; they are absent from the index by design, not unpublished.
+  const sameLanguage = (candidate: BlogArticle): boolean =>
+    article.sourceLang
+      ? candidate.sourceLang === article.sourceLang && isArticleVisibleInThisEnv(candidate)
+      : isArticleListedInThisEnv(candidate);
   const pool = articles
     .filter(
       (candidate): candidate is BlogArticle =>
         candidate.kind === 'article' &&
         candidate.slug !== article.slug &&
         candidate.publisher === article.publisher &&
-        isArticleListedInThisEnv(candidate),
+        sameLanguage(candidate),
     )
     .sort(compareArticlesNewestFirst);
   if (pool.length === 0) return [];

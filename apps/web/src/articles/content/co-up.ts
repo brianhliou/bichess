@@ -20,13 +20,13 @@
 import { deriveTranslation } from '../derived-translation.js';
 import { jieqiPlatformArticle } from './jieqi-platform.js';
 
-const VI: Record<string, string> = {
+export const CO_UP_VI: Record<string, string> = {
   "Jieqi on Mistboard": "Cờ úp trên Mistboard",
   "Play Jieqi Online, with Engine Analysis": "Chơi cờ úp online, có phân tích bằng engine",
   "Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.": "Chơi cờ úp với máy hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích tách riêng phần bạn chọn khỏi phần bạn lật trúng.",
   "Jieqi players looking for somewhere to play and review their games.": "Người chơi cờ úp đang tìm chỗ để chơi và để xem lại ván đấu của mình.",
   "Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.": "Cờ úp là [cờ tướng](/rules/xiangqi) với mọi quân đều úp xuống. Một quân đi theo vị trí xuất phát nó đang đứng, rồi lật lên và giữ đúng thân phận đó đến hết ván. Bạn vào ván mà không biết quân nào là quân gì, kể cả quân của mình. [Trang luật](/blog/luat-co-up) nói chi tiết.",
-  "It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players.": "Đây là môn cờ còn trẻ, khởi đi từ Hồng Kông và Quảng Đông, lan rộng trong vài chục năm gần đây chủ yếu trong cộng đồng người Hoa và người Việt. Tiếng Trung gọi là 揭棋.",
+  "It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).": "Đây là môn cờ còn trẻ, khởi đi từ Hồng Kông và Quảng Đông, lan rộng trong vài chục năm gần đây chủ yếu trong cộng đồng người Hoa và người Việt. Tiếng Trung gọi là 揭棋. Còn nên khai cuộc thế nào, xem [người chơi giỏi tin gì về khai cuộc](/blog/khai-cuoc-co-up).",
   "Play the engine": "Chơi với máy",
   "Play a friend": "Mời bạn bè",
   "Mistboard · 5+5 casual": "Mistboard · 5+5 casual",
@@ -75,7 +75,7 @@ const VI: Record<string, string> = {
 export const coUpArticle = deriveTranslation(jieqiPlatformArticle, {
   slug: 'co-up',
   sourceLang: 'vi',
-  dict: VI,
+  dict: CO_UP_VI,
   // The English page is published; this one waits on a native reader.
   overrides: { status: 'draft' },
 });

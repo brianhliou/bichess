@@ -405,7 +405,11 @@ try {
   // Declared once per pair and expanded both ways, so the two directions cannot
   // drift apart. An alternate is only emitted when the partner is actually
   // published: pointing Google at a draft is pointing it at a 404.
-  const CROSS_LANGUAGE_PAIRS = [{ en: 'jieqi-platform', vi: 'co-up' }];
+  const CROSS_LANGUAGE_PAIRS = [
+    { en: 'jieqi-platform', vi: 'co-up' },
+    { en: 'jieqi-openings', vi: 'khai-cuoc-co-up' },
+    { en: 'jieqi', vi: 'luat-co-up' },
+  ];
 
   const published = articles.filter((a) => a.status === 'published');
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
