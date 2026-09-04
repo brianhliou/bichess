@@ -381,12 +381,13 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
-  // Leads the row from 2026-09-03: newest, and the clearest case of a page that
-  // sends a reader straight into something they can do here. The openings
-  // article follows it because it is the piece that page's reader is sent to
-  // next, and because it exists in no other language than Chinese.
-  'jieqi-platform',
+  // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
+  // platform page is the clearest case of a page that sends a reader straight
+  // into something they can do here rather than something to read about; the
+  // openings article is where that reader goes next, and it exists in no
+  // language but Chinese anywhere else.
   'jieqi-openings',
+  'jieqi-platform',
   // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
   // a reader into something they can do rather than something to read about,
   // and the method it documents is not published anywhere else for xiangqi.

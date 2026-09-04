@@ -17,7 +17,7 @@ export const jieqiOpeningsArticle: Article = {
     'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.',
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-09-03',
+  publishedAt: '2026-09-04',
   audience:
     'Jieqi and xiangqi players who want to know what the first move is worth, and English speakers who have never seen this material because it has only ever existed in Chinese.',
   thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },

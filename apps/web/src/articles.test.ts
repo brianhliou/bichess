@@ -85,15 +85,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The jieqi pair, published together on 2026-09-03 rather than two days
-      // apart: each of the five jieqi pages links another in prose, so they had
-      // to ship as one batch or a published page would link a draft. Sharing a
-      // date puts them on the comparator's alphabetical tie-break, which lands
-      // the platform page above the openings article. That happens to be the
-      // order the dependency wants anyway, since the openings article is the
-      // one that links to the platform page.
-      '/blog/jieqi-platform',
+      // The jieqi pair shipped as one batch on 2026-09-03, because each of the
+      // five jieqi pages links another in prose and a published page cannot link
+      // a draft. They are dated a day apart anyway, the way the champion pair
+      // below is: two halves of one launch landing on the same date read as a
+      // dump, and the platform page takes the earlier date because it is the one
+      // the openings article links to.
       '/blog/jieqi-openings',
+      '/blog/jieqi-platform',
       // jieqi-platform's Vietnamese derivation (co-up) inherits its date but
       // never appears here: a page with sourceLang set is out of the index by
       // rule, so moving that date still moves two articles, it just moves one
@@ -263,8 +262,8 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
-      '/blog/jieqi-platform',
       '/blog/jieqi-openings',
+      '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
       '/blog/xiangqi-match-fixing',
       '/blog/xiangqi-world-championship',
