@@ -98,6 +98,22 @@ export type GameSummary = {
   initialMs?: number | null;
   incrementMs?: number | null;
   hiddenDraft960?: boolean | null;
+  // A terminal state the kernel finished but that must NOT be recorded as a
+  // completed game with a winner. The only current case is an engine failure:
+  // the kernel finishes the room as an abandonment so live clients see an end,
+  // but a bot cannot abandon, so the ROW is an abort with no result.
+  //
+  // This rides recordGameEnd rather than abortRunningGame on purpose.
+  // abortRunningGame is `UPDATE ... WHERE status = 'running'`, and most tenants
+  // deliberately omit recordGameStart (fog xiangqi, xiangqi, jieqi, banqi,
+  // jungle, dark-crossroads), so there is no running row for it to touch: it
+  // returns false and changes nothing. recordGameEnd is also the only writer
+  // that creates game_participants, so routing an engine failure away from it
+  // would drop the game out of the database entirely instead of misfiling it.
+  abortedAs?: {
+    termination: Extract<GameTermination, 'engine-failure'>;
+    abortedReason: string;
+  };
 };
 
 export type GameRecord = {
@@ -1306,6 +1322,10 @@ export async function gameFacets(): Promise<GameFacets> {
 export async function recordGameEnd(roomId: string, summary: GameSummary): Promise<void> {
   const mode = summary.mode ?? (summary.corpusId ? 'imported' : 'pvp');
   const visibility = summary.visibility ?? 'public';
+  // An aborted row carries no winner and states the real cause, not the
+  // abandonment the kernel used to end the room.
+  const result = summary.abortedAs ? null : summary.result;
+  const termination = summary.abortedAs?.termination ?? summary.termination;
   await withTransaction(async (client) => {
     const rated = summary.rated ?? false;
     await client.query(
@@ -1313,8 +1333,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          (room_id, variant, result, termination, ply_count, started_at, ended_at,
           white_client, black_client, white_name, black_name, corpus_id,
           mode, status, review_status, visibility, rated,
-          initial_ms, increment_ms, hidden_draft960, region)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'completed', $14, $15, $16, $17, $18, $19, $20)
+          initial_ms, increment_ms, hidden_draft960, region, aborted_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $21, $14, $15, $16, $17, $18, $19, $20, $22)
        ON CONFLICT (room_id) DO UPDATE SET
          variant = EXCLUDED.variant,
          result = EXCLUDED.result,
@@ -1328,7 +1348,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          black_name = EXCLUDED.black_name,
          corpus_id = EXCLUDED.corpus_id,
          mode = EXCLUDED.mode,
-         status = 'completed',
+         status = $21,
          review_status = EXCLUDED.review_status,
          visibility = EXCLUDED.visibility,
          rated = EXCLUDED.rated,
@@ -1336,13 +1356,13 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          increment_ms = EXCLUDED.increment_ms,
          hidden_draft960 = EXCLUDED.hidden_draft960,
          region = EXCLUDED.region,
-         aborted_reason = NULL
+         aborted_reason = $22
        WHERE games.status = 'running'`,
       [
         roomId,
         summary.variant,
-        summary.result,
-        summary.termination,
+        result,
+        termination,
         summary.plyCount,
         summary.startedAt,
         summary.endedAt,
@@ -1359,6 +1379,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         summary.incrementMs ?? null,
         summary.hiddenDraft960 ?? null,
         summary.region ?? 'global',
+        summary.abortedAs ? 'aborted' : 'completed',
+        summary.abortedAs?.abortedReason ?? null,
       ],
     );
     const participants =
@@ -1385,7 +1407,10 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         ],
       );
     }
-    if (mode === 'pvp' && rated) {
+    // An aborted row has no result, so there is nothing to rate. Unreachable
+    // today (engine failure is always mode 'pve', and PvE is never rated) but
+    // stated here so the guard does not depend on that staying true.
+    if (mode === 'pvp' && rated && !summary.abortedAs) {
       const bucket = bucketForGame({
         variant: summary.variant,
         initialMs: summary.initialMs,

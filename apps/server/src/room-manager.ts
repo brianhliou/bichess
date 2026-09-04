@@ -18,6 +18,7 @@ import {
   variantForId,
 } from '@mistboard/game';
 import { sendEngineAlertNotification } from './engine-alert-email.js';
+import { engineFailureAbort } from './engine-failure-abort.js';
 import { engineVersionDisplayName, loadEngine } from './engine-registry.js';
 import { firstPartyBotForEngine, firstPartyBotForId } from './first-party-bots.js';
 import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
@@ -389,6 +390,13 @@ export function buildGameSummary(ctx: RoomManagerContext, room: Room): GameSumma
     incrementMs: room.timeControl?.incrementMs ?? null,
     hiddenDraft960: room.hiddenDraft960,
     participants,
+    // An engine cannot abandon: record the failure, not a win for the human.
+    // This is the live fog-chess path (dark-chess rides the legacy shell).
+    abortedAs: engineFailureAbort({
+      engineSeat: engineSeatFor(room),
+      winner: status.winner,
+      reason: status.reason,
+    }),
   };
 }
 
