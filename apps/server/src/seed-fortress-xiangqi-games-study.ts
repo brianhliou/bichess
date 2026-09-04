@@ -477,8 +477,11 @@ async function main(): Promise<void> {
 
     const detailResponse = await get(`/api/studies/${target.id}`);
     if (!detailResponse.ok) throw new Error(`study fetch failed: ${detailResponse.status}`);
+    // TWO different `version` fields, and picking the wrong one 409s every PATCH:
+    // `chapter.version` is the DB revision updateChapterTree guards on, while
+    // `chapter.root.version` is the SerializedTree format version and is always 1.
     const existing = (await detailResponse.json()) as {
-      chapters: Array<{ id: string; root: { version?: number } }>;
+      chapters: Array<{ id: string; version?: number }>;
     };
     console.log(
       `editing ${target.id} in place: ${existing.chapters.length} chapters on the server`,
@@ -490,9 +493,7 @@ async function main(): Promise<void> {
         const response = await patch(`/api/studies/${target.id}/chapters/${current.id}`, {
           name: chapter.name,
           root: chapter.root,
-          ...(typeof current.root?.version === 'number'
-            ? { baseVersion: current.root.version }
-            : {}),
+          ...(typeof current.version === 'number' ? { baseVersion: current.version } : {}),
         });
         if (!response.ok) {
           throw new Error(
