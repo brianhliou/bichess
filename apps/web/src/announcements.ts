@@ -24,6 +24,24 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    // Dated to the article's own date, a day after the platform page it links
+    // back to, so the News row and the page never disagree about a post.
+    date: '2026-09-04',
+    kind: 'article',
+    headline: 'What strong jieqi players believe about the opening.',
+    body: 'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.',
+    href: '/blog/jieqi-openings',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-09-03',
+    kind: 'article',
+    headline: 'Jieqi, in Chinese and in Vietnamese.',
+    body: 'The jieqi page now says what the site does with the game in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese. It also reads in Vietnamese, at co-up, next to a Vietnamese rules page. Those are the first Vietnamese pages here, and jieqi is the game that earns them: most of the people playing it are Chinese or Vietnamese.',
+    href: '/blog/jieqi-platform',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-09-03',
     kind: 'update',
     headline: 'Storm the Fortress: the Soldier crosses the river again.',

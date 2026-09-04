@@ -308,7 +308,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Audit production dependencies
-        run: npm audit --omit=dev
+        # Wrapped rather than bare `npm audit`, which exits 1 both for a real
+        # advisory and for a registry that did not answer. See the script.
+        run: node scripts/audit-prod-deps.mjs
 
   node:
     name: node
