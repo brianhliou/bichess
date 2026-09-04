@@ -15,8 +15,12 @@
 // - dpxq pages embed the real movelist in a JS var; the visible tag block's
 //   [DhtmlXQ_movelist] is empty (see apps/server/fixtures/dpxq/). We take the
 //   digit-richest movelist occurrence on the page.
-// - Pages with a non-empty [DhtmlXQ_binit] start from a custom position; the
-//   importer only replays from the standard opening, so those are skipped.
+// - Pages with a non-empty [DhtmlXQ_binit] start from a custom position, which is
+//   what classical endgame compositions are. These are kept: the binit tag is
+//   carried into the written record and importXiangqiGame decodes it, so the
+//   candidate is validated against its own start rather than the opening array.
+//   (Before 2026-09-04 the importer could only replay from the standard opening,
+//   so they were skipped and ledgered as 'custom-binit'.)
 // - Each candidate is replayed through importXiangqiGame before it counts as
 //   valid; games that fail legality land in <out>/rejects/ with the reason in
 //   the ledger, so import-time rejects stay near zero and are inspectable.
@@ -48,6 +52,8 @@ type LedgerStatus =
   | 'reject'
   | 'no-movelist'
   | 'short'
+  // Retired 2026-09-04 (compositions are now kept); still parsed so ledgers
+  // written before that date load without error.
   | 'custom-binit'
   | 'http'
   | 'network';
@@ -157,20 +163,25 @@ function extractMovelistDigits(html: string): string {
   return best;
 }
 
-function hasCustomStartPosition(html: string): boolean {
+function customStartPosition(html: string): string | null {
   for (const match of html.matchAll(/\[DhtmlXQ_binit\]([^[]*)/gi)) {
-    if (match[1]!.trim().length > 0) return true;
+    const value = match[1]!.trim();
+    if (value.length > 0) return value;
   }
-  return false;
+  return null;
 }
 
 function buildGameFile(html: string, url: string, digits: string): string {
+  const binit = customStartPosition(html);
   const lines = ['[DhtmlXQ]'];
   for (const name of ['title', 'event', 'round', 'date', 'result', 'red', 'black'] as const) {
     const value = pageTag(html, name);
     if (value) lines.push(`[DhtmlXQ_${name}]${value}[/DhtmlXQ_${name}]`);
   }
   lines.push(`[DhtmlXQ_source_url]${url}[/DhtmlXQ_source_url]`);
+  // Must precede the movelist in spirit if not in fact: without it a composition
+  // replays from the opening array and silently becomes a different game.
+  if (binit) lines.push(`[DhtmlXQ_binit]${binit}[/DhtmlXQ_binit]`);
   lines.push(`[DhtmlXQ_movelist]${digits}[/DhtmlXQ_movelist]`);
   lines.push('[/DhtmlXQ]');
   return `${lines.join('\n')}\n`;
@@ -303,8 +314,6 @@ async function main(): Promise<void> {
     const digits = extractMovelistDigits(html);
     if (digits.length === 0) {
       await record({ id, status: 'no-movelist', ts: new Date().toISOString() });
-    } else if (hasCustomStartPosition(html)) {
-      await record({ id, status: 'custom-binit', ts: new Date().toISOString() });
     } else if (digits.length < args.minPlies * 4 || digits.length % 4 !== 0) {
       await record({
         id,
