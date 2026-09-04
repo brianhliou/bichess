@@ -36,8 +36,8 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-03',
     kind: 'article',
-    headline: 'Jieqi, in Chinese and in Vietnamese.',
-    body: 'The jieqi page now says what the site does with the game in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese. It also reads in Vietnamese, at co-up, next to a Vietnamese rules page. Those are the first Vietnamese pages here, and jieqi is the game that earns them: most of the people playing it are Chinese or Vietnamese.',
+    headline: 'What the site does with jieqi, on one page.',
+    body: 'The jieqi page now says it in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese too.',
     href: '/blog/jieqi-platform',
     cta: 'Read the article',
   },

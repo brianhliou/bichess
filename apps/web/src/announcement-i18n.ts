@@ -41,9 +41,9 @@ const ZH_HANS: Record<string, string> = {
     '揭棋没有开局书。它有的是一场争论，多年来跑在中文论坛上，参与的人下过几千盘棋，而这场争论从未用英文写出来过。五个第一步的排名，为什么一个暗子是一次用掉就没有的权利，以及在你可能揭出的全部六种结果上，把仙人指路和炮二进四放在一起称一称。我们自己的五十盘棋并不同意这个排名，而引擎干脆连这份名单都不用。',
 
   // ── 2026-09-03 (jieqi platform, zh + vi) ── 揭子、复盘、分析棋盘 与文章用词一致。
-  'Jieqi, in Chinese and in Vietnamese.': '揭棋，有中文版，也有越南文版。',
-  'The jieqi page now says what the site does with the game in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese. It also reads in Vietnamese, at co-up, next to a Vietnamese rules page. Those are the first Vietnamese pages here, and jieqi is the game that earns them: most of the people playing it are Chinese or Vietnamese.':
-    '揭棋页面现在把这个站点为这门棋做的事写在一处：和引擎或朋友对弈，得到一份把每一次揭子的运气和你每一个选择分开计价的复盘，并在自己的浏览器里用同一个引擎打开分析棋盘。页面有简体和繁体两版。它也有越南文版，地址是 co-up，旁边还有一页越南文规则。那是本站第一批越南文页面，而揭棋正是配得上它们的那门棋：下这门棋的人，多半是华人或越南人。',
+  'What the site does with jieqi, on one page.': '这个站点为揭棋做的事，都在一页上。',
+  'The jieqi page now says it in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese too.':
+    '揭棋页面现在把话说在一处：和引擎或朋友对弈，得到一份把每一次揭子的运气和你每一个选择分开计价的复盘，并在自己的浏览器里用同一个引擎打开分析棋盘。页面也有简体和繁体两版。',
 
   // ── 2026-09-03 (current games) ── 进行中的对局 is the nav label the
   // Watch menu renders (nav.currentGames), 通信对局 the correspondence
@@ -311,9 +311,9 @@ const ZH_HANT: Record<string, string> = {
     '揭棋沒有開局書。它有的是一場爭論，多年來跑在中文論壇上，參與的人下過幾千盤棋，而這場爭論從未用英文寫出來過。五個第一步的排名，為什麼一個暗子是一次用掉就沒有的權利，以及在你可能揭出的全部六種結果上，把仙人指路和炮二進四放在一起稱一稱。我們自己的五十盤棋並不同意這個排名，而引擎乾脆連這份名單都不用。',
 
   // ── 2026-09-03 (jieqi platform, zh + vi) ── 揭子、複盤、分析棋盤 與文章用詞一致。
-  'Jieqi, in Chinese and in Vietnamese.': '揭棋，有中文版，也有越南文版。',
-  'The jieqi page now says what the site does with the game in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese. It also reads in Vietnamese, at co-up, next to a Vietnamese rules page. Those are the first Vietnamese pages here, and jieqi is the game that earns them: most of the people playing it are Chinese or Vietnamese.':
-    '揭棋頁面現在把這個站點為這門棋做的事寫在一處：和引擎或朋友對弈，得到一份把每一次揭子的運氣和你每一個選擇分開計價的複盤，並在自己的瀏覽器裡用同一個引擎打開分析棋盤。頁面有簡體和繁體兩版。它也有越南文版，網址是 co-up，旁邊還有一頁越南文規則。那是本站第一批越南文頁面，而揭棋正是配得上它們的那門棋：下這門棋的人，多半是華人或越南人。',
+  'What the site does with jieqi, on one page.': '這個站點為揭棋做的事，都在一頁上。',
+  'The jieqi page now says it in one place: play the engine or a friend, get a review that prices every flip separately from every choice you made, and run the same engine in your own browser on the analysis board. It reads in Simplified and Traditional Chinese too.':
+    '揭棋頁面現在把話說在一處：和引擎或朋友對弈，得到一份把每一次揭子的運氣和你每一個選擇分開計價的複盤，並在自己的瀏覽器裡用同一個引擎打開分析棋盤。頁面也有簡體和繁體兩版。',
 
   // ── 2026-09-03 (current games) ── Traditional forms of the Simplified
   // entry above: 進行中的對局 (nav.currentGames), 通訊對局, 進階搜尋.
