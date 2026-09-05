@@ -119,6 +119,9 @@ function jungleMoveDiagram(opts: {
   }
   return responsive(
     renderJungleBoardSvg(board, {
+      // Published article artwork: these diagrams teach the rule in prose beside
+      // them, and their pixels should not shift under an already-published piece.
+      cueBadges: false,
       ...DIAGRAM_SKIN,
       idSuffix: opts.id,
       perspective: 'red',
@@ -134,6 +137,9 @@ function jungleMoveDiagram(opts: {
 
 export const JUNGLE_START_BOARD = responsive(
   renderJungleBoardSvg(createInitialJungleBoard(), {
+    // Published article artwork: these diagrams teach the rule in prose beside
+    // them, and their pixels should not shift under an already-published piece.
+    cueBadges: false,
     ...DIAGRAM_SKIN,
     idSuffix: '-start',
     perspective: 'red',

@@ -131,7 +131,18 @@ export type JungleRenderOptions = {
   // deterministically (variant markers, rules diagrams, OG cards).
   boardSkin?: JungleBoardSkin;
   pieceSkin?: JunglePieceSkin;
-  /** PROTOTYPE: draw the Rat / Tiger / Lion river-ability badges. */
+  /**
+   * The Rat / Tiger / Lion river-ability badges. ON by default, so a new Jungle
+   * surface teaches the river without anyone remembering to ask for it.
+   *
+   * Set false where the badge cannot do its job: boards rendered so small the
+   * ~10px badge is mush (variant markers), and boards whose pixels are published
+   * artefacts that should not shift under an article (rules diagrams).
+   *
+   * NOT available on the Flip Jungle renderer, and that is deliberate rather than
+   * an omission: Flip Jungle is a 4x4 bare grid with no rivers, dens, traps or
+   * jumps, so a badge there would advertise an ability the rules do not grant.
+   */
   cueBadges?: boolean;
   cueBadgeOverrides?: Partial<JungleCueBadgeSpec>;
 };
@@ -364,7 +375,7 @@ export function renderJungleBoardSvg(
         shadow,
         options.draggingFrom ?? null,
         pieceSkin,
-        options.cueBadges ?? false,
+        options.cueBadges ?? true,
         options.cueBadgeOverrides,
       ) +
       `<g class="jungle-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jungleMarkerSvg(marker, geom)).join('')}</g>` +
