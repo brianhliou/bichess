@@ -12,7 +12,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { enginePython, engineScript } from './engine-paths.js';
+import { engineDir, enginePython, engineScript, resolveStockfishPath } from './engine-paths.js';
 import { logger } from './obs.js';
 
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
@@ -60,7 +60,20 @@ function spawnAnalysisJob(
 
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
-    const child = spawn(enginePython(), args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    // Same child setup as the live pool (python-pool.ts). The analyzer's grader
+    // resolves Stockfish via FOW_STOCKFISH or PATH, and apt installs the binary
+    // at /usr/games/stockfish which is NOT on the container PATH — the live
+    // engine forfeited move 1 that way once, and the first production analysis
+    // died the same way. cwd matches too, so relative lookups behave alike.
+    const stockfishPath = resolveStockfishPath();
+    const child = spawn(enginePython(), args, {
+      cwd: engineDir(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        ...(stockfishPath ? { FOW_STOCKFISH: stockfishPath } : {}),
+      },
+    });
     let stdout = '';
     let stderrTail = '';
     let settled = false;

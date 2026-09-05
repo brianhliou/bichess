@@ -13,9 +13,8 @@
 
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import type { Move } from '@mistboard/game';
-import { engineDir, enginePython, engineScript } from './engine-paths.js';
+import { defaultStockfishPath, engineDir, enginePython, engineScript } from './engine-paths.js';
 import { loadEngine } from './engines/registry.js';
 import { engineCounters, logger } from './obs.js';
 
@@ -761,13 +760,4 @@ export function disposeAllPythonPools(): void {
   POOLS.clear();
 }
 
-function defaultStockfishPath(): string | undefined {
-  for (const candidate of [
-    '/usr/games/stockfish',
-    '/usr/bin/stockfish',
-    '/opt/homebrew/bin/stockfish',
-  ]) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
+// defaultStockfishPath now lives in engine-paths (one definition, three callers).
