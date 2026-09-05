@@ -660,8 +660,19 @@ function renderStudy(
     }
 
     const gamebookable = studyVariantSupportsGamebook(variant);
-    const rail = (status: HTMLElement): HTMLElement =>
-      buildStudyRail(study, chapters, activeId, status, {
+    /**
+     * The rail as a LEARNER sees it: no settings gear, no per-chapter gear, no
+     * drag handles, no "add a chapter".
+     *
+     * The rail gates all of those on `study.isOwner`, which stays true while an
+     * owner previews their own exercise -- so a preview rendered the author's
+     * editing affordances inside the player and showed them something no learner
+     * would ever see. A preview that is not faithful defeats the point of having
+     * one.
+     */
+    const learnerView = { ...study, isOwner: false };
+    const rail = (status: HTMLElement, asLearner = false): HTMLElement =>
+      buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
         previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
@@ -738,7 +749,9 @@ function renderStudy(
       railSub.textContent = firstSentence(localizedStudyDescription(study.description, study.i18n));
       railText.append(railTitle, railSub);
       railHead.append(railIcon, railText);
-      railCard.append(railHead, rail(statusSpan(study.isOwner)));
+      // Always the learner's rail here: this branch only renders when the reader
+      // is not the owner, or when the owner asked to preview.
+      railCard.append(railHead, rail(statusSpan(false), true));
       // Rail only, no chat: a practice chapter is a solo drill against the
       // engine, and the chat panel rendered as an empty box under the rail.
       aside.append(railCard);
