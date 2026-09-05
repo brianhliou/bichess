@@ -179,12 +179,52 @@
   min-height: 0;
 }
 
-.practice__progress {
-  padding-bottom: 0.5rem;
+/* Header band for the right column: the exercise number carries the weight the
+   way lichess's "#19" does, so the column is anchored rather than captioned. */
+.practice__side-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0 -14px;
+  padding: 0.45rem 14px 0.5rem;
   border-bottom: 1px solid var(--site-border-soft, var(--site-border));
-  margin: 0 -14px 0;
-  padding-left: 14px;
-  padding-right: 14px;
+}
+
+.practice__side-num {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--site-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.practice__side-of {
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.practice__coach-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  opacity: 0.9;
+}
+.practice__coach-avatar svg {
+  width: 34px;
+  height: 34px;
+}
+
+.practice__coach-say {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Controls sit under the coach block, full width of the panel. */
+.practice__coach .gamebook__controls {
+  padding: 0 14px 0.8rem;
 }
 
 /* The coach sits at the bottom under a coloured strip, so the panel reads as
@@ -213,10 +253,14 @@
   color: #4ea96a;
 }
 
-/* Band, not a nested card: no border or radius of its own. */
+/* Band, not a nested card: no border or radius of its own. The face sits BESIDE
+   what it says, as lichess's robot does; stacked, it read as a loose icon above
+   a status line. One rule only -- an earlier partial rule for this class further
+   up the file lost to this one and the direction silently stayed column. */
 .practice__coach-body {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-start;
   gap: 0.6rem;
   padding: 0.7rem 14px 0.8rem;
   border: 0;
@@ -241,12 +285,44 @@
   padding-right: 0;
 }
 
-/* Full-bleed saturated header, like lichess's blue title block. */
+/* Full-bleed saturated header with an emblem beside the text, like lichess's
+   blue title block. The emblem is the same piece the /practice card used, so
+   the two surfaces read as one journey. */
 .practice__rail-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   margin: 0;
   padding: 0.6rem 14px 0.55rem;
   background: var(--site-accent);
   color: #fff;
+}
+
+.practice__rail-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+.practice__rail-icon svg {
+  width: 44px;
+  height: 44px;
+}
+
+.practice__rail-headtext {
+  min-width: 0;
+}
+
+/* The shared rail's "11 Chapters" strip. Useful on a study, redundant here: the
+   rows are immediately below it and the right column already says which exercise
+   of how many you are on. lichess has no equivalent row, and dropping it is what
+   lets the card start with its list. */
+.practice__rail-card .study-chapters__head {
+  display: none;
+}
+.practice__rail-card .study-chapters {
+  border-top: 0;
 }
 .practice__rail-title {
   color: #fff;
@@ -271,14 +347,12 @@
   min-height: 0;
 }
 
-/* Dense single-line rows. The shared rail wraps to two lines because a curated
-   study title can carry a native name plus a gloss; an exercise list is a list
-   of short labels, and wrapping halves how many a learner can see at once. */
+/* Two lines, not one. A single clamped line cut most of every row -- an endgame
+   is named by a matchup, and a matchup does not fit in a rail the way "Exploit
+   the pin #3" does. Two lines costs a little density and stops the list being a
+   column of ellipses. */
 .practice__rail-card .study-chapters__name {
-  -webkit-line-clamp: 1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow-wrap: normal;
+  -webkit-line-clamp: 2;
 }
 .practice__rail-card .study-chapters__row {
   min-height: 1.75rem;

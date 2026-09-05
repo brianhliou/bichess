@@ -47,6 +47,10 @@ export type StudyChapterRecord = {
 export type StudyRecord = {
   id: string;
   ownerId: string;
+  /** Stable curated identity (migration 132). Null for user-created studies;
+   *  set by a seeder so the /practice catalogue can name a study without
+   *  depending on its generated id or its editable name. */
+  slug: string | null;
   /** Present only where the query joined `users`. The detail read does (so an
    *  export can credit the author); the owner's own listing does not need it. */
   ownerHandle?: string;
@@ -115,6 +119,8 @@ export type NewChapterInput = {
 
 export type CreateStudyInput = {
   ownerId: string;
+  /** Curated identity (migration 132). Seeders set it; the UI never does. */
+  slug?: string;
   name: string;
   description: string;
   /** Optional per-locale overrides for `name`/`description`. */
@@ -141,6 +147,7 @@ function shortId(len = 8): string {
 type StudyRow = {
   id: string;
   owner_id: string;
+  slug: string | null;
   owner_handle?: string;
   owner_display_name?: string;
   name: string;
@@ -175,6 +182,7 @@ function mapStudy(row: StudyRow): StudyRecord {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    slug: row.slug ?? null,
     ...(row.owner_handle ? { ownerHandle: row.owner_handle } : {}),
     ...(row.owner_display_name ? { ownerDisplayName: row.owner_display_name } : {}),
     name: row.name,
@@ -209,7 +217,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
 }
 
 const STUDY_COLS =
-  'id, owner_id, name, description, i18n, visibility, featured_at, created_at, updated_at';
+  'id, owner_id, slug, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
   'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, created_at, updated_at';
 
@@ -284,11 +292,12 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
     await client.query('BEGIN');
     const studyId = shortId();
     await client.query(
-      `INSERT INTO studies (id, owner_id, name, description, i18n, visibility)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+      `INSERT INTO studies (id, owner_id, slug, name, description, i18n, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
       [
         studyId,
         input.ownerId,
+        input.slug ?? null,
         input.name,
         input.description,
         JSON.stringify(input.i18n ?? {}),
@@ -343,6 +352,58 @@ export async function getStudyById(id: string): Promise<StudyWithChapters | null
     [id],
   );
   return { ...mapStudy(row), chapters: chapters.rows.map(mapChapter) };
+}
+
+/** One curated practice study, as the /practice index needs it. */
+export type PracticeStudySummary = {
+  slug: string;
+  id: string;
+  name: string;
+  description: string;
+  i18n: Record<string, unknown>;
+  /** Chapters in practice mode. This is the card's "N exercises", and it counts
+   *  practice chapters rather than all chapters so a stray note chapter in a
+   *  curated study cannot inflate it. */
+  exerciseCount: number;
+};
+
+/**
+ * Resolve curated slugs to studies, in ONE query rather than per card.
+ *
+ * Private studies are skipped: the index is a public page, and a curated slug
+ * pointing at something unpublished should render as a missing card rather than
+ * leak a title. The caller decides what to do about a slug that resolves to
+ * nothing -- the honest options are to omit the card or to show it disabled,
+ * never to silently renumber the section.
+ */
+export async function getPracticeStudiesBySlug(
+  slugs: readonly string[],
+): Promise<PracticeStudySummary[]> {
+  if (!isInitialized() || slugs.length === 0) return [];
+  const { rows } = await getPool().query<{
+    slug: string;
+    id: string;
+    name: string;
+    description: string;
+    i18n: Record<string, unknown> | null;
+    exercise_count: string;
+  }>(
+    `SELECT s.slug, s.id, s.name, s.description, s.i18n,
+            (SELECT count(*) FROM study_chapters c
+               WHERE c.study_id = s.id AND c.practice) AS exercise_count
+       FROM studies s
+      WHERE s.slug = ANY($1::text[])
+        AND s.visibility <> 'private'`,
+    [[...slugs]],
+  );
+  return rows.map((row) => ({
+    slug: row.slug,
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    i18n: row.i18n ?? {},
+    exerciseCount: Number.parseInt(row.exercise_count, 10) || 0,
+  }));
 }
 
 export async function listStudiesForOwner(ownerId: string, q?: string): Promise<StudySummary[]> {
@@ -437,6 +498,35 @@ export type SetStudyFeaturedResult =
 
 /** Admin-facing curation write. Re-selecting a current pick is idempotent and
  * preserves its ordering timestamp; private/unlisted studies fail closed. */
+/**
+ * Set (or clear) a study's curated slug. ADMIN-ONLY at the route layer.
+ *
+ * Privileged on purpose: the slug is what the /practice catalogue points at, so
+ * a user able to set their own would be able to take over a curated card by
+ * claiming its slug. Uniqueness is enforced by the index from migration 132; a
+ * collision surfaces here as a rejected write rather than a silent swap.
+ */
+export async function setStudySlug(
+  studyId: string,
+  slug: string | null,
+): Promise<{ ok: true; study: StudyRecord } | { ok: false; error: 'not_found' | 'slug_taken' }> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  if (slug) {
+    const clash = await getPool().query<{ id: string }>(
+      'SELECT id FROM studies WHERE slug = $1 AND id <> $2',
+      [slug, studyId],
+    );
+    if (clash.rows[0]) return { ok: false, error: 'slug_taken' };
+  }
+  const { rows } = await getPool().query<StudyRow>(
+    `UPDATE studies SET slug = $1, updated_at = now() WHERE id = $2 RETURNING ${STUDY_COLS}`,
+    [slug, studyId],
+  );
+  const row = rows[0];
+  if (!row) return { ok: false, error: 'not_found' };
+  return { ok: true, study: mapStudy(row) };
+}
+
 export async function setStudyFeatured(
   studyId: string,
   featured: boolean,

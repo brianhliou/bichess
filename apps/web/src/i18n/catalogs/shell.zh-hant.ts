@@ -13,6 +13,7 @@ export const ZH_HANT_SHELL = {
   'nav.puzzles': '題目',
   'nav.learn': '學習',
   'nav.learnXiangqi': '象棋入門',
+  'nav.practice': '練習',
   'nav.rules': '規則',
   'nav.articles': '文章',
   'nav.watch': '觀看',

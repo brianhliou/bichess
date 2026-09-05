@@ -420,6 +420,8 @@ export const ZH_HANT_REVIEW = {
   'review.setDefaultView': '設為預設視角',
   'review.revealIdentities': '揭示身分',
   'review.hideIdentities': '隱藏身分',
+  'review.showAlternatives': '顯示備選著法',
+  'review.hideAlternatives': '隱藏備選著法',
   'review.analyseFromHere': '從此局面分析',
   'review.boardEditor': '棋盤編輯器',
   'review.newDeal': '重新發牌',

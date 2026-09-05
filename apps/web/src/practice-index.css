@@ -1,0 +1,20 @@
+/* /practice — the few things the shared tile-map shell does not cover.
+   Everything structural (sidebar card, section headings, tile grid, tiles,
+   corner ribbon) comes from tile-map.css, the same shell /learn/xiangqi uses.
+   The two pages are the same kind of thing and should not look like two
+   products. */
+
+/* Stands where /learn puts its "Progress: N%" bar, so the sidebar does not end
+   on a ragged edge before practice progress exists (#356). */
+.practice-index__total {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.practice-index__notice {
+  color: var(--site-muted);
+  text-align: center;
+}

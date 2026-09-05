@@ -77,3 +77,32 @@ export function enginePython(): string {
 export function engineFeedbackPath(...parts: string[]): string {
   return resolve(engineDir(), 'feedback', ...parts);
 }
+
+/**
+ * Where Stockfish lives in this environment. apt installs it at
+ * /usr/games/stockfish, which is NOT on the container PATH, so anything that
+ * resolves the binary by PATH alone fails in prod — the live engine forfeited
+ * move 1 that way once (room 81e7b246), and the fog analyzer failed its first
+ * production run the same way.
+ *
+ * One definition on purpose: this was copied into python-pool and engine-runner,
+ * and a third copy was about to be written for the analysis spawn. Any caller
+ * spawning engine Python must export the result as FOW_STOCKFISH.
+ */
+export function defaultStockfishPath(): string | undefined {
+  for (const candidate of [
+    '/usr/games/stockfish',
+    '/usr/bin/stockfish',
+    '/opt/homebrew/bin/stockfish',
+  ]) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+/** The resolved Stockfish path, honouring the env overrides the live pool uses. */
+export function resolveStockfishPath(): string | undefined {
+  return (
+    process.env.PYTHON_ENGINE_STOCKFISH_PATH ?? process.env.STOCKFISH_PATH ?? defaultStockfishPath()
+  );
+}

@@ -21,6 +21,7 @@ import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './study.css';
 import './study-index.css';
+import type { XiangqiPieceRole } from '@mistboard/game';
 import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { mountStudyReview } from './review/study-review.js';
@@ -56,9 +57,12 @@ import {
   type StudyVisibility,
 } from './study-controls.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type StudyDto = {
   id: string;
+  /** Curated slug, when the study is part of a catalogue (migration 132). */
+  slug?: string | null;
   name: string;
   description: string;
   /** Per-locale overrides for name/description; resolved at render time. */
@@ -89,6 +93,8 @@ type ChapterDto = {
   /** Authored goal text ("mate in 3", "win", "draw in 20"); null unless
    *  `practice`. Parsed by parsePracticeGoal at mount. */
   practiceGoal?: string | null;
+  /** Whether the signed-in reader has already solved this exercise. */
+  solved?: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -134,6 +140,29 @@ async function loadStudy(studyId: string): Promise<LoadResult> {
   if (!response.ok) return { ok: false, status: response.status };
   const body = (await response.json()) as { study: StudyDto; chapters: ChapterDto[] };
   return { ok: true, study: body.study, chapters: body.chapters };
+}
+
+/**
+ * The opening sentence of a study description, for the rail card's tagline slot.
+ *
+ * A description is written to be read in full on the index; the rail wants the
+ * one line that says what the set is. Falls back to the whole string when there
+ * is no sentence break, rather than cutting mid-word.
+ */
+/** The piece an endgame set's rail header illustrates. Mirrors practice-index. */
+function railPieceForSlug(slug: string | null | undefined): XiangqiPieceRole {
+  if (!slug) return 'general';
+  if (slug.includes('chariot')) return 'chariot';
+  if (slug.includes('horse')) return 'horse';
+  if (slug.includes('cannon')) return 'cannon';
+  if (slug.includes('soldier')) return 'soldier';
+  return 'general';
+}
+
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  const stop = trimmed.indexOf('. ');
+  return stop === -1 ? trimmed : trimmed.slice(0, stop + 1);
 }
 
 function renderStudy(
@@ -415,6 +444,39 @@ function renderStudy(
     return null;
   };
 
+  /**
+   * Turn a chapter into a practice exercise, or back.
+   *
+   * The goal travels with the flag because a practice chapter without one is not
+   * a half-configured exercise, it is an exercise with no way to be won or lost.
+   * Validated here before the request so a typo is a message under the field
+   * rather than a 400 the author has to interpret.
+   */
+  const setPractice = async (
+    chapterId: string,
+    on: boolean,
+    goal: string,
+  ): Promise<string | null> => {
+    const chapter = chapters.find((entry) => entry.id === chapterId);
+    if (!chapter) return t('study.chapterNotFound');
+    if (on && !parsePracticeGoal(goal)) {
+      return 'Goal must read like "mate", "mate in 3", "win", or "draw in 20".';
+    }
+    if (!(await flushActive())) return t('study.resolveFirst');
+    const response = await fetch(`/api/studies/${study.id}/chapters/${chapterId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ practice: on, practiceGoal: on ? goal.trim() : null }),
+    });
+    if (!response.ok) return responseError(response, 'Could not change practice mode.');
+    chapter.practice = on;
+    chapter.practiceGoal = on ? goal.trim() : null;
+    if (!on) previewMode = false;
+    disposeActive();
+    renderActive();
+    return null;
+  };
+
   const setPreview = (on: boolean): void => {
     void flushActive().then((saved) => {
       if (!saved) return;
@@ -598,8 +660,19 @@ function renderStudy(
     }
 
     const gamebookable = studyVariantSupportsGamebook(variant);
-    const rail = (status: HTMLElement): HTMLElement =>
-      buildStudyRail(study, chapters, activeId, status, {
+    /**
+     * The rail as a LEARNER sees it: no settings gear, no per-chapter gear, no
+     * drag handles, no "add a chapter".
+     *
+     * The rail gates all of those on `study.isOwner`, which stays true while an
+     * owner previews their own exercise -- so a preview rendered the author's
+     * editing affordances inside the player and showed them something no learner
+     * would ever see. A preview that is not faithful defeats the point of having
+     * one.
+     */
+    const learnerView = { ...study, isOwner: false };
+    const rail = (status: HTMLElement, asLearner = false): HTMLElement =>
+      buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
         previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
@@ -609,8 +682,22 @@ function renderStudy(
         onOpenStudySettings: openStudySettings,
         onOpenChapterSettings: openChapterSettings,
       });
+    // Practice and gamebook are alternative chapter modes, so an owner is offered
+    // whichever one the chapter is already in, and practice's dock when it is in
+    // neither. Showing both at once would invite turning both on, which the
+    // player resolves by silently preferring practice.
+    const practiceDock =
+      study.isOwner && gamebookable && !chapter.gamebook
+        ? buildPracticeDock({
+            enabled: Boolean(chapter.practice),
+            goal: chapter.practiceGoal ?? '',
+            preview: previewMode,
+            onToggle: (enabled, goal) => setPractice(chapter.id, enabled, goal),
+            onPreview: setPreview,
+          })
+        : undefined;
     const lessonControls =
-      study.isOwner && gamebookable
+      study.isOwner && gamebookable && !chapter.practice
         ? buildLessonDock({
             enabled: chapter.gamebook,
             preview: previewMode,
@@ -639,14 +726,32 @@ function renderStudy(
       railCard.className = 'practice__panel practice__rail-card';
       const railHead = document.createElement('header');
       railHead.className = 'practice__rail-head';
+      // An emblem beside the title, matching the /practice card the reader just
+      // clicked and the illustration lichess puts in this slot. Derived from the
+      // slug rather than stored: an endgame set is named for its piece.
+      const railIcon = document.createElement('div');
+      railIcon.className = 'practice__rail-icon';
+      railIcon.innerHTML = renderXiangqiPiece(
+        { color: 'red', role: railPieceForSlug(study.slug) },
+        { size: 44 },
+      );
+      const railText = document.createElement('div');
+      railText.className = 'practice__rail-headtext';
       const railTitle = document.createElement('h2');
       railTitle.className = 'practice__rail-title';
       railTitle.textContent = localizedStudyName(study.name, study.i18n);
       const railSub = document.createElement('p');
       railSub.className = 'practice__rail-sub';
-      railSub.textContent = localizedStudyName(chapter.name, chapter.i18n);
-      railHead.append(railTitle, railSub);
-      railCard.append(railHead, rail(statusSpan(study.isOwner)));
+      // The SET's tagline, not the current chapter's name. The chapter name is
+      // already the highlighted row two lines below, and repeating it here spent
+      // three wrapped lines saying nothing new. lichess puts a short standing
+      // blurb in this slot ("Pin it to win it").
+      railSub.textContent = firstSentence(localizedStudyDescription(study.description, study.i18n));
+      railText.append(railTitle, railSub);
+      railHead.append(railIcon, railText);
+      // Always the learner's rail here: this branch only renders when the reader
+      // is not the owner, or when the owner asked to preview.
+      railCard.append(railHead, rail(statusSpan(false), true));
       // Rail only, no chat: a practice chapter is a solo drill against the
       // engine, and the chat panel rendered as an empty box under the rail.
       aside.append(railCard);
@@ -664,6 +769,8 @@ function renderStudy(
           // exercise's goal lives under the board. A title floating above the
           // three columns belongs to neither and reads as a stray caption.
           aside,
+          chapterId: chapter.id,
+          studyId: study.id,
           progress: { index: practiceIndex + 1, total: chapters.length },
           // Omitted on the last chapter, so the button is not offered at all
           // rather than offered and inert.
@@ -785,6 +892,7 @@ function renderStudy(
       details: buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
+      annotationPracticeControls: practiceDock,
       annotationEditing: study.isOwner,
       // A study is read forward. Landing on the final position of a 60-ply
       // annotated game means rewinding before you can start.
@@ -1050,6 +1158,84 @@ function likeButton(study: StudyDto): HTMLButtonElement {
       });
   });
   return button;
+}
+
+/**
+ * Owner control for practice mode: the flag, its goal, and a preview.
+ *
+ * Without this a practice chapter could only be created by hitting the API, and
+ * its author could never see what a learner sees -- the player only mounts for
+ * non-owners. That is how the gamebook ended up built, shipped and empty.
+ *
+ * Reuses the lesson dock's classes so the two chapter modes are configured in
+ * visibly the same place rather than looking like unrelated features.
+ */
+function buildPracticeDock(opts: {
+  enabled: boolean;
+  goal: string;
+  preview: boolean;
+  onToggle(enabled: boolean, goal: string): Promise<string | null>;
+  onPreview(preview: boolean): void;
+}): HTMLElement {
+  const panel = document.createElement('div');
+  panel.className = 'study-lesson-dock';
+  const copy = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = 'Practice';
+  const description = document.createElement('p');
+  description.textContent = opts.enabled
+    ? 'Played against the engine from this position.'
+    : 'Set a goal and the engine plays the defence. The move tree is ignored.';
+  copy.append(title, description);
+
+  const actions = document.createElement('div');
+  actions.className = 'study-lesson-dock__actions';
+
+  const goalInput = document.createElement('input');
+  goalInput.type = 'text';
+  goalInput.className = 'study-lesson-dock__goal';
+  goalInput.value = opts.goal;
+  goalInput.placeholder = 'mate in 3';
+  goalInput.setAttribute('aria-label', 'Practice goal');
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = opts.enabled ? 'study-lesson-dock__toggle is-on' : 'study-lesson-dock__toggle';
+  toggle.textContent = opts.enabled ? 'Practice on' : 'Enable practice';
+  toggle.setAttribute('aria-pressed', String(opts.enabled));
+
+  const feedback = document.createElement('span');
+  feedback.className = 'study-lesson-dock__feedback';
+  feedback.setAttribute('aria-live', 'polite');
+
+  toggle.addEventListener('click', () => {
+    toggle.disabled = true;
+    feedback.textContent = '';
+    void opts
+      .onToggle(!opts.enabled, goalInput.value)
+      .then((error) => {
+        if (!error) return;
+        toggle.disabled = false;
+        feedback.textContent = error;
+      })
+      .catch(() => {
+        toggle.disabled = false;
+        feedback.textContent = t('study.requestFailed');
+      });
+  });
+
+  if (!opts.enabled) actions.append(goalInput);
+  actions.append(toggle);
+  if (opts.enabled) {
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'study-lesson-dock__preview';
+    preview.textContent = opts.preview ? 'Back to editing' : 'Preview exercise';
+    preview.addEventListener('click', () => opts.onPreview(!opts.preview));
+    actions.append(preview);
+  }
+  panel.append(copy, actions, feedback);
+  return panel;
 }
 
 function buildLessonDock(opts: {

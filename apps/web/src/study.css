@@ -724,3 +724,17 @@
   margin: 0;
   color: var(--site-text);
 }
+
+/* Solved tick, in the slot the row number occupies. Lives HERE, beside the rest
+   of the rail's styles, because the markup is built in study-controls.ts and the
+   rail renders on the owner's editing view as well as inside the practice
+   player -- scoped to the practice card it would have rendered as a bare
+   unstyled character on the other one.
+
+   Green rather than accent so it reads as an outcome, not as selection: the
+   active row already uses the accent for that. */
+.study-chapters__num--solved {
+  color: #4ea96a;
+  font-weight: 700;
+  opacity: 1;
+}

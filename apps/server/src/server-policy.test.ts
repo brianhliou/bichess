@@ -344,6 +344,7 @@ const PARKED_CLIENT_ROUTES = new Set<string>([
   '/pixel-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/variant-marks', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/sound-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
+  '/jungle-cues', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/deepdive', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/engine-review', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/showcase-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts

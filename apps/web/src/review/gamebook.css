@@ -30,7 +30,7 @@
      The middle track is `auto` so it takes the board's own width: when the
      resize grip scales the board the two side columns keep their widths and the
      grid re-centres around it, rather than the columns stretching to fill. */
-  grid-template-columns: minmax(0, 15rem) auto minmax(0, 17rem);
+  grid-template-columns: minmax(0, 19rem) auto minmax(0, 17rem);
   gap: 1rem;
   /* Stretch, so the side columns take the row's height rather than their own
      content's. `min-height: 0` alone is not enough: a grid auto row is sized by
@@ -43,11 +43,20 @@
      overran the viewport -- the constant was wrong whenever the header above the
      grid was a different height than assumed. */
   align-items: stretch;
+  /* Declared HERE, on the common ancestor, not on .gamebook__board: the board
+     frame and the brief are SIBLINGS/ANCESTORS of the board, and a custom
+     property inherits down rather than up. Declared on the board itself, the
+     frame silently fell back to its 30rem default and the board stayed small
+     however this value was tuned. */
+  --gamebook-board-fit: min(67vh, 40rem);
   --gamebook-page-top: 5.5rem;
   --gamebook-page-height: calc(100dvh - var(--gamebook-page-top) - 1rem);
   grid-auto-rows: minmax(0, var(--gamebook-page-height));
   justify-content: center;
-  max-width: 1180px;
+  /* Wide enough that the board is limited by the HEIGHT cap above rather than by
+     the leftover middle track: at 1180px the rail and coach columns ate enough
+     width to hold the board 60px under what the viewport allowed. */
+  max-width: 1320px;
   margin: 0.75rem auto 1.5rem;
   padding: 0 1rem;
 }
@@ -77,7 +86,6 @@
      Multiplied by --uni-board-scale so the shared resize grip drives this board
      the way it drives the room, review, analysis and puzzle boards: one setting,
      persisted once, honoured everywhere. */
-  --gamebook-board-fit: min(62vh, 30rem);
   position: relative;
   width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
   max-width: 100%;
@@ -183,10 +191,10 @@
        definite row height above would truncate the rail instead of bounding it. */
     grid-auto-rows: auto;
     align-items: start;
+    --gamebook-board-fit: min(78vw, 26rem);
   }
   .gamebook__board {
     order: -1;
-    --gamebook-board-fit: min(78vw, 26rem);
   }
   .gamebook__aside,
   .gamebook__coach {

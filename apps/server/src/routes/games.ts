@@ -3,6 +3,11 @@ import type { Color, GameEvent, GameExportFormat, TimeClass } from '@mistboard/g
 import { currentAccountUser } from './../account-session.js';
 import { buildCrosstable, CROSSTABLE_GAME_LIMIT, resolveCrosstablePair } from './../crosstable.js';
 import {
+  type DarkChessAnalysisPublication,
+  resolveDarkChessAnalysis,
+} from './../dark-chess-analysis.js';
+import { resolveDarkChessDecisions } from './../dark-chess-decisions.js';
+import {
   decisionLogAvailable,
   devArtifactPayloads,
   devArtifactSummaries,
@@ -10,6 +15,7 @@ import {
 import { FinishedGameCache } from './../finished-game-cache.js';
 import { attachFlipFirstColors } from './../flip-first-color.js';
 import { resolveGameExport } from './../game-export-tenant.js';
+import { internalEngineAnalysisConfigured } from './../internal-engine-client.js';
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
@@ -28,6 +34,7 @@ import {
   type WatchRailRow,
   withFreshRow,
 } from './../watch-rail-cache.js';
+import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
@@ -109,6 +116,96 @@ export function channelTopPlayer(games: RecentEveGameRecord[]): WatchChannelTopP
   return pickHeadlineSeat(humans.length > 0 ? humans : seats);
 }
 
+const PROMOTION_LETTER: Record<string, string> = {
+  queen: 'q',
+  rook: 'r',
+  bishop: 'b',
+  knight: 'n',
+};
+
+// The variant values fog chess games are PERSISTED under. This is the DB
+// spelling, which is NOT the event log's kernel label ('fog-of-war') — matching
+// on that returns null for every game, so the route 404s everywhere. 'fog' is
+// the legacy value carried by rooms recorded before the rename; both are the
+// same variant and both analyse. draft960 persists as its own variant value and
+// stays excluded: it starts from a shuffled setup the analyzer does not yet
+// thread through (start-FEN support is a follow-up).
+const FOG_CHESS_PERSISTED_VARIANTS = new Set(['dark-chess', 'fog']);
+
+/** Exported for tests: the DB-spelling gate that decides whether a finished game is a
+ *  fog chess game. The original wiring matched 'fog-of-war' (the event log's kernel
+ *  label, never a persisted value) and so 404'd for every game. */
+export function isFogChessPersistedVariant(variant: string): boolean {
+  return FOG_CHESS_PERSISTED_VARIANTS.has(variant);
+}
+
+// Analysis inputs: a minimal publication-shaped payload (game id + ordered
+// UCI move list) for a FINISHED fog game. getGameSummary only returns rows with
+// status='completed', so a recorded summary IS the finished-gate — same trust as
+// the postgame page.
+async function loadFinishedDarkChessGameInputs(
+  roomId: string,
+): Promise<DarkChessAnalysisPublication | null> {
+  const summary = await persistence.getGameSummary(roomId);
+  if (!summary || !FOG_CHESS_PERSISTED_VARIANTS.has(summary.variant)) return null;
+  const events = await persistence.loadRoomEvents<GameEvent>(roomId);
+  if (!events) return null;
+  const plies: DarkChessAnalysisPublication['plies'] = [];
+  for (const event of events) {
+    if (event.type !== 'move-played') continue;
+    const move = event.move;
+    const promo = move.promotion ? (PROMOTION_LETTER[move.promotion] ?? '') : '';
+    plies.push({
+      ply: plies.length + 1,
+      mover: event.color,
+      uci: `${move.from}${move.to}${promo}`,
+    });
+  }
+  if (plies.length === 0) return null;
+  return {
+    schema_version: 'route/1',
+    game_id: roomId,
+    variant: 'fog-of-war',
+    plies,
+  };
+}
+
+// Computer analysis for finished fog games: the standard eval track plus the
+// fog layer (belief/sample/decision verdicts), computed on the engine-worker
+// via the internal analyze endpoint. Gates/envelopes/queue: the shared
+// factory — GET/POST /api/dark-chess/games/:id/analysis (+ /jobs/:jobId).
+const handleAnalysisRoutes = createGameAnalysisRoutes({
+  routeId: 'dark-chess',
+  logPrefix: 'dark-chess',
+  variantLabel: 'Fog of War',
+  enabled: () => true,
+  requiresPersistence: true,
+  // Fail closed: analysis is the misty engine service only. Missing config is
+  // a broken deploy — surface 503, never a weaker eval.
+  engineBinary: {
+    available: internalEngineAnalysisConfigured,
+    label: 'internal engine service (misty)',
+  },
+  loadInputs: loadFinishedDarkChessGameInputs,
+  countPlies: (inputs) => inputs.plies.length,
+  // EVERY fog ply is a chance ply. jieqi marks only its reveals, because only
+  // there is the outcome decided by something the mover could not see; under fog
+  // that is true of every move. Marking them stops the truth eval from judging
+  // (it keeps the chart and the per-move eval) and hands grading to the decision
+  // layer, so the glyph, the label and the alternatives all come from Misty and
+  // can no longer disagree. Before this, ply 21 was labelled an Inaccuracy by
+  // Stockfish while Misty scored its decision loss at 0.0 — the page accused the
+  // player of an error it had already decided was unavoidable.
+  analysisExtras: (inputs) => ({ chancePlies: inputs.plies.map((ply) => ply.ply) }),
+  resolveAnalysis: (roomId, inputs, computeIfMissing) =>
+    resolveDarkChessAnalysis(roomId, inputs, undefined, undefined, computeIfMissing),
+  // Ranked alternatives per ply. Free relative to the analysis: Misty's solve already scores
+  // every root move, so this only projects the cached row — no second pass, no second cache
+  // entry. Presence of this resolver is what enables /api/dark-chess/games/:id/decisions.
+  resolveDecisions: (roomId, inputs, computeIfMissing) =>
+    resolveDarkChessDecisions(roomId, inputs, computeIfMissing),
+});
+
 export async function tryHandle(
   ctx: HttpApiContext,
   request: IncomingMessage,
@@ -117,6 +214,8 @@ export async function tryHandle(
   parsedUrl: URL,
 ): Promise<boolean> {
   const url = request.url ?? '/';
+
+  if (await handleAnalysisRoutes(request, response, pathname)) return true;
 
   if (pathname === '/api/games/favorites') {
     if (!requireMethod(request, response, 'GET')) return true;

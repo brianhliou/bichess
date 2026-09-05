@@ -19,13 +19,20 @@ import {
   describePracticeGoal,
   fsfUciToXiangqiSquares,
   type PracticeGoal,
+  type PracticeVerdict,
   type StandardXiangqiPlayerView,
   type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
-import { createPracticeSession, type PracticeEval, type PracticeView } from './practice-play.js';
+import { renderXiangqiPiece } from '../xiangqi-pieces.js';
+import {
+  createPracticeSession,
+  type PracticeEval,
+  type PracticePhase,
+  type PracticeView,
+} from './practice-play.js';
 import { xiangqiPracticeConfig } from './xiangqi-practice.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
@@ -56,6 +63,15 @@ export interface XiangqiPracticeOptions {
    *  has no notion of a next; the button is then not offered at all rather than
    *  offered and inert. */
   onNext?: () => void;
+  /** Called once, the first time the learner solves this exercise, with the
+   *  number of moves they took. The caller persists it; failures are the
+   *  caller's to swallow, because losing a progress write must never interrupt
+   *  the moment the learner just succeeded. */
+  onSolved?: (moves: number) => void;
+  /** Called each time an attempt fails, with the grade that ended it. A surface
+   *  where every learner blunders on move one is MISCALIBRATED rather than
+   *  unused, and the two are indistinguishable in a completion count alone. */
+  onFailed?: (verdict: PracticeVerdict, moves: number) => void;
   /**
    * Site navigation to keep above the player. The mount replaces the root's
    * children, so a caller that built a nav there first would otherwise have it
@@ -150,10 +166,19 @@ export function mountXiangqiPractice(
   side.className = 'practice__panel practice__side';
 
   if (opts.progress) {
-    const progressEl = document.createElement('p');
-    progressEl.className = 'practice__progress';
-    progressEl.textContent = `Exercise ${opts.progress.index} of ${opts.progress.total}`;
-    side.append(progressEl);
+    // A band with the number carrying the weight, not one grey line. lichess
+    // anchors this column with a substantial "#19" header; without something of
+    // similar mass the column reads as an empty box with a caption.
+    const head = document.createElement('div');
+    head.className = 'practice__side-head';
+    const num = document.createElement('span');
+    num.className = 'practice__side-num';
+    num.textContent = `#${opts.progress.index}`;
+    const of = document.createElement('span');
+    of.className = 'practice__side-of';
+    of.textContent = `of ${opts.progress.total}`;
+    head.append(num, of);
+    side.append(head);
   }
 
   // The played line. A study chapter has a move list; an exercise has none, so
@@ -169,11 +194,21 @@ export function mountXiangqiPractice(
   coachStrip.textContent = 'Practice with the engine';
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble practice__coach-body';
+  // The LEARNER's own general, not a generic mascot. The line beside it reads
+  // "Your move", so the face should be the seat the reader is sitting in -- and
+  // on a hold-the-draw exercise that seat is Black, which a fixed colour would
+  // quietly misreport.
+  const avatar = document.createElement('div');
+  avatar.className = 'practice__coach-avatar';
+  avatar.innerHTML = renderXiangqiPiece({ color: opts.orientation, role: 'general' }, { size: 34 });
   const feedback = document.createElement('p');
   feedback.className = 'gamebook__feedback';
   const hintText = document.createElement('p');
   hintText.className = 'gamebook__hint';
-  bubble.append(feedback, hintText);
+  const say = document.createElement('div');
+  say.className = 'practice__coach-say';
+  say.append(feedback, hintText);
+  bubble.append(avatar, say);
 
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
@@ -182,14 +217,21 @@ export function mountXiangqiPractice(
   const restartBtn = button('Restart', 'gamebook__btn');
   const nextBtn = button('Next exercise', 'gamebook__btn gamebook__btn--primary');
   controls.append(hintBtn, retryBtn, restartBtn, nextBtn);
-  bubble.append(controls);
   coach.append(coachStrip, bubble);
+  coach.append(controls);
   side.append(coach);
   wrap.append(side);
 
   // Reentrancy guard: the engine is async, so without this a fast second drag
   // could open a new attempt while the first is still resolving.
   let busy = false;
+  // One report per mount: a learner who solves, restarts and solves again has
+  // not solved a second exercise.
+  let reportedSolved = false;
+  // Failures ARE reported per occurrence -- each one is a separate data point
+  // about the exercise's difficulty -- so this tracks the transition rather than
+  // suppressing repeats. render() runs on every state change, including retry.
+  let lastPhase: PracticePhase | null = null;
 
   const interactive = createXiangqiInteractiveBoard({
     board: boardEl,
@@ -293,6 +335,20 @@ export function mountXiangqiPractice(
         hintText.textContent = 'This is the move.';
       }
     }
+
+    // Report the solve once, the first time this run reaches it. Guarded rather
+    // than fired from the success branch of attempt(), because render() also
+    // runs on retry and restart and would otherwise re-report.
+    if (view.phase === 'success' && !reportedSolved) {
+      reportedSolved = true;
+      opts.onSolved?.(view.movesPlayed);
+    }
+    // On the TRANSITION into failed, so a re-render of the same failed state
+    // (asking for a hint, say) does not count as a second failure.
+    if (view.phase === 'failed' && lastPhase !== 'failed' && view.verdict) {
+      opts.onFailed?.(view.verdict, view.movesPlayed);
+    }
+    lastPhase = view.phase;
 
     if (state === 'thinking') {
       feedback.textContent = 'Thinking…';
