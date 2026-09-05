@@ -1132,6 +1132,88 @@ definePersistenceTests('ratings', () => {
     }
   });
 
+  test('getUserGamesPage scopes history to a rating pool, legacy variant strings included', async () => {
+    const now = new Date('2026-05-10T10:00:00.000Z');
+    await createUser({
+      id: 'user_pool',
+      email: 'pool@example.com',
+      emailVerifiedAt: now,
+      handle: 'pool-player',
+      displayName: 'Pool Player',
+      profileVisibility: 'public',
+      now,
+    });
+    const play = async (roomId: string, variant: string, minutes: number) => {
+      await recordGameEnd(roomId, {
+        variant,
+        mode: 'pvp',
+        result: 'white-wins',
+        termination: 'king-captured',
+        plyCount: 9,
+        startedAt: now,
+        endedAt: new Date(now.getTime() + minutes * 60_000),
+        whiteClient: 'pool-browser',
+        blackClient: 'guest-browser',
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Pool Player',
+            subjectType: 'user',
+            subjectId: 'user_pool',
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+        ],
+      });
+    };
+
+    await play('pool-xq-1', 'xiangqi', 1);
+    await play('pool-jq-1', 'jieqi', 2);
+    await play('pool-xq-2', 'xiangqi', 3);
+    // Pre-rename string for the crossroads pool. A filter built from the spec
+    // id alone would drop this row while the rating rail still counted it.
+    await play('pool-legacy-1', 'dual-chess', 4);
+
+    const all = await getUserGamesPage('pool-player', null, 0, 20);
+    assert.equal(all?.total, 4);
+
+    const xiangqi = await getUserGamesPage('pool-player', null, 0, 20, 'xiangqi');
+    assert.equal(xiangqi?.total, 2);
+    assert.deepEqual(
+      xiangqi?.games.map((game) => game.roomId),
+      ['pool-xq-2', 'pool-xq-1'],
+    );
+
+    const jieqi = await getUserGamesPage('pool-player', null, 0, 20, 'jieqi');
+    assert.equal(jieqi?.total, 1);
+    assert.equal(jieqi?.games[0]?.roomId, 'pool-jq-1');
+
+    // The legacy row answers to its pool, not to its literal variant string.
+    const crossroads = await getUserGamesPage('pool-player', null, 0, 20, 'crossroads_chess_open');
+    assert.equal(crossroads?.total, 1);
+    assert.equal(crossroads?.games[0]?.roomId, 'pool-legacy-1');
+
+    // total is the FILTERED total, so "Load more" stops at the right place.
+    const firstPage = await getUserGamesPage('pool-player', null, 0, 1, 'xiangqi');
+    assert.equal(firstPage?.total, 2);
+    assert.equal(firstPage?.games.length, 1);
+    assert.equal(firstPage?.games[0]?.roomId, 'pool-xq-2');
+
+    // A pool the player has never touched is empty, not unfiltered.
+    const banqi = await getUserGamesPage('pool-player', null, 0, 20, 'banqi');
+    assert.equal(banqi?.total, 0);
+    assert.deepEqual(banqi?.games, []);
+  });
+
   test('getUserGamesPage paginates a user games newest-first with a stable total', async () => {
     const now = new Date('2026-05-09T10:00:00.000Z');
     await createUser({

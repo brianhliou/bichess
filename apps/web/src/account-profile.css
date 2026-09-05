@@ -2179,6 +2179,39 @@
   color: var(--site-muted);
 }
 
+/* The "showing one variant" chip above a filtered games list. Sits inside the
+   games group, above the list, so the scope of what follows is stated rather
+   than inferred from the rows. Hidden entirely when the list is unfiltered. */
+.profile-games-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.profile-games-filter-label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--site-heading);
+}
+
+.profile-games-filter-clear {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--site-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.profile-games-filter-clear:hover,
+.profile-games-filter-clear:focus-visible {
+  text-decoration: underline;
+}
+
 .profile-games-more {
   display: flex;
   justify-content: center;
