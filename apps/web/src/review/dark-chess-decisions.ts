@@ -40,10 +40,34 @@ export type DarkChessDecisionsResponse = {
   decisions: DarkChessDecision[];
 };
 
-// Deadband in WIN POINTS. Misty's root values cluster tightly in quiet positions, so a decision
-// loss under this floor is solve noise rather than a real mistake — leave it unjudged. Same
-// discipline as the jieqi deadband, in the same units.
-const DECISION_NOISE_WINPCT = 5;
+/**
+ * Fog decision losses are converted to their chess-scale equivalent before grading.
+ *
+ * Misty's root value is an expectation over the mover's whole belief set, and
+ * averaging across worlds squeezes the moves together: an error that costs 15 win
+ * points in a position you can see costs about half that once it is scored across
+ * every position consistent with what you actually observed. Grading the raw number
+ * with lila's bars therefore under-marks everything — 17% of plies drew any mark,
+ * against 33% when the SAME moves were graded on the revealed truth, and a whole
+ * game could finish with no mistake and no blunder.
+ *
+ * The factor is measured, not chosen. Over 224 plies of three analyzed human games,
+ * each ply was scored twice — belief-relative (Misty) and truth-relative (Stockfish
+ * on the revealed board, which is the scale lila fitted its bars to). Quantile
+ * matching the two distributions lands lila's 5 / 10 / 15 at 2.87 / 4.66 / 6.83 fog
+ * points: per-bar ratios of 1.74 / 2.15 / 2.20, mean 2.03.
+ *
+ * Scaling the loss rather than defining a parallel set of fog bars keeps ONE tier
+ * definition in the tree: judgment and accuracy read from the same shared curve, so
+ * they cannot drift apart, and a later change to the bars carries over for free.
+ *
+ * Worth revisiting on a wider corpus — three games and two players is thin. One
+ * residual is still unmeasured: the analyzer seeds its belief sample at a fixed 7,
+ * so a re-run reproduces a game bit for bit and the sample-vs-belief estimation
+ * error never appears as run-to-run spread. Threading a seed through the engine's
+ * scripts/analyze_job.py is what would measure it.
+ */
+const FOG_DECISION_SCALE = 2;
 
 export type DecisionView = {
   ply: number;
@@ -54,6 +78,16 @@ export type DecisionView = {
   decisionLoss: number;
   /** Per-decision accuracy in [0, 100] (lila's win%-drop curve, best -> played). */
   accuracy: number;
+  /**
+   * Rank of the played move over all root moves. Reported, never folded into
+   * `judgment`: measured against the same 224 plies it is already implied by the
+   * loss (r = +0.76, and median rank rises 2 / 6 / 10 / 17 across unjudged /
+   * inaccuracy / mistake / blunder), so escalating a tier on deep rank double-counts
+   * it — promoting at rank >= 8 called 46 of 224 moves blunders. It also means
+   * something different in a flat position, where 14 of those plies sat past rank 10
+   * while costing under 3 win points: many moves were "better" and none of it
+   * mattered. Cost is the severity axis; rank is context for reading the card.
+   */
   playedRank: number | null;
   candidates?: DarkChessDecisionCandidate[];
   verdict?: string;
@@ -68,17 +102,19 @@ export type DecisionView = {
 // either. "Best across 200 worlds consistent with what you observed" is a real
 // statement about a decision under uncertainty. `truthInSample` earns its place
 // explaining WHY a graded mistake happened (sample_error), never deciding whether
-// a grade may exist. Sampling noise is handled by the deadband below.
+// a grade may exist. Sampling noise is absorbed by the lowest bar, which after
+// scaling sits at 2.5 win points of belief-relative loss.
 export function decisionView(d: DarkChessDecision): DecisionView {
   const decisionLoss = Math.max(0, d.bestWin - d.playedWin);
-  const judgment =
-    decisionLoss < DECISION_NOISE_WINPCT ? null : moveJudgment(d.bestWin, d.playedWin);
+  // Grade on the chess-equivalent loss; report `decisionLoss` raw, because that is
+  // the expected-win cost the choice really carried over the mover's belief.
+  const equivalentLoss = decisionLoss * FOG_DECISION_SCALE;
   return {
     ply: d.ply,
     mover: d.mover,
-    judgment,
+    judgment: moveJudgment(equivalentLoss, 0),
     decisionLoss,
-    accuracy: accuracyPercent(d.bestWin, d.playedWin),
+    accuracy: accuracyPercent(equivalentLoss, 0),
     playedRank: d.playedRank,
     ...(d.candidates?.length ? { candidates: d.candidates } : {}),
     ...(d.verdict ? { verdict: d.verdict } : {}),
