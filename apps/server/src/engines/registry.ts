@@ -560,6 +560,34 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
       'baked in the engine profile (no FOW_XIANGQI_* env needed). Human-validated ' +
       '(beat author 3/3 live PvE; opening cannon-hang class did not recur).',
   },
+  'python-fdx-v1.2': {
+    id: 'python-fdx-v1.2',
+    engineId: 'v2',
+    engineName: 'Misty DXQ',
+    name: 'Misty DXQ 1.2',
+    kind: 'container',
+    gameSpecId: 'dark-xiangqi',
+    configHash: 'fdx-v1.2-guarded-timed-i32-20m',
+    playSignature: 'fdx-v1.2-guarded-timed-i32-20m',
+    config: {
+      kind: 'python-subprocess',
+      strategy: 'v2-xiangqi',
+      version: '1.2',
+      config: 'fdx-guarded-timed-i32-20m-pikafish-d1',
+      config_hash: 'guarded-timed-i32-20m',
+      engine_pin: 'fdx-v1.2-local',
+    },
+    livePolicy: { timeoutMs: 60_000 },
+    notes:
+      'Misty DXQ 1.2 — v1.1 with the search made TIME-bounded. Same guards, same ' +
+      'coverage, same eval; only what stops the search changed. v1.1 ran a static ' +
+      '64-iteration cap, so its deadline check was unreachable and it spent ~1.8% ' +
+      'of the budget the server offered (33 moves in 24.4s over a 5+5 game, ' +
+      'finishing with more clock than it started). The cap is now out of reach and ' +
+      'a 4s per-move ceiling is the real control. A new id rather than an edit to ' +
+      'v1.1: configHash is persisted into eve_games play signatures, so mutating a ' +
+      'shipped bundle would make old rows describe a config that never ran.',
+  },
   'python-tier1-v0.9.1': {
     id: 'python-tier1-v0.9.1',
     engineId: 'tier1',

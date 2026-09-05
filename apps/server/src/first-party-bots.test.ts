@@ -28,6 +28,10 @@ test('the merged Misty identity fronts every house variant', () => {
   for (const engineId of [
     'python-v2-v1.0',
     'python-dmx-v1.0',
+    // Superseded fog-xiangqi builds. Every finished dxq game was played on one
+    // of these, so dropping either would strand its record on the bot profile.
+    'python-fdx-v1.0',
+    'python-fdx-v1.1',
     'misty-jungle-level-1',
     'misty-jungle-level-3',
   ]) {

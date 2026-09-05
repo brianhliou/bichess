@@ -27,7 +27,25 @@ dfa6d88
 # Rollback target: 91e73d6 (the previous pin; drops the analyzer fixes only, no
 # registry or env changes).
 #
-# ^ The mistboard-engine commit the prod build checks out (railpack build step).
+# fdx v1.2, time-bounded search (2026-09-05): 6f16bfd (carried by a314c43) adds the
+# guarded-timed-i32-20m bundle and engine id python-fdx-v1.2. v1.1's search was
+# iteration-bounded, not time-bounded — the loop ran range(64) and the deadline
+# break inside solve_multiroot_rust_tree was unreachable, so Misty played a full
+# 5+5 game in 24.4s of thinking (~1.8% of the offered budget) and finished with
+# more clock than it started. v1.2 lifts the cap out of reach and adds a 4s
+# per-move ceiling, so wall time is the real control. v1.0/v1.1 are frozen and
+# byte-identical; DMX is untouched (the shared budget helper's new max_seconds
+# defaults to None). Rollback target: 91e73d6 — but note that reverting the pin
+# alone strands the web registry, which offers python-fdx-v1.2; roll web back
+# to the commit before the v1.2 registration, or the worker falls through to
+# the STRIPPED legacy bundle and silently serves a weaker bot.
+#
+# Rides along, benign: 91e73d6..a314c43 also carries jungle/viewer/lab/docs
+# commits (b8c7532, 91e04b3, 1caeba2, 39a3805, 4083d74, 18cfe4a, 40f69a1) plus
+# a314c43 itself (fog analyzer runnable on real games: analyze_job.py +
+# analysis.py). None touch scripts/live_move_worker.py, the live path does not
+# import fow_chess.analysis, and railpack builds only fow_rust.
+#
 # Belief-update fail-safe + telemetry (2026-08-23): 91e73d6 makes the worker
 # project each belief update's cost (per-world EWMA learned per host) BEFORE
 # starting it and refuse the turn with an explicit BeliefUpdateOverBudget error
