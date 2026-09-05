@@ -48,14 +48,23 @@
   background: var(--site-surface);
 }
 
+/* A seat disc carries the INK its player has, so it must NOT flip with the theme.
+   `var(--site-text)` did exactly that: it inverts to a light grey in dark mode, so
+   the BLACK seat rendered nearly white. Fixed values now, with one neutral ring
+   that stays visible on a light card and a dark one alike. */
 .review-seat--red .review-seat__disc {
   border-color: #a63328;
   background: #a63328;
 }
 
+.review-seat--white .review-seat__disc {
+  border-color: #8f8b83;
+  background: #f4f1e9;
+}
+
 .review-seat--black .review-seat__disc {
-  border-color: var(--seat-dark-ink-border, var(--site-text));
-  background: var(--seat-dark-ink, var(--site-text));
+  border-color: var(--seat-dark-ink-border, #8f8b83);
+  background: var(--seat-dark-ink, #34302e);
 }
 
 .review-seat__name {

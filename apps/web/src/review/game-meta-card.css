@@ -164,7 +164,11 @@
 }
 
 .game-meta-card__disc--light {
-  background: transparent;
+  /* A real light fill, not `transparent`. Transparent took whatever the CARD was,
+     so in dark mode the WHITE seat rendered DARKER than the black seat sitting
+     right under it and the two discs read backwards. The fill is what carries the
+     ink; the --site-text ring keeps the disc defined on a light card. */
+  background: #f4f1e9;
 }
 
 /* Flip variants before the opening flip binds an ink: nobody owns a colour yet, so

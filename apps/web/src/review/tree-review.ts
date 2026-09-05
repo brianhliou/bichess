@@ -71,6 +71,7 @@ import {
   type ReviewSurface,
 } from './review-layout.js';
 import type { ReviewSeatColors } from './review-seat-colors.js';
+import { seatStripInks } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
@@ -676,17 +677,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const bottomIsRed = orientation() === presentation.perspective(false);
     const near = bottomIsRed ? seatNames.red : seatNames.black;
     const far = bottomIsRed ? seatNames.black : seatNames.red;
+    // The INK each slot actually renders as. `seatNames` is keyed red/black as
+    // move-order SLOTS, which is why the disc used to be painted from an `isRed`
+    // boolean -- and that collapsed chess's White onto 'red', so a fog-chess white
+    // seat wore a RED disc. `perspective(false)` returns the variant's real
+    // unflipped ink ('white' for chess, 'red' elsewhere), so ask it instead.
+    //
+    // Flip variants (Banqi, Flip Jungle) return a SEAT here, not the ink their
+    // opening flip bound. Those two are seat-keyed on this strip today and stay
+    // that way; this change neither fixes nor worsens them.
+    const { top: topInk, bottom: bottomInk } = seatStripInks(presentation.perspective, flipped);
     const profiles = config.playerProfiles;
     const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
     const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
+    // `Color` is an unconstrained generic here, so title-casing it needs the cast.
+    const inkWord = (ink: Color): string => {
+      const word = String(ink);
+      return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+    };
     const paint = (
       el: HTMLElement,
       name: string | undefined,
       profile: ProfileTarget | null | undefined,
-      isRed: boolean,
+      ink: Color,
       slot: 'top' | 'bottom',
     ): void => {
-      el.className = `review-seat review-seat--${slot} review-seat--${isRed ? 'red' : 'black'}`;
+      el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
       el.replaceChildren();
       const disc = document.createElement('span');
       disc.className = 'review-seat__disc';
@@ -694,11 +710,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // the link is bound to the resolved name rather than the slot.
       const label = name
         ? playerNameEl(name, profile ?? null, 'review-seat__name')
-        : playerNameEl(isRed ? 'Red' : 'Black', null, 'review-seat__name');
+        : playerNameEl(inkWord(ink), null, 'review-seat__name');
       el.append(disc, label);
     };
-    paint(topSeat, far, farProfile, !bottomIsRed, 'top');
-    paint(bottomSeat, near, nearProfile, bottomIsRed, 'bottom');
+    paint(topSeat, far, farProfile, topInk, 'top');
+    paint(bottomSeat, near, nearProfile, bottomInk, 'bottom');
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding
