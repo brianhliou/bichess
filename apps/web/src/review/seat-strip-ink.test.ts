@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { seatStripInks } from './seat-strip-ink.js';
+import { CHESS_SEAT_COLORS } from './review-seat-colors.js';
+import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
 
 // The two shapes every review presentation's `perspective` takes today.
 const chess = (flipped: boolean) => (flipped ? 'black' : 'white');
@@ -58,5 +59,53 @@ describe('seat-labels.css', () => {
       expect(block).not.toContain('var(--site-text)');
       expect(block).not.toContain('var(--site-surface)');
     }
+  });
+});
+
+describe('seatStripDisplayInk', () => {
+  // Banqi and Flip Jungle seat their players as first/second MOVER under the ids
+  // 'red'/'black'; the opening reveal decides which ink each actually plays. So a
+  // raw seat is wrong in about half of all games, not merely inconsistent.
+  const bound = { red: 'black', black: 'red' } as const;
+
+  it('routes a flip seat through the binding the opening reveal established', () => {
+    expect(seatStripDisplayInk('red', bound, true)).toBe('black');
+    expect(seatStripDisplayInk('black', bound, true)).toBe('red');
+  });
+
+  it('renders neutral before the flip binds, instead of guessing a colour', () => {
+    expect(seatStripDisplayInk('red', undefined, true)).toBe(UNBOUND_SEAT_INK);
+    expect(seatStripDisplayInk('black', undefined, true)).toBe(UNBOUND_SEAT_INK);
+  });
+
+  it('leaves fixed-ink variants alone', () => {
+    // Xiangqi: seat IS the ink, and no mapping is supplied.
+    expect(seatStripDisplayInk('red', undefined, false)).toBe('red');
+    expect(seatStripDisplayInk('black', undefined, false)).toBe('black');
+    // Chess: perspective() already handed us an ink, so there is nothing to map.
+    expect(seatStripDisplayInk('white', undefined, false)).toBe('white');
+    expect(seatStripDisplayInk('white', CHESS_SEAT_COLORS, false)).toBe('white');
+    // Chess's first SLOT resolves to white through the mapping.
+    expect(seatStripDisplayInk('red', CHESS_SEAT_COLORS, false)).toBe('white');
+  });
+
+  it('agrees with the meta card rather than contradicting it', () => {
+    // The reported bug: on one finished Banqi page the strips said Guest was black
+    // while the meta card said red. Both now read the same mapping, so for every
+    // binding the two seats resolve to different, complementary inks.
+    for (const colors of [bound, { red: 'red', black: 'black' } as const]) {
+      const red = seatStripDisplayInk('red', colors, true);
+      const black = seatStripDisplayInk('black', colors, true);
+      expect(red).toBe(colors.red);
+      expect(black).toBe(colors.black);
+      expect(red).not.toBe(black);
+    }
+  });
+});
+
+describe('seat-labels.css unbound state', () => {
+  it('styles the pre-flip disc', () => {
+    const css = readFileSync('src/review/seat-labels.css', 'utf8');
+    expect(css).toContain(`.review-seat--${UNBOUND_SEAT_INK} .review-seat__disc`);
   });
 });

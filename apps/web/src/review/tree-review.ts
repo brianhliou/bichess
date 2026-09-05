@@ -71,7 +71,7 @@ import {
   type ReviewSurface,
 } from './review-layout.js';
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
-import { seatStripInks } from './seat-strip-ink.js';
+import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
@@ -430,6 +430,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Visual ink bound to the first/second analysis seats. Flip variants set this
    *  after the opening reveal; analysis ownership remains keyed by seat. */
   seatColors?: ReviewSeatColors;
+  /** True for variants whose seats are move-order slots until an opening flip binds
+   *  their ink (Banqi, Flip Jungle). With no `seatColors` yet, the seat strips render
+   *  a neutral disc rather than naming a colour nobody owns. */
+  seatInkBindsOnFlip?: boolean;
   /** Show the "Crosstable" underboard tab. */
   showCrosstable?: boolean;
   /** Lazy head-to-head body for the Crosstable tab (review/crosstable.ts). */
@@ -677,29 +681,33 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const bottomIsRed = orientation() === presentation.perspective(false);
     const near = bottomIsRed ? seatNames.red : seatNames.black;
     const far = bottomIsRed ? seatNames.black : seatNames.red;
-    // The INK each slot actually renders as. `seatNames` is keyed red/black as
-    // move-order SLOTS, which is why the disc used to be painted from an `isRed`
-    // boolean -- and that collapsed chess's White onto 'red', so a fog-chess white
-    // seat wore a RED disc. `perspective(false)` returns the variant's real
-    // unflipped ink ('white' for chess, 'red' elsewhere), so ask it instead.
-    //
-    // Flip variants (Banqi, Flip Jungle) return a SEAT here, not the ink their
-    // opening flip bound. Those two are seat-keyed on this strip today and stay
-    // that way; this change neither fixes nor worsens them.
-    const { top: topInk, bottom: bottomInk } = seatStripInks(presentation.perspective, flipped);
+    // The INK each slot renders as, in two steps. `perspective()` gives the
+    // variant's own side id -- an ink already for chess ('white') and the xiangqi
+    // family ('red'), but a move-order SEAT for the flip variants, whose colour is
+    // only decided by the opening reveal. seatStripDisplayInk finishes the job by
+    // routing that seat through the same `seatColors` mapping the meta card, the
+    // advantage chart and the move-time bars all use, so the strips can no longer
+    // contradict them.
+    const { top: topSeat_, bottom: bottomSeat_ } = seatStripInks(presentation.perspective, flipped);
+    const toInk = (seat: Color): string =>
+      seatStripDisplayInk(String(seat), config.seatColors, config.seatInkBindsOnFlip ?? false);
+    const topInk = toInk(topSeat_);
+    const bottomInk = toInk(bottomSeat_);
     const profiles = config.playerProfiles;
     const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
     const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
-    // `Color` is an unconstrained generic here, so title-casing it needs the cast.
-    const inkWord = (ink: Color): string => {
-      const word = String(ink);
-      return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+    // A nameless seat falls back to a word. Before the flip binds, no colour word
+    // is true, so it falls back to the move order instead of picking a side.
+    const inkWord = (ink: string, isFirstMover: boolean): string => {
+      if (ink === UNBOUND_SEAT_INK) return isFirstMover ? 'First' : 'Second';
+      return `${ink.charAt(0).toUpperCase()}${ink.slice(1)}`;
     };
     const paint = (
       el: HTMLElement,
       name: string | undefined,
       profile: ProfileTarget | null | undefined,
-      ink: Color,
+      ink: string,
+      isFirstMover: boolean,
       slot: 'top' | 'bottom',
     ): void => {
       el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
@@ -710,11 +718,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       // the link is bound to the resolved name rather than the slot.
       const label = name
         ? playerNameEl(name, profile ?? null, 'review-seat__name')
-        : playerNameEl(inkWord(ink), null, 'review-seat__name');
+        : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
     };
-    paint(topSeat, far, farProfile, topInk, 'top');
-    paint(bottomSeat, near, nearProfile, bottomInk, 'bottom');
+    // The first-mover SEAT is the one `perspective(false)` names, whatever ink it
+    // ended up with; it is the bottom strip exactly when the board is unflipped.
+    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top');
+    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom');
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding
