@@ -22,12 +22,19 @@ import {
 } from './../dark-xiangqi-tenant.js';
 import { darkXiangqiEnabled } from './../feature-flags.js';
 import * as persistence from './../persistence.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import {
   applyTenantEvent,
   isTenantEventLog,
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
-import { type HttpApiContext, postgameGameSummary, requireMethod, writeJson } from './lib.js';
+import {
+  type HttpApiContext,
+  isHttpAdminSession,
+  postgameGameSummary,
+  requireMethod,
+  writeJson,
+} from './lib.js';
 
 type DarkXiangqiPostgameViewKey = XiangqiColor | 'truth';
 
@@ -77,6 +84,8 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await tryHandleArtifacts(request, response, pathname, _parsedUrl)) return true;
+
   const postgameMatch = pathname.match(/^\/api\/dark-xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
 
@@ -94,6 +103,82 @@ export async function tryHandle(
   }
   writeJson(response, 200, payload);
   return true;
+}
+
+/**
+ * Per-move engine telemetry written by server-dark-xiangqi-engine.ts. Admin-only,
+ * like the chess and xiangqi equivalents; the chess route cannot serve these
+ * because its seat filter is chess-coloured and a dxq seat is red/black.
+ *
+ * Unlike the xiangqi route, an id that names no dark-xiangqi game gets a 404
+ * rather than `{artifacts: []}`. An empty 200 for an unknown or wrong-variant id
+ * reads as "this engine recorded nothing", which is how a missing-instrumentation
+ * problem got mistaken for an engine problem.
+ */
+async function tryHandleArtifacts(
+  request: IncomingMessage,
+  response: ServerResponse,
+  pathname: string,
+  parsedUrl: URL,
+): Promise<boolean> {
+  const match = pathname.match(/^\/api\/dark-xiangqi\/games\/([^/]+)\/artifacts$/);
+  if (!match) return false;
+  if (!requireMethod(request, response, 'GET')) return true;
+  if (!darkXiangqiEnabled()) {
+    writeJson(response, 404, { error: 'not_found' });
+    return true;
+  }
+  if (parsedUrl.searchParams.get('type') !== LIVE_ENGINE_DECISION_ARTIFACT_TYPE) {
+    writeJson(response, 400, { error: 'invalid_artifact_type' });
+    return true;
+  }
+  if (!(await isHttpAdminSession(request))) {
+    writeJson(response, 403, { error: 'forbidden' });
+    return true;
+  }
+  const payload = await darkXiangqiArtifactsForApi(decodeURIComponent(match[1]!));
+  if (!payload) {
+    writeJson(response, 404, { error: 'not_found' });
+    return true;
+  }
+  writeJson(response, 200, payload);
+  return true;
+}
+
+export type DarkXiangqiArtifactsPersistence = {
+  isPersistenceEnabled?(): boolean;
+  getGameSummary(roomId: string): ReturnType<typeof persistence.getGameSummary>;
+  listArtifacts(roomId: string): ReturnType<typeof persistence.listGameDebugArtifactPayloads>;
+};
+
+const liveArtifactsPersistence: DarkXiangqiArtifactsPersistence = {
+  isPersistenceEnabled: () => persistence.isInitialized(),
+  getGameSummary: (roomId) => persistence.getGameSummary(roomId),
+  listArtifacts: (roomId) =>
+    persistence.listGameDebugArtifactPayloads(roomId, {
+      artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
+    }),
+};
+
+/** Null means 404. An id naming no dark-xiangqi game is NOT an empty artifact list. */
+export async function darkXiangqiArtifactsForApi(
+  roomId: string,
+  deps: DarkXiangqiArtifactsPersistence = liveArtifactsPersistence,
+) {
+  if (!(deps.isPersistenceEnabled?.() ?? true)) return null;
+  const game = await deps.getGameSummary(roomId);
+  if (!game || game.variant !== DARK_XIANGQI_SPEC_ID) return null;
+  const artifacts = await deps.listArtifacts(roomId);
+  return {
+    artifacts: artifacts.map((artifact) => ({
+      id: artifact.id,
+      gameId: artifact.gameId,
+      ply: artifact.ply,
+      artifactType: artifact.artifactType,
+      payload: artifact.payload,
+      createdAt: artifact.createdAt.toISOString(),
+    })),
+  };
 }
 
 export async function darkXiangqiPostgameForApi(

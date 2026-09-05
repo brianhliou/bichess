@@ -1,3 +1,5 @@
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import type {
   EngineObservationPush,
   EngineTurnRequest,
@@ -458,4 +460,167 @@ async function readCappedText(response: Response, maxBytes: number): Promise<str
     await reader.cancel().catch(() => {});
   }
   return Buffer.concat(chunks).toString('utf8');
+}
+
+// ── Post-game analysis (fog chess) ──────────────────────────────────────────
+
+const ENGINE_ANALYZE_PATH = '/internal/engine/analyze';
+// A whole-game analysis runs one solve per ply plus Stockfish grading —
+// minutes, not milliseconds.
+const DEFAULT_ANALYSIS_TIMEOUT_MS = 15 * 60 * 1_000;
+// Analysis documents carry per-ply rows for both seats; far larger than a
+// turn response, still bounded.
+const MAX_ANALYSIS_RESPONSE_BYTES = 64 * 1_048_576;
+
+export type EngineAnalysisRequestPayload = {
+  publication: unknown;
+  options?: {
+    sfDepth?: number;
+    iterations?: number;
+    iSample?: number;
+    timeBudgetSeconds?: number;
+    seat?: 'white' | 'black' | 'both';
+    /** Per-ply belief solve; false = grading only (the fast local profile). */
+    search?: boolean;
+  };
+};
+
+/**
+ * POST a finished game's publication payload to an engine endpoint's analyze
+ * path and return the raw analysis document (validated by the caller —
+ * dark-chess-analysis owns the schema).
+ */
+export async function requestEngineAnalysisAt(
+  endpoint: EngineEndpoint,
+  payload: EngineAnalysisRequestPayload,
+  timeoutMs: number = DEFAULT_ANALYSIS_TIMEOUT_MS,
+): Promise<unknown> {
+  const { baseUrl, token } = endpoint;
+  const url = new URL(internalEngineUrl(baseUrl, ENGINE_ANALYZE_PATH));
+  const body = JSON.stringify(payload);
+  // node:http, NOT fetch. Node's fetch caps response headers at 300s no matter
+  // what the AbortController says, so an analysis running longer than five
+  // minutes died as an opaque "fetch failed" while the engine happily kept
+  // computing. A whole-game fog analysis is minutes by design (measured: 116s for
+  // 53 plies at production parity), so that ceiling is inside the working range.
+  const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
+
+  return new Promise<unknown>((resolve, reject) => {
+    let settled = false;
+    const fail = (err: InternalEngineClientError): void => {
+      if (settled) return;
+      settled = true;
+      req.destroy();
+      reject(err);
+    };
+
+    const req = send(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: `${url.pathname}${url.search}`,
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        const chunks: Buffer[] = [];
+        let total = 0;
+        res.on('data', (chunk: Buffer) => {
+          total += chunk.byteLength;
+          if (total > MAX_ANALYSIS_RESPONSE_BYTES) {
+            fail(
+              new InternalEngineClientError(
+                'invalid_response',
+                `engine analysis response exceeded ${MAX_ANALYSIS_RESPONSE_BYTES} bytes`,
+              ),
+            );
+            return;
+          }
+          chunks.push(chunk);
+        });
+        res.on('end', () => {
+          if (settled) return;
+          settled = true;
+          const text = Buffer.concat(chunks).toString('utf8');
+          if (status < 200 || status >= 300) {
+            reject(
+              new InternalEngineClientError(
+                'http_error',
+                `internal engine analysis returned HTTP ${status}`,
+                {
+                  status,
+                  diagnostics: { status, bodyTail: text.slice(-ERROR_BODY_TAIL_CHARS) },
+                },
+              ),
+            );
+            return;
+          }
+          try {
+            resolve(JSON.parse(text) as unknown);
+          } catch (err) {
+            reject(
+              new InternalEngineClientError(
+                'invalid_response',
+                `internal engine analysis returned invalid JSON: ${(err as Error).message}`,
+              ),
+            );
+          }
+        });
+        res.on('error', (err) =>
+          fail(
+            new InternalEngineClientError(
+              'network_error',
+              `internal engine analysis response failed: ${err.message}`,
+            ),
+          ),
+        );
+      },
+    );
+
+    // The only ceiling now, and it is the one the caller asked for.
+    req.setTimeout(timeoutMs, () => {
+      fail(
+        new InternalEngineClientError(
+          'timeout',
+          `internal engine analysis timed out after ${timeoutMs}ms`,
+          { timeoutMs },
+        ),
+      );
+    });
+    req.on('error', (err) =>
+      fail(
+        new InternalEngineClientError(
+          'network_error',
+          `internal engine analysis request failed: ${err.message}`,
+        ),
+      ),
+    );
+    req.end(body);
+  });
+}
+
+/**
+ * Live path: analysis via the server-environment engine service
+ * (`MISTBOARD_INTERNAL_ENGINE_URL` / `MISTBOARD_INTERNAL_ENGINE_TOKEN`).
+ */
+export async function requestInternalEngineAnalysis(
+  payload: EngineAnalysisRequestPayload,
+  timeoutMs?: number,
+): Promise<unknown> {
+  return requestEngineAnalysisAt(engineEndpointFromEnv(), payload, timeoutMs);
+}
+
+/** True when the internal engine service is configured in this environment —
+ *  the fog analysis route's engine-availability gate. */
+export function internalEngineAnalysisConfigured(): boolean {
+  return Boolean(
+    process.env.MISTBOARD_INTERNAL_ENGINE_URL?.trim() &&
+      process.env.MISTBOARD_INTERNAL_ENGINE_TOKEN?.trim(),
+  );
 }

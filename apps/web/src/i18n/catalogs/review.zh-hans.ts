@@ -419,6 +419,8 @@ export const ZH_HANS_REVIEW = {
   'review.setDefaultView': '设为默认视角',
   'review.revealIdentities': '揭示身份',
   'review.hideIdentities': '隐藏身份',
+  'review.showAlternatives': '显示备选着法',
+  'review.hideAlternatives': '隐藏备选着法',
   'review.analyseFromHere': '从此局面分析',
   'review.boardEditor': '棋盘编辑器',
   'review.newDeal': '重新发牌',

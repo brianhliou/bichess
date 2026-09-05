@@ -19,6 +19,7 @@ import { buildXiangqiEngineTurnRequest } from './engine-protocol/build-xiangqi.j
 import { isDarkXiangqiEngineClientId, loadEngine } from './engines/registry.js';
 import { requestInternalEngineTurn } from './internal-engine-client.js';
 import { engineCounters, logger } from './obs.js';
+import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import type { DarkXiangqiLiveRoom } from './server-dark-xiangqi-types.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 
@@ -155,6 +156,7 @@ export async function playDarkXiangqiEngineMoveIfReady(
   if (!engineToMove(room, seat)) return;
   const legal = getXiangqiLegalMoves(room.projection.state);
   let chosen = legal.find((m) => m.from === response.move.from && m.to === response.move.to);
+  const fellBackToLegal = chosen === undefined;
   if (!chosen) {
     chosen = legal[0] ?? null;
     if (!chosen) {
@@ -198,6 +200,25 @@ export async function playDarkXiangqiEngineMoveIfReady(
     reportEngineMoveOk();
   }
 
+  queueDarkXiangqiEngineDecision(room, {
+    engineId,
+    seat,
+    ply,
+    // What the SERVER allotted. The engine reports its own self-budget and the
+    // time it actually spent inside `diagnostics`; the gap between the three is
+    // the whole question when a fog move looks too fast or too slow.
+    computeBudgetMs,
+    remainingMs,
+    incrementMs,
+    move: `${chosen.from}${chosen.to}`,
+    requestedMove: `${response.move.from}${response.move.to}`,
+    fallbackUsed: fellBackToLegal,
+    legalCount: legal.length,
+    // Opaque per-engine telemetry (belief size, iterations, elapsed, decision
+    // source, leaf evaluator). Free-form by protocol contract, stored as-is.
+    diagnostics: response.diagnostics ?? null,
+  });
+
   const event: DarkXiangqiEvent = {
     type: 'move-played',
     at: Date.now(),
@@ -207,6 +228,38 @@ export async function playDarkXiangqiEngineMoveIfReady(
   };
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
+}
+
+/** Longest game the queue will hold; past this the oldest decisions are kept. */
+const MAX_QUEUED_DECISIONS = 400;
+
+/**
+ * Queue one engine decision on the room for the tenant event writer to persist
+ * at game end. Mirrors queueXiangqiEngineDecision, and for the same reason:
+ * dark-xiangqi rooms have no games row until the game finishes, and
+ * game_debug_artifacts.game_id is a foreign key onto that row, so writing at
+ * move time fails on every ply.
+ *
+ * Until this existed, dark-xiangqi was the only PvE surface writing NO
+ * artifacts, so answering "why did the bot play that" meant reconstructing
+ * per-ply timings from Railway logs. Exported for tests.
+ */
+export function queueDarkXiangqiEngineDecision(
+  room: Pick<DarkXiangqiLiveRoom, 'id' | 'pendingDebugArtifacts'>,
+  payload: Record<string, unknown>,
+): void {
+  if (!room.pendingDebugArtifacts) room.pendingDebugArtifacts = [];
+  const queue = room.pendingDebugArtifacts;
+  if (queue.length >= MAX_QUEUED_DECISIONS) return;
+  queue.push({
+    gameId: room.id,
+    ply: typeof payload.ply === 'number' ? payload.ply : null,
+    // Seat colour is carried in the payload instead: engineColor is typed to
+    // chess colours ('white' | 'black') and a dxq seat is red/black.
+    engineColor: null,
+    artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
+    payload,
+  });
 }
 
 async function forfeitDarkXiangqiEngine(
