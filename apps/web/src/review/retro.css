@@ -74,7 +74,7 @@
   background: #c0563f;
 }
 .retro-box__disc--black {
-  background: #34302e;
+  background: var(--seat-dark-ink, #34302e);
 }
 .retro-box__icon {
   flex: 0 0 auto;

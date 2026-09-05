@@ -11,9 +11,29 @@ import { t } from './i18n/catalog.js';
 export function seatColorWord(variant: string | null | undefined, color: string): string {
   if (color === 'red') return t('setup.red');
   if (color === 'white') return t('setup.white');
-  if (color === 'black') {
-    const family = variant ? maybeGameSpecForId(variant)?.family : undefined;
-    return family === 'jungle' ? t('setup.blue') : t('setup.black');
-  }
+  if (color === 'black') return brandsBlackAsBlue(variant) ? t('setup.blue') : t('setup.black');
   return color.charAt(0).toUpperCase() + color.slice(1);
+}
+
+/**
+ * True when this variant brands its 'black' ink as Blue. Same predicate the word
+ * above uses, exported so the seat DISCS key on it too: the word and the dot beside
+ * it disagreeing is exactly the defect this fixes, and two copies of `family ===
+ * 'jungle'` would let them drift apart again.
+ *
+ * Presentation only. The internal color id stays 'black' everywhere -- nothing
+ * downstream should ever compare against the string 'blue'.
+ */
+export function brandsBlackAsBlue(variant: string | null | undefined): boolean {
+  return (variant ? maybeGameSpecForId(variant)?.family : undefined) === 'jungle';
+}
+
+/**
+ * The `data-seat-ink-family` value for a surface showing this variant, or null when
+ * it needs none. Pages that swap variants in place (/watch) stamp this on a
+ * container; `seat-disc-ink.css` hangs the ink tokens off it. Review pages already
+ * carry a `.jungle-review` / `.jungle-flip-review` class and need nothing here.
+ */
+export function seatInkFamily(variant: string | null | undefined): string | null {
+  return brandsBlackAsBlue(variant) ? 'jungle' : null;
 }

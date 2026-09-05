@@ -35,7 +35,7 @@
   background: #c0563f;
 }
 .analysis-summary__dot--black {
-  background: #34302e;
+  background: var(--seat-dark-ink, #34302e);
 }
 .analysis-summary__name {
   font-size: 13px;

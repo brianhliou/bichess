@@ -54,8 +54,8 @@
 }
 
 .review-seat--black .review-seat__disc {
-  border-color: var(--site-text);
-  background: var(--site-text);
+  border-color: var(--seat-dark-ink-border, var(--site-text));
+  background: var(--seat-dark-ink, var(--site-text));
 }
 
 .review-seat__name {

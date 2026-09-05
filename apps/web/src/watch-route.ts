@@ -37,7 +37,7 @@ import { createReviewShell } from './review/review-shell.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
-import { seatColorWord } from './variant-seat-label.js';
+import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
 import { formatClock } from './web-utils.js';
 
 // replay.js statically pulls in chessground (~64KB). Importing it dynamically
@@ -855,6 +855,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const renderLiveMeta = (featured: LiveFeatured): void => {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
+    setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
     renderWatchMainReviewLink(watch.reviewLink, null);
     watch.metaRoot.replaceChildren();
     const badge = document.createElement('div');
@@ -1607,6 +1608,23 @@ function watchParticipantRating(participant: GameParticipant | null): number | n
   return participant.ratingAfter ?? participant.ratingBefore ?? null;
 }
 
+// Stamp the showing variant's seat-ink family on the shell, so seat-disc-ink.css
+// can hang per-family disc colours off it (today: the Jungle family's second seat
+// is Blue, not black). Review pages get this from a static `.jungle-review` page
+// class; /watch is ONE page that swaps variants as you change channel, so it has
+// to be re-stamped per game and CLEARED when the next game is not in the family.
+//
+// Called from BOTH row-builders. The completed-feed path and the live-follow path
+// render the meta card and seat rows independently -- renderWatchActiveGame returns
+// early while a live game is airing -- so a stamp in only one of them leaves the
+// other painting the wrong colour, the same way each of this page's seat-vs-ink
+// builders had to learn `firstColor` separately.
+export function setWatchSeatInkFamily(watch: WatchSection, variant: string | null): void {
+  const family = seatInkFamily(variant);
+  if (family) watch.el.dataset.seatInkFamily = family;
+  else delete watch.el.dataset.seatInkFamily;
+}
+
 // Re-render the left meta card + right-rail player rows from the active game.
 // Called on every feed refresh and channel/game switch (the active game changes).
 function renderWatchActiveGame(
@@ -1615,6 +1633,7 @@ function renderWatchActiveGame(
   activeRoomId: string | null,
 ): void {
   const game = activeWatchGame(feed, activeRoomId);
+  setWatchSeatInkFamily(watch, game?.variant ?? null);
   renderWatchMetaCard(watch.metaRoot, game);
   renderWatchHeadline(
     watch.headlineRoot,

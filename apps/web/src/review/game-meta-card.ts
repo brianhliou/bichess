@@ -16,6 +16,7 @@
 // pregame / live / finished copy, and setPlayers re-renders the player rows as
 // seats fill. Every field is plain data — no variant coupling.
 
+import '../seat-disc-ink.css';
 import './game-meta-card.css';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import { renderVariantMarker } from '../variant-markers.js';

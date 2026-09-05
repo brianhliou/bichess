@@ -17,6 +17,7 @@
 // tree, engine, and analysis machinery is identical. The board is INTERACTIVE
 // (play a move → it branches the tree, promote/delete variations).
 
+import '../seat-disc-ink.css';
 import './seat-labels.css';
 import { type MoveJudgment, winPercent } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';

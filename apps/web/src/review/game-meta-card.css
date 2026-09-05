@@ -159,7 +159,8 @@
      mode and made the black side read as whitish. This matches the light-mode
      text color (so light mode is unchanged); the --site-text disc border stays a
      contrasting ring, keeping the disc visible on a dark card. */
-  background: hsl(40, 3%, 30%);
+  background: var(--seat-dark-ink, hsl(40, 3%, 30%));
+  border-color: var(--seat-dark-ink-border, var(--site-text));
 }
 
 .game-meta-card__disc--light {

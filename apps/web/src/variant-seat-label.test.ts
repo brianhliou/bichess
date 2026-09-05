@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seatColorWord } from './variant-seat-label.js';
+import { brandsBlackAsBlue, seatColorWord, seatInkFamily } from './variant-seat-label.js';
 
 describe('seatColorWord', () => {
   it('brands the Jungle family dark seat "Blue", keeps every other variant literal', () => {
@@ -21,5 +21,28 @@ describe('seatColorWord', () => {
     expect(seatColorWord('not-a-variant', 'black')).toBe('Black');
     // Unknown color id title-cases rather than throwing.
     expect(seatColorWord('jungle', 'green')).toBe('Green');
+  });
+});
+
+describe('seatInkFamily', () => {
+  // The seat DISC has to key on the same predicate as the seat WORD. A jungle page
+  // reading "Blue is victorious" beside a black dot is the defect this exists to
+  // stop, so these assertions are what pins the two together.
+  it('names the jungle family and nothing else', () => {
+    expect(seatInkFamily('jungle')).toBe('jungle');
+    expect(seatInkFamily('jungle-flip')).toBe('jungle');
+    // Every other red-vs-black variant keeps the default dark disc. A leak here
+    // would repaint xiangqi, jieqi and banqi blue on /watch.
+    for (const variant of ['xiangqi', 'dark-xiangqi', 'jieqi', 'banqi', 'dark-chess']) {
+      expect(seatInkFamily(variant)).toBeNull();
+    }
+    expect(seatInkFamily(null)).toBeNull();
+    expect(seatInkFamily('not-a-variant')).toBeNull();
+  });
+
+  it('agrees with the word rename it shares a predicate with', () => {
+    for (const variant of ['jungle', 'jungle-flip', 'xiangqi', 'banqi', 'dark-chess', null]) {
+      expect(brandsBlackAsBlue(variant)).toBe(seatColorWord(variant, 'black') === 'Blue');
+    }
   });
 });

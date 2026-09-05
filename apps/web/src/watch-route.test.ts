@@ -21,6 +21,7 @@ import {
   renderWatchReplaySkeleton,
   resultLabel,
   seedWatchRail,
+  setWatchSeatInkFamily,
   shouldPlayWatchMoveSound,
   WATCH_FEED_CACHE_MS,
   watchFeedCacheIsFresh,
@@ -855,5 +856,28 @@ describe('renderWatchMainReviewLink', () => {
     renderWatchMainReviewLink(link, { ...finishedGame, roomId: 'other' });
 
     expect(link.querySelector('.watch-main-review-link__chip')).toBe(chip);
+  });
+});
+
+describe('setWatchSeatInkFamily', () => {
+  const section = () => ({ el: document.createElement('main') }) as never;
+
+  it('stamps the Jungle family and clears it for anything else', () => {
+    const watch = section();
+    const el = (watch as unknown as { el: HTMLElement }).el;
+
+    setWatchSeatInkFamily(watch, 'jungle');
+    expect(el.dataset.seatInkFamily).toBe('jungle');
+    setWatchSeatInkFamily(watch, 'jungle-flip');
+    expect(el.dataset.seatInkFamily).toBe('jungle');
+
+    // The regression that matters on /watch: switching channel away from Jungle
+    // must REMOVE the stamp, or the next game's black seat keeps the blue disc.
+    setWatchSeatInkFamily(watch, 'xiangqi');
+    expect(el.dataset.seatInkFamily).toBeUndefined();
+
+    setWatchSeatInkFamily(watch, 'jungle');
+    setWatchSeatInkFamily(watch, null);
+    expect(el.dataset.seatInkFamily).toBeUndefined();
   });
 });
