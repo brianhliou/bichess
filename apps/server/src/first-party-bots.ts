@@ -74,7 +74,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: {
       'dark-chess': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
       'dark-draft960': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
-      'dark-xiangqi': 'python-fdx-v1.2',
+      'dark-xiangqi': 'python-fdx-v1.1',
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',
       'jungle-flip': 'misty-jungle-flip',
@@ -88,10 +88,9 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-v2-v1.4',
       'python-v2-v1.5',
       'python-dmx-v1.0',
-      // Earlier fog-xiangqi builds. Misty is the only bot that has ever fronted
-      // a dark-xiangqi engine, so a room on any of them still attributes to her.
+      // The earlier fog-xiangqi build. Misty is the only bot that has ever
+      // fronted a dark-xiangqi engine, so a legacy v1.0 room still attributes.
       'python-fdx-v1.0',
-      'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
