@@ -1,4 +1,15 @@
-a314c43
+dfa6d88
+# ^ The mistboard-engine commit the prod build checks out (railpack build step).
+# analyze_job vendor path (2026-09-05): dfa6d88 puts /vendor on sys.path in
+# scripts/analyze_job.py, the way live_move_worker.py and the other
+# container-run scripts already do. The prod build installs dependencies with
+# `pip install --target .../vendor`, which is neither site-packages nor a venv,
+# so the first production analysis died 26ms in with
+# ModuleNotFoundError: No module named 'chess'. Invisible until deploy because
+# the script had only ever run from a local checkout, where .venv carries them.
+# LIVE-MOVE RISK: none. Touches one script that the live turn path never loads.
+# Rollback target: a314c43 (the previous pin; analysis fails to import again).
+#
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
 # Fog analyzer runnable on real games (2026-09-05): a314c43 makes the post-game
 # fog analyzer usable outside the engine-vs-engine corpus it was tuned on.
