@@ -271,14 +271,12 @@
   min-height: 0;
 }
 
-/* Dense single-line rows. The shared rail wraps to two lines because a curated
-   study title can carry a native name plus a gloss; an exercise list is a list
-   of short labels, and wrapping halves how many a learner can see at once. */
+/* Two lines, not one. A single clamped line cut most of every row -- an endgame
+   is named by a matchup, and a matchup does not fit in a rail the way "Exploit
+   the pin #3" does. Two lines costs a little density and stops the list being a
+   column of ellipses. */
 .practice__rail-card .study-chapters__name {
-  -webkit-line-clamp: 1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow-wrap: normal;
+  -webkit-line-clamp: 2;
 }
 .practice__rail-card .study-chapters__row {
   min-height: 1.75rem;

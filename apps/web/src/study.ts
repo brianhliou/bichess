@@ -136,6 +136,19 @@ async function loadStudy(studyId: string): Promise<LoadResult> {
   return { ok: true, study: body.study, chapters: body.chapters };
 }
 
+/**
+ * The opening sentence of a study description, for the rail card's tagline slot.
+ *
+ * A description is written to be read in full on the index; the rail wants the
+ * one line that says what the set is. Falls back to the whole string when there
+ * is no sentence break, rather than cutting mid-word.
+ */
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  const stop = trimmed.indexOf('. ');
+  return stop === -1 ? trimmed : trimmed.slice(0, stop + 1);
+}
+
 function renderStudy(
   root: HTMLElement,
   study: StudyDto,
@@ -644,7 +657,11 @@ function renderStudy(
       railTitle.textContent = localizedStudyName(study.name, study.i18n);
       const railSub = document.createElement('p');
       railSub.className = 'practice__rail-sub';
-      railSub.textContent = localizedStudyName(chapter.name, chapter.i18n);
+      // The SET's tagline, not the current chapter's name. The chapter name is
+      // already the highlighted row two lines below, and repeating it here spent
+      // three wrapped lines saying nothing new. lichess puts a short standing
+      // blurb in this slot ("Pin it to win it").
+      railSub.textContent = firstSentence(localizedStudyDescription(study.description, study.i18n));
       railHead.append(railTitle, railSub);
       railCard.append(railHead, rail(statusSpan(study.isOwner)));
       // Rail only, no chat: a practice chapter is a solo drill against the

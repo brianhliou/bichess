@@ -106,11 +106,20 @@ export function practiceGoalFor(entry: EndgameEntry): string {
   return entry.verdict === 'win' ? 'mate' : 'draw';
 }
 
-/** One-line brief shown above the board, so the learner knows the material. */
+/**
+ * The row label in the chapter rail.
+ *
+ * Deliberately NOT "<attacker> beats <defender>". That phrasing did two things
+ * wrong at once: it put the ANSWER in the title of an exercise whose whole
+ * question is whether the position wins, and it made every row long enough to be
+ * truncated in the rail. lichess's rows read "Exploit the pin #3" -- short enough
+ * to be read at a glance, and silent about the result.
+ *
+ * The matchup alone is the useful label; the verdict is the goal, and the goal is
+ * stated under the board once the exercise is open.
+ */
 export function practiceChapterName(entry: EndgameEntry): string {
-  return entry.verdict === 'win'
-    ? `${entry.attacker} beats ${entry.defender}`
-    : `${entry.attacker} does not beat ${entry.defender}`;
+  return `${entry.attacker} vs ${entry.defender}`;
 }
 
 export function practiceChapterBody(entry: EndgameEntry): Record<string, unknown> {
