@@ -61,6 +61,9 @@ function parseI18nField(value: unknown): Record<string, unknown> | undefined {
 function studyView(study: persistence.StudyRecord, isOwner: boolean) {
   return {
     id: study.id,
+    // Curated identity, when the study has one. The practice player uses it to
+    // pick the piece its rail header illustrates.
+    slug: study.slug,
     name: study.name,
     description: study.description,
     // Per-locale overrides; the client resolves against its current locale and

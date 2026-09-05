@@ -21,6 +21,7 @@ import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './study.css';
 import './study-index.css';
+import type { XiangqiPieceRole } from '@mistboard/game';
 import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { mountStudyReview } from './review/study-review.js';
@@ -56,9 +57,12 @@ import {
   type StudyVisibility,
 } from './study-controls.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type StudyDto = {
   id: string;
+  /** Curated slug, when the study is part of a catalogue (migration 132). */
+  slug?: string | null;
   name: string;
   description: string;
   /** Per-locale overrides for name/description; resolved at render time. */
@@ -143,6 +147,16 @@ async function loadStudy(studyId: string): Promise<LoadResult> {
  * one line that says what the set is. Falls back to the whole string when there
  * is no sentence break, rather than cutting mid-word.
  */
+/** The piece an endgame set's rail header illustrates. Mirrors practice-index. */
+function railPieceForSlug(slug: string | null | undefined): XiangqiPieceRole {
+  if (!slug) return 'general';
+  if (slug.includes('chariot')) return 'chariot';
+  if (slug.includes('horse')) return 'horse';
+  if (slug.includes('cannon')) return 'cannon';
+  if (slug.includes('soldier')) return 'soldier';
+  return 'general';
+}
+
 function firstSentence(text: string): string {
   const trimmed = text.trim();
   const stop = trimmed.indexOf('. ');
@@ -652,6 +666,17 @@ function renderStudy(
       railCard.className = 'practice__panel practice__rail-card';
       const railHead = document.createElement('header');
       railHead.className = 'practice__rail-head';
+      // An emblem beside the title, matching the /practice card the reader just
+      // clicked and the illustration lichess puts in this slot. Derived from the
+      // slug rather than stored: an endgame set is named for its piece.
+      const railIcon = document.createElement('div');
+      railIcon.className = 'practice__rail-icon';
+      railIcon.innerHTML = renderXiangqiPiece(
+        { color: 'red', role: railPieceForSlug(study.slug) },
+        { size: 44 },
+      );
+      const railText = document.createElement('div');
+      railText.className = 'practice__rail-headtext';
       const railTitle = document.createElement('h2');
       railTitle.className = 'practice__rail-title';
       railTitle.textContent = localizedStudyName(study.name, study.i18n);
@@ -662,7 +687,8 @@ function renderStudy(
       // three wrapped lines saying nothing new. lichess puts a short standing
       // blurb in this slot ("Pin it to win it").
       railSub.textContent = firstSentence(localizedStudyDescription(study.description, study.i18n));
-      railHead.append(railTitle, railSub);
+      railText.append(railTitle, railSub);
+      railHead.append(railIcon, railText);
       railCard.append(railHead, rail(statusSpan(study.isOwner)));
       // Rail only, no chat: a practice chapter is a solo drill against the
       // engine, and the chat panel rendered as an empty box under the rail.

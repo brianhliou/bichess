@@ -25,6 +25,7 @@ import {
 } from '@mistboard/game';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
+import { renderXiangqiPiece } from '../xiangqi-pieces.js';
 import { createPracticeSession, type PracticeEval, type PracticeView } from './practice-play.js';
 import { xiangqiPracticeConfig } from './xiangqi-practice.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
@@ -150,10 +151,19 @@ export function mountXiangqiPractice(
   side.className = 'practice__panel practice__side';
 
   if (opts.progress) {
-    const progressEl = document.createElement('p');
-    progressEl.className = 'practice__progress';
-    progressEl.textContent = `Exercise ${opts.progress.index} of ${opts.progress.total}`;
-    side.append(progressEl);
+    // A band with the number carrying the weight, not one grey line. lichess
+    // anchors this column with a substantial "#19" header; without something of
+    // similar mass the column reads as an empty box with a caption.
+    const head = document.createElement('div');
+    head.className = 'practice__side-head';
+    const num = document.createElement('span');
+    num.className = 'practice__side-num';
+    num.textContent = `#${opts.progress.index}`;
+    const of = document.createElement('span');
+    of.className = 'practice__side-of';
+    of.textContent = `of ${opts.progress.total}`;
+    head.append(num, of);
+    side.append(head);
   }
 
   // The played line. A study chapter has a move list; an exercise has none, so
@@ -169,11 +179,20 @@ export function mountXiangqiPractice(
   coachStrip.textContent = 'Practice with the engine';
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble practice__coach-body';
+  // A face for the opponent. lichess puts its robot here; the panel lost its
+  // mascot when it was rebuilt and read as a bare status box afterwards. A red
+  // general is more on-brand than an emoji and matches the pieces on the board.
+  const avatar = document.createElement('div');
+  avatar.className = 'practice__coach-avatar';
+  avatar.innerHTML = renderXiangqiPiece({ color: 'black', role: 'general' }, { size: 34 });
   const feedback = document.createElement('p');
   feedback.className = 'gamebook__feedback';
   const hintText = document.createElement('p');
   hintText.className = 'gamebook__hint';
-  bubble.append(feedback, hintText);
+  const say = document.createElement('div');
+  say.className = 'practice__coach-say';
+  say.append(feedback, hintText);
+  bubble.append(avatar, say);
 
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
@@ -182,8 +201,8 @@ export function mountXiangqiPractice(
   const restartBtn = button('Restart', 'gamebook__btn');
   const nextBtn = button('Next exercise', 'gamebook__btn gamebook__btn--primary');
   controls.append(hintBtn, retryBtn, restartBtn, nextBtn);
-  bubble.append(controls);
   coach.append(coachStrip, bubble);
+  coach.append(controls);
   side.append(coach);
   wrap.append(side);
 
