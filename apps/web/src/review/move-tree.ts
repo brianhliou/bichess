@@ -37,7 +37,9 @@ export interface MoveTreeAnnotation {
   /** Ranked alternatives for a chance ply, rendered as rows under the advice text. Chance
    *  variants cannot show a deep refutation LINE (nothing is knowable past the reveal), so the
    *  honest equivalent is the ranked candidate set the engine actually scored. */
-  candidates?: Array<{ label: string; win: number; played?: boolean }>;
+  /** Ranked alternatives. `rank` is the ENGINE's rank when supplied; row position
+   *  is only a fallback for lists that are themselves the full ranked set. */
+  candidates?: Array<{ label: string; win: number; played?: boolean; rank?: number }>;
   /** Positional-assessment glyph (=, ⩲, ±, +−, …) closing a server-analysis
    *  variation, shown on the LAST move of the grafted line like an opening book
    *  ends a line with its verdict. */
@@ -284,7 +286,9 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
         : 'move-tree__candidate';
       const rank = document.createElement('span');
       rank.className = 'move-tree__candidate-rank';
-      rank.textContent = `${index + 1}.`;
+      // The engine's rank when the variant supplies one; row position only as a
+      // fallback for lists that ARE the full ranked set (see DecisionCandidate.rank).
+      rank.textContent = `${candidate.rank ?? index + 1}.`;
       const label = document.createElement('span');
       label.className = 'move-tree__candidate-move';
       label.textContent = candidate.label;

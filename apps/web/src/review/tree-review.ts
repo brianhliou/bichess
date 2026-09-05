@@ -33,6 +33,11 @@ import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
+import {
+  alternativesEnabled,
+  setAlternativesEnabled,
+  trimAlternatives,
+} from './alternatives-pref.js';
 import type { CevalLine, CevalVariant } from './engine/ceval.js';
 import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engine-arrow-pref.js';
 import { createEnginePanel } from './engine/engine-panel.js';
@@ -196,6 +201,16 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
 export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   /** Rules seam: the concrete VariantTreeAdapter (already generic). */
   adapter: VariantTreeAdapter<Move, Truth, View>;
+  /**
+   * Whether the eval track's `best` may be quoted as advice ("X was best").
+   * Default true. FALSE for imperfect-information variants: there the eval is
+   * Stockfish on the REVEALED truth, a fair record of what a move cost but NOT
+   * advice the mover could have acted on. Quoting it grades the player against
+   * information they never had, and contradicts the belief-relative recommendation
+   * the decision layer renders directly beneath it. Those variants let their own
+   * decision layer name the better move.
+   */
+  quoteEvalBestMove?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -298,8 +313,11 @@ export type DecisionMoveInfo = {
   /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
    *  accuracy so a reveal ply is graded on skill, not the dice. */
   accuracy: number;
-  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky). */
-  luck: number;
+  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
+   *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
+   *  would render as "average luck" instead of "no such number". Fog is the case — its error
+   *  classes (belief_lost_truth / sample_error / decision_error) are categorical. */
+  luck?: number;
   /** The played reveal's rank among the alternatives (1 = best), or null when off the table. */
   playedRank: number | null;
   /** Ranked alternatives for this chance ply, best first, ALREADY formatted by the variant
@@ -312,6 +330,14 @@ export type DecisionMoveInfo = {
 export type DecisionCandidate = {
   /** Board-notation move text, e.g. "e8-a8". */
   label: string;
+  /**
+   * The engine's OWN rank for this move, 1-based. Optional: where a variant's
+   * candidate list is exactly the set it ranked (jieqi), row position already is
+   * the rank and this can be omitted. Supply it wherever the displayed rows are a
+   * SUBSET of what was ranked — otherwise the row index silently reads as a rank
+   * and tells the reader their 21st-choice move was second best.
+   */
+  rank?: number;
   /** Luck-free win% for this choice, already rounded for display. */
   win: number;
   /** True when this is the move actually played. */
@@ -954,6 +980,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const MAX_INJECTED_PV_PLIES = 24;
 
   function injectBestLines(analysis: GameAnalysis): void {
+    // Same rule as the "… was best" sentence: a variant that will not QUOTE the
+    // truth eval's best move must not GRAFT it either. Suppressing only the text
+    // left the line behind with nothing to explain it, which read worse than
+    // before — the omniscient recommendation was still on screen, just mute.
+    if (presentation.quoteEvalBestMove === false) return;
     // Which parser turns an analysis PV token into a move. A variant whose
     // analysis-engine UCI diverges from the board's move dialect (banqi,
     // jungle-flip, jieqi, jungle) ships its own `moveFromEngineUci`; it is the
@@ -1031,6 +1062,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // analysis does. Continue-from-here (create a live game from a FEN) and
   // Settings are still absent. Re-add an item WITH its implementation, not
   // ahead of it.
+  // Ranked alternatives are opt-in (see alternatives-pref): the glyph and the
+  // advice line already name the best move, so the win% table is a second layer
+  // the reader asks for rather than one they scroll past.
+  let showAlternatives = alternativesEnabled();
   const menuItems: ReviewMenuItem[] = [
     { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
   ];
@@ -1092,6 +1127,19 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         hiddenRevealed = !hiddenRevealed;
         config.revealHidden?.setRevealed(hiddenRevealed);
         render();
+      },
+    });
+  }
+  // Only offered where there is something to show — a variant whose analysis
+  // carries no candidate sets never gets a dead menu row.
+  if (config.decisions) {
+    menuItems.push({
+      label: () => (showAlternatives ? t('review.hideAlternatives') : t('review.showAlternatives')),
+      icon: REVIEW_MENU_ICONS.analyse,
+      onClick: () => {
+        showAlternatives = !showAlternatives;
+        setAlternativesEnabled(showAlternatives);
+        refreshMoveTreeAnnotations();
       },
     });
   }
@@ -1389,8 +1437,22 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   });
 
   // The tree truncates an illegal seed to the legal prefix; surface a notice.
+  // This used to be `config.details ?? notice`, which meant any variant supplying
+  // its own left-rail panel could never show it — dark-chess always does, so a
+  // truncated fog game rendered as a SHORT GAME with no explanation, which reads
+  // as corruption rather than as a bad import. A truncation is a data problem the
+  // reader has to see, so it now wins and the variant's panel follows it. The
+  // wrapper is display:contents so the rail lays out exactly as before.
   const truncated = !config.initialTree && mainlineLen < config.moves.length;
-  const details = config.details ?? (truncated ? truncationNotice(mainlineLen) : undefined);
+  const details = ((): HTMLElement | undefined => {
+    if (!truncated) return config.details;
+    const notice = truncationNotice(mainlineLen);
+    if (!config.details) return notice;
+    const stack = document.createElement('div');
+    stack.style.display = 'contents';
+    stack.append(notice, config.details);
+    return stack;
+  })();
 
   // Material rows (variant opt-in): create the hosts before the scaffold so
   // they land in the rail's mat-top/mat-bot slots; render() drives the updater.
@@ -1831,7 +1893,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
         // refutation line).
-        const best = move.judgment ? evalByPly.get(move.ply - 1)?.best : null;
+        const quoteBest = presentation.quoteEvalBestMove !== false;
+        const best = move.judgment && quoteBest ? evalByPly.get(move.ply - 1)?.best : null;
         byPathKey.set(pathKey(tree.pathTo(node)), {
           suffix: glyph?.suffix,
           suffixClass: glyph?.suffixClass,
@@ -1864,17 +1927,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           if (!node) continue;
           const key = pathKey(tree.pathTo(node));
           const glyph = judgmentGlyph(info.judgment);
-          const luck = Math.round(info.luck);
+          const luck = info.luck === undefined ? null : Math.round(info.luck);
           byPathKey.set(key, {
             ...byPathKey.get(key),
             suffix: glyph?.suffix,
             suffixClass: glyph?.suffixClass,
-            luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
-            luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+            ...(luck === null
+              ? {}
+              : {
+                  luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
+                  luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+                }),
             // Chance plies get the ranked alternatives instead of a refutation line: past a
             // reveal nothing is knowable, so a LINE would be a fiction while a ranked SET is
             // exactly what the server scored.
-            ...(info.candidates?.length ? { candidates: info.candidates } : {}),
+            // The judge supplies the word too. With the eval track no longer
+            // grading these plies there is no comment to inherit, and a bare
+            // glyph makes the reader guess at severity.
+            ...(info.judgment
+              ? {
+                  comment: `${ADVICE_LABEL[info.judgment]}.`,
+                  commentClass: info.judgment,
+                }
+              : {}),
+            ...(showAlternatives && info.candidates?.length
+              ? { candidates: trimAlternatives(info.candidates) }
+              : {}),
           });
         }
       }

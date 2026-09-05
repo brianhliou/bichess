@@ -443,6 +443,8 @@ export const EN_REVIEW = {
   'review.setDefaultView': 'Set as default view',
   'review.revealIdentities': 'Reveal identities',
   'review.hideIdentities': 'Hide identities',
+  'review.showAlternatives': 'Show alternatives',
+  'review.hideAlternatives': 'Hide alternatives',
   'review.analyseFromHere': 'Analyse from here',
   'review.boardEditor': 'Board editor',
   'review.newDeal': 'New deal',

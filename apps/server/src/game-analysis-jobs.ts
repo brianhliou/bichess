@@ -11,7 +11,7 @@
 // re-enqueues, resuming from the incremental progress checkpoint). A jobs table
 // would add a migration + reaper for strictly less recoverable state.
 //
-// Execution is a global FIFO chain with concurrency 1: sweeps are CPU-bound and
+// Execution is a FIFO chain with concurrency 1 PER LANE (see chains): sweeps are CPU-bound and
 // the per-variant analysis pools hold one persistent engine each — running two
 // sweeps at once would just make both slower and steal CPU from live games.
 // Completed jobs (done/failed) are retained ~10 minutes for polling, then GC'd.
@@ -52,8 +52,27 @@ export const ANALYSIS_QUEUE_PENDING_CAP = 32;
 const FINISHED_JOB_TTL_MS = 10 * 60 * 1000;
 
 const jobs = new Map<string, AnalysisJob>();
-// Global FIFO execution chain (concurrency 1).
-let chain: Promise<void> = Promise.resolve();
+// FIFO execution chains, one per lane (concurrency 1 each).
+/**
+ * One serial chain PER LANE, not one globally.
+ *
+ * Every variant but fog computes in THIS process (jieqi spawns PikaJieQi, xiangqi
+ * Pikafish, banqi/jungle their Rust binaries), so serialising them protects the
+ * web service. Fog is the exception: it POSTs to the engine-worker and this
+ * process only holds a socket. A single global chain therefore made a two-minute
+ * fog job block a jieqi job that would have finished in seconds — two pieces of
+ * work with no shared resource, queued behind each other for no reason.
+ */
+type JobLane = 'local' | 'remote';
+const REMOTE_LANE_VARIANTS = new Set(['dark-chess']);
+const chains: Record<JobLane, Promise<void>> = {
+  local: Promise.resolve(),
+  remote: Promise.resolve(),
+};
+
+function laneFor(variant: string): JobLane {
+  return REMOTE_LANE_VARIANTS.has(variant) ? 'remote' : 'local';
+}
 
 function pendingJobs(): AnalysisJob[] {
   return [...jobs.values()].filter((job) => job.status === 'pending');
@@ -88,7 +107,7 @@ export type EnqueueAnalysisJobResult =
 
 /**
  * Enqueue a compute job. `run` produces the same envelope the synchronous 200
- * path returned; it runs on the global FIFO chain. Callers must have handled
+ * path returned; it runs on its lane's FIFO chain. Callers must have handled
  * coalescing (findPendingAnalysisJob) and the cached fast path first.
  */
 export function enqueueAnalysisJob(args: {
@@ -122,7 +141,8 @@ export function enqueueAnalysisJob(args: {
   };
   jobs.set(job.id, job);
 
-  chain = chain.then(async () => {
+  const lane = laneFor(args.variant);
+  chains[lane] = chains[lane].then(async () => {
     try {
       job.result = await args.run();
       job.status = 'done';
@@ -163,6 +183,6 @@ export function analysisJobStatusBody(job: AnalysisJob): Record<string, unknown>
 
 /** Test hook: drop all jobs and wait out the execution chain. */
 export async function resetAnalysisJobsForTests(): Promise<void> {
-  await chain.catch(() => {});
+  await Promise.all(Object.values(chains).map((lane) => lane.catch(() => {})));
   jobs.clear();
 }

@@ -18,6 +18,16 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 
+/** Board notation for a plain chess UCI move ("e2e4" -> "e2-e4", "a7a8q" -> "a7-a8=Q").
+ *  Shared by the "… was best." advice line and the decisions alternatives block, so the two
+ *  can never drift into different dialects on the same page. */
+export function formatDarkChessMove(uci: string): string {
+  const from = uci.slice(0, 2);
+  const to = uci.slice(2, 4);
+  const promo = uci.length > 4 ? `=${uci.slice(4, 5).toUpperCase()}` : '';
+  return `${from}-${to}${promo}`;
+}
+
 /** Config for a Fog Chess review mount. */
 export type DarkChessReviewConfig = TreeReviewConfig<Move, GameState>;
 
@@ -37,6 +47,16 @@ const darkChessPresentation: TreePresentation<
 > = {
   adapter: darkChessTreeAdapter,
   engine: null,
+  // The fog eval track is Stockfish on the revealed truth. It earns the chart and
+  // the per-move eval — what the move actually cost — but it must not say "X was
+  // best": under fog that is a move the player could not have found, and it
+  // contradicted the belief-relative alternatives rendered directly beneath it
+  // (Stockfish said b2-b4, Misty said f1-e1, and the card showed both).
+  quoteEvalBestMove: false,
+  // Server analysis emits plain chess UCI ("e2e4", "a7a8q"); the default
+  // formatter is the xiangqi/FSF dialect, so supply chess's own for the
+  // "… was best" advice line.
+  formatBestMove: formatDarkChessMove,
   boardHostClassName: 'dxq-postgame__board dark-chess-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Fog Chess board',
