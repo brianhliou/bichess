@@ -49,8 +49,8 @@ test('Dark Mini Xiangqi has a dedicated engine that stays out of the chess PvE p
 
 test('Dark Xiangqi has a dedicated local engine that stays out of the chess PvE picker', () => {
   const engine = loadEngine(DARK_XIANGQI_DEFAULT_ENGINE_ID);
-  assert.equal(engine.id, 'python-fdx-v1.2');
-  assert.equal(engine.name, 'Misty DXQ 1.2');
+  assert.equal(engine.id, 'python-fdx-v1.1');
+  assert.equal(engine.name, 'Misty DXQ 1.1');
   assert.equal(engine.gameSpecId, 'dark-xiangqi');
   assert.equal(isDarkXiangqiEngineClientId(engine.id), true);
   assert.equal(isDarkMiniXiangqiEngineClientId(engine.id), false);
