@@ -88,6 +88,9 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-v2-v1.4',
       'python-v2-v1.5',
       'python-dmx-v1.0',
+      // The earlier fog-xiangqi build. Misty is the only bot that has ever
+      // fronted a dark-xiangqi engine, so a legacy v1.0 room still attributes.
+      'python-fdx-v1.0',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
