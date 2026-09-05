@@ -63,7 +63,17 @@ export async function tryHandle(
     const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = clampInt(parsedUrl.searchParams.get('limit'), 15, 1, GAMES_PAGE_MAX);
     const viewer = await currentAccountUser(request);
-    const page = await persistence.getUserGamesPage(handle, viewer?.id ?? null, offset, limit);
+    // Optional pool filter for the profile's Games tab. parseRatingVariant is
+    // fail-closed: an unknown value yields null, which serves the unfiltered
+    // history rather than erroring or, worse, matching nothing.
+    const ratingVariant = parseRatingVariant(parsedUrl.searchParams.get('variant'));
+    const page = await persistence.getUserGamesPage(
+      handle,
+      viewer?.id ?? null,
+      offset,
+      limit,
+      ratingVariant,
+    );
     if (!page) {
       writeJson(response, 404, { error: 'not_found' });
       return true;

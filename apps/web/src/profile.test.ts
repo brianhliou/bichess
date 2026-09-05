@@ -835,4 +835,109 @@ describe('profile ratings rail', () => {
     expect(root.querySelectorAll('.rating-stats-bar').length).toBeGreaterThan(0);
     expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard?variant=fog&limit=500');
   });
+  it('scopes the games list to the variant picked in the rating rail, and can clear it', async () => {
+    // Before this, picking a variant moved the rating spotlight while the games
+    // list kept showing every variant -- the list is paginated, so the filter
+    // has to be a server query, not a narrowing of the page already in hand.
+    const game = (roomId: string, variant: string) => ({
+      roomId,
+      variant,
+      mode: 'pvp' as const,
+      rated: false,
+      result: 'red-wins',
+      termination: 'resignation',
+      plyCount: 20,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      endedAt: '2026-07-01T12:00:00.000Z',
+      participants: [],
+      playerColor: 'red',
+    });
+    const gamesRequests: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      const json = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        });
+      if (url.includes('/rating-history')) return json({ points: [] });
+      if (url.includes('/games?')) {
+        gamesRequests.push(url);
+        return json(
+          url.includes('variant=jieqi')
+            ? { games: [game('jq-1', 'jieqi')], total: 1 }
+            : { games: [game('xq-1', 'xiangqi'), game('jq-1', 'jieqi')], total: 2 },
+        );
+      }
+      return json({
+        profile: {
+          isViewer: false,
+          relation: null,
+          user: {
+            handle: 'railfilter',
+            displayName: 'railfilter',
+            bio: '',
+            profileVisibility: 'public',
+            accountRole: 'player',
+            createdAt: '2026-05-01T00:00:00.000Z',
+          },
+          ratings: [
+            {
+              variant: 'xiangqi',
+              timeClass: 'blitz',
+              eloRating: null,
+              ratedGamesPlayed: 0,
+              totalGamesPlayed: 1,
+              provisional: false,
+            },
+            {
+              variant: 'jieqi',
+              timeClass: 'blitz',
+              eloRating: null,
+              ratedGamesPlayed: 0,
+              totalGamesPlayed: 1,
+              provisional: false,
+            },
+          ],
+          puzzleRatings: [],
+          games: [game('xq-1', 'xiangqi'), game('jq-1', 'jieqi')],
+          gamesTotal: 2,
+        },
+      });
+    });
+
+    const root = document.createElement('div');
+    const { mountProfile } = await import('./profile.js');
+    await mountProfile(root, 'railfilter');
+
+    const rowIds = () =>
+      Array.from(root.querySelectorAll('.profile-games .profile-game-row-open'), (a) =>
+        a.getAttribute('href'),
+      );
+    const filterBar = () => root.querySelector<HTMLElement>('.profile-games-filter');
+
+    // Unfiltered: both variants, no chip, and no games fetch (the profile
+    // payload already carried the first page).
+    expect(rowIds()).toHaveLength(2);
+    expect(filterBar()?.hidden).toBe(true);
+    expect(gamesRequests).toHaveLength(0);
+
+    root.querySelector<HTMLElement>('.profile-rating-row[data-variant="jieqi"]')?.click();
+    await vi.waitFor(() => {
+      expect(rowIds()).toHaveLength(1);
+    });
+    expect(gamesRequests.some((url) => url.includes('variant=jieqi'))).toBe(true);
+    expect(filterBar()?.hidden).toBe(false);
+    expect(filterBar()?.textContent).toContain('Jieqi');
+    // The tab badge stays the LIFETIME total; the chip states what is shown.
+    expect(root.querySelector('.profile-tab-count')?.textContent).toBe('2');
+
+    filterBar()?.querySelector<HTMLElement>('.profile-games-filter-clear')?.click();
+    await vi.waitFor(() => {
+      expect(rowIds()).toHaveLength(2);
+    });
+    expect(filterBar()?.hidden).toBe(true);
+  });
 });
