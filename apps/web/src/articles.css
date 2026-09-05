@@ -2257,6 +2257,14 @@
   background: var(--site-panel-soft);
 }
 
+/* The rules-page play row sits directly under the header, so it wants less
+   space above it than a CTA dropped mid-body. Two classes deliberately: the
+   base row rule can land in a later chunk than this one on a prod build. */
+.article-cta-row.article-play-cta {
+  margin-top: 4px;
+  margin-bottom: 28px;
+}
+
 .article-cta-row-single-row {
   width: max-content;
   max-width: 100%;

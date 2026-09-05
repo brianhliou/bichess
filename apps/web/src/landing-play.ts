@@ -49,6 +49,7 @@ import { isRatedModeEnabled } from './rated-flag.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { variantSupportsPve } from './variant-public-surfaces.js';
 import {
   defaultTimePresetForSpec,
   webVariantTenantForSpecId,
@@ -1600,21 +1601,13 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   window.history.replaceState(null, '', url);
 }
 
-// Whether a variant has a computer opponent in the play menu. Dark chess uses
-// the always-on empty-lobby/fallback engine, and Xiangqi fog variants default
-// their engines server-side (so neither carries tenant engineOptions); other
-// variants need a tenant PvE engine option. PvP-first variants with no bot yet
-// return false, so the engine flow greys them out instead of offering a dead
-// "Play the engine" that silently falls back to a PvP room.
-function landingVariantSupportsPve(gameSpecId: LandingGameSpecId): boolean {
-  if (
-    gameSpecId === DARK_CHESS_SPEC_ID ||
-    gameSpecId === DARK_XIANGQI_SPEC_ID ||
-    gameSpecId === DARK_MINI_XIANGQI_SPEC_ID
-  )
-    return true;
-  return Boolean(webVariantTenantForSpecId(gameSpecId)?.landing?.engineOptions);
-}
+// Whether a variant has a computer opponent in the play menu. PvP-first
+// variants with no bot yet return false, so the engine flow greys them out
+// instead of offering a dead "Play the engine" that silently falls back to a
+// PvP room. The rule itself lives in variant-public-surfaces so that the rules
+// pages, which link straight into this dialog, cannot answer it differently.
+const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
+  variantSupportsPve(gameSpecId);
 
 /** Which variant a first-time player lands on. Xiangqi is the flagship (the
  *  same one bare `/analysis` opens), so the dialog opens there rather than on
