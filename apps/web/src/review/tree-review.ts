@@ -395,6 +395,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  page supplies the enable/preview controls; the annotation editor adds the
    *  current position's hint/deviation fields when gamebook mode is active. */
   annotationLessonControls?: HTMLElement;
+  /** Practice-mode dock for the same under-board tab. */
+  annotationPracticeControls?: HTMLElement;
   /** Show the study annotation controls (glyph picker + comment box + clear-shapes)
    *  in the under-board authoring dock. Only editable studies set this; the
    *  postgame/analysis surfaces are read-only and omit it. Board shape-drawing
@@ -1372,6 +1374,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         },
         gamebook: config.gamebookEditing,
         lessonControls: config.annotationLessonControls,
+        practiceControls: config.annotationPracticeControls,
         onGamebook: (patch) => {
           tree.annotateAt(currentPath, {
             gamebook: {

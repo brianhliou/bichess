@@ -442,6 +442,39 @@ function renderStudy(
     return null;
   };
 
+  /**
+   * Turn a chapter into a practice exercise, or back.
+   *
+   * The goal travels with the flag because a practice chapter without one is not
+   * a half-configured exercise, it is an exercise with no way to be won or lost.
+   * Validated here before the request so a typo is a message under the field
+   * rather than a 400 the author has to interpret.
+   */
+  const setPractice = async (
+    chapterId: string,
+    on: boolean,
+    goal: string,
+  ): Promise<string | null> => {
+    const chapter = chapters.find((entry) => entry.id === chapterId);
+    if (!chapter) return t('study.chapterNotFound');
+    if (on && !parsePracticeGoal(goal)) {
+      return 'Goal must read like "mate", "mate in 3", "win", or "draw in 20".';
+    }
+    if (!(await flushActive())) return t('study.resolveFirst');
+    const response = await fetch(`/api/studies/${study.id}/chapters/${chapterId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ practice: on, practiceGoal: on ? goal.trim() : null }),
+    });
+    if (!response.ok) return responseError(response, 'Could not change practice mode.');
+    chapter.practice = on;
+    chapter.practiceGoal = on ? goal.trim() : null;
+    if (!on) previewMode = false;
+    disposeActive();
+    renderActive();
+    return null;
+  };
+
   const setPreview = (on: boolean): void => {
     void flushActive().then((saved) => {
       if (!saved) return;
@@ -636,8 +669,22 @@ function renderStudy(
         onOpenStudySettings: openStudySettings,
         onOpenChapterSettings: openChapterSettings,
       });
+    // Practice and gamebook are alternative chapter modes, so an owner is offered
+    // whichever one the chapter is already in, and practice's dock when it is in
+    // neither. Showing both at once would invite turning both on, which the
+    // player resolves by silently preferring practice.
+    const practiceDock =
+      study.isOwner && gamebookable && !chapter.gamebook
+        ? buildPracticeDock({
+            enabled: Boolean(chapter.practice),
+            goal: chapter.practiceGoal ?? '',
+            preview: previewMode,
+            onToggle: (enabled, goal) => setPractice(chapter.id, enabled, goal),
+            onPreview: setPreview,
+          })
+        : undefined;
     const lessonControls =
-      study.isOwner && gamebookable
+      study.isOwner && gamebookable && !chapter.practice
         ? buildLessonDock({
             enabled: chapter.gamebook,
             preview: previewMode,
@@ -828,6 +875,7 @@ function renderStudy(
       details: buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
+      annotationPracticeControls: practiceDock,
       annotationEditing: study.isOwner,
       // A study is read forward. Landing on the final position of a 60-ply
       // annotated game means rewinding before you can start.
@@ -1093,6 +1141,84 @@ function likeButton(study: StudyDto): HTMLButtonElement {
       });
   });
   return button;
+}
+
+/**
+ * Owner control for practice mode: the flag, its goal, and a preview.
+ *
+ * Without this a practice chapter could only be created by hitting the API, and
+ * its author could never see what a learner sees -- the player only mounts for
+ * non-owners. That is how the gamebook ended up built, shipped and empty.
+ *
+ * Reuses the lesson dock's classes so the two chapter modes are configured in
+ * visibly the same place rather than looking like unrelated features.
+ */
+function buildPracticeDock(opts: {
+  enabled: boolean;
+  goal: string;
+  preview: boolean;
+  onToggle(enabled: boolean, goal: string): Promise<string | null>;
+  onPreview(preview: boolean): void;
+}): HTMLElement {
+  const panel = document.createElement('div');
+  panel.className = 'study-lesson-dock';
+  const copy = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = 'Practice';
+  const description = document.createElement('p');
+  description.textContent = opts.enabled
+    ? 'Played against the engine from this position.'
+    : 'Set a goal and the engine plays the defence. The move tree is ignored.';
+  copy.append(title, description);
+
+  const actions = document.createElement('div');
+  actions.className = 'study-lesson-dock__actions';
+
+  const goalInput = document.createElement('input');
+  goalInput.type = 'text';
+  goalInput.className = 'study-lesson-dock__goal';
+  goalInput.value = opts.goal;
+  goalInput.placeholder = 'mate in 3';
+  goalInput.setAttribute('aria-label', 'Practice goal');
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = opts.enabled ? 'study-lesson-dock__toggle is-on' : 'study-lesson-dock__toggle';
+  toggle.textContent = opts.enabled ? 'Practice on' : 'Enable practice';
+  toggle.setAttribute('aria-pressed', String(opts.enabled));
+
+  const feedback = document.createElement('span');
+  feedback.className = 'study-lesson-dock__feedback';
+  feedback.setAttribute('aria-live', 'polite');
+
+  toggle.addEventListener('click', () => {
+    toggle.disabled = true;
+    feedback.textContent = '';
+    void opts
+      .onToggle(!opts.enabled, goalInput.value)
+      .then((error) => {
+        if (!error) return;
+        toggle.disabled = false;
+        feedback.textContent = error;
+      })
+      .catch(() => {
+        toggle.disabled = false;
+        feedback.textContent = t('study.requestFailed');
+      });
+  });
+
+  if (!opts.enabled) actions.append(goalInput);
+  actions.append(toggle);
+  if (opts.enabled) {
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'study-lesson-dock__preview';
+    preview.textContent = opts.preview ? 'Back to editing' : 'Preview exercise';
+    preview.addEventListener('click', () => opts.onPreview(!opts.preview));
+    actions.append(preview);
+  }
+  panel.append(copy, actions, feedback);
+  return panel;
 }
 
 function buildLessonDock(opts: {
