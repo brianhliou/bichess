@@ -26,6 +26,7 @@ interface PracticeCardDto {
   blurb: string;
   studyId: string;
   exerciseCount: number;
+  solvedCount: number;
 }
 
 interface PracticeSectionDto {
@@ -95,17 +96,30 @@ function sidebar(sections: PracticeSectionDto[]): HTMLElement {
   sub.textContent = 'against the engine';
   side.append(illus, title, sub);
 
-  // Where /learn puts its "Progress: N%" bar. There is no practice progress
-  // store yet (#356), so this states the size of the shelf instead -- true, and
-  // it becomes the progress bar without the layout moving.
+  // The same progress bar /learn uses, reading from practice progress.
   const total = sections.reduce(
     (sum, section) => sum + section.cards.reduce((n, card) => n + card.exerciseCount, 0),
     0,
   );
+  const solved = sections.reduce(
+    (sum, section) => sum + section.cards.reduce((n, card) => n + card.solvedCount, 0),
+    0,
+  );
   if (total > 0) {
+    const pct = Math.round((solved / total) * 100);
+    const bar = document.createElement('div');
+    bar.className = 'learn-xq-progress-bar';
+    const fill = document.createElement('div');
+    fill.className = 'learn-xq-progress-fill';
+    fill.style.width = `${pct}%`;
+    const label = document.createElement('span');
+    label.textContent = `Progress: ${pct}%`;
+    bar.append(fill, label);
+    side.append(bar);
+
     const count = document.createElement('p');
     count.className = 'practice-index__total';
-    count.textContent = `${total} exercises`;
+    count.textContent = `${solved} of ${total} solved`;
     side.append(count);
   }
   return side;
@@ -134,14 +148,15 @@ function tile(entry: PracticeCardDto): HTMLElement {
 
   link.append(illus, text);
 
-  // The folded corner ribbon carries state on /learn. Until practice progress
-  // exists it carries the set's SIZE, which is the honest thing to put there and
-  // keeps the anatomy intact for when "3 / 11" replaces it.
+  // The folded corner ribbon carries state, as it does on /learn: "solved /
+  // total", and the done tint once the set is finished.
+  const done = entry.solvedCount >= entry.exerciseCount && entry.exerciseCount > 0;
+  if (done) link.classList.add('learn-xq-tile--done');
   const wrap = document.createElement('div');
   wrap.className = 'learn-xq-ribbon-wrap';
   const ribbon = document.createElement('div');
-  ribbon.className = 'learn-xq-ribbon learn-xq-ribbon--ongoing';
-  ribbon.textContent = String(entry.exerciseCount);
+  ribbon.className = `learn-xq-ribbon learn-xq-ribbon--${done ? 'done' : 'ongoing'}`;
+  ribbon.textContent = `${entry.solvedCount} / ${entry.exerciseCount}`;
   wrap.append(ribbon);
   link.append(wrap);
 

@@ -57,6 +57,11 @@ export interface XiangqiPracticeOptions {
    *  has no notion of a next; the button is then not offered at all rather than
    *  offered and inert. */
   onNext?: () => void;
+  /** Called once, the first time the learner solves this exercise, with the
+   *  number of moves they took. The caller persists it; failures are the
+   *  caller's to swallow, because losing a progress write must never interrupt
+   *  the moment the learner just succeeded. */
+  onSolved?: (moves: number) => void;
   /**
    * Site navigation to keep above the player. The mount replaces the root's
    * children, so a caller that built a nav there first would otherwise have it
@@ -210,6 +215,9 @@ export function mountXiangqiPractice(
   // Reentrancy guard: the engine is async, so without this a fast second drag
   // could open a new attempt while the first is still resolving.
   let busy = false;
+  // One report per mount: a learner who solves, restarts and solves again has
+  // not solved a second exercise.
+  let reportedSolved = false;
 
   const interactive = createXiangqiInteractiveBoard({
     board: boardEl,
@@ -312,6 +320,14 @@ export function mountXiangqiPractice(
         ]);
         hintText.textContent = 'This is the move.';
       }
+    }
+
+    // Report the solve once, the first time this run reaches it. Guarded rather
+    // than fired from the success branch of attempt(), because render() also
+    // runs on retry and restart and would otherwise re-report.
+    if (view.phase === 'success' && !reportedSolved) {
+      reportedSolved = true;
+      opts.onSolved?.(view.movesPlayed);
     }
 
     if (state === 'thinking') {

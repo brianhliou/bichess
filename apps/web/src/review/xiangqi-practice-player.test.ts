@@ -243,3 +243,53 @@ test('the board is closed while the engine is thinking', async () => {
   await pending;
   expect(text(host, '.gamebook__feedback')).toBe('Good. Keep going.');
 });
+
+test("a solve is reported once, with the learner's move count", async () => {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const solves: number[] = [];
+  // A `win` goal so the solve is reachable by EVALUATION in one move. An
+  // unbounded `mate` goal succeeds only on a real checkmate, which one legal
+  // move from this position will not produce -- a test written against it would
+  // never reach success and would assert nothing.
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: { kind: 'win', centipawns: 600 },
+    orientation: row.turn,
+    evaluate: steady(900),
+    onSolved: (moves) => solves.push(moves),
+  });
+  await handle.ready();
+  expect(solves, 'nothing is reported before a solve').toEqual([]);
+
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+
+  expect(handle.view().phase, 'the fake must actually reach success').toBe('success');
+  expect(solves.length, 'reported exactly once').toBe(1);
+  expect(solves[0]).toBe(handle.view().movesPlayed);
+});
+
+test('a solve is not re-reported when the learner restarts and solves again', async () => {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const solves: number[] = [];
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: { kind: 'win', centipawns: 600 },
+    orientation: row.turn,
+    evaluate: steady(900),
+    onSolved: (moves) => solves.push(moves),
+  });
+  await handle.ready();
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+  expect(solves.length).toBe(1);
+
+  // render() runs on every state change, including restart; without the guard
+  // the report would fire again each time the success state was re-rendered.
+  const restart = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Restart');
+  restart?.click();
+  await handle.play(move);
+  expect(solves.length, 'one mount, one report').toBe(1);
+});

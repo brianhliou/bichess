@@ -464,13 +464,26 @@ async function readStudy(
     return true;
   }
   const likeState = await persistence.getStudyLikeState(id, user?.id);
+  // Which practice chapters this reader has solved, so the rail can tick them.
+  // Asked only when the study actually has practice chapters and someone is
+  // signed in -- a plain study should not pay for a progress query.
+  const practiceChapterIds = study.chapters
+    .filter((chapter) => chapter.practice)
+    .map((chapter) => chapter.id);
+  const solved =
+    user && practiceChapterIds.length > 0
+      ? await persistence.solvedChapterIds(user.id, practiceChapterIds)
+      : new Set<string>();
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
       ...likeState,
       canFeature: user?.accountRole === 'admin',
     },
-    chapters: study.chapters.map(chapterView),
+    chapters: study.chapters.map((chapter) => ({
+      ...chapterView(chapter),
+      ...(solved.has(chapter.id) ? { solved: true } : {}),
+    })),
   });
   return true;
 }

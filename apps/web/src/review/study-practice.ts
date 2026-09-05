@@ -40,6 +40,8 @@ export interface MountPracticeChapterOptions {
   nav?: HTMLElement;
   progress?: { index: number; total: number };
   onNext?: () => void;
+  /** Chapter id, so a solve can be recorded against it. */
+  chapterId?: string;
 }
 
 /**
@@ -94,5 +96,20 @@ export function mountPracticeChapter(
     })(),
     ...(opts.progress === undefined ? {} : { progress: opts.progress }),
     ...(opts.onNext === undefined ? {} : { onNext: opts.onNext }),
+    ...(opts.chapterId === undefined
+      ? {}
+      : {
+          onSolved: (moves: number) => {
+            // Fire and forget. A progress write that fails must not interrupt
+            // the moment the learner just succeeded, and there is nothing
+            // useful to tell them about it -- the next page load simply will
+            // not show the tick.
+            void fetch('/api/practice/complete', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ chapterId: opts.chapterId, moves }),
+            }).catch(() => {});
+          },
+        }),
   });
 }

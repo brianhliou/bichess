@@ -365,6 +365,11 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
+export {
+  recordPracticeSolved,
+  solvedChapterIds,
+  solvedCountsByStudy,
+} from './persistence-practice.js';
 export type {
   ProfileBucketRating,
   ProfileRatingHistory,

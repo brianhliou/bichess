@@ -19,6 +19,10 @@ export type ChapterControlModel = {
   name: string;
   i18n?: unknown;
   gamebook: boolean;
+  /** Practice exercise this reader has already solved. Renders as a tick in the
+   *  place of the row number, which is what turns the rail from a table of
+   *  chapters into a course you can see your way through. */
+  solved?: boolean;
   /** Server-validated on write, typed loose here to match the chapter DTO;
    *  normalized where it is read. */
   orientation: string;
@@ -214,7 +218,16 @@ export function buildStudyRail(
     if (chapter.id === activeId) link.setAttribute('aria-current', 'page');
     const num = document.createElement('span');
     num.className = 'study-chapters__num';
-    num.textContent = String(index + 1);
+    if (chapter.solved) {
+      // A tick REPLACES the number rather than sitting beside it: the row is
+      // already ordered by position, and two markers in one slot reads as a
+      // table with a status column instead of a checklist.
+      num.classList.add('study-chapters__num--solved');
+      num.textContent = '✓';
+      num.title = 'Solved';
+    } else {
+      num.textContent = String(index + 1);
+    }
     const name = document.createElement('span');
     name.className = 'study-chapters__name';
     name.textContent = chapterLabel;

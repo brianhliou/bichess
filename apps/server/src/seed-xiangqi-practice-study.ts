@@ -101,9 +101,21 @@ const SETS: {
 
 type Visibility = 'public' | 'unlisted' | 'private';
 
-/** The goal text for an entry, in the grammar parsePracticeGoal accepts. */
+/**
+ * The goal text for an entry, in the grammar parsePracticeGoal accepts.
+ *
+ * A draw goal is BOUNDED. An unbounded one never completes -- holding level is
+ * the whole exercise, so `evaluatePracticeGoal` keeps returning 'ongoing' and
+ * waits for a caller to end the run, and no caller does. Seeded unbounded, every
+ * hold-the-draw exercise was unwinnable: the learner could defend perfectly and
+ * never see it solved.
+ *
+ * Fifteen of the learner's own moves against an engine trying to break through
+ * is a real demonstration for these endgames, and short enough not to become
+ * shuffling for its own sake.
+ */
 export function practiceGoalFor(entry: EndgameEntry): string {
-  return entry.verdict === 'win' ? 'mate' : 'draw';
+  return entry.verdict === 'win' ? 'mate' : 'draw in 15';
 }
 
 /**

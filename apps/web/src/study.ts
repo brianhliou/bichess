@@ -93,6 +93,8 @@ type ChapterDto = {
   /** Authored goal text ("mate in 3", "win", "draw in 20"); null unless
    *  `practice`. Parsed by parsePracticeGoal at mount. */
   practiceGoal?: string | null;
+  /** Whether the signed-in reader has already solved this exercise. */
+  solved?: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -754,6 +756,7 @@ function renderStudy(
           // exercise's goal lives under the board. A title floating above the
           // three columns belongs to neither and reads as a stray caption.
           aside,
+          chapterId: chapter.id,
           progress: { index: practiceIndex + 1, total: chapters.length },
           // Omitted on the last chapter, so the button is not offered at all
           // rather than offered and inert.
