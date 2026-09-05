@@ -10,6 +10,7 @@ import type { AuthUser } from './account-nav.js';
 import { loadCachedCurrentUser } from './account-nav.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { buildNav } from './site-shell.js';
 
 type PatronTierConfig = { key: string; mode: 'subscription' | 'payment'; isLifetime: boolean };
 type PatronConfigResponse = { configured: boolean; tiers: PatronTierConfig[] };
@@ -36,11 +37,32 @@ const PREVIEW_MONTHLY_TIERS = ['monthly_5', 'monthly_10', 'monthly_20', 'monthly
 // without copying anyone's wings.
 const MASCOT_ROLE = 'elephant';
 
-export function buildPatronPage(locale: Locale = currentLocale()): HTMLElement {
+type PatronPageOptions = {
+  /** Build-time render: bake the tier card instead of the loading label and skip
+   *  the live /api/patron/config + current-user fetches, which resolve to nothing
+   *  under happy-dom and would leave a bare ellipsis card in the baked HTML. */
+  prerender?: boolean;
+};
+
+export function buildPatronPage(
+  locale: Locale = currentLocale(),
+  options: PatronPageOptions = {},
+): HTMLElement {
   const page = document.createElement('div');
   page.className = 'patron-page';
-  page.append(buildHero(locale), buildBody(locale));
+  page.append(buildHero(locale), buildBody(locale, options));
   return page;
+}
+
+/** Build-time shell for /patron (prerender-articles.mjs). The page is authored
+ *  copy plus four fixed amounts, so the baked DOM is what a reader gets; the SPA
+ *  still replaces it on boot with the live-config card. Without this the route
+ *  served a bare shell that carried the product only in a meta description: what
+ *  the site sells has to be legible without running JavaScript, both for readers
+ *  and for anyone (a crawler, a payment processor) checking the page by fetching
+ *  it. This is the one page whose whole job is to say what is for sale. */
+export function renderPatronShellForPrerender(locale: Locale = 'en'): string {
+  return `${buildNav(locale).outerHTML}${buildPatronPage(locale, { prerender: true }).outerHTML}`;
 }
 
 function buildHero(locale: Locale): HTMLElement {
@@ -61,7 +83,7 @@ function buildHero(locale: Locale): HTMLElement {
   return hero;
 }
 
-function buildBody(locale: Locale): HTMLElement {
+function buildBody(locale: Locale, options: PatronPageOptions): HTMLElement {
   const body = document.createElement('div');
   body.className = 'patron-body';
 
@@ -84,14 +106,20 @@ function buildBody(locale: Locale): HTMLElement {
   donate.className = 'patron-donate-col';
   const card = document.createElement('div');
   card.className = 'patron-card';
-  card.append(para(loadingLabel()));
+  // The baked card omits the checkout-status note: that line is the one part of
+  // the preview that depends on live config, and a build artifact cannot follow
+  // STRIPE_PRICE_* being set on Railway. Everything else here is true under
+  // every config.
+  card.append(
+    options.prerender ? buildTierPreview(locale, { statusNote: false }) : para(loadingLabel()),
+  );
   const supportLine = document.createElement('p');
   supportLine.className = 'patron-support-line';
   supportLine.textContent = t('patron.supportLine', {}, locale);
   donate.append(card, supportLine);
 
   body.append(intro, donate);
-  void hydrateCard(card, locale);
+  if (!options.prerender) void hydrateCard(card, locale);
   return body;
 }
 
@@ -122,7 +150,10 @@ async function hydrateCard(card: HTMLElement, locale: Locale): Promise<void> {
 // reviewing what this site sells) can see the four monthly tiers instead of a
 // bare "not set up yet". The amounts are display-only: no tier is selectable and
 // there is no button, so nothing here can start a charge.
-function buildTierPreview(locale: Locale): HTMLElement {
+function buildTierPreview(
+  locale: Locale,
+  options: { statusNote: boolean } = { statusNote: true },
+): HTMLElement {
   const preview = document.createElement('div');
   preview.className = 'patron-form patron-form-preview';
 
@@ -139,7 +170,8 @@ function buildTierPreview(locale: Locale): HTMLElement {
     amounts.append(amount);
   }
 
-  preview.append(label, amounts, note(t('patron.unavailable', {}, locale)));
+  preview.append(label, amounts);
+  if (options.statusNote) preview.append(note(t('patron.unavailable', {}, locale)));
   return preview;
 }
 

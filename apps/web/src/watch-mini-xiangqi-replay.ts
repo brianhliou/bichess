@@ -36,8 +36,8 @@ const AUTO_PLAY_LOOP_HOLD_MS = 2600;
 // Compact showcase end-of-game hold: long enough to read the 1/0/½ result marks
 // before the cycler advances (matches watch-tenant-replay).
 const SHOWCASE_END_HOLD_MS = 4000;
-// Compact showcase per-move pacing: play each move at its real recorded duration
-// clamped to this band, and tick the mover's clock across it.
+// Compact showcase per-move pacing: play each move at its real recorded duration,
+// clamped to this band. Board pacing only: the clock does not animate across it.
 const SHOWCASE_MIN_MOVE_MS = 700;
 const SHOWCASE_MAX_MOVE_MS = 2500;
 
@@ -169,18 +169,8 @@ export async function mountMiniXiangqiWatchReplay(
   let controls: ControlRefs | null = null;
   let seatCells: { red: SeatCell; black: SeatCell } | null = null;
   let clocks: Array<Record<MiniXiangqiColor, number>> | null = null;
-  let incrementMs = 0;
   // Compact showcase: per-move real-duration playback delays (null = fixed pacing).
   let moveDelays: number[] | null = null;
-  // Continuous-countdown animation for the side to move (see tickClock).
-  let clockAnim: {
-    side: MiniXiangqiColor;
-    startVal: number;
-    floorVal: number;
-    shownAt: number;
-    windowMs: number;
-  } | null = null;
-  let clockTickTimer: number | null = null;
   let maxPly = 0;
   let currentPly = 0;
   let boardOrientation: MiniXiangqiColor = 'red';
@@ -273,41 +263,11 @@ export async function mountMiniXiangqiWatchReplay(
       seatCells.red.row.classList.toggle('active', toMove === 'red');
       seatCells.black.row.classList.toggle('active', toMove === 'black');
     }
-    // Arm the countdown for the side to move: animate its clock from this ply's
-    // value toward the value just before its next move (next snapshot minus the
-    // increment it earns on completing the move), over the auto-play window.
-    if (toMove && clocks) {
-      const startVal = clocks[Math.min(currentPly, clocks.length - 1)]?.[toMove] ?? 0;
-      const nextVal = clocks[currentPly + 1]?.[toMove];
-      clockAnim = {
-        side: toMove,
-        startVal,
-        floorVal: nextVal === undefined ? startVal : Math.max(0, nextVal - incrementMs),
-        shownAt: Date.now(),
-        windowMs: moveDelays?.[currentPly + 1] ?? AUTO_PLAY_PLY_MS,
-      };
-    } else {
-      clockAnim = null;
-    }
-  };
-
-  // Smoothly drains the active clock between ply snapshots (a long think shows as
-  // a fast drop, compressed into the auto-play window); mirrors the dark-chess
-  // watch's clock tick. Settles at the floor when paused.
-  const tickClock = (): void => {
-    if (!clockAnim) return;
-    const fraction = Math.min((Date.now() - clockAnim.shownAt) / clockAnim.windowMs, 1);
-    const displayed = Math.max(
-      0,
-      clockAnim.startVal - (clockAnim.startVal - clockAnim.floorVal) * fraction,
-    );
-    if (compactSeats) {
-      const seat =
-        compactSeats.top.color === clockAnim.side ? compactSeats.top : compactSeats.bottom;
-      seat.clockEl.textContent = formatClock(displayed);
-    } else if (seatCells) {
-      seatCells[clockAnim.side].clock.textContent = formatClock(displayed);
-    }
+    // No countdown animation: this is a replay, so each ply's clock is a static label until
+    // the next move lands. The drain that used to live here compressed the move's REAL
+    // duration into the clamped auto-play window, which made the clock tick at whatever
+    // ratio fell out (a long think read as a fast drop). See the doctrine note in
+    // watch-tenant-replay.ts.
   };
 
   const scheduleAuto = (): void => {
@@ -375,7 +335,6 @@ export async function mountMiniXiangqiWatchReplay(
     currentPly = 0;
     paused = !autoplay;
     boardOrientation = 'red';
-    incrementMs = (postgame.game.timeControl ?? postgame.state.timeControl)?.incrementMs ?? 0;
     endFired = false;
 
     // Compact showcase: a single fogged board framed by a player name + real
@@ -389,8 +348,9 @@ export async function mountMiniXiangqiWatchReplay(
       controls = null;
       seatCells = null;
       clocks = clockSeries(postgame);
-      // Play each move at its real recorded duration (clamped); the clock ticks
-      // down across that window via tickClock.
+      // Play each move at its real recorded duration (clamped) so a long think lingers.
+      // The clock does NOT animate across that window: the window is compressed and the
+      // clock delta is not, so any drain over it ticks at the wrong rate.
       const moves = postgame.timeline.flatMap((event) =>
         typeof event.color === 'string' && typeof event.ply === 'number'
           ? [{ at: event.at, color: event.color, ply: event.ply }]
@@ -423,9 +383,6 @@ export async function mountMiniXiangqiWatchReplay(
       root.replaceChildren(layout);
       sync();
       scheduleAuto();
-      if (clocks && clockTickTimer === null) {
-        clockTickTimer = window.setInterval(tickClock, 100);
-      }
       return;
     }
 
@@ -503,7 +460,6 @@ export async function mountMiniXiangqiWatchReplay(
 
     sync();
     scheduleAuto();
-    if (clockTickTimer === null) clockTickTimer = window.setInterval(tickClock, 100);
   };
 
   const load = async (nextId: string): Promise<void> => {
@@ -528,10 +484,6 @@ export async function mountMiniXiangqiWatchReplay(
     destroy: () => {
       destroyed = true;
       clearTimer();
-      if (clockTickTimer !== null) {
-        window.clearInterval(clockTickTimer);
-        clockTickTimer = null;
-      }
       root.replaceChildren();
     },
     loadGame: async (sampleId: string) => {

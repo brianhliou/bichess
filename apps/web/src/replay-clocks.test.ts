@@ -51,14 +51,17 @@ describe('renderClockPanel', () => {
     expect(panel.label.textContent).toBe('Time 0:05 / move');
     expect(panel.whiteLabel.textContent).toBe('Guest');
     expect(panel.blackLabel.textContent).toBe('Engine');
-    expect(panel.whiteTime.textContent).toBe('0.3s / 5s');
+    // The seat to move counts its per-move budget DOWN (5s allowance, 0.25s of it spent);
+    // the idle seat shows the full allowance it gets on its own turn. Together they read as
+    // a clock. The progress fill still tracks the fraction CONSUMED.
+    expect(panel.whiteTime.textContent).toBe('4.8s');
     expect(panel.blackTime.textContent).toBe('5s');
     expect(panel.whiteRow.classList.contains('active')).toBe(true);
     expect(panel.whiteRow.classList.contains('is-thinking')).toBe(true);
     expect(panel.whiteRow.style.getPropertyValue('--replay-thinking-progress')).toBe('0.05');
   });
 
-  it('keeps sub-tenth clockless labels aligned with later elapsed labels', () => {
+  it('keeps a barely-started countdown one decimal wide, so the label cannot jump', () => {
     const panel = createClockPanel();
 
     renderClockPanel(panel, undefined, playingState('white'), meta, undefined, {
@@ -67,7 +70,23 @@ describe('renderClockPanel', () => {
       elapsedMs: 50,
     });
 
-    expect(panel.whiteTime.textContent).toBe('0.0s / 5s');
+    // "5.0s", not "5s": the countdown keeps its tenth so the row does not reflow on the
+    // first tick. The idle seat's bare "5s" is a different label and stays integer.
+    expect(panel.whiteTime.textContent).toBe('5.0s');
+  });
+
+  it('pins an over-budget engine at zero rather than a negative remainder', () => {
+    const panel = createClockPanel();
+
+    // Misty routinely overshoots its per-move budget; the caller caps elapsed at the budget
+    // so the countdown bottoms out instead of counting past it.
+    renderClockPanel(panel, undefined, playingState('white'), meta, undefined, {
+      activeColor: 'white',
+      budgetMs: 5_000,
+      elapsedMs: 5_000,
+    });
+
+    expect(panel.whiteTime.textContent).toBe('0.0s');
   });
 
   it('leaves per-move budget clocks blank after clockless games finish', () => {

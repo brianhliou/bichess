@@ -16,7 +16,12 @@
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { initialStartFen, isStudyEligibleSpecId, startIsDealt } from '@mistboard/game';
+import {
+  initialStartFen,
+  isStudyEligibleSpecId,
+  parsePracticeGoal,
+  startIsDealt,
+} from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import {
@@ -130,6 +135,8 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     tags: chapter.tags,
     version: chapter.version,
     gamebook: chapter.gamebook,
+    practice: chapter.practice,
+    practiceGoal: chapter.practiceGoal,
   };
 }
 
@@ -565,6 +572,31 @@ async function patchChapter(
     const result = await persistence.setChapterGamebook(chapterId, ownerId, body.gamebook);
     if (!result.ok) {
       writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });
+      return true;
+    }
+    writeJson(response, 200, { chapter: chapterView(result.chapter) });
+    return true;
+  }
+  if (typeof body.practice === 'boolean') {
+    // The goal is validated HERE rather than trusted as free text, because it is
+    // what decides whether a learner has won or lost. An unparseable goal that
+    // reaches storage becomes a silent fallback later; lila's regex-with-default
+    // is precisely how 27 of its practice chapters lost their authored goal.
+    const rawGoal = typeof body.practiceGoal === 'string' ? body.practiceGoal.trim() : '';
+    if (body.practice && !parsePracticeGoal(rawGoal)) {
+      writeJson(response, 400, { error: 'invalid_goal' });
+      return true;
+    }
+    const result = await persistence.setChapterPractice(
+      chapterId,
+      ownerId,
+      body.practice,
+      body.practice ? rawGoal : null,
+    );
+    if (!result.ok) {
+      const status =
+        result.error === 'forbidden' ? 403 : result.error === 'invalid_goal' ? 400 : 404;
+      writeJson(response, status, { error: result.error });
       return true;
     }
     writeJson(response, 200, { chapter: chapterView(result.chapter) });

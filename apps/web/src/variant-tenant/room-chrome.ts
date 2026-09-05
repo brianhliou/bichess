@@ -19,6 +19,7 @@ import { openConfirmDialog } from '../confirm-dialog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import { postGameInviteButton } from '../postgame-invite.js';
+import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { formatClock } from '../web-utils.js';
@@ -102,6 +103,7 @@ export type TenantChromeContext<C extends string> = {
   // Server-resolved player names (account/bot/engine); guests absent, so
   // renderers fall back to the seat label.
   seatDisplayNames(): Partial<Record<C, string>>;
+  seatProfiles(): Partial<Record<C, ProfileIdentity>>;
   abortDeadline(): number | null;
   forfeitDeadline(): number | null;
   roomMode(): string;
@@ -232,12 +234,16 @@ export function createTenantRoomChrome<C extends string>(
         const isTurn = color === pregameTurn;
         const playerLine = document.createElement('span');
         playerLine.className = isTurn ? 'clock-player-line active' : 'clock-player-line';
-        const nameEl = document.createElement('span');
-        nameEl.className = 'clock-name';
-        const name = ctx.seatDisplayNames()[color] ?? seatName(color);
-        nameEl.textContent = name;
-        nameEl.title = name;
-        playerLine.append(nameEl);
+        const serverName = ctx.seatDisplayNames()[color];
+        // The seat label is a placeholder for an unnamed seat, so only a
+        // server-supplied name carries the seat's profile link.
+        playerLine.append(
+          playerNameEl(
+            serverName ?? seatName(color),
+            serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
+            'clock-name',
+          ),
+        );
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
@@ -298,12 +304,15 @@ export function createTenantRoomChrome<C extends string>(
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
       playerLine.append(presenceDot(ctx.connectedSeats()[color] ?? false));
-      const nameEl = document.createElement('span');
-      nameEl.className = 'clock-name';
-      const name = playerName(color);
-      nameEl.textContent = name;
-      nameEl.title = name;
-      playerLine.append(nameEl);
+      // playerName falls back to 'You' / the seat label when the server has no
+      // name for the seat; those name nobody, so they stay plain text.
+      playerLine.append(
+        playerNameEl(
+          playerName(color),
+          ctx.seatDisplayNames()[color] ? profileTargetFor(ctx.seatProfiles()[color]) : null,
+          'clock-name',
+        ),
+      );
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
       toMove.textContent = 'to move';

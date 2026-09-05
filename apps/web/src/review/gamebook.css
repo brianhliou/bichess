@@ -1,67 +1,119 @@
-/* Gamebook (interactive-lesson) player: board + coach panel. */
+/* Lesson player (gamebook + practice): chapter rail + board + coach panel.
+ *
+ * These rules were originally written against `--c-bg` / `--c-border` /
+ * `--c-accent`, none of which are tokens this app defines. Every colour was
+ * therefore rendering from its hardcoded fallback, which is why the coach panel
+ * came out as a grey blob that matched nothing else on the page. The design
+ * system is `--site-*` (site-box.css); use it. */
 
 .gamebook__header {
   max-width: 1100px;
-  margin: 0.5rem auto 0;
+  margin: 0.75rem auto 0;
   padding: 0 1rem;
 }
 .gamebook__title {
   margin: 0;
+  font-size: 1.35rem;
 }
 .gamebook__summary {
-  margin: 0.25rem 0 0;
-  opacity: 0.7;
+  margin: 0.2rem 0 0;
+  color: var(--site-muted);
 }
 
 .gamebook {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  /* Rail | board | coach. The rail used to be `flex: 0 0 100%`, which put 32
+     chapters in a full-width band above the board and pushed the board itself
+     off the bottom of the viewport -- on an endgame trainer that hid the half
+     of the board the learner is playing.
+
+     The middle track is `auto` so it takes the board's own width: when the
+     resize grip scales the board the two side columns keep their widths and the
+     grid re-centres around it, rather than the columns stretching to fill. */
+  grid-template-columns: minmax(0, 15rem) auto minmax(0, 17rem);
   gap: 1rem;
-  align-items: flex-start;
+  /* Stretch, so the side columns take the row's height rather than their own
+     content's. `min-height: 0` alone is not enough: a grid auto row is sized by
+     its items' content, so an uncapped chapter list drags the row taller than
+     the board. The row therefore gets a DEFINITE height.
+
+     Measured from the grid's own top rather than guessed: `--gamebook-page-top`
+     is the distance from the viewport top to this grid, which a caller sets when
+     it knows better. Guessing it (100dvh minus a nav-height constant) is what
+     overran the viewport -- the constant was wrong whenever the header above the
+     grid was a different height than assumed. */
+  align-items: stretch;
+  --gamebook-page-top: 5.5rem;
+  --gamebook-page-height: calc(100dvh - var(--gamebook-page-top) - 1rem);
+  grid-auto-rows: minmax(0, var(--gamebook-page-height));
   justify-content: center;
-  max-width: 1100px;
-  margin: 1rem auto;
+  max-width: 1180px;
+  margin: 0.75rem auto 1.5rem;
   padding: 0 1rem;
 }
 
+/* The aside is the GRID ITEM; the rail card sits two levels inside it (aside >
+   study-aside > card). Stretch only sizes the item, so without carrying the
+   height down this chain the card falls back to content height and runs off the
+   bottom of the page -- measured at 1016px inside an 800px row. */
 .gamebook__aside {
-  flex: 0 0 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.gamebook__aside > * {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
 }
 
 .gamebook__board {
-  flex: 1 1 460px;
-  max-width: min(70vh, 560px);
+  /* Sized off viewport HEIGHT, because the board is the tall element and the
+     failure mode is vertical: a xiangqi board is 9x10, so its rendered height
+     is ~1.11x this width. Keep the whole board on screen beside the header.
+
+     Multiplied by --uni-board-scale so the shared resize grip drives this board
+     the way it drives the room, review, analysis and puzzle boards: one setting,
+     persisted once, honoured everywhere. */
+  --gamebook-board-fit: min(62vh, 30rem);
+  position: relative;
+  width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
+  max-width: 100%;
 }
 
 .gamebook__coach {
-  flex: 1 1 260px;
-  max-width: 340px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.3));
-  border-radius: 12px;
-  background: var(--c-bg-elevated, rgba(128, 128, 128, 0.06));
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 12px);
+  background: var(--site-panel);
+  color: var(--site-text);
 }
 
 .gamebook__mascot {
-  font-size: 2.4rem;
+  font-size: 2rem;
   line-height: 1;
 }
 
 .gamebook__bubble {
   position: relative;
-  padding: 0.75rem 0.9rem;
-  border-radius: 10px;
-  background: var(--c-bg, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.25));
-  min-height: 3.5rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--site-radius-sm, 10px);
+  background: var(--site-surface);
+  border: 1px solid var(--site-border-soft, var(--site-border));
+  color: var(--site-text);
 }
-.gamebook__coach[data-state="bad"] .gamebook__bubble {
+.gamebook__coach[data-state="bad"] .gamebook__bubble,
+.gamebook__coach[data-state="failed"] .gamebook__bubble {
   border-color: #b91c1c;
 }
-.gamebook__coach[data-state="end"] .gamebook__bubble {
+.gamebook__coach[data-state="end"] .gamebook__bubble,
+.gamebook__coach[data-state="success"] .gamebook__bubble {
   border-color: #15803d;
 }
 
@@ -76,18 +128,19 @@
   margin: 0.4rem 0 0;
   font-weight: 600;
 }
-.gamebook__coach[data-state="bad"] .gamebook__feedback {
-  color: #b91c1c;
-  font-weight: 400;
+.gamebook__coach[data-state="bad"] .gamebook__feedback,
+.gamebook__coach[data-state="failed"] .gamebook__feedback {
+  color: #ef6461;
 }
-.gamebook__coach[data-state="end"] .gamebook__feedback {
-  color: #15803d;
+.gamebook__coach[data-state="end"] .gamebook__feedback,
+.gamebook__coach[data-state="success"] .gamebook__feedback {
+  color: #4ea96a;
 }
 
 .gamebook__hint {
-  margin: 0;
+  margin: 0.35rem 0 0;
   font-style: italic;
-  opacity: 0.85;
+  color: var(--site-muted);
 }
 .gamebook__hint:empty {
   display: none;
@@ -102,17 +155,41 @@
 .gamebook__btn {
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
-  border: 1px solid var(--c-border, rgba(128, 128, 128, 0.4));
-  border-radius: 6px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 6px);
   background: transparent;
-  color: inherit;
+  color: var(--site-text);
   cursor: pointer;
+}
+.gamebook__btn:hover {
+  border-color: var(--site-accent);
 }
 .gamebook__btn[hidden] {
   display: none;
 }
 .gamebook__btn--primary {
-  background: var(--c-accent, #3893e8);
-  border-color: var(--c-accent, #3893e8);
+  background: var(--site-accent);
+  border-color: var(--site-accent);
   color: #fff;
+}
+
+/* One column below the point where a rail, a board and a panel stop fitting
+   side by side. The board leads, because it is what the learner acts on. */
+@media (max-width: 60rem) {
+  .gamebook {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    /* Stacked: each block takes its own height and the PAGE scrolls, so the
+       definite row height above would truncate the rail instead of bounding it. */
+    grid-auto-rows: auto;
+    align-items: start;
+  }
+  .gamebook__board {
+    order: -1;
+    --gamebook-board-fit: min(78vw, 26rem);
+  }
+  .gamebook__aside,
+  .gamebook__coach {
+    width: min(100%, 30rem);
+  }
 }

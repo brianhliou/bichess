@@ -25,6 +25,7 @@
  */
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { liveSeatProfileIdentity } from './first-party-bots.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -94,6 +95,13 @@ export type LiveTvPlayer = {
   color: string;
   name: string | null;
   isEngine: boolean;
+  // Profile identity for the seat, so TV can link a live name the same way the
+  // finished-game surfaces do. At most one is ever set: `handle` addresses
+  // /@/<handle> for a signed-in human, `botId` addresses /bot/<id> for a
+  // first-party bot. Both absent for a guest, and for a raw engine-version seat
+  // with no bot identity in front of it — neither has a public page.
+  handle?: string | null;
+  botId?: string | null;
 };
 
 export type LiveTvCandidate = {
@@ -160,6 +168,7 @@ function candidateFromChessRoom(
       color,
       isEngine,
       name: token?.userDisplayName ?? token?.userHandle ?? (isEngine ? clientId : null),
+      ...liveSeatProfileIdentity(isEngine ? clientId : null, token?.userHandle ?? null),
     });
   }
   return finishCandidate({
@@ -195,6 +204,7 @@ function candidateFromTenantRoom(
       color,
       isEngine: engineSeat,
       name: token?.userDisplayName ?? token?.userHandle ?? engineName,
+      ...liveSeatProfileIdentity(engineSeat ? clientId : null, token?.userHandle ?? null),
     });
   }
   if (players.length < 2) return null;

@@ -252,8 +252,8 @@ definePersistenceTests('crosstable', () => {
     const body = buildCrosstable({
       variant: 'xiangqi',
       players: [
-        { name: 'Alice', kind: 'account' },
-        { name: 'Bob', kind: 'account' },
+        { name: 'Alice', kind: 'account', handle: null, botId: null },
+        { name: 'Bob', kind: 'account', handle: null, botId: null },
       ],
       games,
       tallies,
@@ -277,8 +277,8 @@ definePersistenceTests('crosstable', () => {
     const reversedBody = buildCrosstable({
       variant: 'xiangqi',
       players: [
-        { name: 'Bob', kind: 'account' },
-        { name: 'Alice', kind: 'account' },
+        { name: 'Bob', kind: 'account', handle: null, botId: null },
+        { name: 'Alice', kind: 'account', handle: null, botId: null },
       ],
       games: [],
       tallies: reversed,
@@ -295,8 +295,8 @@ definePersistenceTests('crosstable', () => {
     const engineBody = buildCrosstable({
       variant: 'xiangqi',
       players: [
-        { name: 'Alice', kind: 'account' },
-        { name: 'misty-xiangqi', kind: 'engine' },
+        { name: 'Alice', kind: 'account', handle: null, botId: null },
+        { name: 'misty-xiangqi', kind: 'engine', handle: null, botId: null },
       ],
       games: await queryHeadToHeadGames(ALICE, ENGINE, 'xiangqi', CROSSTABLE_GAME_LIMIT),
       tallies: engineTallies,
@@ -323,9 +323,12 @@ definePersistenceTests('crosstable', () => {
     assert.equal(payload.available, true);
     if (!payload.available) return;
     assert.equal(payload.variant, 'xiangqi');
+    // The handles come from the users join in loadGameParticipants, so this is
+    // the end-to-end proof that a real account seat is linkable: the fixtures
+    // above pass handle: null as INPUT, and only the DB path fills them in.
     assert.deepEqual(payload.players, [
-      { name: 'alice', kind: 'account' },
-      { name: 'bob', kind: 'account' },
+      { name: 'alice', kind: 'account', handle: 'alice', botId: null },
+      { name: 'bob', kind: 'account', handle: 'bob', botId: null },
     ]);
     assert.deepEqual(payload.score, { a: 2, b: 2, draws: 1, total: 5 });
     assert.deepEqual(payload.games[0], {
@@ -387,8 +390,8 @@ definePersistenceTests('crosstable', () => {
     const body = buildCrosstable({
       variant: 'xiangqi',
       players: [
-        { name: 'Alice', kind: 'account' },
-        { name: 'Bob', kind: 'account' },
+        { name: 'Alice', kind: 'account', handle: null, botId: null },
+        { name: 'Bob', kind: 'account', handle: null, botId: null },
       ],
       games,
       tallies,

@@ -8,6 +8,7 @@ import {
   variantForId,
 } from '@mistboard/game';
 import { engineVersionDisplayName } from './engine-registry.js';
+import type { LiveSeatProfile } from './first-party-bots.js';
 import { type GameAccessMode, modeForProjection } from './server-policy.js';
 
 export type Seat = Color | 'spectator';
@@ -31,6 +32,12 @@ export type SnapshotRoom = {
   region?: string;
   rematch?: { offers: Partial<Record<Color, unknown>>; finalizedRoomId?: string };
   seatDisplayNames?: Partial<Record<Color, string>>;
+  // Linkable profile identity per seat, parallel to seatDisplayNames (built by
+  // seatProfilesForRoom). Public identity only -- a handle or a bot slug, each
+  // already implied by the display name sitting beside it -- so this discloses
+  // nothing per-seat that a spectator could not already read off the room, and
+  // it is deliberately NOT filtered per client the way the board view is.
+  seatProfiles?: Partial<Record<Color, LiveSeatProfile>>;
   // Absolute ms deadline for the current pre-move abort window, or null when no
   // window is live. Sent to clients to render the abort countdown; survives
   // reconnect since it's an absolute timestamp.
@@ -144,6 +151,7 @@ function basePayloadFields(room: SnapshotRoom, client: SnapshotClient) {
     forfeitDeadline: room.forfeitDeadline ?? null,
     connectedSeats: computeConnectedSeats(room.clients),
     seatDisplayNames: room.seatDisplayNames ?? {},
+    seatProfiles: room.seatProfiles ?? {},
     rematch: room.rematch
       ? {
           offers: {

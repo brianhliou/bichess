@@ -109,6 +109,7 @@ export {
   getCorrespondenceSeekListing,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
+  listOutgoingSeeksForUser,
 } from './persistence-correspondence-seeks.js';
 export { close, init, isInitialized, probeDb } from './persistence-db.js';
 export type {
@@ -482,6 +483,7 @@ export {
   reorderStudyChapters,
   setChapterGamebook,
   setChapterOrientation,
+  setChapterPractice,
   setChapterTags,
   setStudyFeatured,
   setStudyLike,

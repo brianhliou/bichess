@@ -18,6 +18,7 @@ import {
   darkXiangqiObservedCaptures,
   darkXiangqiTenant,
 } from './dark-xiangqi-tenant.js';
+import { DARK_XIANGQI_DEFAULT_ENGINE_ID } from './engines/registry.js';
 import { darkXiangqiPostgameForApi } from './routes/dark-xiangqi-games.js';
 import {
   createTenantRuntimeRoomFromEvents,
@@ -123,6 +124,60 @@ test('game summary: anonymous seats are named "Guest", never a color word', () =
   );
   assert.equal(names.red, 'Guest');
   assert.equal(names.black, 'Guest');
+});
+
+test('game summary: a PvE engine seat is attributed to the bot, not the engine version', () => {
+  // Regression: Dark Xiangqi is the only tenant that overrides buildGameSummary,
+  // and its private participant builder never read room.pveBotId — so every dxq
+  // PvE game recorded subject_type 'engine-version'/'python-fdx-v1.1' where the
+  // shared tenantParticipant records 'bot'/'misty'. The bot profile counts games
+  // by (subject_type='bot', subject_id), so Misty's Fog Xiangqi tab read
+  // "0 Games / No completed Fog Xiangqi games yet" while finished games existed.
+  const roomId = 'dxq_pve_bot_attribution';
+  const events = captureGameEvents(roomId, { resign: true });
+  events[0] = { ...events[0]!, pveBotId: 'misty' } as DarkXiangqiEvent;
+  events.splice(1, 0, {
+    type: 'seat-assigned',
+    at: 2_000,
+    roomId,
+    clientId: DARK_XIANGQI_DEFAULT_ENGINE_ID,
+    seat: 'black',
+  });
+
+  const created = createTenantRuntimeRoomFromEvents(darkXiangqiTenant, events);
+  if (!created.ok) throw new Error('pve game must hydrate');
+
+  const summary = buildDarkXiangqiGameSummary(created.room);
+  const black = (summary.participants ?? []).find((p) => p.color === 'black');
+  assert.equal(black?.subjectType, 'bot');
+  assert.equal(black?.subjectId, 'misty');
+  assert.equal(black?.displayName, 'Misty');
+
+  // The human seat is unaffected.
+  const red = (summary.participants ?? []).find((p) => p.color === 'red');
+  assert.equal(red?.subjectType, 'guest');
+});
+
+test('game summary: an engine seat with no pveBotId still resolves its first-party bot', () => {
+  // Legacy rooms created before pveBotId was recorded fall back to
+  // firstPartyBotForEngine(engineId), so a backfill is not needed for naming.
+  const roomId = 'dxq_pve_legacy_attribution';
+  const events = captureGameEvents(roomId, { resign: true });
+  events.splice(1, 0, {
+    type: 'seat-assigned',
+    at: 2_000,
+    roomId,
+    clientId: DARK_XIANGQI_DEFAULT_ENGINE_ID,
+    seat: 'black',
+  });
+
+  const created = createTenantRuntimeRoomFromEvents(darkXiangqiTenant, events);
+  if (!created.ok) throw new Error('legacy pve game must hydrate');
+
+  const summary = buildDarkXiangqiGameSummary(created.room);
+  const black = (summary.participants ?? []).find((p) => p.color === 'black');
+  assert.equal(black?.subjectType, 'bot');
+  assert.equal(black?.subjectId, 'misty');
 });
 
 // ── Postgame history truncation ──────────────────────────────────────────────

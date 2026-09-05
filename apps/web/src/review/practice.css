@@ -1,0 +1,297 @@
+/* Practice player: the parts an engine-adjudicated exercise has that an authored
+   gamebook does not. Structure (rail / board / coach grid) comes from
+   gamebook.css -- the two are the same widget with a different brain, and
+   forking the layout is how they would drift apart. */
+
+.practice__progress {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The line played so far. Two columns so the learner's moves and the engine's
+   replies line up as a pair per full move, the way any move list reads. */
+.practice__moves {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.1rem 0.5rem;
+  align-content: start;
+  margin: 0;
+  padding: 0.5rem 14px;
+  list-style: none;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+.practice__moves[hidden] {
+  display: none;
+}
+
+.practice__move {
+  padding: 0.05rem 0;
+}
+.practice__move--learner {
+  color: var(--site-text);
+  font-weight: 600;
+}
+.practice__move--defender {
+  color: var(--site-muted);
+}
+
+/* While the engine searches, the panel says so and the board dims a little: the
+   learner needs to know it is unresponsive on purpose, not stuck. */
+.gamebook__coach[data-state="thinking"] .gamebook__feedback {
+  color: var(--site-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.practice .gamebook__board {
+  transition: opacity 120ms ease;
+}
+.practice:has(.gamebook__coach[data-state="thinking"]) .gamebook__board {
+  opacity: 0.85;
+}
+
+/* Hint ink. A `kind: 'circle'` marker renders as fill="none" with a stroke-WIDTH
+   but no stroke COLOUR -- the colour always comes from a class the caller
+   passes. Without this rule the hint ring is in the DOM, correctly positioned,
+   and completely invisible, which is exactly how it shipped the first time: the
+   unit test asserted the element existed and passed. */
+.xq-marker--circle.xq-marker--practice-hint {
+  stroke: #d8a01d;
+}
+
+/* ── Board column: board, then the brief under it ───────────────────────────
+   lichess puts the goal and the concept prose BELOW the board rather than in a
+   side panel. That is the right place: the goal is what a learner re-reads
+   while staring at the position, so it belongs in their eyeline. It also stops
+   the area under the board reading as dead space. */
+.practice__board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+/* Stable wrapper for the board: carries the scaled width and hosts the resize
+   grip, which cannot live on the board itself because that element is repainted
+   with innerHTML on every move. */
+.practice__board-frame {
+  position: relative;
+  width: calc(var(--gamebook-board-fit, min(62vh, 30rem)) * var(--uni-board-scale, 1));
+  max-width: 100%;
+}
+.practice__board-frame .gamebook__board {
+  width: 100%;
+}
+
+.practice__brief {
+  /* Match the board, which sizes itself from the shared scale token. */
+  width: calc(var(--gamebook-board-fit, min(62vh, 30rem)) * var(--uni-board-scale, 1));
+  max-width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 12px);
+  background: var(--site-panel);
+  text-align: center;
+}
+
+.practice__brief-goal {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--site-text);
+}
+
+.practice__brief-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--site-muted);
+  text-align: left;
+}
+
+/* The column panel. Deliberately NOT `.review-info-card`: that class is styled
+   in review/review-shell.css, which this surface does not import, so borrowing
+   it rendered both columns as unstyled text on the page. Shared markup has to
+   ship its own styles; the look is matched here on purpose. */
+.practice__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius, 10px);
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-text);
+}
+
+/* ── Left column: the rail card ────────────────────────────────────────────
+   `.study-chapters` is a SECTION of a panel, not a box -- it carries only a
+   border-top and expects a card around it. Mounted bare it renders as naked
+   rows floating on the page, which is what it was doing here. */
+.practice__rail-card {
+  gap: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.practice__rail-head {
+  padding-bottom: 0.5rem;
+}
+
+.practice__rail-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--site-text);
+}
+
+.practice__rail-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--site-muted);
+}
+
+/* Rows run edge to edge inside the card, cancelling its 14px side padding --
+   the same trick `.review-info-card .study-chapters` uses on the review page,
+   so the two surfaces read as the same component. */
+.practice__rail-card .study-chapters {
+  margin: 0 -14px;
+}
+
+/* ── Right column: ONE panel, full-bleed bands ─────────────────────────────
+   lichess stacks the side column as continuous bands inside a single bordered
+   panel (eval / moves / coach / controls), not as a set of floating rounded
+   sub-boxes with gaps between them. The gaps are what made this look unstructured. */
+.practice__side {
+  gap: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  /* Board height (the grid stretches it), with the move area as the part that
+     gives, so the coach sits at the BOTTOM the way lichess anchors it. */
+  min-height: 0;
+}
+
+.practice__progress {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
+  margin: 0 -14px 0;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* The coach sits at the bottom under a coloured strip, so the panel reads as
+   "reference above, live state below" rather than one undifferentiated stack. */
+.practice__coach {
+  margin: auto -14px 0;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+.practice__coach-strip {
+  margin: 0;
+  padding: 0.3rem 14px;
+  background: var(--site-accent-soft, var(--site-surface));
+  color: var(--site-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.practice__side[data-state="failed"] .practice__coach-strip {
+  background: rgba(185, 28, 28, 0.25);
+  color: #ef6461;
+}
+.practice__side[data-state="success"] .practice__coach-strip {
+  background: rgba(21, 128, 61, 0.25);
+  color: #4ea96a;
+}
+
+/* Band, not a nested card: no border or radius of its own. */
+.practice__coach-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.7rem 14px 0.8rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ── Matching the lichess rail more closely ────────────────────────────────
+   Four differences a side-by-side made obvious: their header is a saturated
+   coloured block, their rows are single-line and dense (19 visible against our
+   6), their card fills the board's height, and their coach strip is actually
+   coloured rather than a dark band you have to look for. */
+
+.practice__rail-card {
+  /* Board height, not content height: min-height 0 all the way down to the
+     scrolling list is what lets the card shrink instead of growing the row. */
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Full-bleed saturated header, like lichess's blue title block. */
+.practice__rail-head {
+  margin: 0;
+  padding: 0.6rem 14px 0.55rem;
+  background: var(--site-accent);
+  color: #fff;
+}
+.practice__rail-title {
+  color: #fff;
+}
+.practice__rail-sub {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* The rail becomes the card's flexible middle so its list scrolls instead of
+   the card growing past the board. */
+.practice__rail-card .study-chapters {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  border-top: 0;
+  margin: 0;
+}
+.practice__rail-card .study-chapters__list {
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Dense single-line rows. The shared rail wraps to two lines because a curated
+   study title can carry a native name plus a gloss; an exercise list is a list
+   of short labels, and wrapping halves how many a learner can see at once. */
+.practice__rail-card .study-chapters__name {
+  -webkit-line-clamp: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
+.practice__rail-card .study-chapters__row {
+  min-height: 1.75rem;
+}
+.practice__rail-card .study-chapters__link {
+  align-items: center;
+  padding-top: 0.18rem;
+  padding-bottom: 0.18rem;
+}
+
+/* The coach strip carries real colour, the way lichess's green bar does: it is
+   the one band that says the engine is live, and a dark-on-dark strip loses it. */
+.practice__coach-strip {
+  background: color-mix(in srgb, #4d8a3d 70%, transparent);
+  color: #eaf5e6;
+}

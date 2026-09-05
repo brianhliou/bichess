@@ -28,9 +28,11 @@ import {
   type XiangqiSquare,
   xiangqiCaptureLedger,
 } from '@mistboard/game';
+import { engineFailureAbort } from './engine-failure-abort.js';
 import { engineVersionDisplayName, isDarkXiangqiEngineClientId } from './engines/registry.js';
 import { darkXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
+import { tenantParticipant } from './variant-tenant/events.js';
 import type {
   TenantClientEvent,
   TenantRoomEvent,
@@ -248,9 +250,15 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
     rated: false,
     visibility,
     participants: [
-      darkXiangqiParticipant('red', room, visibility),
-      darkXiangqiParticipant('black', room, visibility),
+      tenantParticipant(darkXiangqiTenant, 'red', room, visibility),
+      tenantParticipant(darkXiangqiTenant, 'black', room, visibility),
     ],
+    // An engine cannot abandon: record the failure, not a win for the human.
+    abortedAs: engineFailureAbort({
+      engineSeat,
+      winner: status.winner,
+      reason: status.reason,
+    }),
   };
 }
 
@@ -258,43 +266,6 @@ function darkXiangqiResult(winner: XiangqiColor | null): persistence.GameResult 
   if (winner === 'red') return 'red-wins';
   if (winner === 'black') return 'black-wins';
   return 'draw';
-}
-
-function darkXiangqiParticipant(
-  color: XiangqiColor,
-  room: DarkXiangqiTenantRoom,
-  visibility: persistence.GameVisibility,
-): persistence.GameParticipant {
-  const seatedClientId = room.projection.seats[color];
-  if (seatedClientId && isDarkXiangqiEngineClientId(seatedClientId)) {
-    return {
-      color,
-      displayName: engineVersionDisplayName(seatedClientId),
-      subjectType: 'engine-version',
-      subjectId: seatedClientId,
-      visibility,
-    };
-  }
-  const token = room.seatTokens[color];
-  if (token?.userId) {
-    return {
-      color,
-      displayName: token.userDisplayName ?? token.userHandle ?? 'Player',
-      subjectType: 'user',
-      subjectId: token.userId,
-      visibility,
-    };
-  }
-  // Anonymous seat: name it 'Guest', matching every other persistence path
-  // (room-manager, persistence-games). A color word here reads as a side label,
-  // not a player, and surfaces as "Red"/"Black" on watch thumbnails and reviews.
-  return {
-    color,
-    displayName: 'Guest',
-    subjectType: 'guest',
-    subjectId: null,
-    visibility,
-  };
 }
 
 function darkXiangqiEngineSeat(room: DarkXiangqiTenantRoom): XiangqiColor | null {

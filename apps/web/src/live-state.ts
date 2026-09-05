@@ -10,6 +10,7 @@ import type {
   XiangqiColor,
 } from '@mistboard/game';
 import type { Api } from 'chessground/api';
+import type { ProfileIdentity } from './profile-link.js';
 import { isColor } from './web-utils.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -198,6 +199,9 @@ export const liveState = {
   // Keyed by PlayableSeat (not just chess Color): the mini-xiangqi rooms ride
   // this same shell and their seats are red/black.
   seatDisplayNames: {} as Partial<Record<PlayableSeat, string>>,
+  // Where each seat name links, parallel to seatDisplayNames. A seat with no
+  // public page (a guest, an engine with no bot fronting it) is simply absent.
+  seatProfiles: {} as Partial<Record<PlayableSeat, ProfileIdentity>>,
   seat: 'spectator' as Seat,
   solo: false,
   offer: [] as Chess960Start[],

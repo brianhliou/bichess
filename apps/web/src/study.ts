@@ -21,7 +21,7 @@ import './live-xiangqi.css';
 import './xiangqi-postgame.css';
 import './study.css';
 import './study-index.css';
-import { deepCloneJson, normalizeStartFen } from '@mistboard/game';
+import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
@@ -82,6 +82,13 @@ type ChapterDto = {
   root: SerializedTree;
   version: number;
   gamebook: boolean;
+  /** Practice (engine-adjudicated) chapter: played from the root position
+   *  against the engine, which also grades. Absent on chapters written before
+   *  migration 131. */
+  practice?: boolean;
+  /** Authored goal text ("mate in 3", "win", "draw in 20"); null unless
+   *  `practice`. Parsed by parsePracticeGoal at mount. */
+  practiceGoal?: string | null;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -613,6 +620,59 @@ function renderStudy(
         : undefined;
 
     root.replaceChildren(buildNav());
+
+    // A practice chapter is played against the engine. It is checked BEFORE the
+    // gamebook branch because the two flags are mutually exclusive in intent and
+    // practice ignores the tree entirely: a chapter carrying both is a bug, and
+    // silently rendering the tree-based player would hide it.
+    const practiceGoal = chapter.practice ? parsePracticeGoal(chapter.practiceGoal) : null;
+    if (practiceGoal && gamebookable && (!study.isOwner || previewMode)) {
+      const aside = document.createElement('div');
+      aside.className = 'study-aside';
+      // The rail is a SECTION of a surrounding panel, not a standalone box: it
+      // carries only a border-top and expects a card to supply the border,
+      // background and radius (study.css: `.review-info-card .study-chapters`).
+      // Mounted bare it renders as naked rows floating on the page. Wrap it the
+      // way the review page does, with the set's name as the card's header --
+      // which is also where lichess puts it, instead of a centred page title.
+      const railCard = document.createElement('section');
+      railCard.className = 'practice__panel practice__rail-card';
+      const railHead = document.createElement('header');
+      railHead.className = 'practice__rail-head';
+      const railTitle = document.createElement('h2');
+      railTitle.className = 'practice__rail-title';
+      railTitle.textContent = localizedStudyName(study.name, study.i18n);
+      const railSub = document.createElement('p');
+      railSub.className = 'practice__rail-sub';
+      railSub.textContent = localizedStudyName(chapter.name, chapter.i18n);
+      railHead.append(railTitle, railSub);
+      railCard.append(railHead, rail(statusSpan(study.isOwner)));
+      // Rail only, no chat: a practice chapter is a solo drill against the
+      // engine, and the chat panel rendered as an empty box under the rail.
+      aside.append(railCard);
+      // Dynamic: the practice player pulls in the client engine, and a study
+      // view that never opens a practice chapter should not pay for it.
+      const practiceNav = buildNav();
+      const practiceIndex = chapters.findIndex((entry) => entry.id === chapter.id);
+      const nextChapter = chapters[practiceIndex + 1];
+      void import('./review/study-practice.js').then(({ mountPracticeChapter }) => {
+        mountPracticeChapter(root, {
+          chapter,
+          nav: practiceNav,
+          goal: practiceGoal,
+          // No centred page header: the set's name lives in the rail card, the
+          // exercise's goal lives under the board. A title floating above the
+          // three columns belongs to neither and reads as a stray caption.
+          aside,
+          progress: { index: practiceIndex + 1, total: chapters.length },
+          // Omitted on the last chapter, so the button is not offered at all
+          // rather than offered and inert.
+          ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
+        });
+      });
+      attachStudyPageThumbnail(root, study.id);
+      return;
+    }
 
     // A gamebook chapter is played (guess-the-move) by viewers and by the owner in
     // preview; the owner authors it in the review board otherwise.

@@ -69,7 +69,13 @@ export async function createCorrespondenceSeek(seek: CorrespondenceSeekRecord): 
 // spam.
 export async function countOpenSeeksForUser(userId: string): Promise<number> {
   const { rows } = await getPool().query<{ count: string }>(
-    'SELECT COUNT(*)::text AS count FROM correspondence_seeks WHERE creator_user_id = $1',
+    // Expired rows are excluded so the cap counts exactly what
+    // listOutgoingSeeksForUser shows and cancelSeek can remove. Without this,
+    // dead links held a slot between their expiry and the sweeper's next pass,
+    // and the player had no way to see or clear the row blocking them.
+    `SELECT COUNT(*)::text AS count FROM correspondence_seeks
+      WHERE creator_user_id = $1
+        AND (expires_at IS NULL OR expires_at > now())`,
     [userId],
   );
   return Number(rows[0]?.count ?? '0');
@@ -90,6 +96,11 @@ type SeekListingRow = {
   expires_at: Date | null;
   creator_name: string | null;
   created_at: Date;
+};
+
+/** A seek the caller created, plus the recipient's name for a directed one. */
+export type OutgoingCorrespondenceSeek = CorrespondenceSeekListing & {
+  targetName: string | null;
 };
 
 function toListing(row: SeekListingRow): CorrespondenceSeekListing {
@@ -140,6 +151,33 @@ export async function listChallengesForUser(
     [targetUserId, limit],
   );
   return rows.map(toListing);
+}
+
+// "Challenges I sent" — every standing invitation this player created, whatever
+// its visibility: public board posts, private share links, and directed
+// challenges. This is the only read that can see a player's own private
+// challenges: listOpenCorrespondenceSeeks is deliberately
+// `visibility = 'public' AND target_user_id IS NULL`, and listChallengesForUser
+// matches on target_user_id, so before this a link challenge existed nowhere its
+// creator could see it and could not be cancelled, while still counting against
+// MAX_OPEN_SEEKS_PER_USER for its full seven-day TTL (#353).
+export async function listOutgoingSeeksForUser(
+  creatorUserId: string,
+  limit = 100,
+): Promise<OutgoingCorrespondenceSeek[]> {
+  const { rows } = await getPool().query<SeekListingRow & { target_name: string | null }>(
+    `SELECT ${SEEK_COLUMNS},
+            COALESCE(t.display_name, t.handle) AS target_name
+     FROM correspondence_seeks s
+     JOIN users u ON u.id = s.creator_user_id
+     LEFT JOIN users t ON t.id = s.target_user_id
+     WHERE s.creator_user_id = $1
+       AND (s.expires_at IS NULL OR s.expires_at > now())
+     ORDER BY s.created_at DESC
+     LIMIT $2`,
+    [creatorUserId, limit],
+  );
+  return rows.map((row) => ({ ...toListing(row), targetName: row.target_name }));
 }
 
 // Housekeeping: drop challenges whose expiry has passed. Correctness never

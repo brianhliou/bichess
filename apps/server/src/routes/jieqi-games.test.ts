@@ -154,8 +154,41 @@ test('Jieqi postgame exposes players sourced from persisted participants', async
   const payload = await jieqiPostgameForApi(ROOM_ID, deps(record, finishedCaptureEvents()));
   assert.ok(payload);
   assert.deepEqual(payload.game.players, [
-    { color: 'red', name: '周孟芳', rating: 2412, kind: 'account' },
-    { color: 'black', name: 'Misty', rating: null, kind: 'engine' },
+    // `handle` is null even though the seat is a user with a subjectId: the
+    // participant carries no handle here, and subjectId is an internal user id
+    // that /@/:handle cannot address. Linking off it would 404.
+    { color: 'red', name: '周孟芳', rating: 2412, kind: 'account', handle: null, botId: null },
+    // A raw engine-version subject has no /bot page, so it stays unlinkable.
+    { color: 'black', name: 'Misty', rating: null, kind: 'engine', handle: null, botId: null },
+  ]);
+});
+
+test('Jieqi postgame carries a linkable handle for a user seat and a bot id for a bot seat', async () => {
+  const record = gameRecord({
+    participants: [
+      {
+        color: 'red',
+        displayName: 'Zhou',
+        subjectType: 'user',
+        subjectId: 'acct-1',
+        handle: 'zhou',
+        visibility: 'public',
+      },
+      {
+        color: 'black',
+        displayName: 'Misty',
+        subjectType: 'bot',
+        subjectId: 'misty',
+        visibility: 'public',
+      },
+    ],
+  });
+  const payload = await jieqiPostgameForApi(ROOM_ID, deps(record, finishedCaptureEvents()));
+  assert.ok(payload);
+  assert.deepEqual(payload.game.players, [
+    { color: 'red', name: 'Zhou', rating: null, kind: 'account', handle: 'zhou', botId: null },
+    // Both seats read 'account'; only botId/handle say which page each one has.
+    { color: 'black', name: 'Misty', rating: null, kind: 'account', handle: null, botId: 'misty' },
   ]);
 });
 
@@ -167,6 +200,9 @@ test('Jieqi postgame redacts a private participant to Anonymous but keeps kind',
         displayName: 'Alice',
         subjectType: 'user',
         subjectId: 'acct-9',
+        // A linkable handle IS present; the redaction has to drop it anyway,
+        // otherwise the row shows 'Anonymous' and links straight to the name.
+        handle: 'alice',
         visibility: 'private',
         ratingBefore: 1500,
       },
@@ -182,8 +218,10 @@ test('Jieqi postgame redacts a private participant to Anonymous but keeps kind',
   const payload = await jieqiPostgameForApi(ROOM_ID, deps(record, finishedCaptureEvents()));
   assert.ok(payload);
   assert.deepEqual(payload.game.players, [
-    { color: 'red', name: 'Anonymous', rating: 1500, kind: 'account' },
-    { color: 'black', name: 'guest-xyz', rating: null, kind: 'guest' },
+    // A redacted seat must not carry a link that names the account behind the
+    // 'Anonymous' it shows, so handle is null regardless of the participant.
+    { color: 'red', name: 'Anonymous', rating: 1500, kind: 'account', handle: null, botId: null },
+    { color: 'black', name: 'guest-xyz', rating: null, kind: 'guest', handle: null, botId: null },
   ]);
 });
 

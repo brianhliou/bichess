@@ -22,20 +22,28 @@ type CorrespondenceGamesResponse = {
   yourMoveCount: number;
 };
 
-// One open seek, as served by GET /api/correspondence/seeks. A standing
-// invitation anyone (but its creator) can accept to start a game.
-type CorrespondenceSeek = {
+// Move order, not color (server migration 106): seeks are variant-neutral, and
+// the label is resolved per variant at render time.
+type SeekPreferredColor = 'first' | 'second' | 'random';
+
+// One invitation THIS player sent, as served by GET /api/correspondence/seeks/mine.
+// Unlike the public board feed this includes private link challenges and directed
+// ones, which is the whole point: before #353 a link challenge appeared nowhere
+// its creator could see it, could not be cancelled, and still held one of the six
+// outstanding-invitation slots for its full seven-day TTL.
+type OutgoingSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
-  // Move order, not color (server migration 106): the seek board is variant-neutral.
-  preferredColor: 'first' | 'second' | 'random';
-  creatorName: string | null;
+  preferredColor: SeekPreferredColor;
+  visibility: 'public' | 'private';
+  targetName: string | null;
+  challengeUrl: string | null;
+  expiresAt: string | null;
   createdAt: string;
-  isMine: boolean;
 };
 
-type CorrespondenceSeeksResponse = { seeks: CorrespondenceSeek[] };
+type OutgoingSeeksResponse = { limit: number; seeks: OutgoingSeek[] };
 
 export async function mountCorrespondence(root: HTMLElement): Promise<void> {
   root.replaceChildren();
@@ -201,7 +209,7 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
   heading.textContent = t('correspondence.yourOpenChallenges');
   headerRow.append(heading);
 
-  const resp = await fetch('/api/correspondence/seeks').catch(() => null);
+  const resp = await fetch('/api/correspondence/seeks/mine').catch(() => null);
   if (resp?.status === 404) {
     // The server's own kill-switch (MISTBOARD_CORRESPONDENCE_ENABLED) answers
     // here. That is a state, not a failure: say the format is coming rather
@@ -226,18 +234,7 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
     );
     return;
   }
-  const { seeks: allSeeks } = (await resp.json()) as CorrespondenceSeeksResponse;
-  // Everyone else's open seeks are the lobby tab's job; keep only the rows this
-  // page can act on (isMine rows render a Cancel button, the rest a Join).
-  //
-  // NOTE this can only ever show PUBLIC posts: listOpenCorrespondenceSeeks is
-  // `visibility = 'public' AND target_user_id IS NULL`, so private link
-  // challenges (what "Create a link to share" and the post-game invite mint) are
-  // structurally absent. There is no endpoint for a player's outgoing private
-  // challenges — /seeks/incoming covers only directed ones aimed AT you — so a
-  // sent link currently has no record anywhere and cannot be cancelled. Hence
-  // "Your posted games" rather than "Your open challenges".
-  const seeks = allSeeks.filter((seek) => seek.isMine);
+  const { seeks, limit } = (await resp.json()) as OutgoingSeeksResponse;
   const refresh = (): void => {
     void renderSeekBoard(container);
   };
@@ -265,8 +262,16 @@ async function renderSeekBoard(container: HTMLElement): Promise<void> {
   } else {
     const list = document.createElement('ol');
     list.className = 'correspondence-list correspondence-seek-list';
-    for (const seek of seeks) list.append(buildSeekRow(seek, refresh));
+    for (const seek of seeks) list.append(buildOutgoingSeekRow(seek, refresh));
     children.push(list);
+    // Standing invitations are capped, and hitting it refuses every new game
+    // with a 409. Say so before that happens rather than after.
+    if (seeks.length >= limit) {
+      const note = document.createElement('p');
+      note.className = 'correspondence-seek-empty';
+      note.textContent = t('correspondence.seekLimitReached', { limit });
+      children.push(note);
+    }
   }
   container.replaceChildren(...children);
 }
@@ -419,22 +424,24 @@ function buildPostSeekForm(onPosted: () => void): HTMLFormElement {
   return form;
 }
 
-function buildSeekRow(seek: CorrespondenceSeek, onChange: () => void): HTMLLIElement {
+function buildOutgoingSeekRow(seek: OutgoingSeek, onChange: () => void): HTMLLIElement {
   const item = document.createElement('li');
   item.className = 'correspondence-item correspondence-seek-item';
 
   const row = document.createElement('div');
   row.className = 'correspondence-row';
 
+  // Who it is aimed at: a named player, a share link, or the open board.
   const who = document.createElement('span');
   who.className = 'correspondence-opponent';
-  who.textContent = seek.isMine
-    ? t('correspondence.you')
-    : (seek.creatorName ?? t('correspondence.playerFallback'));
+  who.textContent = seek.targetName
+    ? t('correspondence.challengeTo', { name: seek.targetName })
+    : seek.visibility === 'private'
+      ? t('correspondence.shareLinkChallenge')
+      : t('correspondence.postedToBoard');
 
   const detail = document.createElement('span');
   detail.className = 'correspondence-turn';
-  // Lead with the variant now that the board is cross-variant, then side + cadence.
   detail.textContent = t('correspondence.seekDetail', {
     variant: variantDisplayLabel(seek.gameSpecId),
     color: seekColorLabel(seek.gameSpecId, seek.preferredColor),
@@ -444,51 +451,53 @@ function buildSeekRow(seek: CorrespondenceSeek, onChange: () => void): HTMLLIEle
         : t('correspondence.daysPerMove', { count: seek.daysPerMove }),
   });
 
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'correspondence-cta correspondence-seek-action';
-  if (seek.isMine) {
-    button.textContent = t('correspondence.cancel');
-    button.classList.add('is-cancel');
-    button.addEventListener('click', () => {
-      button.disabled = true;
-      void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}`, { method: 'DELETE' })
-        .then(() => onChange())
-        .catch(() => {
-          button.disabled = false;
-        });
-    });
-  } else {
-    button.textContent = t('correspondence.join');
-    button.addEventListener('click', () => {
-      button.disabled = true;
-      void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}/accept`, {
-        method: 'POST',
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            const body = (await res.json().catch(() => null)) as { url?: string } | null;
-            if (body?.url) {
-              window.location.href = body.url;
-              return;
-            }
-          }
-          // 409 seek_taken (someone beat us) or an error: refresh the board so
-          // the now-gone seek drops off.
-          onChange();
+  row.append(who, detail);
+
+  const actions = document.createElement('div');
+  actions.className = 'correspondence-seek-actions';
+
+  // A link challenge is useless without its link, and the creator may well have
+  // lost the tab they copied it from.
+  if (seek.challengeUrl) {
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'correspondence-cta correspondence-seek-action';
+    copy.textContent = t('correspondence.copyLink');
+    copy.addEventListener('click', () => {
+      const url = `${window.location.origin}${seek.challengeUrl}`;
+      void navigator.clipboard
+        ?.writeText(url)
+        .then(() => {
+          copy.textContent = t('correspondence.linkCopied');
+          setTimeout(() => {
+            copy.textContent = t('correspondence.copyLink');
+          }, 2000);
         })
-        .catch(() => {
-          button.disabled = false;
-        });
+        .catch(() => {});
     });
+    actions.append(copy);
   }
 
-  row.append(who, detail, button);
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'correspondence-cta correspondence-seek-action is-cancel';
+  cancel.textContent = t('correspondence.cancel');
+  cancel.addEventListener('click', () => {
+    cancel.disabled = true;
+    void fetch(`/api/correspondence/seeks/${encodeURIComponent(seek.id)}`, { method: 'DELETE' })
+      .then(() => onChange())
+      .catch(() => {
+        cancel.disabled = false;
+      });
+  });
+  actions.append(cancel);
+
+  row.append(actions);
   item.append(row);
   return item;
 }
 
-function seekColorLabel(gameSpecId: string, color: CorrespondenceSeek['preferredColor']): string {
+function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {
   if (color === 'first')
     return t('correspondence.playsColor', { color: firstMoverColorName(gameSpecId) });
   if (color === 'second')

@@ -6,8 +6,15 @@
 // this module never handles identities, only names and outcomes.
 
 import { t } from '../i18n/catalog.js';
+import { playerNameEl, profileTargetFor } from '../profile-link.js';
 
-export type CrosstablePlayer = { name: string; kind: 'account' | 'engine' };
+export type CrosstablePlayer = {
+  name: string;
+  kind: 'account' | 'engine';
+  // Linkable profile identity, at most one set; both null for a seat with no page.
+  handle?: string | null;
+  botId?: string | null;
+};
 
 export type CrosstableGame = {
   roomId: string;
@@ -72,12 +79,13 @@ type Standing = 'lead' | 'trail' | 'level';
 
 function playerRow(
   side: Side,
-  name: string,
+  player: CrosstablePlayer,
   games: readonly CrosstableGame[],
   total: string,
   standing: Standing,
   currentRoomId: string,
 ): HTMLTableRowElement {
+  const name = player.name;
   const row = document.createElement('tr');
   row.className = `review-crosstable__row review-crosstable__row--${side}`;
   // Lichess column order: the game cells packed against the names from the
@@ -106,7 +114,7 @@ function playerRow(
   const head = document.createElement('th');
   head.scope = 'row';
   head.className = 'review-crosstable__name';
-  head.textContent = name;
+  head.append(playerNameEl(name, profileTargetFor(player), 'review-crosstable__name-text'));
   const score = document.createElement('td');
   score.className = `review-crosstable__score review-crosstable__score--${standing}`;
   score.textContent = total;
@@ -144,7 +152,7 @@ export function renderCrosstable(
   body.append(
     playerRow(
       'a',
-      a.name,
+      a,
       games,
       formatPoints(data.score.a, data.score.draws),
       standingA,
@@ -152,7 +160,7 @@ export function renderCrosstable(
     ),
     playerRow(
       'b',
-      b.name,
+      b,
       games,
       formatPoints(data.score.b, data.score.draws),
       standingB,

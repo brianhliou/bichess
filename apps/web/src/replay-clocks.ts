@@ -205,11 +205,14 @@ function clocklessReplayTimeLabel(
       ? formatThinkingBudget(thinkingBudgetMs)
       : '';
   }
+  // The idle seat shows its full per-move allowance; the seat to move counts that allowance
+  // DOWN. The two rows then read as a clock ("2.9s" against "1.4s and falling") instead of
+  // as a statistic, which is how the old elapsed-over-budget form ("1.5s / 2.9s") read.
   if (color !== thinking.activeColor) return formatThinkingBudget(thinking.budgetMs);
-  return `${formatThinkingElapsed(thinking.elapsedMs)} / ${formatThinkingBudget(thinking.budgetMs)}`;
+  return formatThinkingRemaining(thinking.budgetMs - thinking.elapsedMs);
 }
 
-function formatThinkingElapsed(ms: number): string {
+function formatThinkingRemaining(ms: number): string {
   if (ms < 100) return '0.0s';
   const seconds = Math.max(0, ms) / 1000;
   if (seconds < 10) return `${seconds.toFixed(1)}s`;

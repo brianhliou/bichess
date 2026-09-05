@@ -22,6 +22,11 @@ export type GameParticipant = {
   subjectType: 'guest' | 'user' | 'bot' | 'engine-version' | 'manual' | 'imported';
   subjectId: string | null;
   visibility: 'private' | 'link' | 'unlisted' | 'public';
+  // The account handle behind a `user` seat, present only when the profile is
+  // safe to link (open account, non-private profile). `subjectId` for a user is
+  // an internal user id that /@/:handle cannot address, so this is the ONLY
+  // field that may build a member profile href — see profile-link.ts.
+  handle?: string | null;
   ratingBefore?: number | null;
   ratingAfter?: number | null;
 };
@@ -36,6 +41,11 @@ export type PostgamePlayerRow = {
   name: string;
   rating: number | null;
   kind: 'account' | 'guest' | 'engine';
+  // Linkable profile identity, at most one set. `kind` cannot stand in for
+  // these: it collapses users and bots into 'account'. Optional because a few
+  // surfaces hand-build partial rows; absent means "no page", same as null.
+  handle?: string | null;
+  botId?: string | null;
 };
 
 export type FeaturedGame = {

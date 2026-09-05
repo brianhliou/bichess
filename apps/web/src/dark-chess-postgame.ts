@@ -14,6 +14,7 @@ import './game-route.css';
 import './dark-xiangqi-postgame.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { t } from './i18n/catalog.js';
+import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import {
   type DarkChessDecisionSummary,
@@ -147,6 +148,7 @@ export function mountDarkChessPostgame(
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: reviewPlayers(game),
+    playerProfiles: reviewSeatProfiles(game.players, 'white'),
     result: { score: resultScore(game.result), label: status },
     ...crosstableConfig(game.roomId, game.players),
     // Draft960 is absent from the export table (its PGN needs [SetUp]/[FEN]), so

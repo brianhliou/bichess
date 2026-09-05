@@ -215,6 +215,8 @@ export const ZH_HANS_COMMUNITY = {
   'profile.savedGames': '收藏',
   'profile.noSavedGames': '还没有收藏的对局。',
   'profile.noAccountGames': '还没有账号对局。',
+  'profile.noVariantGames': '还没有{variant}对局。',
+  'profile.showAllGames': '显示全部对局',
   'profile.loadMore': '加载更多',
   'profile.loadingMore': '加载中...',
   'profile.finishedGame': '已结束的对局',

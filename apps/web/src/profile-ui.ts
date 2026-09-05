@@ -7,13 +7,13 @@ import {
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
-  matchupLabel,
   matchupSeats,
   participantForColor,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
+import { participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
@@ -180,9 +180,20 @@ export function buildProfileGameRow(
   const locale = opts.locale ?? currentLocale();
   const neutral = opts.neutral === true;
   const item = document.createElement('li');
-  const link = document.createElement('a');
-  link.href = profileGameHref(game);
+  // The row is a DIV with a stretched overlay link rather than one big <a>,
+  // because the opponent name inside it is itself a link to their profile and
+  // an <a> inside an <a> is invalid: browsers close the outer anchor early and
+  // the rest of the row silently stops being clickable. The overlay carries the
+  // href and the accessible name; everything else is inert content, except the
+  // opponent link, which is lifted above it (see .profile-game-row-open CSS).
+  const link = document.createElement('div');
   link.className = 'profile-game-row';
+  const open = document.createElement('a');
+  open.className = 'profile-game-row-open';
+  open.href = profileGameHref(game);
+  // The overlay carries no text of its own, so it needs an explicit accessible
+  // name; before the split the row's own content supplied one.
+  open.setAttribute('aria-label', t('profile.finishedGame', {}, locale));
   const tone = neutral ? 'neutral' : profileResultTone(game);
   link.classList.add(`profile-game-row-${tone}`);
 
@@ -198,14 +209,33 @@ export function buildProfileGameRow(
 
   const opponent = document.createElement('span');
   opponent.className = 'profile-game-opponent';
-  opponent.textContent = neutral
-    ? matchupLabel(game)
-    : t('profile.vsOpponent', { opponent: profileOpponentName(game, locale) }, locale);
-  if (!neutral) {
+  if (neutral) {
+    // Neutral rows have no subject seat, so BOTH names are opponents and both
+    // get linked; the ' vs ' between them stays plain text.
+    const [first, second] = matchupSeats(game);
+    opponent.append(
+      matchupNameEl(game, first),
+      document.createTextNode(' vs '),
+      matchupNameEl(game, second),
+    );
+  } else {
+    // "vs " stays plain text and only the NAME is the link, so the click target
+    // is the thing it addresses. Building the two spans by hand rather than
+    // through t() with an interpolated name keeps the name a separate node.
     const participant = profileOpponentParticipant(game);
+    const nameEl = playerNameEl(
+      profileOpponentName(game, locale),
+      participantProfileTarget(participant),
+      'profile-game-opponent-name',
+    );
     if (participant?.subjectType === 'bot' && participant.subjectId) {
-      attachBotCard(opponent, participant.subjectId);
+      attachBotCard(nameEl, participant.subjectId);
     }
+    appendWithNameNode(
+      opponent,
+      (token) => t('profile.vsOpponent', { opponent: token }, locale),
+      nameEl,
+    );
   }
 
   // Date rides its own right-aligned column (lichess game-row style) instead of
@@ -252,9 +282,59 @@ export function buildProfileGameRow(
   );
 
   body.append(topLine, details);
-  link.append(outcome, body, date);
+  // The overlay goes in FIRST so it sits under the row content in paint order;
+  // the opponent link then only needs a z-index to come back out on top.
+  link.append(open, outcome, body, date);
   item.append(link);
   return item;
+}
+
+// One seat of a neutral row's "A vs B" pairing, linked when that seat has a
+// page. Mirrors matchupLabel's halves, so the rendered text stays identical to
+// the string it replaced.
+function matchupNameEl(game: FeaturedGame, seat: GameParticipant['color']): HTMLElement {
+  const participant = participantForColor(game, seat);
+  const el = playerNameEl(
+    displayParticipantName(game, seat),
+    participantProfileTarget(participant),
+    'profile-game-opponent-name',
+  );
+  if (participant?.subjectType === 'bot' && participant.subjectId) {
+    attachBotCard(el, participant.subjectId);
+  }
+  return el;
+}
+
+// A sentinel no display name can contain, used to find where a translated
+// template puts its name placeholder.
+const NAME_SLOT = '\u0000';
+
+/**
+ * Render a translated one-placeholder template with a real ELEMENT in the
+ * placeholder's position, so the name can be a link while the words around it
+ * stay localized and in the locale's own order ('vs {opponent}' in English,
+ * '对 {opponent}' in Chinese).
+ *
+ * `render` is the t() call with the placeholder left as the caller's token, so
+ * this helper never has to reach into the catalog. If the template drops the
+ * placeholder entirely, the node is appended bare rather than lost.
+ */
+function appendWithNameNode(
+  host: HTMLElement,
+  render: (token: string) => string,
+  node: HTMLElement,
+): void {
+  const template = render(NAME_SLOT);
+  const at = template.indexOf(NAME_SLOT);
+  if (at < 0) {
+    host.append(node);
+    return;
+  }
+  const before = template.slice(0, at);
+  const after = template.slice(at + NAME_SLOT.length);
+  if (before) host.append(document.createTextNode(before));
+  host.append(node);
+  if (after) host.append(document.createTextNode(after));
 }
 
 function buildGameDetail(label: string, extraClass?: string): HTMLElement {

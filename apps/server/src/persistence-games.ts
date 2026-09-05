@@ -64,6 +64,13 @@ export type GameParticipant = {
   subjectType: GameParticipantSubjectType;
   subjectId: string | null;
   visibility: GameVisibility;
+  // The account handle behind a `user` seat, so game-derived surfaces can link the
+  // name to /@/<handle>. `subjectId` for a user is the internal user id, which the
+  // profile route cannot address. Present ONLY when the seat is safe to link:
+  // the account is open and its profile is not private. Null for every other
+  // subject type, and for a linkable-in-principle user whose profile is closed or
+  // private, so a client rule of "handle present => render a link" is fail-closed.
+  handle?: string | null;
   // Engine build version for engine-version seats whose subject_id is version-less (the
   // variant-tenant UCI engines — jieqi/banqi/crossroads, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
@@ -98,6 +105,22 @@ export type GameSummary = {
   initialMs?: number | null;
   incrementMs?: number | null;
   hiddenDraft960?: boolean | null;
+  // A terminal state the kernel finished but that must NOT be recorded as a
+  // completed game with a winner. The only current case is an engine failure:
+  // the kernel finishes the room as an abandonment so live clients see an end,
+  // but a bot cannot abandon, so the ROW is an abort with no result.
+  //
+  // This rides recordGameEnd rather than abortRunningGame on purpose.
+  // abortRunningGame is `UPDATE ... WHERE status = 'running'`, and most tenants
+  // deliberately omit recordGameStart (fog xiangqi, xiangqi, jieqi, banqi,
+  // jungle, dark-crossroads), so there is no running row for it to touch: it
+  // returns false and changes nothing. recordGameEnd is also the only writer
+  // that creates game_participants, so routing an engine failure away from it
+  // would drop the game out of the database entirely instead of misfiling it.
+  abortedAs?: {
+    termination: Extract<GameTermination, 'engine-failure'>;
+    abortedReason: string;
+  };
 };
 
 export type GameRecord = {
@@ -1306,6 +1329,10 @@ export async function gameFacets(): Promise<GameFacets> {
 export async function recordGameEnd(roomId: string, summary: GameSummary): Promise<void> {
   const mode = summary.mode ?? (summary.corpusId ? 'imported' : 'pvp');
   const visibility = summary.visibility ?? 'public';
+  // An aborted row carries no winner and states the real cause, not the
+  // abandonment the kernel used to end the room.
+  const result = summary.abortedAs ? null : summary.result;
+  const termination = summary.abortedAs?.termination ?? summary.termination;
   await withTransaction(async (client) => {
     const rated = summary.rated ?? false;
     await client.query(
@@ -1313,8 +1340,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          (room_id, variant, result, termination, ply_count, started_at, ended_at,
           white_client, black_client, white_name, black_name, corpus_id,
           mode, status, review_status, visibility, rated,
-          initial_ms, increment_ms, hidden_draft960, region)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'completed', $14, $15, $16, $17, $18, $19, $20)
+          initial_ms, increment_ms, hidden_draft960, region, aborted_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $21, $14, $15, $16, $17, $18, $19, $20, $22)
        ON CONFLICT (room_id) DO UPDATE SET
          variant = EXCLUDED.variant,
          result = EXCLUDED.result,
@@ -1328,7 +1355,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          black_name = EXCLUDED.black_name,
          corpus_id = EXCLUDED.corpus_id,
          mode = EXCLUDED.mode,
-         status = 'completed',
+         status = $21,
          review_status = EXCLUDED.review_status,
          visibility = EXCLUDED.visibility,
          rated = EXCLUDED.rated,
@@ -1336,13 +1363,13 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          increment_ms = EXCLUDED.increment_ms,
          hidden_draft960 = EXCLUDED.hidden_draft960,
          region = EXCLUDED.region,
-         aborted_reason = NULL
+         aborted_reason = $22
        WHERE games.status = 'running'`,
       [
         roomId,
         summary.variant,
-        summary.result,
-        summary.termination,
+        result,
+        termination,
         summary.plyCount,
         summary.startedAt,
         summary.endedAt,
@@ -1359,6 +1386,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         summary.incrementMs ?? null,
         summary.hiddenDraft960 ?? null,
         summary.region ?? 'global',
+        summary.abortedAs ? 'aborted' : 'completed',
+        summary.abortedAs?.abortedReason ?? null,
       ],
     );
     const participants =
@@ -1385,7 +1414,10 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         ],
       );
     }
-    if (mode === 'pvp' && rated) {
+    // An aborted row has no result, so there is nothing to rate. Unreachable
+    // today (engine failure is always mode 'pve', and PvE is never rated) but
+    // stated here so the guard does not depend on that staying true.
+    if (mode === 'pvp' && rated && !summary.abortedAs) {
       const bucket = bucketForGame({
         variant: summary.variant,
         initialMs: summary.initialMs,
@@ -1469,12 +1501,25 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     engine_version: string | null;
     elo_before: number | null;
     elo_after: number | null;
+    handle: string | null;
   }>(
-    `SELECT game_id, color, subject_type, subject_id, display_name, visibility,
-            engine_version, elo_before, elo_after
+    // The users join resolves a `user` seat's linkable handle. It is filtered in
+    // the JOIN rather than in a WHERE so a private/closed account still yields its
+    // participant row (with a null handle) instead of dropping the seat entirely.
+    `SELECT game_participants.game_id, game_participants.color,
+            game_participants.subject_type, game_participants.subject_id,
+            game_participants.display_name, game_participants.visibility,
+            game_participants.engine_version, game_participants.elo_before,
+            game_participants.elo_after, users.handle
      FROM game_participants
-     WHERE game_id = ANY($1)
-     ORDER BY game_id, CASE color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
+     LEFT JOIN users
+       ON game_participants.subject_type = 'user'
+      AND users.id = game_participants.subject_id
+      AND users.closed_at IS NULL
+      AND users.profile_visibility <> 'private'
+     WHERE game_participants.game_id = ANY($1)
+     ORDER BY game_participants.game_id,
+              CASE game_participants.color WHEN 'white' THEN 0 WHEN 'red' THEN 0 ELSE 1 END`,
     [roomIds],
   );
   const byGame = new Map<string, GameParticipant[]>();
@@ -1485,6 +1530,9 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       subjectType: row.subject_type,
       subjectId: row.subject_id,
       visibility: row.visibility,
+      // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
+      // participant shape, same convention as the fields below.
+      ...(row.handle != null ? { handle: row.handle } : {}),
       // Omitted-when-null so the participant shape is unchanged for games without a
       // recorded engine build (humans, pre-versioning rows, version-in-id engines).
       ...(row.engine_version != null ? { engineVersion: row.engine_version } : {}),

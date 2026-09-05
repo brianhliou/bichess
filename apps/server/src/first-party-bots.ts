@@ -88,6 +88,9 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-v2-v1.4',
       'python-v2-v1.5',
       'python-dmx-v1.0',
+      // The earlier fog-xiangqi build. Misty is the only bot that has ever
+      // fronted a dark-xiangqi engine, so a legacy v1.0 room still attributes.
+      'python-fdx-v1.0',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
@@ -212,6 +215,29 @@ export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
 
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {
   return botByEngineId.get(engineId) ?? null;
+}
+
+/**
+ * The linkable profile identity behind a live seat, as the `handle`/`botId`
+ * fields the live feeds carry (LiveTvPlayer, CurrentGamePlayer). At most one is
+ * ever set.
+ *
+ * An engine seat resolves through the first-party bot table, so a raw engine
+ * version with no bot in front of it stays unlinked: /bot/:id would 404 for it,
+ * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
+ * cannot be linkable on /watch and plain on /games.
+ */
+export type LiveSeatProfile = { handle?: string; botId?: string };
+
+export function liveSeatProfileIdentity(
+  engineClientId: string | null,
+  userHandle: string | null,
+): LiveSeatProfile {
+  if (engineClientId) {
+    const bot = firstPartyBotForEngine(engineClientId);
+    return bot ? { botId: bot.id } : {};
+  }
+  return userHandle ? { handle: userHandle } : {};
 }
 
 /** The engine a first-party bot currently fronts for a variant, or null when it

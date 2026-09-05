@@ -16,7 +16,11 @@
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
 import { clockPolicyKindFor, isAbortReason } from '@mistboard/game';
 import { countDeployGatingRooms } from '../deploy-gate.js';
-import { firstPartyBotForEngine, firstPartyBotForId } from '../first-party-bots.js';
+import {
+  firstPartyBotForEngine,
+  firstPartyBotForId,
+  type LiveSeatProfile,
+} from '../first-party-bots.js';
 import type {
   TenantClientEvent,
   TenantClockState,
@@ -468,6 +472,9 @@ export type TenantSnapshotPayload<C extends string, M, View, Spec extends string
   // engine seats, account displayName/handle for signed-in humans. Guests are
   // OMITTED (clients fall back to the seat label), never a placeholder.
   seatDisplayNames: Partial<Record<C, string>>;
+  // Where each of those names links (see tenantSeatProfiles). Same omission
+  // rule: a seat with no public page is absent, not null.
+  seatProfiles: Partial<Record<C, LiveSeatProfile>>;
   state: View;
   timeControl: RoomTimeControl | undefined;
 };
@@ -503,6 +510,38 @@ export function tenantSeatDisplayNames<
   return names;
 }
 
+// The linkable profile behind each seat, the companion to tenantSeatDisplayNames.
+// It repeats that function's resolution order EXACTLY -- pveBotId first, then the
+// engine's bot, then the seat token -- so the name a client renders and the page
+// it links to can never come from different sources. A seat with no public page
+// (a guest, or an engine with no first-party bot fronting it) is omitted.
+export function tenantSeatProfiles<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+): Partial<Record<C, LiveSeatProfile>> {
+  const profiles: Partial<Record<C, LiveSeatProfile>> = {};
+  for (const color of tenant.colors) {
+    const clientId = room.projection.seats[color];
+    if (clientId && tenant.engine?.isEngineClientId(clientId)) {
+      const bot = room.pveBotId
+        ? firstPartyBotForId(room.pveBotId)
+        : firstPartyBotForEngine(clientId);
+      if (bot) profiles[color] = { botId: bot.id };
+      continue;
+    }
+    const handle = room.seatTokens[color]?.userHandle;
+    if (handle) profiles[color] = { handle };
+  }
+  return profiles;
+}
+
 export function tenantSnapshotPayload<
   Kind extends string,
   C extends string,
@@ -530,6 +569,7 @@ export function tenantSnapshotPayload<
     events: tenantEventsForClient(tenant, room, client),
     seats: room.projection.seats,
     seatDisplayNames: tenantSeatDisplayNames(tenant, room),
+    seatProfiles: tenantSeatProfiles(tenant, room),
     state,
     timeControl: room.projection.timeControl,
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),

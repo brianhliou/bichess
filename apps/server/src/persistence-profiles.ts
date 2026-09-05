@@ -32,6 +32,41 @@ import {
   type RatingVariant,
 } from './rating-buckets.js';
 
+// Maps a stored `games.variant` to its rating pool, IN SQL. Extracted so the
+// profile's per-variant game COUNT (the rating rail) and its per-variant game
+// LIST (the Games tab filter) are the same expression: if they disagreed, a rail
+// row would advertise "3 games" over a list that showed a different set.
+//
+// It has to be SQL rather than the TS ratingPoolForSpec because the mapping
+// depends on columns, not just the id: a dark-chess row with hidden_draft960 is
+// a fog_draft960 game. It also absorbs pre-rename variant strings ('fog',
+// 'draft960', 'dual-chess') that never became GameSpecAliasIds.
+const RATING_POOL_FROM_GAME_SQL = `CASE
+         WHEN games.variant IN ('crossroads-chess', 'dual-chess') THEN 'crossroads_chess_open'
+         WHEN games.variant IN ('dark-crossroads-chess', 'dark-dual-chess') THEN 'crossroads_chess'
+         WHEN games.variant = 'dark-mini-xiangqi' THEN 'dark_mini_xiangqi'
+         WHEN games.variant = 'drop-mini-xiangqi' THEN 'drop_mini_xiangqi'
+         WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
+         WHEN games.variant = 'jieqi' THEN 'jieqi'
+         WHEN games.variant = 'banqi' THEN 'banqi'
+         WHEN games.variant = 'reveal-chess' THEN 'reveal_chess'
+         WHEN games.variant = 'dark-shogi' THEN 'dark_shogi'
+         WHEN games.variant = 'dark-crazyhouse' THEN 'dark_crazyhouse'
+         WHEN games.variant = 'kriegspiel' THEN 'kriegspiel'
+         WHEN games.variant = 'jungle' THEN 'jungle'
+         WHEN games.variant = 'jungle-flip' THEN 'jungle_flip'
+         WHEN games.variant = 'xiangqi' THEN 'xiangqi'
+         WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
+         WHEN games.variant IN ('draft960', 'dark-draft960', 'fog-draft960')
+              OR COALESCE(games.hidden_draft960, false) THEN 'fog_draft960'
+         ELSE 'fog'
+       END`;
+
+// The stored variant strings the pool mapping above is defined over. Anything
+// outside this set has no pool, so it is excluded rather than falling into the
+// CASE's 'fog' default.
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'crossroads-chess', 'dual-chess', 'dark-crossroads-chess', 'dark-dual-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi')`;
+
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
   | { ok: false; error: 'handle_taken' | 'handle_change_cooldown'; availableAt?: Date };
@@ -342,6 +377,10 @@ async function queryUserGames(
   isViewer: boolean,
   offset: number,
   limit: number,
+  // Rating pool to scope the history to, or null for every variant. Compared
+  // against the stored spec ids AND their legacy aliases, so a pool's older
+  // rows ('dual-chess') are not silently dropped from its own history.
+  ratingVariant: RatingVariant | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const { rows } = await getPool().query<{
     room_id: string;
@@ -374,10 +413,14 @@ async function queryUserGames(
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
+       ${ratingVariant ? `AND ${RATED_POOL_VARIANTS_SQL} AND ${RATING_POOL_FROM_GAME_SQL} = $4` : ''}
        ${profileVisibilityClause(isViewer)}
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT $2 OFFSET $3`,
-    [userId, limit, offset],
+    // COUNT(*) OVER() sits inside the same WHERE, so `total` is the FILTERED
+    // total -- which is what the Games tab count and the "Load more" exhaustion
+    // check both need once a pool is selected.
+    ratingVariant ? [userId, limit, offset, ratingVariant] : [userId, limit, offset],
   );
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   const games = rows.map(
@@ -463,33 +506,14 @@ export async function getUserProfileByHandle(
     games_played: string;
   }>(
     `SELECT
-       CASE
-         WHEN games.variant IN ('crossroads-chess', 'dual-chess') THEN 'crossroads_chess_open'
-         WHEN games.variant IN ('dark-crossroads-chess', 'dark-dual-chess') THEN 'crossroads_chess'
-         WHEN games.variant = 'dark-mini-xiangqi' THEN 'dark_mini_xiangqi'
-         WHEN games.variant = 'drop-mini-xiangqi' THEN 'drop_mini_xiangqi'
-         WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
-         WHEN games.variant = 'jieqi' THEN 'jieqi'
-         WHEN games.variant = 'banqi' THEN 'banqi'
-         WHEN games.variant = 'reveal-chess' THEN 'reveal_chess'
-         WHEN games.variant = 'dark-shogi' THEN 'dark_shogi'
-         WHEN games.variant = 'dark-crazyhouse' THEN 'dark_crazyhouse'
-         WHEN games.variant = 'kriegspiel' THEN 'kriegspiel'
-         WHEN games.variant = 'jungle' THEN 'jungle'
-         WHEN games.variant = 'jungle-flip' THEN 'jungle_flip'
-         WHEN games.variant = 'xiangqi' THEN 'xiangqi'
-         WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
-         WHEN games.variant IN ('draft960', 'dark-draft960', 'fog-draft960')
-              OR COALESCE(games.hidden_draft960, false) THEN 'fog_draft960'
-         ELSE 'fog'
-       END AS variant,
+       ${RATING_POOL_FROM_GAME_SQL} AS variant,
        COUNT(*)::text AS games_played
      FROM game_participants
      JOIN games ON games.room_id = game_participants.game_id
      WHERE game_participants.subject_type = 'user'
        AND game_participants.subject_id = $1
        AND games.status = 'completed'
-       AND games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'crossroads-chess', 'dual-chess', 'dark-crossroads-chess', 'dark-dual-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi')
+       AND ${RATED_POOL_VARIANTS_SQL}
        ${visibilityClause}
      GROUP BY 1`,
     [user.id],
@@ -592,6 +616,7 @@ export async function getUserGamesPage(
   viewerUserId: string | null,
   offset: number,
   limit: number,
+  ratingVariant: RatingVariant | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number } | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -599,7 +624,7 @@ export async function getUserGamesPage(
   if (user.profileVisibility === 'private' && !isViewer) return null;
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const boundedOffset = Math.max(0, offset);
-  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit);
+  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, ratingVariant);
 }
 
 export async function getUserRatingHistory(

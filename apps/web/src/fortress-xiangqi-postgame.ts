@@ -4,6 +4,7 @@ import {
   type FortressXiangqiPlayerView,
   fortressXiangqiEngineFen,
 } from '@mistboard/game';
+import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import './drop-mini-xiangqi.css';
 import { variantDisplayLabel } from './game-display.js';
@@ -182,6 +183,7 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: playerNames,
+    playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('fortress-xiangqi', fortressXiangqiEngineFen(truth)),

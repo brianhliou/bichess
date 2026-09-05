@@ -33,6 +33,13 @@ export type StudyChapterRecord = {
   /** Gamebook (interactive-lesson) chapter: the guess-the-move player is the
    *  default presentation. Same tree data; per-node hint/deviation live in it. */
   gamebook: boolean;
+  /** Practice (engine-adjudicated) chapter: played from the root position against
+   *  the engine, which also grades. The tree is IGNORED — unlike a gamebook, the
+   *  exercise is the position plus `practiceGoal`, not an authored line. */
+  practice: boolean;
+  /** Authored goal text ("mate in 3", "win", "draw in 20"); parsed by
+   *  parsePracticeGoal. Non-null whenever `practice` is true (DB CHECK). */
+  practiceGoal: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -118,7 +125,7 @@ export type CreateStudyInput = {
 
 export type UpdateChapterResult =
   | { ok: true; chapter: StudyChapterRecord }
-  | { ok: false; error: 'not_found' | 'forbidden' | 'conflict' };
+  | { ok: false; error: 'not_found' | 'forbidden' | 'conflict' | 'invalid_goal' };
 
 const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -158,6 +165,8 @@ type ChapterRow = {
   tags: StudyChapterTags;
   version: number;
   gamebook: boolean;
+  practice: boolean;
+  practice_goal: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -192,6 +201,8 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
     tags: row.tags ?? {},
     version: row.version,
     gamebook: row.gamebook,
+    practice: row.practice,
+    practiceGoal: row.practice_goal,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -200,7 +211,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
 const STUDY_COLS =
   'id, owner_id, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
-  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, created_at, updated_at';
+  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, created_at, updated_at';
 
 /** Correlated scalar subquery yielding the first few chapters (by ordinal) as a
  *  jsonb array of `{name, i18n}`, for a study aliased `s`. This is the preview
@@ -855,6 +866,40 @@ export async function setChapterGamebook(
   const updated = await getPool().query<ChapterRow>(
     `UPDATE study_chapters SET gamebook = $1, updated_at = now() WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
     [gamebook, chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
+/**
+ * Flip a chapter between vanilla and practice (engine-adjudicated) mode (owner).
+ *
+ * The goal moves with the flag on purpose. A practice chapter without a goal is
+ * not a half-configured exercise, it is an exercise with no way to be won or
+ * lost, and lila's separate-fields arrangement is exactly how 27 of its chapters
+ * ended up silently defaulting. Turning practice OFF clears the goal rather than
+ * leaving it behind as dead data the next author would have to notice.
+ */
+export async function setChapterPractice(
+  chapterId: string,
+  ownerId: string,
+  practice: boolean,
+  goal: string | null,
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  if (practice && !goal) return { ok: false, error: 'invalid_goal' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET practice = $1, practice_goal = $2, updated_at = now()
+       WHERE id = $3 RETURNING ${CHAPTER_COLS}`,
+    [practice, practice ? goal : null, chapterId],
   );
   return { ok: true, chapter: mapChapter(updated.rows[0]!) };
 }

@@ -21,6 +21,7 @@ import './seat-labels.css';
 import { type MoveJudgment, winPercent } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
+import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
 import {
@@ -437,6 +438,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
    *  the side's displayed ink is used. */
   players?: { red?: string; black?: string };
+  /** Where each seat strip's name links, keyed like `players` (so `red` is the
+   *  first-mover slot, which is White on the chess boards). Absent or null for a
+   *  seat with no page, which renders as plain text. */
+  playerProfiles?: { red?: ProfileTarget | null; black?: ProfileTarget | null };
   /**
    * Draw the names as strips above and below the board. OPT-IN, and separate
    * from `players` on purpose: every game-review surface already passes
@@ -696,9 +701,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const bottomIsRed = orientation() === presentation.perspective(false);
     const near = bottomIsRed ? seatNames.red : seatNames.black;
     const far = bottomIsRed ? seatNames.black : seatNames.red;
+    const profiles = config.playerProfiles;
+    const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
+    const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
     const paint = (
       el: HTMLElement,
       name: string | undefined,
+      profile: ProfileTarget | null | undefined,
       isRed: boolean,
       slot: 'top' | 'bottom',
     ): void => {
@@ -706,13 +715,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       el.replaceChildren();
       const disc = document.createElement('span');
       disc.className = 'review-seat__disc';
-      const label = document.createElement('span');
-      label.className = 'review-seat__name';
-      label.textContent = name ?? (isRed ? 'Red' : 'Black');
+      // A seat with no name falls back to its ink word, which names nobody, so
+      // the link is bound to the resolved name rather than the slot.
+      const label = name
+        ? playerNameEl(name, profile ?? null, 'review-seat__name')
+        : playerNameEl(isRed ? 'Red' : 'Black', null, 'review-seat__name');
       el.append(disc, label);
     };
-    paint(topSeat, far, !bottomIsRed, 'top');
-    paint(bottomSeat, near, bottomIsRed, 'bottom');
+    paint(topSeat, far, farProfile, !bottomIsRed, 'top');
+    paint(bottomSeat, near, nearProfile, bottomIsRed, 'bottom');
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding

@@ -373,17 +373,6 @@ export async function mountTenantWatchReplay<
   // Drives the compact seat clocks AND the full TV rail clocks (through clockAtPly).
   let clockSeries: ShowcaseClockPair[] | null = null;
   let moveDelays: number[] | null = null;
-  let clockIncrement = 0;
-  // Continuous drain of the mover's clock between ply snapshots. Armed on every sync
-  // (see armClockDrain), read by the compact seats' own ticker and by clockAtPly for the
-  // /watch rail.
-  let clockAnim: {
-    side: 'first' | 'second';
-    startVal: number;
-    floorVal: number;
-    shownAt: number;
-    windowMs: number;
-  } | null = null;
   let clockTickTimer: number | null = null;
   // Live follow only: the server's authoritative clock from the latest live frame.
   // The reconstruction above only knows about moves that have LANDED, so on its own
@@ -399,42 +388,25 @@ export async function mountTenantWatchReplay<
   const toMoveAtPly = (): 'first' | 'second' | null =>
     currentPly >= maxPly && !live ? null : currentPly % 2 === 0 ? 'first' : 'second';
 
-  // Drain the mover's clock from this ply's recorded value toward the value it reaches
-  // just before the increment it earns on completing the move, across that move's real
-  // (clamped) playback window. The clock therefore lands EXACTLY on the recorded value at
-  // every ply — the reconstruction is the anchor, the animation only fills the gaps.
-  // Paused (a manual jump/scrub) means no drain: the clock holds the ply's true value.
-  const armClockDrain = (): void => {
-    const side = toMoveAtPly();
-    if (paused || !side || !clockSeries || !moveDelays) {
-      clockAnim = null;
-      return;
-    }
-    const startVal = clockSeries[currentPly]?.[side] ?? 0;
-    const nextVal = clockSeries[currentPly + 1]?.[side];
-    clockAnim = {
-      side,
-      startVal,
-      floorVal: nextVal === undefined ? startVal : Math.max(0, nextVal - clockIncrement),
-      shownAt: Date.now(),
-      windowMs: moveDelays[currentPly + 1] ?? SHOWCASE_MIN_MOVE_MS,
-    };
-  };
-
-  /** The drained value for the animating seat right now, or null when nothing is draining. */
-  const drainedClockNow = (): { side: 'first' | 'second'; ms: number } | null => {
-    if (!clockAnim) return null;
-    const fraction = Math.min((Date.now() - clockAnim.shownAt) / clockAnim.windowMs, 1);
-    const ms = Math.max(
-      0,
-      clockAnim.startVal - (clockAnim.startVal - clockAnim.floorVal) * fraction,
-    );
-    return { side: clockAnim.side, ms };
-  };
-
-  // The live clock, projected to now, or null when the reconstruction is the source
-  // (finished game, untimed, or scrubbed back from the newest ply: a past ply shows
-  // its recorded value).
+  // A CLOCK ONLY EVER TICKS AT ONE SECOND PER SECOND. That leaves exactly two states, and
+  // there is deliberately no third:
+  //
+  //   live    — the server's clock projected against Date.now() (liveClockNow below).
+  //   replay  — the ply's recorded value, rendered as a STATIC label by sync(). No animation.
+  //
+  // Until 2026-09-04 replay had a third state: the mover's clock drained the real time the
+  // move cost across the CLAMPED playback window (moveDelays, [700, 2500] ms). The delta was
+  // real, the window was compressed, so the rate was whatever fell out of the ratio — on a
+  // measured homepage game the bot read a uniform 1.61x and the human swung 1.00x-7.60x,
+  // which is what got it reported. Landing exactly on the recorded value at each ply is not
+  // worth a clock that lies about how fast time passes.
+  //
+  // Do not re-add the drain on top of the clamp. Lichess animates a replay clock only in
+  // 'realtime' autoplay, where the playback window IS the recorded think time (unclamped,
+  // ui/analyse/src/autoplay.ts) so the ratio is 1 by construction; it subtracts real elapsed
+  // wall time, never a fraction of a window (ui/analyse/src/view/clocks.ts). We clamp on
+  // purpose — an unattended landing-page board cannot sit frozen through a 19-second think —
+  // and a clamped window and an honest countdown cannot both hold.
   const liveClockNow = (): ShowcaseClockPair | null => {
     if (!liveClock || currentPly < maxPly) return null;
     const now = Date.now();
@@ -444,19 +416,14 @@ export async function mountTenantWatchReplay<
     };
   };
 
+  // Live only: replay clocks are static per ply, so nothing here needs a timer.
   const tickCompactClock = (): void => {
     if (!compactSeats) return;
     const liveNow = liveClockNow();
-    if (liveNow) {
-      for (const seat of [compactSeats.top, compactSeats.bottom]) {
-        seat.clockEl.textContent = formatClock(liveNow[seat.side]);
-      }
-      return;
+    if (!liveNow) return;
+    for (const seat of [compactSeats.top, compactSeats.bottom]) {
+      seat.clockEl.textContent = formatClock(liveNow[seat.side]);
     }
-    const drained = drainedClockNow();
-    if (!drained) return;
-    const seat = compactSeats.top.side === drained.side ? compactSeats.top : compactSeats.bottom;
-    seat.clockEl.textContent = formatClock(drained.ms);
   };
 
   const compactSeatRow = (name: string): { row: HTMLElement; clockEl: HTMLElement } => {
@@ -570,7 +537,6 @@ export async function mountTenantWatchReplay<
         toMoveAtPly() === compactSeats.bottom.side,
       );
     }
-    armClockDrain();
     if (controls) {
       const result =
         currentPly >= maxPly
@@ -645,16 +611,10 @@ export async function mountTenantWatchReplay<
       controls.play.textContent = paused
         ? `▶ ${t('watch.play', {}, locale)}`
         : `⏸ ${t('watch.pause', {}, locale)}`;
-    // The drain is armed per playback window, so pausing must park the clock on the ply's
-    // true value and resuming must re-arm against the freshly scheduled window (the pause
-    // button reaches here without a sync(), unlike manualJump).
-    if (paused) {
-      clearTimer();
-      clockAnim = null;
-    } else {
-      armClockDrain();
-      scheduleAuto();
-    }
+    // Replay clocks are static per ply, so pause/resume only has to start and stop playback:
+    // the displayed value is already the ply's true one either way.
+    if (paused) clearTimer();
+    else scheduleAuto();
   };
 
   // A manual step pauses auto-play (TV you can pause and scrub).
@@ -729,7 +689,6 @@ export async function mountTenantWatchReplay<
             firstColor: 'red',
           })
         : null;
-    clockIncrement = clockIncrementMs;
     // Only an in-progress live frame anchors the projection: a finished game's stored
     // clock may still carry a runningSince, and projecting it would count a frozen
     // board down forever.
@@ -807,8 +766,13 @@ export async function mountTenantWatchReplay<
       root.replaceChildren(layout);
       sync();
       scheduleAuto();
-      if ((clockSeries || liveClock) && clockTickTimer === null) {
+      // Only a live game ticks. The cycler reuses this mount across games, so a replay
+      // following a live game must also STOP the ticker, not just leave it no-opping.
+      if (liveClock && clockTickTimer === null) {
         clockTickTimer = window.setInterval(tickCompactClock, SHOWCASE_CLOCK_TICK_MS);
+      } else if (!liveClock && clockTickTimer !== null) {
+        window.clearInterval(clockTickTimer);
+        clockTickTimer = null;
       }
       return;
     }
@@ -1039,10 +1003,10 @@ export async function mountTenantWatchReplay<
     // onPlyChange). The /watch move list + scrubber drive the board through it.
     jumpToPly: (ply: number) => manualJump(ply),
     moveEntries: () => (activePostgame ? buildTenantMoveEntries(activePostgame) : []),
-    // The clocks the players actually had, reconstructed from the move timestamps. Under
-    // autoplay the mover's clock is the LIVE drained value, so polling this on a short
-    // interval ticks it down; the ply snapshots stay the anchor. Null (no clock) for an
-    // untimed game.
+    // The clocks the players actually had, reconstructed from the move timestamps. A live
+    // game projects the server clock to now (so polling this ticks it down at real speed);
+    // a replay reports the ply's recorded value and does not move between plies. Null (no
+    // clock) for an untimed game.
     clockAtPly: () => {
       const toMove = toMoveAtPly();
       const liveNow = liveClockNow();
@@ -1050,12 +1014,7 @@ export async function mountTenantWatchReplay<
       if (!clockSeries) return null;
       const at = clockSeries[Math.min(currentPly, clockSeries.length - 1)];
       if (!at) return null;
-      const drained = drainedClockNow();
-      return {
-        first: drained?.side === 'first' ? drained.ms : at.first,
-        second: drained?.side === 'second' ? drained.ms : at.second,
-        toMove,
-      };
+      return { first: at.first, second: at.second, toMove };
     },
     // Re-point the single compact board at the view whose paneKind matches, then
     // re-render at the current ply (no glide: pov swap doesn't move the ply). A

@@ -13,8 +13,12 @@
 
 import {
   createInitialXiangqiState,
+  positionRepetitionKey,
+  squareOf,
+  type XiangqiBoard,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiPieceRole,
   type XiangqiSquare,
 } from './variants-xiangqi.js';
 import {
@@ -42,6 +46,10 @@ export interface XiangqiImportResult {
   format: XiangqiMoveFormat | null;
   /** Set when no codec produced a fully-legal game; the most useful reason. */
   error?: string;
+  /** The position the moves replay from, when it is not the standard opening:
+   *  a caller-supplied initialState, or a [DhtmlXQ_binit] custom start. Callers
+   *  that render the game need this, or they draw the wrong board. */
+  initialState?: XiangqiGameState;
 }
 
 // A codec turns one notation into canonical moves. detect() is a cheap
@@ -157,8 +165,73 @@ const chineseCodec: XiangqiNotationCodec = {
 // toRow, columns 0-8 left-to-right (= our file index) and rows 0-9 with row 0 at
 // black's top, so our rank is 10 - row. Confirmed against the dpxq clipboard
 // writer (GGchessQi) and anchored by 炮二平五 = h3->e3 = "7747". Accepts either a
-// raw movelist digit string or a full [DhtmlXQ_movelist]...[ block. Only games
-// from the standard opening import (a custom [DhtmlXQ_binit] start is not applied).
+// raw movelist digit string or a full [DhtmlXQ_movelist]...[ block.
+//
+// [DhtmlXQ_binit] carries the starting position, which classical endgame
+// compositions depend on. It is 32 two-digit pairs in a FIXED piece order, one
+// per piece of the standard array, holding that piece's square as colRow, with
+// '99' for a piece that is off the board. The order was read off the standard
+// position's own binit rather than assumed, and checked by replaying 82 real
+// compositions from their own published solutions: all 82 were legal to the
+// last ply. Without this, every composition replays onto the opening position.
+
+// One entry per piece of the standard array, in binit order.
+const DHTMLXQ_BACK_RANK: readonly XiangqiPieceRole[] = [
+  'chariot',
+  'horse',
+  'elephant',
+  'advisor',
+  'general',
+  'advisor',
+  'elephant',
+  'horse',
+  'chariot',
+];
+
+const DHTMLXQ_SLOTS: readonly (readonly ['red' | 'black', XiangqiPieceRole])[] = (
+  ['red', 'black'] as const
+).flatMap((color) => [
+  ...DHTMLXQ_BACK_RANK.map((role) => [color, role] as const),
+  [color, 'cannon'] as const,
+  [color, 'cannon'] as const,
+  ...([0, 1, 2, 3, 4] as const).map(() => [color, 'soldier'] as const),
+]);
+
+/** Decode a [DhtmlXQ_binit] starting position. Returns null when the string is
+ *  not 64 digits or does not describe a playable position (both generals). */
+export function xiangqiBoardFromDhtmlxqBinit(binit: string): XiangqiBoard | null {
+  const digits = binit.match(/\[DhtmlXQ_binit\]([^[]*)/i)?.[1]?.replace(/\D/g, '') ?? binit;
+  if (!/^\d{64}$/.test(digits)) return null;
+  const board: XiangqiBoard = {};
+  let generals = 0;
+  for (let i = 0; i < 32; i++) {
+    const pair = digits.slice(i * 2, i * 2 + 2);
+    const file = Number(pair[0]);
+    const row = Number(pair[1]);
+    // '99' is the off-board sentinel; anything else out of range is malformed.
+    if (file > 8 || row > 9) continue;
+    const slot = DHTMLXQ_SLOTS[i];
+    if (!slot) continue;
+    const [color, role] = slot;
+    if (role === 'general') generals++;
+    board[squareOf(file, 10 - row)] = { color, role };
+  }
+  return generals === 2 ? board : null;
+}
+
+function dhtmlxqStateFromBinit(input: string): XiangqiGameState | null {
+  const board = xiangqiBoardFromDhtmlxqBinit(input);
+  if (!board) return null;
+  const base: XiangqiGameState = {
+    id: 'import',
+    board,
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 1,
+    progressClock: 0,
+    positionCounts: {},
+  };
+  return { ...base, positionCounts: { [positionRepetitionKey(base)]: 1 } };
+}
 
 function dhtmlxqDigits(input: string): string {
   const tag = input.match(/\[DhtmlXQ_movelist\]([^[]*)/i);
@@ -225,12 +298,18 @@ export function importXiangqiGame(
 ): XiangqiImportResult {
   const trimmed = input.trim();
   if (!trimmed) return { moves: [], format: null, error: 'Enter a game to import.' };
+  // An explicit initialState wins; otherwise a DhtmlXQ record may carry its own
+  // start. binit appears only in DhtmlXQ records, so this cannot disturb the
+  // other codecs.
+  const start = options.initialState ?? dhtmlxqStateFromBinit(trimmed) ?? undefined;
   let firstError: string | undefined;
   for (const codec of CODECS) {
     if (!codec.detect(trimmed)) continue;
-    const attempt = replayWithCodec(codec, trimmed, options.initialState);
+    const attempt = replayWithCodec(codec, trimmed, start);
     if (attempt.moves.length > 0 && !attempt.error) {
-      return { moves: attempt.moves, format: codec.format };
+      return start
+        ? { moves: attempt.moves, format: codec.format, initialState: start }
+        : { moves: attempt.moves, format: codec.format };
     }
     firstError ??= attempt.error;
   }

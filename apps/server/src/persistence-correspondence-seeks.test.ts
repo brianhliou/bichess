@@ -9,6 +9,7 @@ import {
   getCorrespondenceSeek,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
+  listOutgoingSeeksForUser,
   updateUserAccountPreference,
   userExists,
 } from './persistence.js';
@@ -25,6 +26,94 @@ definePersistenceTests('correspondence seeks', () => {
       displayName,
       now: at,
     });
+
+  // #353: before listOutgoingSeeksForUser, a private link challenge appeared in
+  // NO listing its creator could reach. listOpenCorrespondenceSeeks is
+  // `visibility = 'public' AND target_user_id IS NULL` and listChallengesForUser
+  // matches on target_user_id, so a link the player sent was invisible to them,
+  // uncancellable, and still held one of the six slots for its whole TTL.
+  test("outgoing seeks include a creator's private link and directed challenges", async () => {
+    const carol = await seedUser('out-carol', 'carol', 'Carol');
+    const dave = await seedUser('out-dave', 'dave', 'Dave');
+    const later = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await createCorrespondenceSeek({
+      id: 'out-public',
+      creatorUserId: carol.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: null,
+      visibility: 'public',
+      expiresAt: null,
+    });
+    await createCorrespondenceSeek({
+      id: 'out-link',
+      creatorUserId: carol.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: null,
+      visibility: 'private',
+      expiresAt: later,
+    });
+    await createCorrespondenceSeek({
+      id: 'out-directed',
+      creatorUserId: carol.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 1,
+      preferredColor: 'first',
+      targetUserId: dave.id,
+      visibility: 'private',
+      expiresAt: later,
+    });
+
+    // The two listings that existed before could not see the link challenge.
+    const board = await listOpenCorrespondenceSeeks();
+    assert.equal(
+      board.some((seek) => seek.id === 'out-link'),
+      false,
+      'the public board must never surface a private link',
+    );
+    assert.equal(
+      (await listChallengesForUser(carol.id)).length,
+      0,
+      'her own challenges are not challenges TO her',
+    );
+
+    const mine = await listOutgoingSeeksForUser(carol.id);
+    assert.deepEqual(
+      mine.map((seek) => seek.id).sort(),
+      ['out-directed', 'out-link', 'out-public'],
+      'every standing invitation she created, whatever its visibility',
+    );
+    assert.equal(mine.find((seek) => seek.id === 'out-directed')?.targetName, 'Dave');
+    assert.equal(mine.find((seek) => seek.id === 'out-link')?.targetName, null);
+    // Someone else's invitations are not hers.
+    assert.equal((await listOutgoingSeeksForUser(dave.id)).length, 0);
+
+    // And the cancel path that was unreachable now has a row to act on.
+    assert.equal(await deleteCorrespondenceSeek('out-link', carol.id), true);
+    assert.equal((await listOutgoingSeeksForUser(carol.id)).length, 2);
+  });
+
+  // The cap must count exactly what the player can see and cancel, or an expired
+  // row blocks a create with nothing on screen explaining why.
+  test('the outstanding-invitation count ignores expired challenges', async () => {
+    const erin = await seedUser('out-erin', 'erin', 'Erin');
+    await createCorrespondenceSeek({
+      id: 'out-expired',
+      creatorUserId: erin.id,
+      gameSpecId: 'xiangqi',
+      daysPerMove: 3,
+      preferredColor: 'random',
+      targetUserId: null,
+      visibility: 'private',
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    assert.equal(await countOpenSeeksForUser(erin.id), 0);
+    assert.equal((await listOutgoingSeeksForUser(erin.id)).length, 0);
+  });
 
   test('create, count, list with creator name, get, and delete-wins-the-race', async () => {
     const alice = await seedUser('seek-alice', 'alice', 'Alice');
