@@ -142,6 +142,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Free xiangqi (Chinese chess) puzzles drawn from real games, with puzzles for Mistboard variants alongside.',
   },
+  '/practice': {
+    title: 'Xiangqi Practice | Mistboard',
+    description:
+      'Practise xiangqi (Chinese chess) endgames against the engine: each position sets a goal, the engine defends, and it tells you when the win has slipped.',
+  },
   '/study': {
     title: 'Xiangqi Studies | Mistboard',
     description:
@@ -657,6 +662,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/stats',
   '/puzzles',
   '/learn/xiangqi',
+  '/practice',
   '/analysis',
   '/editor',
   '/study',

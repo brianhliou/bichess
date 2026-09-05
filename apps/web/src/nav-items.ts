@@ -103,6 +103,9 @@ export function learnNavItems(): NavItem[] {
   return [
     { label: 'Rules', labelKey: 'nav.rules', href: '/rules' },
     { label: 'Xiangqi Basics', labelKey: 'nav.learnXiangqi', href: '/learn/xiangqi' },
+    // Between the course and studies, which is where it sits pedagogically: the
+    // course teaches the moves, practice drills positions, a study is reading.
+    { label: 'Practice', labelKey: 'nav.practice', href: '/practice' },
     { label: 'Study', labelKey: 'nav.studies', href: '/study' },
     { label: 'Coaches', labelKey: 'nav.coaches', href: '/coach' },
   ];

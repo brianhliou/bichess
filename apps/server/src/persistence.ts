@@ -472,6 +472,7 @@ export {
   createStudy,
   deleteChapter,
   deleteStudy,
+  getPracticeStudiesBySlug,
   getStudyById,
   getStudyLikeState,
   isStudyVisibility,
@@ -487,6 +488,7 @@ export {
   setChapterTags,
   setStudyFeatured,
   setStudyLike,
+  setStudySlug,
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';

@@ -339,6 +339,7 @@ const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
+const wantsPractice = path === '/practice';
 // Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
 const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
 // Hidden DEV-only spike for the candidate 7x7 Dark Mini Xiangqi ruleset.
@@ -450,6 +451,13 @@ if (replaySample) {
     import('./editor/editor-page.js').then(({ mountEditorPage }) =>
       mountEditorPage(appRoot, editorVariant),
     ),
+  );
+} else if (wantsPractice) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-index.js').then(({ mountPracticeIndex }) => {
+      mountPracticeIndex(appRoot);
+    }),
   );
 } else if (wantsStudyIndex) {
   setTitleKey('nav.studies');

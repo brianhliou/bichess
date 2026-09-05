@@ -39,6 +39,7 @@ const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
+const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
 function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -169,8 +170,36 @@ export async function tryHandle(
   pathname: string,
 ): Promise<boolean> {
   const featuredMatch = FEATURED_PATH.exec(pathname);
-  if (pathname !== '/api/studies' && !pathname.startsWith('/api/studies/') && !featuredMatch) {
+  const slugMatch = SLUG_PATH.exec(pathname);
+  if (
+    pathname !== '/api/studies' &&
+    !pathname.startsWith('/api/studies/') &&
+    !featuredMatch &&
+    !slugMatch
+  ) {
     return false;
+  }
+
+  // ── Curated slug write (admin) ──
+  // Admin-only because the slug is what the /practice catalogue points at:
+  // a user able to set their own could claim a curated card's slot.
+  if (slugMatch) {
+    if (!requireMethod(request, response, 'PUT')) return true;
+    if (!(await requireAdminSession(request, response))) return true;
+    if (!requirePersistence(response)) return true;
+    const body = await readJsonBody(request);
+    const raw = typeof body.slug === 'string' ? body.slug.trim() : null;
+    if (raw !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(raw)) {
+      writeJson(response, 400, { error: 'invalid_slug' });
+      return true;
+    }
+    const result = await persistence.setStudySlug(slugMatch[1]!, raw);
+    if (!result.ok) {
+      writeJson(response, result.error === 'slug_taken' ? 409 : 404, { error: result.error });
+      return true;
+    }
+    writeJson(response, 200, { slug: result.study.slug });
+    return true;
   }
 
   // ── Staff curation write ──
