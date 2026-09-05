@@ -124,7 +124,7 @@ export function isDarkXiangqiEngineClientId(clientId: string | undefined): clien
 // The default Dark Mini Xiangqi PvE engine (the single player-facing DMX engine,
 // mirroring Misty for chess).
 export const DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-dmx-v1.0';
-export const DARK_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-fdx-v1.1';
+export const DARK_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-fdx-v1.2';
 
 const PYTHON_ENGINES: Record<string, EngineDefinition> = {
   'python-tier1-v0.9.5': {

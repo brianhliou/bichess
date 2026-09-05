@@ -14,7 +14,7 @@ test('the merged Misty identity fronts every house variant', () => {
   assert.ok(misty);
   assert.equal(misty.displayName, 'Misty');
   assert.equal(firstPartyBotEngineFor('misty', 'dark-chess'), 'python-v2-v1.6');
-  assert.equal(firstPartyBotEngineFor('misty', 'dark-xiangqi'), 'python-fdx-v1.1');
+  assert.equal(firstPartyBotEngineFor('misty', 'dark-xiangqi'), 'python-fdx-v1.2');
   assert.equal(firstPartyBotEngineFor('misty', 'banqi'), 'misty-banqi');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle'), 'misty-jungle-level-2');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle-flip'), 'misty-jungle-flip');
