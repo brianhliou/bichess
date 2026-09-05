@@ -430,7 +430,7 @@ function logTenantGameEndRecordFailure(
   );
 }
 
-function tenantParticipant<
+export function tenantParticipant<
   Kind extends string,
   C extends string,
   M,
