@@ -352,10 +352,19 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   // a variant selector, so lifetime totals there read as a broken filter (they
   // stayed at 100 / 82-18-0 across both of pikafish's variants). Variants stays
   // a whole-bot figure, which is what it is about.
+  //
+  // "here" is load-bearing, not filler. These count games played ON THE SITE,
+  // while the rating beside them reads "Elo from 36 engine games" -- a different
+  // population entirely (a clockless engine-vs-engine ladder anchored to
+  // random-legal = 1500, see ratingSampleLabel). Naming only one of the two
+  // populations is what makes the pair read as a contradiction: pikafish shows
+  // 2,334 from 36 engine games next to 12 games and a 12-0-0 record, and a bare
+  // "Games" invites the reader to reconcile numbers that were never the same
+  // measurement.
   const record = botRecordFor(bot, gameSpecId);
   counts.append(
-    buildBotCount(new Intl.NumberFormat().format(record.games), 'Games'),
-    buildBotCount(recordLabel(record), 'Record'),
+    buildBotCount(new Intl.NumberFormat().format(record.games), 'Games here'),
+    buildBotCount(recordLabel(record), 'Record here'),
     buildBotCount(String(playOptionsFor(bot).length), 'Variants'),
   );
   identity.append(counts);
@@ -463,7 +472,9 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
   if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));
-  side.append(buildBotSideStat('Record', recordLabel(botRecordFor(bot, gameSpecId))));
+  // Sits directly under "Published rating", which is an engine-ladder number.
+  // Same disambiguation as the header counts: say which population this counts.
+  side.append(buildBotSideStat('Record here', recordLabel(botRecordFor(bot, gameSpecId))));
 
   const engineId = playOptionsFor(bot).find(
     (candidate) => candidate.gameSpecId === gameSpecId,

@@ -442,17 +442,17 @@ describe('bot pages', () => {
       root.querySelector<HTMLElement>(`.bot-rating-row[data-game-spec-id="${gameSpecId}"]`);
 
     // Xiangqi is the default (it is the bot's default game spec).
-    expect(counts()).toEqual(['64Games', '50-14-0Record', '2Variants']);
+    expect(counts()).toEqual(['64Games here', '50-14-0Record here', '2Variants']);
     expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
 
     railRow('jieqi')?.click();
 
-    expect(counts()).toEqual(['36Games', '32-4-0Record', '2Variants']);
+    expect(counts()).toEqual(['36Games here', '32-4-0Record here', '2Variants']);
     expect(gameLinks()).toEqual(['/jieqi/game/room_j1']);
 
     // ...and back, so the swap is not one-way.
     railRow('xiangqi')?.click();
-    expect(counts()).toEqual(['64Games', '50-14-0Record', '2Variants']);
+    expect(counts()).toEqual(['64Games here', '50-14-0Record here', '2Variants']);
     expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
   });
 
@@ -480,7 +480,7 @@ describe('bot pages', () => {
       Array.from(root.querySelectorAll('.profile-counts .profile-count'), (el) =>
         el.textContent?.replace(/\s+/g, ' ').trim(),
       ),
-    ).toEqual(['0Games', '0-0-0Record', '2Variants']);
+    ).toEqual(['0Games here', '0-0-0Record here', '2Variants']);
     expect(root.querySelector('.bot-profile-games .landing-games-empty')?.textContent).toContain(
       'Jieqi',
     );
