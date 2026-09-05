@@ -311,7 +311,9 @@ describe('bot pages', () => {
     const ratingRows = [...root.querySelectorAll('.profile-rating-row')];
     expect(ratingRows).toHaveLength(2);
     expect(ratingRows[0]?.textContent).toContain('1,812');
-    expect(ratingRows[0]?.textContent).toContain('48 rated games');
+    // eve-anchor sample: named as engine games, not "rated" games -- these
+    // never entered the human pool (PvE is unrated).
+    expect(ratingRows[0]?.textContent).toContain('48 engine games');
     expect(root.querySelector('.profile-chart-variant')?.textContent).toBe('Fog Chess');
     expect(root.querySelector('.bot-profile-actions button')?.textContent).toBe('Play Fog Chess');
     expect(root.querySelector('.bot-rating-spotlight-title')?.textContent).toBe(
@@ -324,6 +326,67 @@ describe('bot pages', () => {
       'Recent games',
     );
     expect(root.querySelectorAll('.profile-game-list .profile-game-row')).toHaveLength(1);
+  });
+
+  it('describes an eve-anchor sample as engine games, never as rated games or a time class', async () => {
+    // The two numbers on this page count different populations: the header's
+    // Games/Record are casual PvE games against people, while rating.games is
+    // the engine-vs-engine ladder sample behind the Elo. Printing the latter as
+    // "36 rated games · Blitz" beside "12 Games" claimed both that those games
+    // were rated (PvE is unrated by decision) and that they were blitz (the
+    // ladder is run clockless -- sourceRef carries time=untimed).
+    const profile = pikafish({
+      recordsByGameSpecId: {
+        xiangqi: { games: 12, wins: 12, losses: 0, draws: 0 },
+        jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+      },
+      gamesByGameSpecId: { xiangqi: [], jieqi: [] },
+      rating: ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 }),
+      ratings: [ratingSnapshot({ gameSpecId: 'xiangqi', rating: 2334, games: 36 })],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+
+    const spotlight = root.querySelector('.profile-chart-detail')?.textContent ?? '';
+    expect(spotlight).toBe('Elo from 36 engine games');
+    expect(spotlight).not.toMatch(/rated/i);
+    expect(spotlight).not.toMatch(/blitz/i);
+
+    // The rail is a narrow cell, so it carries the bare sample -- the longer
+    // spotlight wording overflowed it into an ellipsis.
+    const railRow =
+      root.querySelector('.bot-rating-row[data-game-spec-id="xiangqi"] .profile-rating-games')
+        ?.textContent ?? '';
+    expect(railRow).toBe('36 engine games');
+    expect(railRow).not.toMatch(/rated/i);
+  });
+
+  it('keeps the plain rated-games wording for a non-eve rating source', async () => {
+    // The eve-anchor rewrite is scoped to that source, so a rating that really
+    // did come from a rated pool still reads as one.
+    const imported = ratingSnapshot({
+      gameSpecId: 'xiangqi',
+      rating: 2100,
+      games: 1,
+      source: 'import',
+      timeClass: 'rapid',
+    });
+    const profile = pikafish({ rating: imported, ratings: [imported] });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+
+    // Singular, and the time class rides along in the spotlight only.
+    expect(root.querySelector('.profile-chart-detail')?.textContent).toBe('1 rated game · Rapid');
+    expect(
+      root.querySelector('.bot-rating-row[data-game-spec-id="xiangqi"] .profile-rating-games')
+        ?.textContent,
+    ).toBe('1 rated game');
   });
 
   it('scopes Games, Record and the recent-games list to the selected variant', async () => {

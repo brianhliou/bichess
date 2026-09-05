@@ -419,7 +419,7 @@ function buildBotRatingSpotlight(bot: BotProfile, gameSpecId: string): HTMLEleme
       q.textContent = '?';
       value.append(q);
     }
-    detail.textContent = `${rating.games} rated ${rating.games === 1 ? 'game' : 'games'} · ${timeClassLabel(rating.timeClass)}`;
+    detail.textContent = ratingSampleLabel(rating, { style: 'spotlight' });
   } else {
     value.textContent = '—';
     value.classList.add('profile-chart-value-empty');
@@ -556,7 +556,7 @@ function buildBotRatingRow(
   const games = document.createElement('span');
   games.className = 'profile-rating-games';
   games.textContent = rating
-    ? `${rating.games} rated ${rating.games === 1 ? 'game' : 'games'}`
+    ? ratingSampleLabel(rating, { style: 'rail' })
     : option.playable
       ? 'Unrated'
       : 'Unavailable';
@@ -701,4 +701,38 @@ function ratingLabel(rating: BotRatingSnapshot): string {
 
 function timeClassLabel(timeClass: BotRatingSnapshot['timeClass']): string {
   return timeClass[0].toUpperCase() + timeClass.slice(1);
+}
+
+/**
+ * What a bot rating's sample actually is, in words.
+ *
+ * `rating.games` is the snapshot's sample size, NOT games played on the site --
+ * two different populations that used to sit inches apart on the profile as
+ * "36 rated games" beside a "12 Games" header, reading as though 36 of the
+ * bot's games counted and 12 did not.
+ *
+ * For an `eve-anchor` snapshot (every published bot rating today) the sample is
+ * an engine-vs-engine ladder, on a scale anchored to random-legal = 1500. It is
+ * not the human rated pool: PvE is unrated by decision, so calling these "rated
+ * games" on a page whose other numbers are casual PvE games is the wrong claim.
+ * The time class is omitted for the same reason -- that ladder is run clockless
+ * (sourceRef carries `time=untimed`) and 'blitz' is only the bucket the
+ * snapshot was published into, so printing "Blitz" states something false.
+ */
+function ratingSampleLabel(
+  rating: BotRatingSnapshot,
+  opts: { style: 'rail' | 'spotlight' },
+): string {
+  const plural = rating.games === 1 ? 'game' : 'games';
+  const spotlight = opts.style === 'spotlight';
+  if (rating.source === 'eve-anchor') {
+    // The rail row is a narrow fixed-width cell beside the number, so it takes
+    // the bare sample; "Elo from ..." overflowed it into an ellipsis. The
+    // spotlight has the room to say what the number is.
+    return spotlight
+      ? `Elo from ${rating.games} engine ${plural}`
+      : `${rating.games} engine ${plural}`;
+  }
+  const suffix = spotlight ? ` · ${timeClassLabel(rating.timeClass)}` : '';
+  return `${rating.games} rated ${plural}${suffix}`;
 }
