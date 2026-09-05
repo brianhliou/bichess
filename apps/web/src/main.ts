@@ -24,6 +24,7 @@ import {
   correspondenceEnabled,
   friendsOnlineEnabled,
   learnEnabled,
+  practiceEnabled,
 } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
@@ -339,7 +340,9 @@ const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
-const wantsPractice = path === '/practice';
+// Parked in prod: practiceEnabled is false there, so /practice falls through to
+// the branded 404 shell the same way the legacy /learn hub does (#363).
+const wantsPractice = practiceEnabled() && path === '/practice';
 // Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
 const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
 // Hidden DEV-only spike for the candidate 7x7 Dark Mini Xiangqi ruleset.
