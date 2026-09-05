@@ -4,15 +4,20 @@
 // (@mistboard/game practice-catalog.ts) and returns sections of cards in
 // teaching order. This page's job is to render that shelf and get out of the way.
 //
-// Copy on this page is English-only for now, like the /learn course it sits
-// beside; it joins the catalog in the same pass rather than being half-wired.
+// Uses the SAME tile-map shell as /learn/xiangqi (tile-map.css): sticky sidebar
+// with an emblem and a progress bar, letterspaced section headings, a grid of
+// wide tiles with a folded corner ribbon. The two pages are the same kind of
+// thing -- a shelf of sets you work through -- and lichess draws its /learn and
+// /practice indexes the same way for the same reason. Building a second card
+// language here would make two surfaces that do one job look like two products.
 //
-// Progress (the per-card "N/M" ribbon and an overall bar) is the other half of
-// what makes lichess's version legible, and it does not exist yet -- there is no
-// practice progress table. The card markup leaves the ribbon slot empty rather
-// than faking it; see the note on `card()`.
+// Copy is English-only for now, like the /learn course it sits beside; it joins
+// the i18n catalog in the same pass rather than being half-wired.
 
+import type { XiangqiPieceRole } from '@mistboard/game';
 import { buildNav } from './site-shell.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
+import './tile-map.css';
 import './practice-index.css';
 
 interface PracticeCardDto {
@@ -47,74 +52,116 @@ async function load(): Promise<PracticeSectionDto[]> {
 }
 
 function render(root: HTMLElement, sections: PracticeSectionDto[]): void {
-  const main = document.createElement('main');
-  main.className = 'practice-index';
+  const page = document.createElement('div');
+  page.className = 'learn-xq learn-xq--map practice-index';
 
-  const header = document.createElement('header');
-  header.className = 'practice-index__header';
-  const h1 = document.createElement('h1');
-  h1.className = 'practice-index__title';
-  h1.textContent = 'Practice';
-  const lede = document.createElement('p');
-  lede.className = 'practice-index__lede';
-  // Says what the surface actually does, because it is not a puzzle page and a
-  // learner who expects one will read a failed conversion as a broken puzzle.
-  lede.textContent =
-    'Positions with a goal instead of an answer. The engine plays the defence and tells you when you have let the win slip.';
-  header.append(h1, lede);
-  main.append(header);
+  page.append(sidebar(sections));
+
+  const main = document.createElement('main');
+  main.className = 'learn-xq-map-main';
 
   if (sections.length === 0) {
     main.append(notice('No practice sets are published yet.'));
-    root.replaceChildren(buildNav(), main);
-    return;
   }
-
   for (const section of sections) {
     const block = document.createElement('section');
-    block.className = 'practice-section';
+    block.className = 'learn-xq-categ';
     const heading = document.createElement('h2');
-    heading.className = 'practice-section__title';
     heading.textContent = section.title;
     const grid = document.createElement('div');
-    grid.className = 'practice-section__grid';
-    for (const entry of section.cards) grid.append(card(entry));
+    grid.className = 'learn-xq-tile-grid';
+    for (const entry of section.cards) grid.append(tile(entry));
     block.append(heading, grid);
     main.append(block);
   }
 
-  root.replaceChildren(buildNav(), main);
+  page.append(main);
+  root.replaceChildren(buildNav(), page);
 }
 
-function card(entry: PracticeCardDto): HTMLElement {
+function sidebar(sections: PracticeSectionDto[]): HTMLElement {
+  const side = document.createElement('aside');
+  side.className = 'learn-xq-side-card';
+
+  const illus = document.createElement('div');
+  illus.className = 'learn-xq-mascot';
+  illus.innerHTML = renderXiangqiPiece({ color: 'red', role: 'chariot' }, { size: 96 });
+
+  const title = document.createElement('h1');
+  title.textContent = 'Practice';
+  const sub = document.createElement('p');
+  // Says what the surface actually is, because it is not the puzzle page: a
+  // learner who expects a puzzle will read a failed conversion as a broken one.
+  sub.textContent = 'against the engine';
+  side.append(illus, title, sub);
+
+  // Where /learn puts its "Progress: N%" bar. There is no practice progress
+  // store yet (#356), so this states the size of the shelf instead -- true, and
+  // it becomes the progress bar without the layout moving.
+  const total = sections.reduce(
+    (sum, section) => sum + section.cards.reduce((n, card) => n + card.exerciseCount, 0),
+    0,
+  );
+  if (total > 0) {
+    const count = document.createElement('p');
+    count.className = 'practice-index__total';
+    count.textContent = `${total} exercises`;
+    side.append(count);
+  }
+  return side;
+}
+
+function tile(entry: PracticeCardDto): HTMLElement {
   const link = document.createElement('a');
-  link.className = 'practice-card';
+  // `--link` is the tint /learn uses for an actionable destination tile.
+  link.className = 'learn-xq-tile learn-xq-tile--link';
   link.href = `/study/${encodeURIComponent(entry.studyId)}`;
 
-  const body = document.createElement('span');
-  body.className = 'practice-card__body';
-  const title = document.createElement('span');
-  title.className = 'practice-card__title';
+  const illus = document.createElement('div');
+  illus.className = 'learn-xq-tile-illus';
+  illus.innerHTML = renderXiangqiPiece(
+    { color: 'red', role: pieceForSlug(entry.slug) },
+    { size: 56 },
+  );
+
+  const text = document.createElement('div');
+  text.className = 'learn-xq-tile-text';
+  const title = document.createElement('h3');
   title.textContent = entry.title;
-  const blurb = document.createElement('span');
-  blurb.className = 'practice-card__blurb';
+  const blurb = document.createElement('p');
   blurb.textContent = entry.blurb;
-  body.append(title, blurb);
+  text.append(title, blurb);
 
-  // lichess puts an "N / M" completion ribbon here and colours the card by it.
-  // We have no progress store yet, so the corner states the SIZE of the set --
-  // true, useful, and not a completion claim we cannot back. It becomes the
-  // ribbon once practice progress lands.
-  const count = document.createElement('span');
-  count.className = 'practice-card__count';
-  count.textContent = String(entry.exerciseCount);
-  const countLabel = document.createElement('span');
-  countLabel.className = 'practice-card__count-label';
-  countLabel.textContent = entry.exerciseCount === 1 ? 'exercise' : 'exercises';
-  count.append(countLabel);
+  link.append(illus, text);
 
-  link.append(body, count);
+  // The folded corner ribbon carries state on /learn. Until practice progress
+  // exists it carries the set's SIZE, which is the honest thing to put there and
+  // keeps the anatomy intact for when "3 / 11" replaces it.
+  const wrap = document.createElement('div');
+  wrap.className = 'learn-xq-ribbon-wrap';
+  const ribbon = document.createElement('div');
+  ribbon.className = 'learn-xq-ribbon learn-xq-ribbon--ongoing';
+  ribbon.textContent = String(entry.exerciseCount);
+  wrap.append(ribbon);
+  link.append(wrap);
+
   return link;
+}
+
+/**
+ * The piece a card's illustration shows.
+ *
+ * Driven off the slug rather than stored in the catalogue: every endgame set is
+ * named for the piece that defines it, so the mapping is already implied and a
+ * second place to state it is a second place to get it wrong. An unrecognised
+ * slug falls back to the general, which is the piece every xiangqi position has.
+ */
+function pieceForSlug(slug: string): XiangqiPieceRole {
+  if (slug.includes('chariot')) return 'chariot';
+  if (slug.includes('horse')) return 'horse';
+  if (slug.includes('cannon')) return 'cannon';
+  if (slug.includes('soldier')) return 'soldier';
+  return 'general';
 }
 
 function notice(text: string): HTMLElement {

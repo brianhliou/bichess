@@ -1,116 +1,20 @@
-/* /practice — the curated shelf. Card grid modelled on lichess's practice index:
-   two columns of wide, short cards with the set size in the corner, grouped
-   under quiet section headings. */
+/* /practice — the few things the shared tile-map shell does not cover.
+   Everything structural (sidebar card, section headings, tile grid, tiles,
+   corner ribbon) comes from tile-map.css, the same shell /learn/xiangqi uses.
+   The two pages are the same kind of thing and should not look like two
+   products. */
 
-.practice-index {
-  /* The shell centres its children, which makes a block shrink-to-fit and leaves
-     max-width never engaged -- the card grid then collapses to one column. */
-  width: 100%;
-  max-width: 62rem;
-  margin: 0 auto;
-  padding: 1.25rem 1rem 3rem;
-}
-
-.practice-index__header {
-  margin-bottom: 1.75rem;
-  text-align: center;
-}
-
-.practice-index__title {
+/* Stands where /learn puts its "Progress: N%" bar, so the sidebar does not end
+   on a ragged edge before practice progress exists (#356). */
+.practice-index__total {
   margin: 0;
-  font-size: 1.9rem;
-}
-
-.practice-index__lede {
-  margin: 0.4rem auto 0;
-  max-width: 40rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--site-muted);
-  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
 }
 
 .practice-index__notice {
   color: var(--site-muted);
   text-align: center;
-}
-
-.practice-section {
-  margin-bottom: 2rem;
-}
-
-/* Quiet, wide-tracked heading: the cards carry the page, the section only files
-   them. lichess letterspaces these for the same reason. */
-.practice-section__title {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--site-muted);
-  text-align: center;
-}
-
-.practice-section__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  gap: 0.75rem;
-}
-
-.practice-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius, 10px);
-  background: var(--site-panel, var(--site-surface));
-  color: var(--site-text);
-  text-decoration: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
-}
-.practice-card:hover,
-.practice-card:focus-visible {
-  border-color: var(--site-accent);
-  background: var(--site-surface);
-}
-
-.practice-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.practice-card__title {
-  font-weight: 650;
-}
-
-.practice-card__blurb {
-  font-size: 0.85rem;
-  color: var(--site-muted);
-}
-
-/* Where lichess puts its completion ribbon. Until practice progress exists this
-   states the SIZE of the set, which is true and useful; it becomes "solved / total"
-   without moving. */
-.practice-card__count {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1.1;
-  font-size: 1.25rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--site-accent);
-}
-
-.practice-card__count-label {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--site-muted);
 }

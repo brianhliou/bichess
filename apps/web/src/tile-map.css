@@ -1,0 +1,341 @@
+/* Tile map: the sidebar-plus-card-grid shell shared by /learn/xiangqi and
+   /practice.
+ *
+ * Moved here verbatim from learn-xiangqi.css, which is where it was written and
+ * where it was the only consumer. It has two now, and a component's styles
+ * belong with the component rather than inside one of its consumers -- a class
+ * whose CSS lives in another page's stylesheet renders as correctly-positioned
+ * invisible markup on the page that did not import it.
+ *
+ * The class names still say `learn-xq-`. That is historical, not a claim of
+ * ownership: renaming them would mean touching the learn page's TS and its
+ * tests for no visual gain, and the risk belongs to whoever next needs the
+ * rename for its own sake.
+ *
+ * Anatomy (lichess /learn and /practice share it): a sticky left card with an
+ * emblem, a title and a progress bar; then letterspaced section headings over a
+ * grid of wide tiles, each an illustration beside a title and one line, with a
+ * folded corner ribbon carrying state.
+ */
+
+/* ── Map screen ─────────────────────────────────────────────────────────── */
+
+/* The page wrapper belongs to the shell, not to either consumer: without it the
+   grid has no max width and no centring, and the tiles run off the right edge.
+   It lived in learn-xiangqi.css until /practice became the second consumer and
+   rendered unconstrained -- the same failure as any other rule left behind in
+   one consumer's stylesheet. */
+.learn-xq {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  color: var(--site-text);
+}
+
+.learn-xq--map {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.learn-xq-side-card {
+  position: sticky;
+  top: 16px;
+  background: var(--site-panel);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.learn-xq-side-card h1 {
+  margin: 12px 0 0;
+  font-size: 1.35rem;
+  color: var(--site-heading);
+}
+
+.learn-xq-side-card p {
+  margin: 2px 0 14px;
+  color: var(--site-muted);
+}
+
+.learn-xq-mascot :is(svg) {
+  width: 96px;
+  height: 96px;
+}
+
+/* Filled bar with a darker fill overlay, lichess-style: the whole track is the
+   accent color so the centered white label stays legible at any percentage. */
+.learn-xq-progress-bar {
+  position: relative;
+  height: 30px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--site-accent) 42%, white);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.learn-xq-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--site-accent);
+  transition: width 400ms ease;
+}
+
+.learn-xq-progress-bar span {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.learn-xq-reset {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--site-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.learn-xq-categ h2 {
+  text-align: center;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--site-muted);
+  margin: 34px 0 18px;
+}
+
+.learn-xq-categ:first-child h2 {
+  margin-top: 0;
+}
+
+.learn-xq-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+}
+
+/* Neutral base; the state modifiers below paint the lichess-style tint gradient
+   (green = done, blue = ongoing, violet = locked). */
+.learn-xq-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 48px 10px 0;
+  min-height: 90px;
+  border-radius: var(--site-radius);
+  border: 1px solid var(--site-border-soft);
+  background: var(--site-panel);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.07);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+  isolation: isolate;
+}
+
+.learn-xq-tile > :not(.learn-xq-ribbon-wrap) {
+  position: relative;
+  z-index: 1;
+}
+
+.learn-xq-tile:hover {
+  transform: scale(1.02);
+}
+
+.learn-xq-tile-text h3 {
+  margin: 0;
+  font-family: "Roboto", "Noto Sans", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--site-heading);
+}
+
+.learn-xq-tile-text p {
+  margin: 4px 0 0;
+  color: var(--site-muted);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.learn-xq-tile-illus {
+  display: grid;
+  flex: 0 0 102px;
+  place-items: center;
+  opacity: 0.68;
+}
+
+.learn-xq-tile-illus :is(svg) {
+  width: 70px;
+  height: 70px;
+}
+
+.learn-xq-tile-glyph {
+  font-size: 40px;
+  line-height: 1;
+}
+
+/* Done: green (pine accent) tint rising from the bottom edge. The what-next
+   funnel tiles share this treatment (lichess renders them as completed). */
+.learn-xq-tile--done,
+.learn-xq-tile--link {
+  border-color: color-mix(in srgb, var(--site-accent) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--site-accent) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--site-accent) 20%, var(--site-panel)) 100px
+  );
+}
+
+.learn-xq-tile--done .learn-xq-tile-illus {
+  color: var(--site-accent);
+  opacity: 0.82;
+}
+
+/* Ongoing: blue tint + Lichess's traveling perimeter highlight. */
+.learn-xq-tile--ongoing {
+  border-color: color-mix(in srgb, var(--site-link) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--site-link) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--site-link) 20%, var(--site-panel)) 100px
+  );
+}
+
+.learn-xq-tile--ongoing::after {
+  --learn-xq-border-angle: 0turn;
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border: 3px solid transparent;
+  border-radius: var(--site-radius);
+  background: conic-gradient(
+      from var(--learn-xq-border-angle),
+      transparent 25%,
+      color-mix(in srgb, var(--site-link) 72%, #12283c),
+      color-mix(in srgb, var(--site-link) 20%, transparent)
+    )
+    border-box;
+  content: "";
+  pointer-events: none;
+  animation: learn-xq-border-spin 3.5s linear infinite;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* Future: locked, violet and visually quieter than the actionable stage. */
+.learn-xq-tile--future {
+  --learn-xq-future: hsl(274, 65%, 70%);
+  border-color: color-mix(in srgb, var(--learn-xq-future) 65%, var(--site-border-soft));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--learn-xq-future) 40%, var(--site-panel)),
+    color-mix(in srgb, var(--learn-xq-future) 20%, var(--site-panel)) 100px
+  );
+}
+
+@property --learn-xq-border-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0turn;
+}
+
+@keyframes learn-xq-border-spin {
+  to {
+    --learn-xq-border-angle: 1turn;
+  }
+}
+
+/* Folded corner ribbon (lichess anatomy): a 45deg band clipped to a triangle in
+   the top-right corner, carrying stars (done) or progress text (ongoing). */
+.learn-xq-ribbon-wrap {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.learn-xq-ribbon {
+  --learn-xq-ribbon-fade: rgba(17, 17, 17, 0.24);
+  position: relative;
+  z-index: 1;
+  top: 15px;
+  left: -4px;
+  width: 120px;
+  padding: 7px 0;
+  transform: rotate(45deg);
+  text-align: center;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #4a4636;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.learn-xq-ribbon::before,
+.learn-xq-ribbon::after {
+  position: absolute;
+  top: 0;
+  width: 32px;
+  height: 100%;
+  content: "";
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.learn-xq-ribbon::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--learn-xq-ribbon-fade), transparent);
+}
+
+.learn-xq-ribbon::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--learn-xq-ribbon-fade), transparent);
+}
+
+.learn-xq-ribbon--done {
+  background: #c5e791;
+}
+
+.learn-xq-ribbon--ongoing {
+  background: #bddffa;
+}
+
+.learn-xq-ribbon .learn-xq-star {
+  font-size: 0.92rem;
+}
+
+/* Sits where three stars would on a finished stage, so the two done states read
+   as the same badge at a glance. Counter-rotated out of the band's 45deg: stars
+   survive the tilt and progress text is meant to run along it, but a tilted
+   check reads as a stray tick rather than a mark. */
+.learn-xq-ribbon .learn-xq-check {
+  display: inline-block;
+  font-size: 1.15rem;
+  line-height: 1;
+  transform: rotate(-45deg);
+}
+
+.learn-xq-what-next-copy {
+  text-align: center;
+  color: var(--site-muted);
+  margin: -6px 0 16px;
+}

@@ -4,6 +4,7 @@
 // a specific level. All DOM lives here; game logic lives in the runner.
 
 import '../live-xiangqi.css';
+import '../tile-map.css';
 import './learn-xiangqi.css';
 
 import type { XiangqiPieceRole, XiangqiSquare } from '@mistboard/game';
