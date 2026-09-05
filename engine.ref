@@ -1,4 +1,21 @@
-91e73d6
+a314c43
+# ^ The mistboard-engine commit the prod build checks out (railpack build step).
+# Fog analyzer runnable on real games (2026-09-05): a314c43 makes the post-game
+# fog analyzer usable outside the engine-vs-engine corpus it was tuned on.
+# TruthGrader no longer asks Stockfish about a FoW-reachable position where the
+# side not to move has a capturable king (STATUS_OPPOSITE_CHECK, how nearly every
+# fog game ends): SimpleEngine.analyse takes no timeout and never returns for
+# those, so grade()'s except could not fire and the job hung forever. i_sample
+# 8 -> 200 (8 missed the truth in its own sample on 20 of 52 plies and charged the
+# player a sample_error for each). Belief now uses the resident-Rust state and
+# takes a |P| cap, defaulting to production's 16M — uncapped with the Python
+# set[str] path passed 8 GiB within seconds on a real game. Also keeps the top-3
+# root candidates the solve already computed, for the review's alternatives block.
+# LIVE-MOVE RISK: none. Nothing on this ref touches the live turn path; every
+# change is inside analysis.py's post-game entry points and scripts/analyze_job.py.
+# Rollback target: 91e73d6 (the previous pin; drops the analyzer fixes only, no
+# registry or env changes).
+#
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
 # Belief-update fail-safe + telemetry (2026-08-23): 91e73d6 makes the worker
 # project each belief update's cost (per-world EWMA learned per host) BEFORE
