@@ -50,7 +50,7 @@ function misty(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
-function pikafish(): Record<string, unknown> {
+function pikafish(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return misty({
     id: 'pikafish',
     displayName: 'Pikafish',
@@ -64,6 +64,7 @@ function pikafish(): Record<string, unknown> {
     ],
     rating: null,
     ratings: [],
+    ...overrides,
   });
 }
 
@@ -323,6 +324,103 @@ describe('bot pages', () => {
       'Recent games',
     );
     expect(root.querySelectorAll('.profile-game-list .profile-game-row')).toHaveLength(1);
+  });
+
+  it('scopes Games, Record and the recent-games list to the selected variant', async () => {
+    // The regression this pins (2026-09-04): pikafish's header read 100 games /
+    // 82-18-0 and an all-jieqi games list in BOTH rail states, because the
+    // header was built from lifetime totals and the games panel was built once
+    // outside the click handler.
+    const game = (roomId: string, variant: string) => ({
+      roomId,
+      variant,
+      mode: 'pve',
+      rated: false,
+      result: 'white-wins',
+      termination: 'checkmate',
+      plyCount: 30,
+      whiteName: 'Pikafish',
+      blackName: 'challenger',
+      corpusId: null,
+      endedAt: '2026-07-01T00:00:00.000Z',
+      playerColor: 'white',
+    });
+    const profile = pikafish({
+      gamesTotal: 100,
+      record: { games: 100, wins: 82, losses: 18, draws: 0 },
+      recordsByGameSpecId: {
+        xiangqi: { games: 64, wins: 50, losses: 14, draws: 0 },
+        jieqi: { games: 36, wins: 32, losses: 4, draws: 0 },
+      },
+      // The flat list is all-jieqi, exactly as prod served it: a client-side
+      // filter over THIS would leave xiangqi empty, which is why the server
+      // partitions instead.
+      games: [game('room_j1', 'jieqi')],
+      gamesByGameSpecId: {
+        xiangqi: [game('room_x1', 'xiangqi')],
+        jieqi: [game('room_j1', 'jieqi')],
+      },
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+
+    const counts = () =>
+      Array.from(root.querySelectorAll('.profile-counts .profile-count'), (el) =>
+        el.textContent?.replace(/\s+/g, ' ').trim(),
+      );
+    const gameLinks = () =>
+      Array.from(root.querySelectorAll('.bot-profile-games .profile-game-row-open'), (el) =>
+        el.getAttribute('href'),
+      );
+    const railRow = (gameSpecId: string) =>
+      root.querySelector<HTMLElement>(`.bot-rating-row[data-game-spec-id="${gameSpecId}"]`);
+
+    // Xiangqi is the default (it is the bot's default game spec).
+    expect(counts()).toEqual(['64Games', '50-14-0Record', '2Variants']);
+    expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
+
+    railRow('jieqi')?.click();
+
+    expect(counts()).toEqual(['36Games', '32-4-0Record', '2Variants']);
+    expect(gameLinks()).toEqual(['/jieqi/game/room_j1']);
+
+    // ...and back, so the swap is not one-way.
+    railRow('xiangqi')?.click();
+    expect(counts()).toEqual(['64Games', '50-14-0Record', '2Variants']);
+    expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
+  });
+
+  it('names the variant when the selected one has no games, and never shows lifetime numbers under it', async () => {
+    const profile = pikafish({
+      gamesTotal: 64,
+      record: { games: 64, wins: 50, losses: 14, draws: 0 },
+      // A supported variant the bot has never played arrives as a real 0-0-0,
+      // so the lifetime fallback must not fire for it.
+      recordsByGameSpecId: {
+        xiangqi: { games: 64, wins: 50, losses: 14, draws: 0 },
+        jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+      },
+      games: [],
+      gamesByGameSpecId: { xiangqi: [], jieqi: [] },
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+    root.querySelector<HTMLElement>('.bot-rating-row[data-game-spec-id="jieqi"]')?.click();
+
+    expect(
+      Array.from(root.querySelectorAll('.profile-counts .profile-count'), (el) =>
+        el.textContent?.replace(/\s+/g, ' ').trim(),
+      ),
+    ).toEqual(['0Games', '0-0-0Record', '2Variants']);
+    expect(root.querySelector('.bot-profile-games .landing-games-empty')?.textContent).toContain(
+      'Jieqi',
+    );
   });
 
   it('marks unplayable variants on the profile and posts the row variant on Play', async () => {
