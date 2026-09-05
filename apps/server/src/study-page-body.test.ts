@@ -22,6 +22,8 @@ function chapter(overrides: Partial<StudyChapterRecord> = {}): StudyChapterRecor
     denorm: {},
     version: 0,
     gamebook: false,
+    practice: false,
+    practiceGoal: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,

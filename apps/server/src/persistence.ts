@@ -483,6 +483,7 @@ export {
   reorderStudyChapters,
   setChapterGamebook,
   setChapterOrientation,
+  setChapterPractice,
   setChapterTags,
   setStudyFeatured,
   setStudyLike,
