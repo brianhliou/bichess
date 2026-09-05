@@ -1,4 +1,4 @@
--- 132_studies_slug.sql
+-- 134_studies_slug.sql
 -- Stable, human-authored identity for a study, so something outside the database
 -- can name one without knowing its generated id.
 --
