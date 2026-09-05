@@ -8,6 +8,7 @@
 
 import type { PracticeGoal, XiangqiColor, XiangqiGameState } from '@mistboard/game';
 import { createInitialXiangqiState, parseStandardXiangqiFen } from '@mistboard/game';
+import { track } from '../analytics.js';
 import { createCeval } from './engine/ceval.js';
 import type { PracticeEval } from './practice-play.js';
 import { evaluateXiangqiForPractice } from './xiangqi-practice.js';
@@ -42,6 +43,8 @@ export interface MountPracticeChapterOptions {
   onNext?: () => void;
   /** Chapter id, so a solve can be recorded against it. */
   chapterId?: string;
+  /** Study id, for the analytics events only. */
+  studyId?: string;
 }
 
 /**
@@ -81,6 +84,16 @@ export function mountPracticeChapter(
   const evaluate = (truth: XiangqiGameState): Promise<PracticeEval> =>
     evaluateXiangqiForPractice(ceval, truth);
 
+  // Two events, low volume, one per mount. `practice_started` is the denominator
+  // the #358 gate reads; without it a completion count cannot tell "nobody
+  // finished" apart from "nobody tried", which are different problems with
+  // different answers.
+  track('practice_started', {
+    ...(opts.studyId === undefined ? {} : { studyId: opts.studyId }),
+    ...(opts.chapterId === undefined ? {} : { chapterId: opts.chapterId }),
+    goal: opts.goal.kind,
+  });
+
   return mountXiangqiPractice(root, {
     initialTruth: state,
     goal: opts.goal,
@@ -100,6 +113,12 @@ export function mountPracticeChapter(
       ? {}
       : {
           onSolved: (moves: number) => {
+            track('practice_solved', {
+              ...(opts.studyId === undefined ? {} : { studyId: opts.studyId }),
+              chapterId: opts.chapterId,
+              goal: opts.goal.kind,
+              moves,
+            });
             // Fire and forget. A progress write that fails must not interrupt
             // the moment the learner just succeeded, and there is nothing
             // useful to tell them about it -- the next page load simply will
@@ -109,6 +128,15 @@ export function mountPracticeChapter(
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ chapterId: opts.chapterId, moves }),
             }).catch(() => {});
+          },
+          onFailed: (verdict: string, moves: number) => {
+            track('practice_failed', {
+              ...(opts.studyId === undefined ? {} : { studyId: opts.studyId }),
+              chapterId: opts.chapterId,
+              goal: opts.goal.kind,
+              verdict,
+              moves,
+            });
           },
         }),
   });

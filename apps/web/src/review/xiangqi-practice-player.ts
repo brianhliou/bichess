@@ -19,6 +19,7 @@ import {
   describePracticeGoal,
   fsfUciToXiangqiSquares,
   type PracticeGoal,
+  type PracticeVerdict,
   type StandardXiangqiPlayerView,
   type XiangqiColor,
   type XiangqiGameState,
@@ -26,7 +27,12 @@ import {
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { renderXiangqiPiece } from '../xiangqi-pieces.js';
-import { createPracticeSession, type PracticeEval, type PracticeView } from './practice-play.js';
+import {
+  createPracticeSession,
+  type PracticeEval,
+  type PracticePhase,
+  type PracticeView,
+} from './practice-play.js';
 import { xiangqiPracticeConfig } from './xiangqi-practice.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
@@ -62,6 +68,10 @@ export interface XiangqiPracticeOptions {
    *  caller's to swallow, because losing a progress write must never interrupt
    *  the moment the learner just succeeded. */
   onSolved?: (moves: number) => void;
+  /** Called each time an attempt fails, with the grade that ended it. A surface
+   *  where every learner blunders on move one is MISCALIBRATED rather than
+   *  unused, and the two are indistinguishable in a completion count alone. */
+  onFailed?: (verdict: PracticeVerdict, moves: number) => void;
   /**
    * Site navigation to keep above the player. The mount replaces the root's
    * children, so a caller that built a nav there first would otherwise have it
@@ -218,6 +228,10 @@ export function mountXiangqiPractice(
   // One report per mount: a learner who solves, restarts and solves again has
   // not solved a second exercise.
   let reportedSolved = false;
+  // Failures ARE reported per occurrence -- each one is a separate data point
+  // about the exercise's difficulty -- so this tracks the transition rather than
+  // suppressing repeats. render() runs on every state change, including retry.
+  let lastPhase: PracticePhase | null = null;
 
   const interactive = createXiangqiInteractiveBoard({
     board: boardEl,
@@ -329,6 +343,12 @@ export function mountXiangqiPractice(
       reportedSolved = true;
       opts.onSolved?.(view.movesPlayed);
     }
+    // On the TRANSITION into failed, so a re-render of the same failed state
+    // (asking for a hint, say) does not count as a second failure.
+    if (view.phase === 'failed' && lastPhase !== 'failed' && view.verdict) {
+      opts.onFailed?.(view.verdict, view.movesPlayed);
+    }
+    lastPhase = view.phase;
 
     if (state === 'thinking') {
       feedback.textContent = 'Thinking…';

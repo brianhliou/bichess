@@ -770,6 +770,7 @@ function renderStudy(
           // three columns belongs to neither and reads as a stray caption.
           aside,
           chapterId: chapter.id,
+          studyId: study.id,
           progress: { index: practiceIndex + 1, total: chapters.length },
           // Omitted on the last chapter, so the button is not offered at all
           // rather than offered and inert.

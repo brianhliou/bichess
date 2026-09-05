@@ -293,3 +293,31 @@ test('a solve is not re-reported when the learner restarts and solves again', as
   await handle.play(move);
   expect(solves.length, 'one mount, one report').toBe(1);
 });
+
+test('a failure is reported once per attempt, with its verdict', async () => {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const failures: { verdict: string; moves: number }[] = [];
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: MATE,
+    orientation: row.turn,
+    evaluate: collapsing(900, 0),
+    onFailed: (verdict, moves) => failures.push({ verdict, moves }),
+  });
+  await handle.ready();
+  expect(failures).toEqual([]);
+
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+  expect(handle.view().phase, 'the fake must actually fail the attempt').toBe('failed');
+  expect(failures.length).toBe(1);
+  expect(failures[0]?.verdict).toBe('blunder');
+
+  // Asking for a hint re-renders the SAME failed state; a report keyed on the
+  // phase rather than the transition into it would count that as a second
+  // failure and inflate the difficulty signal.
+  const hintBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hint');
+  hintBtn?.click();
+  expect(failures.length, 'one failure, one report').toBe(1);
+});
