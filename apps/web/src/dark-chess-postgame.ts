@@ -15,6 +15,7 @@ import {
   reviewResultLabel,
 } from './review/game-review-meta.js';
 import { analysisHref, editorHref } from './review/position-links.js';
+import { CHESS_SEAT_COLORS } from './review/review-seat-colors.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 
@@ -130,6 +131,12 @@ export function mountDarkChessPostgame(
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
+    // The analysis seats are named red/black as move-order slots; in chess the
+    // first one plays White. Declaring it here is what stops the summary dots,
+    // retro disc, advantage chart and move-time bars from painting White red --
+    // they all resolve through reviewColorForSeat, so one declaration reaches
+    // every one of them instead of a per-surface `.dark-chess-review` override.
+    seatColors: CHESS_SEAT_COLORS,
     players: reviewPlayers(game),
     playerProfiles: reviewSeatProfiles(game.players, 'white'),
     result: { score: resultScore(game.result), label: status },

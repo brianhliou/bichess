@@ -70,7 +70,7 @@ import {
   installReviewKeyboard,
   type ReviewSurface,
 } from './review-layout.js';
-import type { ReviewSeatColors } from './review-seat-colors.js';
+import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
 import { seatStripInks } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
@@ -1315,6 +1315,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     retro = controller;
     retroPanel = createRetroPanel(controller, {
       labelFor: plyMoveLabel,
+      discInk: reviewColorForSeat(side, config.seatColors),
       onClose: closeRetro,
       onFlip: () => {
         // Look at the game from the other side, then start on its mistakes.

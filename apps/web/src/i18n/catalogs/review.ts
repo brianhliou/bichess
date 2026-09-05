@@ -401,6 +401,7 @@ export const EN_REVIEW = {
   'summary.endgame': 'Endgame',
   'summary.red': 'Red',
   'summary.black': 'Black',
+  'summary.white': 'White',
   'underboard.computerAnalysis': 'Computer analysis',
   'underboard.explorer': 'Opening explorer',
   'underboard.gameInfo': 'Game info',

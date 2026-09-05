@@ -378,6 +378,7 @@ export const ZH_HANS_REVIEW = {
   'summary.endgame': '残局',
   'summary.red': '红方',
   'summary.black': '黑方',
+  'summary.white': '白方',
   'underboard.computerAnalysis': '引擎分析',
   'underboard.explorer': '开局库',
   'underboard.gameInfo': '对局信息',

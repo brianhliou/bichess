@@ -378,6 +378,7 @@ export const ZH_HANT_REVIEW = {
   'summary.endgame': '殘局',
   'summary.red': '紅方',
   'summary.black': '黑方',
+  'summary.white': '白方',
   'underboard.computerAnalysis': '引擎分析',
   'underboard.explorer': '開局庫',
   'underboard.gameInfo': '對局資訊',

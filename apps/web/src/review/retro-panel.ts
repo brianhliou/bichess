@@ -5,6 +5,7 @@
 import './retro.css';
 import { t } from '../i18n/catalog.js';
 import type { RetroController, RetroSide } from './retro.js';
+import type { ReviewInk } from './review-seat-colors.js';
 
 export interface RetroPanelOptions<Node> {
   /** "21… h8-e8" for the fault / solution move. */
@@ -12,6 +13,16 @@ export interface RetroPanelOptions<Node> {
   onClose(): void;
   /** Review the OTHER side's mistakes: the host rebuilds the controller. */
   onFlip(): void;
+  /**
+   * The ink this side's disc paints. `ctrl.side` is a move-order SLOT named
+   * 'red'/'black', so using it directly gave a chess player a red disc; the host
+   * resolves the real ink through reviewColorForSeat and passes it here.
+   *
+   * The surrounding PROSE is still slot-keyed ("...for Red"), because those are
+   * whole translated sentences with the colour baked into the key rather than
+   * interpolated. Fixing that is a catalog change across every locale.
+   */
+  discInk?: ReviewInk;
 }
 
 export interface RetroPanel {
@@ -85,7 +96,7 @@ export function createRetroPanel<Node>(
 
   function sideDisc(): HTMLElement {
     const disc = document.createElement('span');
-    disc.className = `retro-box__disc retro-box__disc--${ctrl.side}`;
+    disc.className = `retro-box__disc retro-box__disc--${opts.discInk ?? ctrl.side}`;
     return disc;
   }
 
