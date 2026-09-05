@@ -10,9 +10,16 @@
 // compressed, so the rate was the ratio between them: measured on one homepage game, the bot
 // read a uniform 1.61x and the human swung 1.00x-7.60x. The whole suite was green when that
 // shipped because nothing asserted the RATE, only the endpoints. So: assert the rate.
-import type { JieqiColor, JieqiMove, JieqiPlayerBoard, JieqiPlayerView } from '@mistboard/game';
+import type {
+  GameEvent,
+  JieqiColor,
+  JieqiMove,
+  JieqiPlayerBoard,
+  JieqiPlayerView,
+} from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JieqiPostgameResponse } from './live-jieqi-postgame.js';
+import { mountReplay } from './replay.js';
 import { mountJieqiWatchReplay } from './watch-jieqi-replay.js';
 
 // Fixed epoch so runningSince arithmetic is exact under fake timers.
@@ -242,3 +249,107 @@ function jsonResponse(body: unknown): Response {
     status: 200,
   });
 }
+
+// A clockless engine game has no clock, so its per-move BUDGET is the clock and the row
+// counts that allowance down. Same rule as above: real wall time, never a fraction of the
+// clamped playback window. This path used to count UP to the move's real think time across
+// that window, so a 14 s think ran at 5.6x.
+describe('clockless per-move budget countdown', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('counts the budget down at one second per second inside a clamped window', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    // Move 1 took 14 s, so clampPace squeezes its playback window to 2500 ms: the exact
+    // ratio (5.6x) the old count-up rendered at.
+    const replay = await mountReplay(root, 'think-countdown-test', {
+      autoplay: true,
+      clampPace: true,
+      showControls: false,
+      loaderForId: async () => clocklessEvents,
+      metadataByRoomId: { 'think-countdown-test': budgetMeta() },
+    });
+
+    try {
+      // White is to move and has not spent anything yet: full allowance on both rows.
+      expect(clockTimes(root)).toEqual(['5.0s', '5s']);
+
+      // 1200 ms of real time must remove exactly 1200 ms of budget. The old code read
+      // 14000 * (1200/2500) = 6720 ms spent, i.e. already past the whole 5 s allowance.
+      await vi.advanceTimersByTimeAsync(1_200);
+      expect(clockTimes(root)[0]).toBe('3.8s');
+
+      await vi.advanceTimersByTimeAsync(800);
+      expect(clockTimes(root)[0]).toBe('3.0s');
+    } finally {
+      replay.destroy();
+      root.remove();
+    }
+  });
+
+  it('bottoms out at zero when the engine outruns its own budget', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const replay = await mountReplay(root, 'think-countdown-test', {
+      autoplay: true,
+      clampPace: false, // unclamped: the window is the full 14 s think, so the budget expires
+      showControls: false,
+      loaderForId: async () => clocklessEvents,
+      metadataByRoomId: { 'think-countdown-test': budgetMeta() },
+    });
+
+    try {
+      // Misty routinely overshoots. Past the allowance the row reads 0.0s and holds there,
+      // rather than counting into a negative remainder.
+      await vi.advanceTimersByTimeAsync(6_000);
+      expect(clockTimes(root)[0]).toBe('0.0s');
+    } finally {
+      replay.destroy();
+      root.remove();
+    }
+  });
+});
+
+// Engine self-play metadata: the per-move budget is the whole point; the rest is what
+// the meta panel needs to render at all.
+function budgetMeta() {
+  return {
+    whiteName: 'Misty',
+    blackName: 'Misty',
+    result: '1-0',
+    termination: 'king-captured',
+    plyCount: 2,
+    timeControl: { kind: 'per-move', milliseconds: 5_000 },
+  };
+}
+
+function clockTimes(root: HTMLElement): string[] {
+  return [...root.querySelectorAll('.replay-clock-time')].map((el) => el.textContent ?? '');
+}
+
+// Clockless (no timeControl on room-created), with the engine's real think time on each move.
+const clocklessEvents: GameEvent[] = [
+  { type: 'room-created', at: 1, roomId: 'think-countdown-test', variant: 'dark-chess' },
+  {
+    type: 'move-played',
+    at: 2,
+    roomId: 'think-countdown-test',
+    color: 'white',
+    move: { from: 'e2', to: 'e4' },
+    thinkTimeMs: 14_000,
+  },
+  {
+    type: 'move-played',
+    at: 3,
+    roomId: 'think-countdown-test',
+    color: 'black',
+    move: { from: 'd7', to: 'd5' },
+    thinkTimeMs: 3_000,
+  },
+] as GameEvent[];

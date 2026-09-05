@@ -965,7 +965,13 @@ export async function mountReplay(
     const plyMs = positiveMs(wallClockLoop.plyMs, FALLBACK_PLAY_MS);
     const nextPly = currentPly + 1;
     const thinkMs = thinkingDurationForPly(events, nextPly) ?? plyMs;
-    const elapsedMs = resolveWallClockThinkingElapsedMs(wallClockPosition.plyElapsedMs, thinkMs);
+    // Already real elapsed time (plyElapsedMs), so the rate was never wrong on this path.
+    // The budget cap is new: the row now counts the budget DOWN, and an engine that
+    // overshoots its budget must read 0.0s rather than a negative remainder.
+    const elapsedMs = Math.min(
+      resolveWallClockThinkingElapsedMs(wallClockPosition.plyElapsedMs, thinkMs),
+      budgetMs,
+    );
     return {
       activeColor: state.status.turn,
       budgetMs,
@@ -1029,10 +1035,6 @@ export async function mountReplay(
     const nextEvent = moveEventAtPly(events, nextPly);
     if (nextEvent?.type !== 'move-played') return;
     const startWall = performance.now();
-    const tickElapsed = (): number => {
-      const elapsedWall = performance.now() - startWall;
-      return Math.min(elapsedWall / delay, 1);
-    };
 
     // A timed game's clock is NOT animated during playback: render() parks it on the ply's
     // recorded value and it stays there until the next move lands. This used to walk the
@@ -1043,12 +1045,23 @@ export async function mountReplay(
     // watch-tenant-replay.ts before reinstating anything here.
     if (state.clock) return;
 
+    // A clockless engine game has no clock to park, so its per-move BUDGET is the clock:
+    // the row counts that allowance down while the engine thinks. The budget is a fixed
+    // per-move quantity that does not depend on how long this move actually took, which is
+    // what lets this animate honestly where the old count-up could not -- it counted up to
+    // the move's REAL think time across the clamped playback window, so a 14.5 s think ran
+    // at 5.78x (measured over the 200-move bakeoff-g21 sample; median 1.14x, 82/200 above
+    // 1.5x). Elapsed is real wall time here, never a fraction of `delay`.
+    //
+    // Two caps, both meaningful. thinkMs stops the countdown where the engine actually
+    // moved, so the row reads how much budget was left when it did; budgetMs keeps an
+    // overshoot (Misty routinely exceeds its budget) pinned at 0.0s instead of going
+    // negative. Whichever the playback window reaches first is where it stops.
     const budgetMs = thinkingBudgetMsFromMeta(meta?.timeControl);
     const thinkMs = thinkingDurationForPly(events, nextPly) ?? delay;
     if (budgetMs === null || thinkMs <= 0) return;
     const tick = (): void => {
-      const fraction = tickElapsed();
-      const elapsedMs = Math.min(thinkMs * fraction, thinkMs);
+      const elapsedMs = Math.min(performance.now() - startWall, thinkMs, budgetMs);
       renderClockPanel(clockPanel, undefined, state, meta, undefined, {
         activeColor,
         budgetMs,
