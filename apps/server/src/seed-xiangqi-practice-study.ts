@@ -126,9 +126,15 @@ export function practiceChapterBody(entry: EndgameEntry): Record<string, unknown
   return {
     name: practiceChapterName(entry),
     variant: 'xiangqi',
-    // The learner always plays the side the position is set up for; for this
-    // corpus that is the attacker on a win and the defender on a draw.
-    orientation: entry.turn,
+    // The learner plays the side with something to prove, NOT whoever happens to
+    // move first. In this corpus the attacker is always Red, so:
+    //   win  -> Red, and the exercise is to convert it
+    //   draw -> BLACK, and the exercise is to hold it
+    // Orienting to `entry.turn` (Red on 31 of 32 entries) handed the learner the
+    // attacking side of a drawn endgame and told them to hold the draw -- a side
+    // that cannot lose being asked not to lose. An exercise that opens on the
+    // other side's move is fine; the runner plays that reply before handing over.
+    orientation: entry.verdict === 'win' ? 'red' : 'black',
     root: {
       version: 1,
       rootFen: endgameEntryFen(entry),

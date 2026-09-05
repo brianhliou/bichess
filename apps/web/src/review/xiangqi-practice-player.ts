@@ -179,12 +179,13 @@ export function mountXiangqiPractice(
   coachStrip.textContent = 'Practice with the engine';
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble practice__coach-body';
-  // A face for the opponent. lichess puts its robot here; the panel lost its
-  // mascot when it was rebuilt and read as a bare status box afterwards. A red
-  // general is more on-brand than an emoji and matches the pieces on the board.
+  // The LEARNER's own general, not a generic mascot. The line beside it reads
+  // "Your move", so the face should be the seat the reader is sitting in -- and
+  // on a hold-the-draw exercise that seat is Black, which a fixed colour would
+  // quietly misreport.
   const avatar = document.createElement('div');
   avatar.className = 'practice__coach-avatar';
-  avatar.innerHTML = renderXiangqiPiece({ color: 'black', role: 'general' }, { size: 34 });
+  avatar.innerHTML = renderXiangqiPiece({ color: opts.orientation, role: 'general' }, { size: 34 });
   const feedback = document.createElement('p');
   feedback.className = 'gamebook__feedback';
   const hintText = document.createElement('p');
