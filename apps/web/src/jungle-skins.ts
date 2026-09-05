@@ -22,7 +22,7 @@
 
 import type { JungleColor, JunglePieceRole } from '@mistboard/game';
 import { Crosshair, House, type IconNode } from 'lucide';
-import { JUNGLE_ART } from './jungle-art.js';
+import { JUNGLE_ART, type JungleCueBadgeSpec, jungleCueBadgeSvg } from './jungle-art.js';
 
 export type JungleBoardSkin = 'illustrated' | 'bare';
 export type JunglePieceSkin = 'animals' | 'characters';
@@ -139,13 +139,17 @@ export type PlainTokenOptions = {
   role: JunglePieceRole;
   ringStrokeRatio?: number;
   filterId?: string;
+  /** PROTOTYPE: the river-ability badge. Skin-independent -- it describes the RULE,
+   *  not the art -- so both token skins draw the identical mark. */
+  cueBadge?: boolean;
+  cueBadgeOverrides?: Partial<JungleCueBadgeSpec>;
 };
 
 /** The character token: the same cream disc + ink ring as the animal token, with
  *  the traditional character and its capture rank in place of the cutout. Sharing
  *  the disc geometry means a swap never moves a piece or breaks a last-move ring. */
 export function characterTokenSvg(opts: PlainTokenOptions): string {
-  const { cx, cy, size, ink, role, ringStrokeRatio, filterId } = opts;
+  const { cx, cy, size, ink, role, ringStrokeRatio, filterId, cueBadge, cueBadgeOverrides } = opts;
   const discR = size * JUNGLE_ART.discRadiusRatio;
   const ringR = size * JUNGLE_ART.ringRadiusRatio;
   const ringW = size * (ringStrokeRatio ?? JUNGLE_ART.ringStrokeRatio);
@@ -162,5 +166,6 @@ export function characterTokenSvg(opts: PlainTokenOptions): string {
       `fill="${inkHex}" fill-opacity="0.75" text-anchor="middle" dominant-baseline="central">${RANK[role]}</text>`,
     `<circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${inkHex}" stroke-width="${ringW}"/>`,
     `</g>`,
+    cueBadge ? jungleCueBadgeSvg(cx, cy, size, role, ink, cueBadgeOverrides ?? {}) : '',
   ].join('');
 }

@@ -349,6 +349,8 @@ const wantsXiangqiDemo = import.meta.env.DEV && path === '/xiangqi-demo';
 const wantsPixelLab = import.meta.env.DEV && path === '/pixel-lab';
 // Hidden DEV-only identity lab for candidate variant marks. No nav entry.
 const wantsVariantMarksLab = import.meta.env.DEV && path === '/variant-marks';
+// Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
+const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
 // Hidden DEV-only board lab for mapping Dobutsu animal art onto chess pieces.
 const wantsDobutsuChessPreview = import.meta.env.DEV && path === '/dobutsu-chess-preview';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
@@ -675,6 +677,11 @@ if (replaySample) {
   setTitle('Pixel lab');
   void mountOrReport(() =>
     import('./pixel-lab.js').then(({ mountPixelLab }) => mountPixelLab(appRoot)),
+  );
+} else if (wantsJungleCuesLab) {
+  setTitle('Jungle movement cues');
+  void mountOrReport(() =>
+    import('./jungle-cues-lab.js').then(({ mountJungleCuesLab }) => mountJungleCuesLab(appRoot)),
   );
 } else if (wantsVariantMarksLab) {
   setTitle('Variant marks');

@@ -10,7 +10,12 @@
 // and verify both are aligned with `npm run check:jungle-art` (diffs this recipe against
 // the blog widget, and the blog's pieces against the canonical public set).
 
-import type { JungleColor, JunglePieceRole } from '@mistboard/game';
+import {
+  JUNGLE_JUMP_DIRS,
+  type JungleColor,
+  type JunglePieceRole,
+  jungleRoleMayEnterWater,
+} from '@mistboard/game';
 
 // The composition spec. Ratios are relative to the token's nominal size (a cell-sized
 // box); the blog uses CELL=48, so e.g. its 1.55px ring stroke is 1.55/48 ≈ 0.032.
@@ -82,11 +87,15 @@ export type FramedTokenOptions = {
   ringStrokeRatio?: number;
   /** Optional drop-shadow filter id (boards pass one; markers usually don't). */
   filterId?: string;
+  /** PROTOTYPE: draw the river-ability badge (Rat / Tiger / Lion). Off by default;
+   *  per-token overrides let the lab sweep the look live. */
+  cueBadge?: boolean;
+  cueBadgeOverrides?: Partial<JungleCueBadgeSpec>;
 };
 
 /** The framed dobutsu token: cream disc + cutout (trimmed per role) + ink ring. */
 export function framedTokenSvg(opts: FramedTokenOptions): string {
-  const { cx, cy, size, ink, role, ringStrokeRatio, filterId } = opts;
+  const { cx, cy, size, ink, role, ringStrokeRatio, filterId, cueBadge, cueBadgeOverrides } = opts;
   const discR = size * JUNGLE_ART.discRadiusRatio;
   const ringR = size * JUNGLE_ART.ringRadiusRatio;
   const ringW = size * (ringStrokeRatio ?? JUNGLE_ART.ringStrokeRatio);
@@ -98,7 +107,234 @@ export function framedTokenSvg(opts: FramedTokenOptions): string {
     `<image href="${jungleDobutsuPieceHref(ink, role)}" x="${cx - imgSize / 2}" y="${cy - imgSize / 2}" width="${imgSize}" height="${imgSize}" preserveAspectRatio="xMidYMid meet"/>`,
     `<circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${JUNGLE_ART.ink[ink]}" stroke-width="${ringW}"/>`,
     `</g>`,
+    // Outside the shadowed group on purpose: the token shadow is tuned for the big
+    // disc and would smear a 10px badge into a grey smudge.
+    cueBadge ? jungleCueBadgeSvg(cx, cy, size, role, ink, cueBadgeOverrides ?? {}) : '',
   ].join('');
+}
+
+/* ── River-ability badge (PROTOTYPE, off by default) ──────────────────────────
+ *
+ * Jungle's newcomer problem: three of the eight pieces have business with the
+ * river and the other five do not, and the board never says which.
+ *
+ * WHY A CORNER BADGE and not a ring. A first pass drew concentric arcs outside
+ * the token and it was the wrong family three ways over. (1) Every token already
+ * wears an ink ring for identity, so a second ring made the piece mean two
+ * unrelated things in one shape. (2) Rings and arcs are already spoken for on
+ * this board -- last-move, selection and target marks are all circular -- so a
+ * blue arc reads as unrecognised UI state before it reads as "jumps". (3) There
+ * is no room: the token is 0.9 of a cell and the cream disc is 0.97 of the
+ * token, leaving about 3px of margin on the AXES at a 48px cell, and the arcs
+ * came out visibly shaved by the board edge on the back rank -- which is exactly
+ * where both Lions and both Tigers start.
+ *
+ * The clearance is at the CORNERS, not the edges: the cell half-diagonal is
+ * 0.786 in token units against a disc edge at 0.485, so a diagonal badge has
+ * roughly 13px to live in at the same cell size. A badge is also icon
+ * vocabulary rather than ring vocabulary, so it stops competing with the marks
+ * the board already uses.
+ *
+ * The DIRECTIONS are not written here. They are read out of the rules
+ * (JUNGLE_JUMP_DIRS / jungleRoleMayEnterWater), so a badge cannot promise a jump
+ * the move generator will refuse. In this ruleset the Tiger jumps VERTICALLY
+ * only; only the Lion also jumps sideways.
+ *
+ * Corner placement is screen-space and direction-free, so flipping the board for
+ * Black's perspective needs no special case. The chevrons ARE direction-bearing,
+ * and vertical stays vertical under that flip. */
+
+/** What a role's badge says. Derived from the rules, never declared. */
+export type JungleCueGlyph = 'water' | 'jump-vertical' | 'jump-ortho';
+
+export function jungleCueGlyphFor(role: JunglePieceRole): JungleCueGlyph | null {
+  if (jungleRoleMayEnterWater(role)) return 'water';
+  const dirs = JUNGLE_JUMP_DIRS[role];
+  if (!dirs || dirs.length === 0) return null;
+  return dirs.some(([df]) => df !== 0) ? 'jump-ortho' : 'jump-vertical';
+}
+
+export type JungleCueBadgeSpec = {
+  /** Badge centre distance from the token centre, along the diagonal, ÷ token size. */
+  offsetRatio: number;
+  /** Badge disc radius ÷ token size. */
+  radiusRatio: number;
+  corner: 'br' | 'tr' | 'bl' | 'tl';
+  /** Badge disc fill. Ignored when `useInk`. */
+  fill: string;
+  /** Glyph (and, with `useInk`, still the glyph) colour. */
+  glyph: string;
+  stroke: string;
+  strokeRatio: number;
+  /** Fill the badge with the PIECE's ink instead of `fill`, so it reads as part of
+   *  this piece rather than as a separate system laid over the board. */
+  useInk: boolean;
+  /**
+   * Where each arm STARTS, ÷ badge radius. Must be > 0: with the arms running all
+   * the way to the centre, the Lion's four shafts plus their round caps fuse into
+   * a blob and the badge reads as a filled cross rather than as four directions.
+   * A hole in the middle is what separates them.
+   */
+  shaftInnerRatio: number;
+  /**
+   * Draw arrowheads. OFF by default, and that is a finding rather than a taste:
+   * at a 48px cell the badge is ~10px and a head is barely over a pixel, so the
+   * Lion's four heads close into a diamond outline no matter how the arms are
+   * spaced -- arms to the centre fuse into a blob, arms pushed off the centre
+   * re-form the same rhombus one ring out. Dropping the heads entirely leaves a
+   * bare BAR for the Tiger against a bare CROSS for the Lion: two shapes that
+   * survive at any size and still say which axes the piece may leap along.
+   */
+  arrowHeads: boolean;
+  /** Arm stroke width ÷ badge radius. */
+  armStrokeRatio: number;
+};
+
+/**
+ * Default: a solid water-blue badge with a cream glyph, at the bottom-right.
+ *
+ * The numbers are the corner budget spent deliberately. At 0.56 along the
+ * diagonal the badge cleared the board boundary by a measured 1.71px at a 48px
+ * cell -- not clipped, but the same knife-edge that made the ring look shaved,
+ * so the default backs off to 0.54 for ~2.3px and lets the badge overlap the
+ * cream disc a little more instead. A badge overlapping its host is ordinary;
+ * a badge kissing the board edge is not. The lab prints the live worst-case
+ * margin under the board so this stays a number rather than a judgement call.
+ */
+export const JUNGLE_CUE_BADGE: JungleCueBadgeSpec = {
+  offsetRatio: 0.54,
+  radiusRatio: 0.12,
+  corner: 'br',
+  // Only consulted when useInk is false; kept as the water-blue alternate.
+  fill: '#2f7f9e',
+  glyph: '#fff2cf',
+  stroke: '#3a2c20',
+  strokeRatio: 0.018,
+  // The badge wears the PIECE's own red or navy, so the board gains a mark but no
+  // new colour. Note what this trades away: with a water-blue badge the colour
+  // itself said "river", and here it does not -- the meaning rides entirely on the
+  // glyph (droplet / bar / cross). That is the better split anyway, because the
+  // glyph is the part that distinguishes Rat from Tiger from Lion, and a colour
+  // could never have carried that.
+  useInk: true,
+  shaftInnerRatio: 0,
+  arrowHeads: false,
+  armStrokeRatio: 0.2,
+};
+
+/** Unit corner directions, in SVG space (y grows downward). */
+const CUE_CORNERS: Record<JungleCueBadgeSpec['corner'], readonly [number, number]> = {
+  br: [1, 1],
+  tr: [1, -1],
+  bl: [-1, 1],
+  tl: [-1, -1],
+};
+
+/**
+ * An arrow -- shaft from the badge centre plus a head -- pointing along (ux, uy).
+ *
+ * Shaft, not a bare chevron. Four bare chevrons at this size close up into a
+ * diamond outline: the reader sees one rhombus rather than four directions, which
+ * loses the entire Tiger-vs-Lion distinction the badge exists to carry. Shafts
+ * make the Lion a four-way arrow and the Tiger a double-headed vertical one --
+ * two shapes nobody has to be taught.
+ */
+function cueArrow(
+  bx: number,
+  by: number,
+  inner: number,
+  dist: number,
+  arm: number,
+  heads: boolean,
+  ux: number,
+  uy: number,
+): string {
+  // Perpendicular to the pointing direction, so one helper draws all four.
+  const px = -uy;
+  const py = ux;
+  const tipX = bx + ux * dist;
+  const tipY = by + uy * dist;
+  const shaft =
+    `M ${(bx + ux * inner).toFixed(2)} ${(by + uy * inner).toFixed(2)} ` +
+    `L ${tipX.toFixed(2)} ${tipY.toFixed(2)}`;
+  if (!heads) return shaft;
+  const backX = tipX - ux * arm;
+  const backY = tipY - uy * arm;
+  return (
+    `${shaft} ` +
+    `M ${(backX + px * arm).toFixed(2)} ${(backY + py * arm).toFixed(2)} ` +
+    `L ${tipX.toFixed(2)} ${tipY.toFixed(2)} ` +
+    `L ${(backX - px * arm).toFixed(2)} ${(backY - py * arm).toFixed(2)}`
+  );
+}
+
+/** The badge for one token, or '' when the role has no river business. */
+export function jungleCueBadgeSvg(
+  cx: number,
+  cy: number,
+  size: number,
+  role: JunglePieceRole,
+  ink: JungleColor,
+  overrides: Partial<JungleCueBadgeSpec> = {},
+): string {
+  const spec = { ...JUNGLE_CUE_BADGE, ...overrides };
+  const glyph = jungleCueGlyphFor(role);
+  if (!glyph) return '';
+
+  const [sx, sy] = CUE_CORNERS[spec.corner];
+  // offsetRatio is measured along the diagonal, so each axis gets 1/sqrt(2) of it.
+  const along = (size * spec.offsetRatio) / Math.SQRT2;
+  const bx = cx + sx * along;
+  const by = cy + sy * along;
+  const r = size * spec.radiusRatio;
+  const fill = spec.useInk ? JUNGLE_ART.ink[ink] : spec.fill;
+
+  // data-cue-badge is a measurement handle, not styling: the lab reads these back
+  // out of the rendered board to print the worst badge-to-board-edge gap.
+  const disc =
+    `<circle data-cue-badge cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r.toFixed(2)}" ` +
+    `fill="${fill}" stroke="${spec.stroke}" stroke-width="${(size * spec.strokeRatio).toFixed(2)}"/>`;
+
+  if (glyph === 'water') {
+    // A teardrop, point up. Filled rather than stroked: at a ~10px badge a stroked
+    // outline closes up into a blob, where a solid silhouette still reads.
+    const h = r * 0.62;
+    const w = r * 0.44;
+    const d =
+      `M ${bx.toFixed(2)} ${(by - h).toFixed(2)} ` +
+      `C ${(bx + w).toFixed(2)} ${(by - h * 0.1).toFixed(2)} ` +
+      `${(bx + w).toFixed(2)} ${(by + h * 0.62).toFixed(2)} ${bx.toFixed(2)} ${(by + h).toFixed(2)} ` +
+      `C ${(bx - w).toFixed(2)} ${(by + h * 0.62).toFixed(2)} ` +
+      `${(bx - w).toFixed(2)} ${(by - h * 0.1).toFixed(2)} ${bx.toFixed(2)} ${(by - h).toFixed(2)} Z`;
+    return `${disc}<path d="${d}" fill="${spec.glyph}"/>`;
+  }
+
+  // One arrow per direction the piece may LEAP. Two for the Tiger (vertical only),
+  // four for the Lion -- so the two badges differ in overall SHAPE, not in the
+  // count of marks a reader would have to stop and tally.
+  const dirs: ReadonlyArray<readonly [number, number]> =
+    glyph === 'jump-ortho'
+      ? [
+          [0, -1],
+          [0, 1],
+          [-1, 0],
+          [1, 0],
+        ]
+      : [
+          [0, -1],
+          [0, 1],
+        ];
+  const dist = r * 0.64;
+  const inner = r * spec.shaftInnerRatio;
+  const arm = r * 0.26;
+  const strokes = dirs
+    .map(([ux, uy]) => `<path d="${cueArrow(bx, by, inner, dist, arm, spec.arrowHeads, ux, uy)}"/>`)
+    .join('');
+  return (
+    `${disc}<g fill="none" stroke="${spec.glyph}" ` +
+    `stroke-width="${(r * spec.armStrokeRatio).toFixed(2)}" ` +
+    `stroke-linecap="round" stroke-linejoin="round">${strokes}</g>`
+  );
 }
 
 /** Flip Jungle face-down tile: the banqi-style neutral jade disc (no identity), sized to

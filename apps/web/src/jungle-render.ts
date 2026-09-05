@@ -38,6 +38,7 @@ import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
   framedTokenSvg,
+  type JungleCueBadgeSpec,
   jungleBoardAssetHref,
   jungleCoverImage,
   jungleLastMoveCellSvg,
@@ -130,6 +131,9 @@ export type JungleRenderOptions = {
   // deterministically (variant markers, rules diagrams, OG cards).
   boardSkin?: JungleBoardSkin;
   pieceSkin?: JunglePieceSkin;
+  /** PROTOTYPE: draw the Rat / Tiger / Lion river-ability badges. */
+  cueBadges?: boolean;
+  cueBadgeOverrides?: Partial<JungleCueBadgeSpec>;
 };
 
 export interface JungleBoardArrow extends SvgBoardArrowStyle {
@@ -261,6 +265,8 @@ function pieces(
   shadow: boolean,
   draggingFrom: JungleSquare | null,
   pieceSkin: JunglePieceSkin,
+  cueBadge: boolean,
+  cueBadgeOverrides: Partial<JungleCueBadgeSpec> | undefined,
 ): string {
   const parts: string[] = [];
   const s = geom.cell * TOKEN_PIECE_RATIO;
@@ -277,6 +283,8 @@ function pieces(
       ink: piece.color,
       role: piece.role,
       filterId: shadow ? `${gid}-shadow` : undefined,
+      cueBadge,
+      cueBadgeOverrides,
     });
     // While this piece is being dragged, dim its on-board token so only the ghost
     // reads. The keyed outer slot lets a post-render glide find the token
@@ -349,7 +357,16 @@ export function renderJungleBoardSvg(
     coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
       furniture(geom, board, options.lastMove ?? null, boardSkin) +
-      pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
+      pieces(
+        board,
+        geom,
+        gid,
+        shadow,
+        options.draggingFrom ?? null,
+        pieceSkin,
+        options.cueBadges ?? false,
+        options.cueBadgeOverrides,
+      ) +
       `<g class="jungle-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jungleMarkerSvg(marker, geom)).join('')}</g>` +
       `<g class="jungle-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleArrowLayer(options.arrows ?? [], geom)}</g>`,
     // Last-move is drawn inside furniture (over the grass terrain); the core's own
