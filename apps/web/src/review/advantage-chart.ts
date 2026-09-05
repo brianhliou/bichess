@@ -80,6 +80,14 @@ export function createAdvantageChart(
   el.append(plot);
   const firstColor = reviewColorForSeat('red', opts.seatColors);
   const secondColor = reviewColorForSeat('black', opts.seatColors);
+  // The two halves are inked independently, and on the dark theme each ink is
+  // lifted on its own so it does not vanish against the panel. For the chess
+  // pairing both lifts land on cream and the halves become indistinguishable
+  // (measured 1.28:1 on a live game). Mark the pairing so the CSS can separate
+  // them without guessing at a sibling.
+  if (firstColor === 'white' && secondColor === 'black') {
+    el.classList.add('advantage-chart--white-black');
+  }
 
   const chart = svg('svg', {
     viewBox: `0 0 ${VIEW_W} ${VIEW_H}`,

@@ -109,6 +109,18 @@
 }
 /* Dark theme: White's area keeps a light fill, but pulled off pure white so it does
    not out-glare Black's #d8d2c6 sitting directly opposite it. */
+/* Chess pairing on dark: Black's generic lift (#d8d2c6) exists so a dark fill is
+   not lost against the panel, and it works when the other half is Red. Against
+   WHITE it collapses -- both halves render cream, 1.28:1, which reads as one
+   undifferentiated block. Black takes a mid warm grey here instead: 4.05:1
+   against White's area and 3.82:1 against the panel, so it separates from both
+   rather than trading one invisibility for another. */
+:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__area--black {
+  fill: #7a716a;
+}
+:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__zone--black {
+  --advantage-zone-ink: #7a716a;
+}
 :root[data-effective-theme="dark"] .advantage-chart__area--white {
   fill: #f0ece3;
 }
