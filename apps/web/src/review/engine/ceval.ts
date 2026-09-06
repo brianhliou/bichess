@@ -53,7 +53,7 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // that key was poisoned. Bump the suffix to mint a fresh, never-cached key that
 // fills from origin (which now always sends COEP) whenever the required response
 // headers change.
-const ENGINE_ASSET_VERSION = '1.1.12-coep1';
+const ENGINE_ASSET_VERSION = '1.1.12-nnue1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 
 /** Human label for the engine, shown in the analysis panel. */
@@ -112,7 +112,8 @@ class EngineCore {
     return () => this.listeners.delete(cb);
   }
 
-  writeFile(path: string, data: string): void {
+  // Text for the Fortress .ini, bytes for the NNUE net.
+  writeFile(path: string, data: string | Uint8Array): void {
     this.raw.FS.writeFile(path, data);
   }
 
@@ -183,6 +184,48 @@ async function loadEngineCore(): Promise<EngineCore> {
   return core;
 }
 
+/**
+ * Fairy-Stockfish's official standard-xiangqi NNUE net, loaded lazily on the
+ * first xiangqi evaluation.
+ *
+ * Without it FSF evaluates xiangqi with its CLASSICAL evaluation, which has no
+ * endgame knowledge: measured against the 32-position basic-endgame corpus at
+ * depth 16 it agreed with the book verdict 17 times, calling won positions 0cp
+ * draws and one book draw a +523cp win. With the net it is 32/32. That is not a
+ * strength nicety, it is the difference between an analysis board that can read
+ * an endgame and one that cannot (#363).
+ *
+ * Lazy and xiangqi-only on purpose: the net is 10.7MB, and the Fortress variant
+ * shares this engine core but is a custom .ini variant the net does not apply
+ * to, so a fortress-only session must not pay for it. `Use NNUE` is set per
+ * evaluation for the same reason -- EvalFile is a global engine option, and the
+ * core is a module singleton that outlives any one board.
+ */
+const XIANGQI_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
+let xiangqiNetPromise: Promise<boolean> | null = null;
+
+function loadXiangqiNet(core: EngineCore): Promise<boolean> {
+  if (!xiangqiNetPromise) {
+    xiangqiNetPromise = (async () => {
+      try {
+        const bytes = await fetch(engineAsset(XIANGQI_NNUE_NET)).then((r) => {
+          if (!r.ok) throw new Error(`ceval: net fetch ${r.status}`);
+          return r.arrayBuffer();
+        });
+        core.writeFile(XIANGQI_NNUE_NET, new Uint8Array(bytes));
+        core.send(`setoption name EvalFile value ${XIANGQI_NNUE_NET}`);
+        return true;
+      } catch {
+        // Fall back to the classical evaluation rather than failing the board.
+        // The analysis is weaker, not broken, and a null result here would take
+        // the whole engine panel down with it.
+        return false;
+      }
+    })();
+  }
+  return xiangqiNetPromise;
+}
+
 /** Warm the engine up ahead of the first evaluate (script + wasm + variant load). */
 export function preloadEngine(): Promise<void> {
   if (!enginePromise) enginePromise = loadEngineCore();
@@ -218,6 +261,15 @@ class Ceval implements CevalHandle {
 
     core.send('stop');
     core.send(`setoption name UCI_Variant value ${this.variant}`);
+    // Standard xiangqi runs on the NNUE net; every other variant on this core
+    // (Fortress) has no net and must be told so explicitly, because EvalFile
+    // persists on the shared engine once any xiangqi board has set it.
+    if (this.variant === 'xiangqi') {
+      const loaded = await loadXiangqiNet(core);
+      core.send(`setoption name Use NNUE value ${loaded ? 'true' : 'false'}`);
+    } else {
+      core.send('setoption name Use NNUE value false');
+    }
     core.send(`setoption name MultiPV value ${multiPv}`);
     const base = req.initialFen ? `fen ${req.initialFen}` : 'startpos';
     core.send(

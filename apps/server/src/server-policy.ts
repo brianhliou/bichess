@@ -352,10 +352,9 @@ export function isClientRoute(pathname: string): boolean {
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a
     // review-shell route (COOP/COEP) below; the bare index is a plain client page.
-    // /practice is intentionally NOT here: it is gated off in the web build
-    // (practiceEnabled, #363), so a prod direct hit falls through to the branded
-    // 404 shell instead of booting a route whose grader is wrong. Restore this
-    // line alongside the flag.
+    // The practice index is a plain client page: it lists curated studies and
+    // mounts no board, so unlike /study/:id it is not a review-shell route.
+    normalized === '/practice' ||
     normalized === '/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA

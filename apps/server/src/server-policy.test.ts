@@ -355,7 +355,6 @@ const PARKED_CLIENT_ROUTES = new Set<string>([
   '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/learn', // legacy dark-chess hub; gated off in prod (learnEnabled) → branded 404
   '/learn/coordinates', // coordinate trainer; parked, gated off in prod (coordinateTrainerEnabled)
-  '/practice', // engine-adjudicated practice; parked, gated off in prod (practiceEnabled, #363)
 ]);
 
 function readMainTsSource(): string {

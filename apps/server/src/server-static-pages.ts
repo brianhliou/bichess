@@ -662,7 +662,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/stats',
   '/puzzles',
   '/learn/xiangqi',
-  // '/practice' is parked (#363) and 404s in prod; never advertise a 404.
+  '/practice',
   '/analysis',
   '/editor',
   '/study',

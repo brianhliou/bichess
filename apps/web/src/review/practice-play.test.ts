@@ -181,6 +181,49 @@ test('a take-back rewinds the played line with the position', async () => {
   expect(session.view().moves).toEqual([]);
 });
 
+// The two ways win%-drop grading was wrong on one real line (#363). Both are
+// regressions the drop thresholds alone CANNOT catch, in opposite directions,
+// which is why failure is judged on result class instead.
+
+test('a huge win% drop that keeps the win does not fail the learner', async () => {
+  const { session } = harness(
+    {
+      evals: {
+        // Learner has mate in 10; winPercent saturates any mate at 100.
+        '': ev(null, 'a1', 10),
+        // A slower move: out of the forced mate, still completely winning.
+        // The raw drop is ~16 points, which the thresholds call a blunder.
+        L: ev(-456, 'd1'),
+        'L d1': ev(500, 'a2'),
+      },
+    },
+    { kind: 'mate' },
+  );
+  await session.start();
+  const verdict = await session.attempt('L');
+  expectBe(session.view().phase, 'play', 'a still-won position must not end the attempt');
+  expectOk(!practiceFails(verdict), `graded ${verdict} for a move that kept the win`);
+});
+
+test('a tiny win% drop that gives up the win does fail the learner', async () => {
+  const { session } = harness(
+    {
+      evals: {
+        // Decisive, just over the line.
+        '': ev(320, 'a1'),
+        // Learner POV +280: under 3 win% points of drop, so every threshold
+        // reads "good", but the position is no longer a won one.
+        L: ev(-280, 'd1'),
+      },
+    },
+    { kind: 'mate' },
+  );
+  await session.start();
+  const verdict = await session.attempt('L');
+  expectBe(session.view().phase, 'failed');
+  expectOk(practiceFails(verdict), `graded ${verdict} for a move that lost the win`);
+});
+
 test('retry stands the learner back at the position before the failed move', async () => {
   const { session } = harness(
     {

@@ -24,7 +24,7 @@ import {
   type PracticeTermination,
   type PracticeVerdict,
   practiceJudgment,
-  practiceMoveFails,
+  practiceMoveAbandonsGoal,
   winPercent,
 } from '@mistboard/game';
 
@@ -259,11 +259,27 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       return verdict;
     }
 
-    if (practiceMoveFails(verdict)) {
+    // Failure is leaving the goal's RESULT CLASS, not the size of the win% drop
+    // (see practiceMoveAbandonsGoal: the drop alone both fails winning moves and
+    // passes losing ones). The drop verdict above stays as the learner's label.
+    const abandoned =
+      before.evaluation !== null &&
+      frame.evaluation !== null &&
+      practiceMoveAbandonsGoal(config.goal, before.evaluation, frame.evaluation);
+    if (abandoned) {
+      // Say it lost the win even when the number barely moved, so the label the
+      // learner reads matches the fact that the attempt just ended.
+      if (verdict === 'good' || verdict === 'inaccuracy') verdict = 'mistake';
       previous = before;
       phase = 'failed';
       return verdict;
     }
+
+    // The move kept the goal, so cap the label below the failing grades: a
+    // `mistake`/`blunder` badge on a move the exercise just let you play on from
+    // reads as a bug, and stepping out of a forced mate into a still-won
+    // position routinely produces a double-digit drop that means nothing here.
+    if (verdict === 'mistake' || verdict === 'blunder') verdict = 'inaccuracy';
 
     if (settle()) return verdict;
 
