@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
   buildHomeVideoCards,
@@ -554,6 +554,43 @@ describe('buildHomeVideoCards', () => {
       const id = new URL(href).searchParams.get('v');
       expect(known.has(`yt:${id}`)).toBe(true);
     }
+  });
+
+  // Mainland China: YouTube AND img.youtube.com are blocked, so the row does not
+  // degrade to dead links, it renders as ten failed images. #378.
+  describe('where YouTube is blocked', () => {
+    const setCountry = (code: string | null) => {
+      document.cookie = 'mb_cc=; Max-Age=0; Path=/';
+      if (code) document.cookie = `mb_cc=${code}; Path=/`;
+    };
+
+    afterEach(() => setCountry(null));
+
+    it('omits the row entirely for a CN viewer', () => {
+      setCountry('CN');
+      expect(buildHomeVideoCards(undefined, 'zh-Hans')).toBeNull();
+      expect(buildHomeVideoCards(undefined, 'en')).toBeNull();
+    });
+
+    // The load-bearing half. Gating on the zh locale instead of on the country
+    // would hide the Chinese shelf from Taiwan, Hong Kong, Singapore and
+    // Malaysia, who reach YouTube fine and were ~59 visitors in the month this
+    // shipped -- the exact readers the Chinese block was added for.
+    it('keeps the row for every other Chinese-reading region', () => {
+      for (const country of ['TW', 'HK', 'MO', 'SG', 'MY']) {
+        setCountry(country);
+        const row = buildHomeVideoCards(undefined, 'zh-Hans');
+        expect(row, `${country} lost the video row`).not.toBeNull();
+        expect(row?.querySelectorAll('.landing-video-card').length).toBeGreaterThan(8);
+      }
+    });
+
+    it('shows the row when the country is unknown', () => {
+      // No cookie is local dev, a direct hit that skipped Cloudflare, or an
+      // unrecognised country. Hiding is only ever a known-blocked case.
+      setCountry(null);
+      expect(buildHomeVideoCards(undefined, 'en')).not.toBeNull();
+    });
   });
 
   // The whole point of the fresh slots: the homepage used to be decoupled from
