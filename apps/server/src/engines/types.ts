@@ -33,6 +33,7 @@ export type EngineId =
   | 'python-dmx-v1.0'
   | 'python-fdx-v1.0'
   | 'python-fdx-v1.1'
+  | 'python-fdx-v1.2'
   | 'python-tier1-v0.9.1'
   | 'python-tier1-v0.8.9'
   | 'python-tier1-v0.7.22'

@@ -647,7 +647,11 @@ export const fogOpeningsArticle: Article = {
         {
           kind: 'cta',
           buttons: [
-            { label: 'Play Fog Chess', href: '/play/fog-of-war', emphasis: 'primary' },
+            {
+              label: 'Play Fog Chess',
+              href: '/?play=computer&gameSpecId=dark-chess',
+              emphasis: 'primary',
+            },
             { label: 'Fog Chess rules', href: '/rules/fog-chess', emphasis: 'secondary' },
           ],
         } as ArticleBlock,

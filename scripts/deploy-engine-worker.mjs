@@ -3,7 +3,16 @@
 // deploy. release:prod covers the WEB (CI gate → push → auto-deploy → smoke);
 // the engine-worker does NOT auto-deploy on push and was always hand-driven.
 //
-// What this codifies (the gotchas hit on 2026-06-03):
+// What this codifies (the gotchas hit on 2026-06-03, plus 0 on 2026-09-05):
+//   0. Project-link gate — `railway up` targets whatever project the CURRENT
+//      DIRECTORY is linked to, and an unlinked directory does not fail: it
+//      creates a new project named after the folder. Deploying from a task
+//      worktree therefore ships to a stray project while prod sits untouched,
+//      and the only tell is one line of output. We refuse unless the link
+//      resolves to the prod project id. NOTE this is the one place the "run
+//      releases from your task worktree" rule does NOT apply — that rule is for
+//      release:prod, which pushes a git ref; `railway up` uploads a DIRECTORY
+//      and needs the link that only a linked checkout has.
 //   1. Cachebust gate — the engine-worker re-clones the private engine repo
 //      ONLY when railpack.json's `echo cachebust-...-<sha>` line changes. If the
 //      engine changed but the cachebust still points at the old SHA, the deploy
@@ -30,6 +39,14 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const SERVICE = 'engine-worker';
+// The prod Railway project. `railway up` resolves its target from the CLI's
+// link for the CURRENT DIRECTORY, and an unlinked directory does not fail — it
+// CREATES a new project named after the folder and deploys into it. Run this
+// from a fresh git worktree and you get a stray project plus a prod service
+// that never received the deploy you think you shipped. That happened twice
+// within six minutes on 2026-09-05, from two different worktrees, and the only
+// symptom was a "✓ Project mistboard-fdx-v12" line scrolling past in the output.
+const PROJECT_ID = 'edd519d3-638e-40da-81b4-a8a70eb7eb94';
 const ENGINE_REMOTE = 'git@github.com:brianhliou/mistboard-engine.git';
 const ENGINE_REF = process.env.MISTBOARD_ENGINE_REF ?? 'main';
 const ENGINE_REF_FILE = 'engine.ref';
@@ -95,6 +112,8 @@ if (!opts.deploy) {
 }
 
 // --- deploy ---
+assertLinkedToProdProject();
+
 console.log(`\n$ railway up --service ${SERVICE} --detach`);
 const up = railway(['up', '--service', SERVICE, '--detach'], { inherit: true });
 if (up.status !== 0) {
@@ -148,6 +167,46 @@ function railwayLogsTail() {
     timeout: 60_000,
   });
   return (res.stdout ?? '').split('\n');
+}
+
+/**
+ * Refuse to deploy from a directory that is not linked to the prod project.
+ *
+ * This is the one gate `railway up` does not give you: an unlinked directory is
+ * not an error to the CLI, it is an invitation to create a project. Fail closed
+ * — a refused deploy costs a `railway link`, a wrong one costs a stray project
+ * and the belief that prod was updated when it was not.
+ *
+ * Deliberately matches on the project ID rather than the name: a stray project
+ * is named after the folder, and a folder can be named anything.
+ */
+function assertLinkedToProdProject() {
+  const res = railway(['status', '--json']);
+  const blob = `${res.stdout ?? ''}${res.stderr ?? ''}`;
+  if (blob.includes(PROJECT_ID)) return;
+
+  console.error(`\ndeploy: this directory is not linked to the prod Railway project.`);
+  if (res.status !== 0) {
+    // Unauthorized/not-logged-in lands here too; say so, since the remedy differs.
+    console.error(`  \`railway status\` exited ${res.status}. If it says Unauthorized, run:`);
+    console.error(`    railway login`);
+    console.error(`  (this script drops RAILWAY_API_TOKEN on purpose — see railwayEnv)`);
+  } else {
+    console.error(`  Linked project does not contain ${PROJECT_ID}.`);
+  }
+  console.error(`\n  Refusing rather than letting \`railway up\` CREATE a new project`);
+  console.error(`  named after this directory. To link:`);
+  console.error(
+    `    railway link --project ${PROJECT_ID} --environment production --service ${SERVICE}`,
+  );
+  console.error(
+    `\n  Override (only if you know the link is right): MISTBOARD_SKIP_PROJECT_CHECK=1`,
+  );
+  if (process.env.MISTBOARD_SKIP_PROJECT_CHECK === '1') {
+    console.error('\n  MISTBOARD_SKIP_PROJECT_CHECK=1 set — continuing anyway.');
+    return;
+  }
+  process.exit(1);
 }
 
 function railway(args, { inherit = false } = {}) {

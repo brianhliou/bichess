@@ -1,4 +1,11 @@
-import { GAME_SPECS, type GameSpecId } from '@mistboard/game';
+import {
+  DARK_CHESS_SPEC_ID,
+  DARK_MINI_XIANGQI_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
+  GAME_SPECS,
+  type GameSpecId,
+} from '@mistboard/game';
+import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 // One public-surface switch per game spec. This controls discoverable UI:
 // rules rails/tiles, homepage article cards, homepage News, and /feed entries.
@@ -61,8 +68,33 @@ export function rulesHrefPublicSurfaceEnabled(href: string | undefined): boolean
 export function gameSpecIdFromRulesHref(href: string | undefined): GameSpecId | null {
   const slug = rulesSlugFromHref(href);
   if (slug === null) return null;
+  return gameSpecIdFromRulesSlug(slug);
+}
+
+/** The variant a `/rules/<slug>` page documents, or null when the slug is a
+ *  concept page (`server-enforced-fog`) rather than a game. */
+export function gameSpecIdFromRulesSlug(slug: string): GameSpecId | null {
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
   return isGameSpecId(gameSpecId) ? gameSpecId : null;
+}
+
+/** Whether a variant is offered a computer opponent in the play menu.
+ *
+ *  This is the ONE answer to "does this variant have a bot" on the web client,
+ *  and it is deliberately not derivable from the tenant registry alone: the
+ *  chess stack (dark chess) and the Xiangqi fog variants default their engines
+ *  server-side and carry no tenant `engineOptions`, so a registry-only read
+ *  reports "no bot" for variants that have one. Any surface that offers a
+ *  "play the computer" link must call this rather than re-deriving it, or the
+ *  link and the dialog it opens will disagree. */
+export function variantSupportsPve(gameSpecId: GameSpecId): boolean {
+  if (
+    gameSpecId === DARK_CHESS_SPEC_ID ||
+    gameSpecId === DARK_XIANGQI_SPEC_ID ||
+    gameSpecId === DARK_MINI_XIANGQI_SPEC_ID
+  )
+    return true;
+  return Boolean(webVariantTenantForSpecId(gameSpecId)?.landing?.engineOptions);
 }
 
 function rulesSlugFromHref(href: string | undefined): string | null {
