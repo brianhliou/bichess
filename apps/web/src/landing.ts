@@ -682,8 +682,10 @@ function buildLandingStage(
   // ── Band 4 (grid-area: videos): a parallel video strip beneath the blog row —
   // the same carousel, filled with curated English-first xiangqi videos (YouTube
   // for now; Mistboard/partner only in the future). Photographic thumbnails plus
-  // a play glyph read as "video" beside the blog strip's board diagrams. ──
-  const videoCards = buildHomeVideoCards(8, locale);
+  // a play glyph read as "video" beside the blog strip's board diagrams. The
+  // default limit leaves room for the fresh slots on top of the curated arc, so
+  // a mining run reaches the homepage without an edit here (see videos.ts). ──
+  const videoCards = buildHomeVideoCards(undefined, locale);
   videoCards?.classList.add('landing-videos-row');
 
   // ── Bands 3-4 side rails: the News feed returns to the homepage on the left

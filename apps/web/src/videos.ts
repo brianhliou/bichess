@@ -601,7 +601,7 @@ const HOME_VIDEO_KEYS: Record<VideoLanguage, readonly string[]> = {
     'yt:hBljfkvvLxs', // 抢占这5个位置 — positional strategy
     'yt:ZxUA7c5xKWc', // 25大基本杀法 — the tactics reference
     'yt:UMmwd_bfmfg', // 实用残局基本杀法 — endgames
-    'yt:khNTfp_hzt4', // 许银川 vs 王天一 — the aspirational ceiling
+    'yt:ZHta2o0NOTw', // 郭中基's double-chariot sacrifice — the aspirational ceiling
     'yt:Cc4Kl4e8-7I', // 象棋的起源和江湖残局 — culture
   ],
 };
@@ -609,6 +609,52 @@ const HOME_VIDEO_KEYS: Record<VideoLanguage, readonly string[]> = {
 // A locale arc has to be deep enough to fill the carousel's three visible cards
 // before it displaces English; below that the row reads as a stub.
 const MIN_HOME_VIDEOS_PER_LANGUAGE = 4;
+
+// Slots the arc does NOT own, filled from the newest catalogue entries in the
+// row's language. The arc above is evergreen on purpose -- it is what a
+// first-time visitor should meet, and reach cannot tell a lesson from a reaction
+// video -- but being evergreen also meant the homepage was decoupled from the
+// catalogue entirely: `npm run videos:mine` could add twenty videos and this row
+// stayed byte-identical, so keeping the front door current was a manual edit
+// nobody remembered to make. These slots are the wire between the two. Ingest,
+// and the front door moves on its own.
+//
+// Two, not more: the arc is the row's identity and freshness is the garnish. And
+// they are shuffled in with the rest rather than pinned to the tail, because the
+// carousel only shows about three cards at a time -- a new video parked in slot
+// nine is a new video nobody sees.
+const HOME_VIDEO_FRESH_SLOTS = 2;
+
+// The arc has priority over the fresh slots, so a `limit` tighter than the arc
+// trims freshness first and never silently shortens the curated roles.
+const HOME_VIDEO_ROW_LIMIT = 10;
+
+// Newest-added catalogue entries in one spoken language, minus whatever the arc
+// already holds. Ordered by `addedAt` descending and, within a date, by
+// catalogue order -- videos-data.ts is written best-first, so a mining batch
+// that lands fifteen entries on one day promotes its best, not its last.
+// First-party videos are excluded: they are already pinned by orderHomeVideos,
+// and a promoted entry appearing twice would read as a bug.
+export function freshHomeVideos(
+  language: VideoLanguage,
+  exclude: ReadonlySet<string>,
+  count: number,
+): VideoEntry[] {
+  return VIDEOS.map((video, index) => ({ video, index }))
+    .filter(
+      ({ video }) =>
+        video.language === language && !isPromotedVideo(video) && !exclude.has(videoKey(video)),
+    )
+    .sort((a, b) =>
+      a.video.addedAt === b.video.addedAt
+        ? a.index - b.index
+        : a.video.addedAt < b.video.addedAt
+          ? 1
+          : -1,
+    )
+    .slice(0, Math.max(0, count))
+    .map(({ video }) => video);
+}
 
 // Ours lead, pinned and in curated order; everything after them is another
 // channel's video and gets shuffled on every render. The curation still decides
@@ -649,7 +695,7 @@ function shuffle<T>(items: readonly T[]): T[] {
 // blog strip uses (so initLandingCarousel drives it), filled with compact video
 // cards. Returns null when none of the curated keys resolve (row is omitted).
 export function buildHomeVideoCards(
-  limit = 8,
+  limit = HOME_VIDEO_ROW_LIMIT,
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
   // Ours resolve here too. They are not in VIDEOS (that list is the catalogue
@@ -664,10 +710,19 @@ export function buildHomeVideoCards(
       return video ? [video] : [];
     });
 
-  const preferred = resolve(HOME_VIDEO_KEYS[videoLanguageForLocale(locale)]);
-  const arc =
-    preferred.length >= MIN_HOME_VIDEOS_PER_LANGUAGE ? preferred : resolve(HOME_VIDEO_KEYS.en);
-  const picks = orderHomeVideos(arc).slice(0, limit);
+  const wanted = videoLanguageForLocale(locale);
+  const preferred = resolve(HOME_VIDEO_KEYS[wanted]);
+  const deep = preferred.length >= MIN_HOME_VIDEOS_PER_LANGUAGE;
+  const arc = deep ? preferred : resolve(HOME_VIDEO_KEYS.en);
+
+  // Follows the arc that actually rendered, not the visitor's locale: a shallow
+  // locale falls back to the English arc, and topping it up with fresh Chinese
+  // would rebuild the mixed row the fallback exists to avoid.
+  const spoken: VideoLanguage = deep ? wanted : 'en';
+  const budget = Math.max(0, Math.min(HOME_VIDEO_FRESH_SLOTS, limit - arc.length));
+  const fresh = freshHomeVideos(spoken, new Set(arc.map(videoKey)), budget);
+
+  const picks = orderHomeVideos([...arc, ...fresh]).slice(0, limit);
   if (picks.length === 0) return null;
 
   const section = document.createElement('section');
