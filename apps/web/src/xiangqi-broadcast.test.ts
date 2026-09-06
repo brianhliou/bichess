@@ -38,6 +38,28 @@ function stubEventSource(): void {
   );
 }
 
+// The no-op stub above is enough for mount-only tests. This one keeps the
+// listener so a test can push a round update the way the server would.
+function stubPushableEventSource(): { push: (payload: unknown, version: string) => void } {
+  const listeners = new Map<string, (event: Event) => void>();
+  vi.stubGlobal(
+    'EventSource',
+    class {
+      addEventListener(type: string, fn: (event: Event) => void): void {
+        listeners.set(type, fn);
+      }
+      close(): void {}
+    },
+  );
+  return {
+    push(payload, version) {
+      const fn = listeners.get('round');
+      if (!fn) throw new Error('nothing listening for round events');
+      fn(new MessageEvent('round', { data: JSON.stringify({ version, payload }) }));
+    },
+  };
+}
+
 function stubFetchJson(payloadForUrl: (url: string) => unknown): void {
   vi.stubGlobal(
     'fetch',
@@ -245,6 +267,57 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     for (const ring of rings) {
       expect(ring.closest('.xqb-card-board')).not.toBeNull();
     }
+  });
+
+  // A live round pushes on every board change, and each card replays its game
+  // from move one to rebuild its SVG. Repainting all twenty per push blocked the
+  // main thread for 400-700ms, so cards are cached and only changed ones rebuild.
+  //
+  // Asserted by DOM node IDENTITY rather than by counting work: identity is what
+  // "did not rebuild" actually means, and it cannot pass by accident.
+  it('reuses the card element for a board that did not change across a stream push', async () => {
+    stubFetchJson(() => ROUND);
+    const stream = stubPushableEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const before = [...root.querySelectorAll('.xqb-board-card')];
+    expect(before.length).toBe(2);
+
+    // One board gains a move; the other is untouched.
+    const next = structuredClone(ROUND) as typeof ROUND & {
+      boards: { id: string; plyCount?: number; updatedAt?: string }[];
+    };
+    next.boards[0]!.plyCount = (next.boards[0]!.plyCount ?? 0) + 1;
+    next.boards[0]!.updatedAt = '2026-09-06T12:00:00.000Z';
+    stream.push(next, 'v2');
+
+    const after = [...root.querySelectorAll('.xqb-board-card')];
+    expect(after.length).toBe(2);
+
+    const idOf = (card: Element) => card.querySelector('.xqb-card-number')?.textContent ?? '';
+    const changedBefore = before.find((c) => idOf(c) === idOf(after[0]!));
+    // The untouched board keeps its exact element; the changed one is replaced.
+    const untouched = after.filter((card) => before.includes(card));
+    expect(untouched.length).toBe(1);
+    expect(changedBefore && after.includes(changedBefore)).toBeFalsy();
+  });
+
+  it('rebuilds every card when board appearance changes', async () => {
+    stubFetchJson(() => ROUND);
+    stubPushableEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const before = [...root.querySelectorAll('.xqb-board-card')];
+
+    // A skin or layout change rewrites every board SVG, so no card may survive.
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+
+    const after = [...root.querySelectorAll('.xqb-board-card')];
+    expect(after.length).toBe(before.length);
+    expect(after.some((card) => before.includes(card))).toBe(false);
   });
 
   it('repaints mini-board cards when the board layout changes', async () => {
