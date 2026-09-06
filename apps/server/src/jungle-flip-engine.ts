@@ -39,13 +39,53 @@ export type JungleFlipEngineTier = {
   movetimeCapMs: number;
 };
 
-// One versioned bot. The Rust engine searches ~512K nodes comfortably; the 4x4 board
-// makes that very deep. Cap keeps moves playable on the shared prod vCPU.
+// One versioned bot. Node budget = the CPU-independent strength dial; the 5s cap is the
+// latency promise to the player and does NOT move.
+//
+// Budget resized 512K -> 2.5M (2026-09-06) to fix a budget-FIT defect, not to claim a
+// strength gain. 512K left the ceiling almost entirely unspent: measured across 786 plies
+// of 40 finished games over 8 weeks, p50 move cost was 217ms against a 5,000ms ceiling
+// (4.3% utilisation; the highest single move ever recorded was 859ms). A work limit that
+// cannot come close to its ceiling is the same defect that had fog xiangqi searching at
+// 1.8% of budget.
+//
+// Sizing rule (the part 512K got wrong): a work budget must fit inside its ceiling at the
+// SLOWEST throughput we are willing to tolerate, not the fastest we measured. Measured in
+// the prod web container 2026-09-06 (48-core shared Railway host, `go nodes N movetime
+// 300000` so the node budget always binds, wall clock around the whole UCI round-trip
+// including spawn), sweeping 512K..4M nodes on opening / early / midgame / endgame FENs:
+//
+//   position class      throughput    cost @ 2.5M nodes    host loadavg
+//   opening (16 dark)   ~8.2M nps       ~310ms             11.3-11.8
+//   early (14 dark)     ~6.9M nps       ~370ms             11.3-11.8
+//   midgame             ~2.4M nps       ~1,070ms           29-34
+//   endgame (TB-heavy)  ~1.27M nps      ~1,930ms           30-34   <- worst
+//
+// Endgames are the slow class: <=4 pieces hits the on-disk tablebase, and 5-6 piece
+// positions probe it constantly without ever resolving in one hit. Host load between
+// loadavg 8 and loadavg 34 moved these numbers by under 8%, so the derate below is a
+// tolerance, not an extrapolation of what was seen: a fixed search on this shared host has
+// been observed to swing ~1.5x when it gets genuinely busy (loadavg 86), so the slowest
+// throughput we accept is the worst measured class divided by 1.5.
+//
+//   slowest tolerated throughput = 1.27M nps / 1.5   = 0.85M nps
+//   worst plausible cost @ 2.5M  = 2.5M / 0.85M nps  = 2,940ms
+//   margin                       = 5,000ms / 2,940ms = 1.70x
+//
+// 1.7x is the target because ~2.2x against a BEST case is what 512K was sized with, and
+// that still crossed its cap when the host got busy. Do not size by scaling the node count
+// up by the utilisation ratio — that puts the median at the ceiling and the p99 well past it.
+//
+// NOT a claimed Elo gain: no self-play was run for this change. The strength evidence on
+// record for this engine is the older 1M-beats-200K and 5M-beats-1M node ladders, which say
+// more nodes has helped here before; it is not a measurement of 2.5M vs 512K. If a strength
+// check is ever run and 2.5M does not beat 512K, the correct response is to lower this
+// number, not to raise the cap.
 const MISTY_JUNGLE_FLIP: JungleFlipEngineTier = {
   id: JUNGLE_FLIP_DEFAULT_ENGINE_ID,
   name: 'MistyJungleFlip',
   version: JUNGLE_FLIP_ENGINE_VERSION,
-  nodes: 512_000,
+  nodes: 2_500_000,
   movetimeCapMs: 5000,
 };
 

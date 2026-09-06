@@ -29,8 +29,12 @@ export type BanqiEngineTier = {
   version: string;
   // Strength is a NODE budget, not a time budget: `go nodes N` searches the same number of
   // positions on any CPU, so the bot plays the same strength regardless of how slow/loaded the
-  // prod box is. (Movetime-only tiers under-searched in prod: 600ms on a slow shared vCPU reaches
-  // ~200K nodes vs ~1.2M on a dev Mac — the bot was far weaker in prod than in testing.)
+  // prod box is. (Movetime-only tiers under-searched in prod: that was measured in 2026-06 as
+  // ~200K nodes in 600ms on the shared vCPU vs ~1.2M on a dev Mac — the bot was far weaker in
+  // prod than in testing. Those ABSOLUTE numbers are long stale; re-measured 2026-09-06 the prod
+  // container runs 1.14M-3.7M nps depending on position class. The ARGUMENT stands, which is why
+  // the dial is still nodes: a node budget is the only way the bot plays the same strength on a
+  // fast host and a busy one.)
   nodes: number;
   // Latency cap (ms): `go nodes N movetime CAP` halts at whichever hits first, so a slow box never
   // exceeds CAP per move. Generous enough that a normal prod CPU reaches the full node budget.
@@ -40,19 +44,62 @@ export type BanqiEngineTier = {
 // ONE versioned bot (2026-06-18). Was 3 difficulty tiers (amateur/strong/strongest); collapsed
 // to a single full-strength MistyBanqi when the cheap-strength eval shipped (v0.2.0: cover_mat +
 // king_ctx + value-aware mobility + adaptive domination + corrected value table, +16.6% vs hw3).
-// 1.5M nodes is the strongest budget; the cap keeps moves playable.
+// The node budget is the strength dial; the 8s cap is the latency promise to the player and
+// does NOT move.
 //
-// Cap raised 5000 -> 8000 (2026-07-24): the node budget is the CPU-independent strength dial,
-// but prod's slow shared vCPU (~330K nodes/s vs ~1.5M/s on a dev Mac) needs ~4.5s to reach 1.5M
-// nodes, so a 5s cap truncated below budget under any contention — the bot played the shallow,
-// weaker move (a diagnosed banqi horizon miss: a full-budget search finds the win, a truncated
-// one doesn't). 8s gives headroom to actually reach the configured budget. `banqiEngineMove`
-// now logs a truncation warning when a move still hits the cap, so real prod behavior is visible.
+// History of the cap, and why the number it was justified with is now wrong. The cap was
+// raised 5000 -> 8000 on 2026-07-24 on the premise that prod's shared vCPU ran ~330K nodes/s
+// (vs ~1.5M/s on a dev Mac) and therefore needed ~4.5s to reach 1.5M nodes, so a 5s cap
+// truncated below budget and the bot played the shallow, weaker move (a diagnosed banqi
+// horizon miss). That premise is stale by roughly 5x. Measured in the prod web container
+// 2026-09-06, the SLOWEST position class runs ~1.14M nodes/s and 1.5M nodes completes in
+// ~1.3s, matching the p50 of 843ms observed across 2,366 live plies. The cap raise therefore
+// bought nothing: the 8s ceiling was never once hit, utilisation sat at ~11%, and the number
+// that should have moved was the node budget.
+//
+// Budget resized 1.5M -> 3.5M (2026-09-06) to fix that budget-FIT defect. It is NOT a claimed
+// strength gain — see the note at the bottom.
+//
+// Sizing rule: a work budget must fit inside its ceiling at the SLOWEST throughput we are
+// willing to tolerate, not the fastest we measured. Measured in the prod web container
+// 2026-09-06 (48-core shared Railway host, `go nodes N movetime 300000` so the node budget
+// always binds, wall clock around the whole UCI round-trip including spawn), sweeping
+// 1.5M..6M nodes over opening / early-flip / midgame / endgame FENs:
+//
+//   position class          throughput    cost @ 3.5M nodes    host loadavg
+//   opening (32 dark)       ~3.7M nps       ~950ms             12.3-13.1
+//   early (29 dark)         ~2.9M nps       ~1,200ms           12.5-13.1
+//   endgame (few pieces)    ~1.8M nps       ~1,930ms           29-34
+//   midgame (dense board)   ~1.14M nps      ~3,040ms           27-32   <- worst
+//
+// Dense revealed midgames are the slow class: widest move list, least chance-node pruning.
+// Host load between loadavg 8 and loadavg 34 moved these numbers by under 5%, so the derate
+// below is a tolerance, not an extrapolation of what was seen: a fixed search on this shared
+// host has been observed to swing ~1.5x when it gets genuinely busy (loadavg 86), so the
+// slowest throughput we accept is the worst measured class divided by 1.5.
+//
+//   slowest tolerated throughput = 1.14M nps / 1.5   = 0.76M nps
+//   worst plausible cost @ 3.5M  = 3.5M / 0.76M nps  = 4,600ms
+//   margin                       = 8,000ms / 4,600ms = 1.74x
+//
+// Do not size by scaling the node count up by the utilisation ratio (~9x here) — that puts
+// the median at the ceiling and the p99 far past it, which is exactly how the sibling
+// jungle-flip tier ended up crossing its cap on a busy host.
+//
+// NOT a claimed Elo gain: no self-play was run for this change. The strength evidence on
+// record is the v0.2.0 eval work (cover_mat + king_ctx + value-aware mobility + adaptive
+// domination + corrected value table, +16.6% vs hw3) and the v0.2.1 gen_danger arm — none of
+// which measured 3.5M vs 1.5M nodes. If a strength check is run and 3.5M does not beat 1.5M,
+// lower this number rather than raising the cap.
+//
+// `banqiEngineMove` logs a truncation warning when a move still hits the cap, so if this
+// budget turns out not to fit on a genuinely degraded host it shows up in the logs rather
+// than silently playing a weaker move.
 const MISTY_BANQI: BanqiEngineTier = {
   id: BANQI_DEFAULT_ENGINE_ID,
   name: 'MistyBanqi',
   version: BANQI_ENGINE_VERSION,
-  nodes: 1_500_000,
+  nodes: 3_500_000,
   movetimeCapMs: 8000,
 };
 

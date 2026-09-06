@@ -74,14 +74,14 @@ const ENGINES: Record<VariantId, EngineSpec> = {
     label: 'MistyBanqi',
     bin: `${HOME}/projects/misty-banqi/target/release/banqi-engine`,
     // apps/server/src/banqi-engine.ts — MISTY_BANQI, the single versioned bot.
-    nodes: 1_500_000,
+    nodes: 3_500_000,
     budgetSource: 'apps/server/src/banqi-engine.ts MISTY_BANQI',
   },
   'jungle-flip': {
     label: 'MistyJungleFlip',
     bin: `${HOME}/projects/misty-flip-jungle/target/release/jungle-flip-engine`,
     // apps/server/src/jungle-flip-engine.ts — MISTY_JUNGLE_FLIP.
-    nodes: 512_000,
+    nodes: 2_500_000,
     budgetSource: 'apps/server/src/jungle-flip-engine.ts MISTY_JUNGLE_FLIP',
   },
 };
