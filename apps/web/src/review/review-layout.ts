@@ -14,6 +14,7 @@
 //     analysis board rides the SAME scaffold with a path-based (tree) controller,
 //     so both surfaces share one layout and size identically.
 
+import { reviewOpenedProps, track } from '../analytics.js';
 import { attachBoardResizeGrip, currentBoardScale, restoreBoardScale } from '../board-resize.js';
 import { createGameFavoriteButton } from '../game-favorite.js';
 import { t } from '../i18n/catalog.js';
@@ -183,6 +184,22 @@ export function createReviewScaffold(
   root: HTMLElement,
   config: ReviewScaffoldConfig,
 ): ReviewScaffold {
+  // Both review controllers (linear and tree) build their chrome here, so this
+  // is the one place a game review open can be counted. Studies and the
+  // analysis board are other surfaces and stay out of the funnel.
+  if (config.reviewSurface === 'game') {
+    track(
+      'review_opened',
+      reviewOpenedProps({
+        pathname: window.location.pathname,
+        referrer: document.referrer,
+        origin: window.location.origin,
+        reviewSurface: config.reviewSurface,
+        hasAnalysis: Boolean(config.analysisSummary || config.enginePanel),
+        pageClassName: config.pageClassName ?? null,
+      }),
+    );
+  }
   let boardAspect = config.boardAspect;
   const sizingConfig = (): SizingInput => ({ ...config, boardAspect });
   const slots: BoardStageSlot[] = config.boards.map((board) => ({
