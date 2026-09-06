@@ -49,6 +49,8 @@ export const ZH_HANS_PLAY = {
   'lobby.daysPerMove': '{days} 天/步',
   'lobby.tagBot': '电脑',
   'lobby.tagHuman': '真人',
+  'lobby.enginePoolRating':
+    '引擎池等级分 {rating}：由引擎互弈计算，随机走子为 1500。不是玩家等级分。',
   'lobby.botStarting': '开始中',
   'lobby.botStartFailed': '无法开始',
   'lobby.colPlayer': '玩家',

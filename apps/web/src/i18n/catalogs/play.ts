@@ -43,6 +43,8 @@ export const EN_PLAY = {
   'lobby.daysPerMove': '{days}d/move',
   'lobby.tagBot': 'Bot',
   'lobby.tagHuman': 'Human',
+  'lobby.enginePoolRating':
+    'Engine pool rating {rating}: measured against other engines, with random play anchored at 1500. Not a player rating.',
   'lobby.botStarting': 'Starting',
   'lobby.botStartFailed': 'Could not start',
   'lobby.colPlayer': 'Player',
@@ -504,6 +506,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'lobby.daysPerMove',
   'lobby.tagBot',
   'lobby.tagHuman',
+  'lobby.enginePoolRating',
   'lobby.botStarting',
   'lobby.botStartFailed',
   'lobby.colPlayer',

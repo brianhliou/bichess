@@ -49,6 +49,8 @@ export const ZH_HANT_PLAY = {
   'lobby.daysPerMove': '{days} 天/步',
   'lobby.tagBot': '電腦',
   'lobby.tagHuman': '真人',
+  'lobby.enginePoolRating':
+    '引擎池等級分 {rating}：由引擎互弈計算，隨機走子為 1500。不是玩家等級分。',
   'lobby.botStarting': '開始中',
   'lobby.botStartFailed': '無法開始',
   'lobby.colPlayer': '玩家',
