@@ -45,6 +45,8 @@ jobs:
       - name: Web smoke with revision
         if: inputs.expect_revision != ''
         run: node scripts/time-command.mjs --label "Web smoke" -- npm run prod:smoke -- --expect-revision "$EXPECTED_REVISION"
+      - name: Practice catalogue audit
+        run: node scripts/time-command.mjs --label "Practice catalogue" -- npm run prod:smoke:practice
       - name: Engine smoke
         run: node scripts/time-command.mjs --label "Engine smoke" -- npm run prod:smoke:engines
 

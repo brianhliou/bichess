@@ -124,6 +124,7 @@
     "prod:smoke:xiangqi": "node scripts/prod-xiangqi-smoke.mjs",
     "prod:smoke:engine-playout": "node scripts/prod-engine-playout.mjs",
     "prod:smoke:ceval": "node scripts/prod-ceval-smoke.mjs",
+    "prod:smoke:practice": "node scripts/check-practice-catalog.mjs",
     "time:command": "node scripts/time-command.mjs",
     "research:kqk-belief": "tsx scripts/fow-kqk-belief.ts",
     "jieqi:play": "tsx scripts/jieqi-playthrough.ts",

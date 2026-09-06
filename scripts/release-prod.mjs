@@ -599,6 +599,12 @@ async function runSmoke({ deployRequired, headRevision }) {
   // page) — the class of failure the fetch-based smokes cannot see (they
   // verify serving/isolation, not a real run).
   runTimed('prod ceval smoke', npmCommand('prod:smoke:ceval', baseArgs()));
+  // The /practice catalogue is DATA, and its failure mode is silent: a chapter
+  // that loses its practice flag stops being an exercise while the card's count
+  // stays truthful, so nothing on the page looks wrong. Cheap (a handful of
+  // public GETs) and it runs after the deploy like every other smoke, so a
+  // finding is an alarm rather than a gate on shipping code.
+  runTimed('prod practice catalogue', npmCommand('prod:smoke:practice', baseArgs()));
   if (smoke !== 'full') return;
 
   // The engine-family smokes are independent (separate rooms, separate engines)
