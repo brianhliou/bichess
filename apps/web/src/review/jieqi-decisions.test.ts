@@ -15,14 +15,14 @@ function decision(p: Partial<JieqiDecision>): JieqiDecision {
 }
 
 describe('decisionView', () => {
-  it('leaves a within-noise decision loss unjudged (win% deadband)', () => {
-    // A 3-point decision loss is inside the ~5-point noise floor, so no glyph.
+  it('leaves a decision loss under the inaccuracy bar unjudged', () => {
+    // 3 points is under moveJudgment's own 5-point bar, so no glyph.
     const v = decisionView(decision({ bestWin: 53, playedWin: 50 }));
     expect(v.judgment).toBeNull();
     expect(v.decisionLoss).toBe(3);
   });
 
-  it('grades a real decision loss beyond the noise floor', () => {
+  it('grades a decision loss at or past the bar', () => {
     const v = decisionView(decision({ bestWin: 70, playedWin: 45 }));
     expect(v.judgment).toBe('blunder'); // a 25-point drop
     expect(v.decisionLoss).toBe(25);

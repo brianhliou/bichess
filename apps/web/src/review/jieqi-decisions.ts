@@ -39,17 +39,25 @@ export type JieqiDecisionsResponse = {
   decisions: JieqiDecision[];
 };
 
-// Deadband in WIN POINTS. The top jieqi reveals cluster within a few win% under the noisy no-net
-// eval, so a decision loss below this floor is engine noise, not a real mistake — leave it
-// unjudged. Same discipline that stopped the eval-swing over-flagging, in win% space now that the
-// server averages the baseline itself.
-const DECISION_NOISE_WINPCT = 5;
+// No deadband, deliberately. A noise-floor guard set to 5 win points used to stand
+// in front of moveJudgment; it could never change an outcome, because moveJudgment
+// already returns null below its own 5-point inaccuracy bar. The bar IS the floor.
+//
+// Its premise was wrong too. It read the tight clustering of chance-ply values as
+// engine noise; measured 2026-09-05 over 204 chance plies, this variant's
+// chance plies and its quiet plies sit on the same scale (p90 ratio 1.14, 95% CI
+// [0.71, 1.71] — contains 1.0, excludes 2.0). Averaging over hidden state does
+// compress the scale, but only in proportion to how much of it there is: fog chess
+// averages across millions of board worlds and did need a correction (a scale
+// factor, not a deadband), where one reveal draws from the mover's own remaining
+// face-down pieces.
+// Depth: memory corpus, chance_variant_judgment_bars_calibrated.
 
 /** A reveal ply's derived, display-ready view. `luck` and `decisionLoss` are win% (points). */
 export type DecisionView = {
   ply: number;
   mover: 'red' | 'black';
-  /** Decision-quality glyph from the win% the CHOICE gave up (null = fine, or within noise). */
+  /** Decision-quality glyph from the win% the CHOICE gave up (null = under the inaccuracy bar). */
   judgment: MoveJudgment;
   /** Win% the choice gave up vs the best move (>= 0). */
   decisionLoss: number;
@@ -65,9 +73,7 @@ export type DecisionView = {
 
 export function decisionView(d: JieqiDecision): DecisionView {
   const decisionLoss = Math.max(0, d.bestWin - d.playedWin);
-  // Deadband: a sub-noise decision loss is not a real mistake, so no glyph.
-  const judgment =
-    decisionLoss < DECISION_NOISE_WINPCT ? null : moveJudgment(d.bestWin, d.playedWin);
+  const judgment = moveJudgment(d.bestWin, d.playedWin);
   return {
     ply: d.ply,
     mover: d.mover,
