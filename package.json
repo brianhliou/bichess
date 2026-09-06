@@ -57,6 +57,7 @@
     "engine:artifact-archive": "node scripts/archive-engine-artifact.mjs",
     "engine:artifact-audit": "node scripts/engine-artifact-audit.mjs",
     "engine:artifact-closeout": "node scripts/engine-artifact-closeout.mjs",
+    "engine:budget-report": "node scripts/engine-budget-report.mjs",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:tooling && npm run test:unit --workspaces --if-present",
     "test:parked": "npm run test:parked --workspaces --if-present",
