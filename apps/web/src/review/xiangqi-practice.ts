@@ -86,6 +86,12 @@ export interface XiangqiPracticeOptions {
   initialTruth: XiangqiGameState;
   /** Injected so tests can drive the runner with a scripted engine. */
   evaluate: (truth: XiangqiGameState) => Promise<PracticeEval>;
+  /** Notified as each ply lands; see `PracticeConfig.onMovePlayed`. */
+  onMovePlayed?: (
+    move: XiangqiMove,
+    parentTruth: XiangqiGameState,
+    by: 'learner' | 'defender',
+  ) => void;
 }
 
 /** Build the runner config for a standard-xiangqi practice exercise. */
@@ -111,6 +117,7 @@ export function xiangqiPracticeConfig(
     moveLabel: (move, parentTruth) =>
       formatXiangqiMove(parentTruth, move, currentXiangqiNotationStyle()),
     evaluate: options.evaluate,
+    onMovePlayed: options.onMovePlayed,
   };
 }
 

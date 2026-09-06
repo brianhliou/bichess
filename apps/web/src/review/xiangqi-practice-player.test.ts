@@ -321,3 +321,32 @@ test('a failure is reported once per attempt, with its verdict', async () => {
   hintBtn?.click();
   expect(failures.length, 'one failure, one report').toBe(1);
 });
+
+test('the learner sees their own move while the engine is still thinking', async () => {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  // What the move list showed at the moment each search STARTED. The engine call
+  // is the only synchronous window into mid-attempt state.
+  const shownAtSearch: number[] = [];
+  const engine = steady(700);
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: MATE,
+    orientation: row.turn,
+    evaluate: async (truth) => {
+      shownAtSearch.push(host.querySelectorAll('.practice__move').length);
+      return engine(truth);
+    },
+  });
+  await handle.ready();
+  shownAtSearch.length = 0;
+
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+
+  // The search that grades the learner's move must already see it on the board.
+  // Without the repaint on the ply hook, the position holds still for the whole
+  // search and then jumps two plies at once -- so the click the learner just
+  // heard describes a board they cannot see yet.
+  expect(shownAtSearch[0], "the learner's move is painted before the search").toBe(1);
+});
