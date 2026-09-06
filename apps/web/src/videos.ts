@@ -16,6 +16,7 @@ import './videos.css';
 
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { YOUTUBE_BLOCKED_IN } from './nav-items.js';
 import { buildNav } from './site-shell.js';
 import {
   FIRST_PARTY_VIDEOS,
@@ -31,6 +32,7 @@ import {
   type VideoVariant,
   videoKey,
 } from './videos-data.js';
+import { isBlockedForViewer } from './viewer-geo.js';
 
 const TAG_LABEL_KEYS: Record<VideoTag, `videos.tag.${VideoTag}`> = {
   basics: 'videos.tag.basics',
@@ -743,6 +745,13 @@ export function buildHomeVideoCards(
   limit = HOME_VIDEO_ROW_LIMIT,
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
+  // Where YouTube is blocked the row is not merely useless, it is visibly
+  // broken: the thumbnails come from img.youtube.com, so every card renders as
+  // a failed image. Omitting the row is the honest version of that. Returning
+  // null is the same signal the caller already handles when no curated key
+  // resolves, and landing.css drops the grid's fourth row to match. See #378.
+  if (isBlockedForViewer(YOUTUBE_BLOCKED_IN)) return null;
+
   // Ours resolve here too. They are not in VIDEOS (that list is the catalogue
   // the /videos page filters), so without this the strip would silently drop the
   // one entry it most wants to lead with.

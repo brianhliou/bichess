@@ -20,7 +20,18 @@ import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js
 // Bump on every shipped eval/search change; the binary self-reports "MistyBanqi <version>"
 // over UCI, and the engines registry records it (configHash) on each game so we can always
 // tell which build played.
-export const BANQI_ENGINE_VERSION = '0.2.5';
+//
+// Corrected 2026-09-06: this read '0.2.5', a version that was never released. The newest
+// misty-banqi release is v0.2.4, railpack.json fetches v0.2.4, and the deployed binary
+// answers `id name MistyBanqi 0.2.4` — so every banqi game recorded since the typo names a
+// build that does not exist. The one mechanism whose whole job is "tell which build
+// played" was itself the thing that was wrong, which is precisely why it survived:
+// nothing compares this constant against what the binary reports.
+//
+// Bump this only together with the railpack pin. Better still, stop bumping it by hand:
+// engine_boot_check already spawns each binary at startup, so it could assert the
+// handshake matches this string and turn a silent provenance lie into a loud boot failure.
+export const BANQI_ENGINE_VERSION = '0.2.4';
 export const BANQI_DEFAULT_ENGINE_ID = 'misty-banqi';
 
 export type BanqiEngineTier = {
