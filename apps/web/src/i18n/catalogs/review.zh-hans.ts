@@ -354,6 +354,7 @@ export const ZH_HANS_REVIEW = {
   'broadcast.prev': '上一步',
   'broadcast.next': '下一步',
   'broadcast.source': '来源',
+  'broadcast.recordsFrom': '棋谱来源：{source}',
   'broadcast.analyseWithEngine': '用引擎分析',
   'broadcast.exportJson': '导出 JSON',
   'broadcast.redWins': '红方获胜',

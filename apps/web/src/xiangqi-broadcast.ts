@@ -537,6 +537,51 @@ function boardCardFor(board: BroadcastBoardSummary, cache?: BoardCardCache): HTM
   return el;
 }
 
+// Where these games came from, taken from the provenance each board already
+// carries rather than from tour.sourceUrl.
+//
+// tour.sourceUrl is a POLL TARGET, not a credit. It has to be fetchable and
+// parseable, the poller re-anchors it on every run, and for a tour imported
+// from an archive there is no URL shape that expresses "all of this came from
+// there": the source interpreter only understands a dpxq page carrying move
+// data, so a tour index is rejected as malformed. A credit is editorial and
+// should not depend on any of that.
+export function broadcastRecordsCredit(
+  boards: readonly { sourceUrl?: string }[],
+): { host: string; href: string } | null {
+  const origins = new Map<string, string>();
+  for (const board of boards) {
+    if (!board.sourceUrl) continue;
+    try {
+      const url = new URL(board.sourceUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
+      origins.set(url.host.replace(/^www\./, ''), url.origin);
+    } catch {
+      // A board with an unparseable source simply does not vote.
+    }
+  }
+  // Two origins would need a list, and no import path produces one today.
+  // Credit only what can be stated without qualification.
+  if (origins.size !== 1) return null;
+  const [entry] = [...origins.entries()];
+  const [host, href] = entry!;
+  return { host, href };
+}
+
+function recordsCreditLine(boards: readonly { sourceUrl?: string }[]): HTMLElement | null {
+  const credit = broadcastRecordsCredit(boards);
+  if (!credit) return null;
+  const line = document.createElement('p');
+  line.className = 'xqb-records-credit';
+  const link = document.createElement('a');
+  link.href = credit.href;
+  link.rel = 'noreferrer';
+  link.textContent = credit.host;
+  const [before, after] = t('broadcast.recordsFrom').split('{source}');
+  line.append(document.createTextNode(before ?? ''), link, document.createTextNode(after ?? ''));
+  return line;
+}
+
 function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTMLElement {
   document.title = `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`;
   const main = broadcastShell();
@@ -578,6 +623,8 @@ function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTML
     for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
   }
   section.append(heading, grid);
+  const credit = recordsCreditLine(data.boards);
+  if (credit) section.append(credit);
   main.append(section);
   return main;
 }

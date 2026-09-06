@@ -4,6 +4,7 @@ import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
+  broadcastRecordsCredit,
   formatBroadcastFreshness,
   mountXiangqiBroadcastBoard,
   mountXiangqiBroadcastIndex,
@@ -414,6 +415,50 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-board-card-live .xqb-card-foot')?.textContent).toContain(
       'live',
     );
+  });
+});
+
+describe('broadcastRecordsCredit', () => {
+  // Games imported from an archive carry their origin per board. The credit is
+  // derived from that, because tour.sourceUrl is a poll target: it has to be
+  // fetchable and parseable, so an archive-imported tour cannot carry one.
+  it('credits the single origin the boards came from, without the www', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142539.html' },
+        { sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142540.html' },
+      ]),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
+  it('says nothing when the boards are ours', () => {
+    expect(broadcastRecordsCredit([{}, {}])).toBeNull();
+  });
+
+  // A mixed-origin round would need a list, and crediting only the first source
+  // would be worse than crediting none.
+  it('says nothing when boards come from more than one origin', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/a.html' },
+        { sourceUrl: 'https://example.org/b.html' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('ignores a board whose source will not parse rather than dropping the credit', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/a.html' },
+        { sourceUrl: 'not a url' },
+      ]),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
+  it('ignores non-http schemes so a discovery source never becomes a credit', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'mistboard-discover://dpxq-live?tourSlug=x' }]),
+    ).toBeNull();
   });
 });
 

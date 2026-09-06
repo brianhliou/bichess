@@ -231,6 +231,26 @@
   color: var(--site-heading);
 }
 
+/* A credit, not a call to action: it sits under the boards it belongs to and
+   stays out of the way of them. */
+.xqb-records-credit {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--site-muted);
+}
+
+/* Inline text, deliberately not .xqb-link: that class is a button pill, and a
+   credit rendered as a call to action reads like an ad for someone else. */
+.xqb-records-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.xqb-records-credit a:hover {
+  color: var(--site-heading);
+}
+
 .xqb-card-board {
   box-shadow: 0 6px 18px rgba(37, 31, 24, 0.12);
   border-radius: 10px;

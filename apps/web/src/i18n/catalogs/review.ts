@@ -192,6 +192,7 @@ export const EN_REVIEW = {
   'broadcast.notFound': 'Broadcast not found',
   'broadcast.unavailable': 'Broadcast unavailable',
   'broadcast.eyebrow': 'Xiangqi broadcast',
+  'broadcast.recordsFrom': 'Game records from {source}',
   'broadcast.tournamentBroadcasts': 'Tournament broadcasts',
   'broadcast.tournamentCount': '{count} tournaments',
   'broadcast.tournamentCountOne': '{count} tournament',
