@@ -3,15 +3,18 @@
  *
  * Dark Xiangqi was the only PvE surface that queued NO artifacts, so answering
  * "why did the bot play that" meant reconstructing per-ply timings from Railway
- * logs. These pin the queue's shape and its cap.
+ * logs. The queue itself is shared (variant-tenant/engine-decisions.ts) and its
+ * cap/ply behaviour is pinned there; what this file pins is the dxq-specific
+ * contract — the seat travels in the payload, and the free-form engine
+ * `diagnostics` block is stored verbatim.
  */
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
-import { queueDarkXiangqiEngineDecision } from './server-dark-xiangqi-engine.js';
+import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
 
-type QueueRoom = Parameters<typeof queueDarkXiangqiEngineDecision>[0];
+type QueueRoom = Parameters<typeof queueEngineDecision>[0];
 
 function room(id = 'dxq_queue'): QueueRoom {
   return { id } as QueueRoom;
@@ -19,7 +22,7 @@ function room(id = 'dxq_queue'): QueueRoom {
 
 test('engine decisions: a queued decision carries ply, type and the payload', () => {
   const r = room();
-  queueDarkXiangqiEngineDecision(r, { ply: 7, move: 'h4i4', diagnostics: { beliefSize: 440 } });
+  queueEngineDecision(r, { ply: 7, move: 'h4i4', diagnostics: { beliefSize: 440 } });
 
   assert.equal(r.pendingDebugArtifacts?.length, 1);
   const queued = r.pendingDebugArtifacts?.[0];
@@ -34,20 +37,4 @@ test('engine decisions: a queued decision carries ply, type and the payload', ()
     move: 'h4i4',
     diagnostics: { beliefSize: 440 },
   });
-});
-
-test('engine decisions: a non-numeric ply degrades to null rather than throwing', () => {
-  const r = room();
-  queueDarkXiangqiEngineDecision(r, { move: 'h4i4' });
-  assert.equal(r.pendingDebugArtifacts?.[0]?.ply, null);
-});
-
-test('engine decisions: the queue is capped, keeping the oldest', () => {
-  const r = room();
-  for (let ply = 0; ply < 450; ply += 1) {
-    queueDarkXiangqiEngineDecision(r, { ply });
-  }
-  assert.equal(r.pendingDebugArtifacts?.length, 400, 'queue is capped');
-  assert.equal(r.pendingDebugArtifacts?.[0]?.ply, 0, 'oldest decisions are the ones kept');
-  assert.equal(r.pendingDebugArtifacts?.[399]?.ply, 399);
 });

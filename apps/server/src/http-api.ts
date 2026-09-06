@@ -11,6 +11,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as accountRoute from './routes/account.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
+import * as adminGameArtifactsRoute from './routes/admin-game-artifacts.js';
 import * as annotationsRoute from './routes/annotations.js';
 import * as authRoute from './routes/auth.js';
 import * as banqiGamesRoute from './routes/banqi-games.js';
@@ -105,6 +106,9 @@ export const routes: RouteModule[] = [
   puzzlesRoute,
   readoutsRoute,
   roomsRoute,
+  // Ahead of every games route: /api/admin/games/:id/artifacts is variant-agnostic
+  // and no other module claims that prefix.
+  adminGameArtifactsRoute,
   correspondenceGamesRoute,
   correspondenceSeeksRoute,
   // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.

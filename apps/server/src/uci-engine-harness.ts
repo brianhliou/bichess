@@ -532,9 +532,17 @@ export type UciEval = {
  * spawn / hard-timeout / SIGKILL-cleanup contract.
  */
 export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
-  const { bin, commands, timeoutMs, timeoutMessage } = args;
+  const { bin, commands, timeoutMs, timeoutMessage, env } = args;
   return new Promise<UciEval>((resolveEval, reject) => {
-    const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    // `env` is honoured here exactly as in runUciBestmove. It was silently
+    // dropped until 2026-09-05, which mattered the moment the Flip Jungle live
+    // move switched to this runner to record its search: its per-game tie-break
+    // seed travels in JF_TIE_SEED, and losing it would have made the opening
+    // flip identical in every game rather than merely reproducible per room.
+    const child = spawn(bin, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    });
     const trace = new UciOutputTrace('spawn');
     let buf = '';
     let settled = false;

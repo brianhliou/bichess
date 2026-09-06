@@ -37,6 +37,11 @@ import {
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { replayTenantEvents, tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
@@ -122,9 +127,20 @@ export function scheduleBanqiEngineMove(ctx: BanqiEngineContext, room: BanqiEngi
   room.engineTimer.unref();
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the engine actually did. Tests inject a stub.
+ */
+export type BanqiEngineMoveProvider = (
+  engineId: string,
+  fen: string,
+  opts: { nodes?: number; movetimeCapMs?: number; moves?: readonly string[] },
+) => Promise<UciEval>;
+
 export async function playBanqiEngineMoveIfReady(
   ctx: BanqiEngineContext,
   room: BanqiEngineRoom,
+  moveProvider: BanqiEngineMoveProvider = banqiLiveEngineMove,
 ): Promise<void> {
   const seat = banqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
@@ -154,14 +170,23 @@ export async function playBanqiEngineMoveIfReady(
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
   // than silently substituting a threat-blind legal move.
+  const startedAt = Date.now();
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<BanqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () =>
-      banqiLiveEngineMove(engineId, fen, { nodes: tier.nodes, movetimeCapMs, moves }),
+    requestMove: async () => {
+      const search = await moveProvider(engineId, fen, {
+        nodes: tier.nodes,
+        movetimeCapMs,
+        moves,
+      });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => {
       const parsed = engineUciToBanqiMove(uci);
       return parsed && isBanqiLegalMove(room.projection.state, parsed) ? parsed : null;
@@ -224,6 +249,30 @@ export async function playBanqiEngineMoveIfReady(
     color: seat,
     move: validated,
   };
+  // Queue BEFORE the append: if this move ends the game, the tenant event writer
+  // records the game end and flushes the queue inside that same append, and a
+  // decision queued afterwards would never be written.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'banqi',
+      roomId: room.id,
+      engineId,
+      engineVersion: BANQI_ENGINE_VERSION,
+      seat,
+      ply: gameMoves.length,
+      budgetMs: movetimeCapMs,
+      remainingMs,
+      incrementMs,
+      tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
+      search: lastSearch,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts,
+      move: banqiMoveToEngineUci(validated),
+      fen,
+      legalCount: getBanqiLegalMoves(room.projection.state).length,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

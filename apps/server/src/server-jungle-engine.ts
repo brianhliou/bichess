@@ -46,6 +46,11 @@ import {
   jungleStateToEngineFen,
 } from './jungle-fen.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
@@ -207,9 +212,21 @@ export function scheduleJungleEngineMove(ctx: JungleEngineContext, room: JungleE
   room.engineTimer.unref();
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the Rust engine actually did. Tests inject a
+ * stub. The in-process TS search below has no provider: it IS the search.
+ */
+export type JungleEngineMoveProvider = (
+  engineId: string,
+  fen: string,
+  opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[] },
+) => Promise<UciEval>;
+
 export async function playJungleEngineMoveIfReady(
   ctx: JungleEngineContext,
   room: JungleEngineRoom,
+  moveProvider: JungleEngineMoveProvider = jungleLiveEngineMove,
 ): Promise<void> {
   const seat = jungleEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
@@ -234,13 +251,22 @@ export async function playJungleEngineMoveIfReady(
       await failClosedJungleBinaryMissing(ctx, room, seat, engineId);
       return;
     }
-    await playJungleRustEngineMove(ctx, room, seat, engineId, remainingMs, incrementMs);
+    await playJungleRustEngineMove(
+      ctx,
+      room,
+      seat,
+      engineId,
+      remainingMs,
+      incrementMs,
+      moveProvider,
+    );
     return;
   }
 
   // Flag off → the in-process TS engine is the DELIBERATE engine for jungle PvE (a config
   // choice, not a failure fallback). This path retires once jungle is Rust-mandatory in
   // every environment (flag on + binary provisioned).
+  const startedAt = Date.now();
   const chosen = chooseJungleEngineMove(room.projection.state, tier);
   if (!chosen) {
     logger.error(
@@ -258,6 +284,32 @@ export async function playJungleEngineMoveIfReady(
     color: seat,
     move: chosen,
   };
+  // Queue BEFORE the append (a winning move finishes the game and flushes the
+  // queue inside that same append). This path is a synchronous in-process search
+  // with NO server time budget, so `movetime_ms` is null and there is no UCI
+  // `search` block — which is itself the useful signal: an artifact with a null
+  // budget and no search says the TS engine moved, not the Rust binary, and that
+  // distinction was previously only visible in a boot-time flag.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'jungle',
+      roomId: room.id,
+      engineId,
+      engineVersion: JUNGLE_ENGINE_VERSION,
+      seat,
+      ply: room.projection.state.moveNumber,
+      budgetMs: null,
+      remainingMs,
+      incrementMs,
+      tier: { depth: tier.depth },
+      search: null,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts: [],
+      move: jungleMoveToEngineUci(chosen),
+      legalCount: getJungleLegalMoves(room.projection.state).length,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }
@@ -305,6 +357,7 @@ async function playJungleRustEngineMove(
   engineId: string,
   remainingMs: number | null,
   incrementMs: number,
+  moveProvider: JungleEngineMoveProvider,
 ): Promise<void> {
   const rustTier = jungleRustTierFor(engineId);
   if (!rustTier) return;
@@ -322,18 +375,23 @@ async function playJungleRustEngineMove(
     floorMs: MIN_MOVETIME_MS,
   });
 
+  const startedAt = Date.now();
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<JungleMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () =>
-      jungleLiveEngineMove(engineId, fen, {
+    requestMove: async () => {
+      const search = await moveProvider(engineId, fen, {
         nodes: rustTier.nodes,
         movetimeCapMs,
         repSeedFens,
-      }),
+      });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => {
       const parsed = engineUciToJungleMove(uci);
       return parsed && isJungleLegalMove(state, parsed) ? parsed : null;
@@ -393,6 +451,30 @@ async function playJungleRustEngineMove(
     color: seat,
     move: validated,
   };
+  // Queue BEFORE the append: if this move ends the game, the tenant event writer
+  // records the game end and flushes the queue inside that same append, and a
+  // decision queued afterwards would never be written.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'jungle',
+      roomId: room.id,
+      engineId,
+      engineVersion: JUNGLE_RUST_ENGINE_VERSION,
+      seat,
+      ply: state.moveNumber,
+      budgetMs: movetimeCapMs,
+      remainingMs,
+      incrementMs,
+      tier: { nodes: rustTier.nodes, movetimeMs: rustTier.movetimeCapMs },
+      search: lastSearch,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts,
+      move: jungleMoveToEngineUci(validated),
+      fen,
+      legalCount: getJungleLegalMoves(state).length,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

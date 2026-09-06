@@ -179,12 +179,12 @@ export async function banqiLiveEngineMove(
   engineId: string,
   fen: string,
   opts: BanqiEngineOptions = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = banqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Banqi engine: ${engineId}`);
   const release = await enginePool.acquire();
   try {
-    return await banqiEngineMove(fen, {
+    return await banqiEngineSearch(fen, {
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       moves: opts.moves,
@@ -242,6 +242,20 @@ export async function banqiEngineMove(
   fen: string,
   opts: BanqiEngineOptions = {},
 ): Promise<string | null> {
+  return (await banqiEngineSearch(fen, opts)).best;
+}
+
+/**
+ * The same move request, but returning the whole search summary rather than just
+ * the move. Live play takes this one so the per-move decision artifact can record
+ * what the engine actually consumed (depth, nodes, time) next to the budget it was
+ * given; without those two numbers side by side, an engine that spends a fraction
+ * of its allocation looks exactly like one that spends all of it.
+ */
+export async function banqiEngineSearch(
+  fen: string,
+  opts: BanqiEngineOptions = {},
+): Promise<UciEval> {
   const nodes = opts.nodes ?? 500_000;
   const movetimeCapMs = opts.movetimeCapMs ?? 2500;
   const position = buildBanqiPositionCommand(fen, opts.moves);
@@ -266,7 +280,7 @@ export async function banqiEngineMove(
     movetimeCapMs,
     elapsedMs: Date.now() - startedAt,
   });
-  return result.best;
+  return result;
 }
 
 // Whole-game ANALYSIS eval (distinct from the playable move provider above): read the

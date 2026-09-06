@@ -19,7 +19,7 @@
 // shared `uci-engine-harness`; this file is just the Fortress config + tiers.
 
 import {
-  fairyStockfishBestmove,
+  fairyStockfishEval,
   fairyStockfishPath,
   resolveFsfVariantIniPath,
   runUciEval,
@@ -220,12 +220,12 @@ export async function fortressXiangqiLiveEngineMove(
   engineId: string,
   moves: string[],
   opts: { movetimeMs?: number } = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = fortressXiangqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Fortress Xiangqi engine: ${engineId}`);
   const release = await fsfPool.acquire();
   try {
-    return await fortressXiangqiEngineMove(moves, {
+    return await fortressXiangqiEngineSearch(moves, {
       skill: tier.skill,
       nodes: tier.nodes,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
@@ -235,11 +235,26 @@ export async function fortressXiangqiLiveEngineMove(
   }
 }
 
-export function fortressXiangqiEngineMove(
+export async function fortressXiangqiEngineMove(
   moves: string[],
   opts: FortressXiangqiEngineRequestOptions = {},
 ): Promise<string | null> {
-  return fairyStockfishBestmove({
+  return (await fortressXiangqiEngineSearch(moves, opts)).best;
+}
+
+/**
+ * The same move request, but returning the whole search summary rather than just
+ * the move. Live play takes this one so the per-move decision artifact can record
+ * what the search actually consumed (depth, nodes, time) next to the rung's node
+ * budget and the movetime the server allotted. On this ladder the node budget is
+ * the strength anchor, so nodes reached against nodes configured is the first
+ * thing to read when a rung plays below its level.
+ */
+export function fortressXiangqiEngineSearch(
+  moves: string[],
+  opts: FortressXiangqiEngineRequestOptions = {},
+): Promise<UciEval> {
+  return fairyStockfishEval({
     moves,
     variant: VARIANT,
     iniPath: fortressXiangqiVariantIniPath(),
