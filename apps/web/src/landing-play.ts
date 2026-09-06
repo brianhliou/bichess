@@ -699,13 +699,23 @@ function seedRosterRating(
 
 function fillSeedRatings(seedsBlock: HTMLElement, bots: LandingBotRosterEntry[]): void {
   for (const row of seedsBlock.querySelectorAll<HTMLElement>('.landing-lobby-seed')) {
-    const cell = row.querySelector('.landing-lobby-seed-rating');
+    const cell = row.querySelector<HTMLElement>('.landing-lobby-seed-rating');
     if (!cell) continue;
     const bot = bots.find((entry) => entry.id === row.dataset.botId);
     if (!bot?.ratings) continue;
     const rating = seedRosterRating(bot.ratings, row.dataset.gameSpec ?? '', row.dataset.timeClass);
     if (!rating) continue;
-    cell.textContent = `${Math.round(rating.rating)}${rating.provisional ? '?' : ''}`;
+    // The number is an engine-pool rating (engines against engines, random play
+    // anchored at 1500), not the human Glicko scale: Pikafish went 23-0 against
+    // humans at a number that reads like a club player. Printed in the rating
+    // column it invites lichess's own "2000 bot plays like 1250" complaint, so
+    // the cell keeps its dash and the number lives in a tooltip that names the
+    // scale it is on (#373). The data attribute keeps it addressable.
+    const poolRating = `${Math.round(rating.rating)}${rating.provisional ? '?' : ''}`;
+    const label = t('lobby.enginePoolRating', { rating: poolRating });
+    cell.dataset.poolRating = poolRating;
+    cell.title = label;
+    row.title = label;
   }
 }
 
