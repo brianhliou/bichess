@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-06',
+    kind: 'release',
+    headline: 'Practice the basic endgames against the engine.',
+    body: 'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.',
+    href: '/practice',
+    cta: 'Try an exercise',
+  },
+  {
     // Dated to the article's own date, a day after the platform page it links
     // back to, so the News row and the page never disagree about a post.
     date: '2026-09-04',

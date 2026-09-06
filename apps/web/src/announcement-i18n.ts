@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-06 (practice endgames) ── 术语用棋界通行说法：残局、士象全、单车难破士象全。
+  'Practice the basic endgames against the engine.': '与引擎对弈，练习基本残局。',
+  'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':
+    '三十二个基本残局，每局只给目标，不给标准答案。引擎负责防守，并按你走完这一步之后胜势是否还在来评判。单车难破士象全，三兵却能破，这种结论只有在自己证明失败之后才会真正相信。先做残局，是因为这些定论正是英文读者最难接触到的部分。后面还会有更多。',
+  'Try an exercise': '试做一题',
   // ── 2026-09-04 (jieqi openings) ── 开局术语跟文章一致：仙人指路、炮二进四、揭子。
   'What strong jieqi players believe about the opening.': '强手眼中的揭棋开局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':
@@ -305,6 +310,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-06 (practice endgames) ── 術語用棋界通行說法：殘局、士象全、單車難破士象全。
+  'Practice the basic endgames against the engine.': '與引擎對弈，練習基本殘局。',
+  'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':
+    '三十二個基本殘局，每局只給目標，不給標準答案。引擎負責防守，並按你走完這一步之後勝勢是否還在來評判。單車難破士象全，三兵卻能破，這種結論只有在自己證明失敗之後才會真正相信。先做殘局，是因為這些定論正是英文讀者最難接觸到的部分。後面還會有更多。',
+  'Try an exercise': '試做一題',
   // ── 2026-09-04 (jieqi openings) ── 開局術語與文章一致：仙人指路、炮二進四、揭子。
   'What strong jieqi players believe about the opening.': '強手眼中的揭棋開局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':
