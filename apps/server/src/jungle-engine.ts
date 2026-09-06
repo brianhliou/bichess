@@ -64,11 +64,38 @@ export type JungleRustTier = {
 //   quite the same opponent as 3+2 Misty. Raising the budget further would widen that
 //   gap without helping the controls people actually play.
 //
+//   Why the cap is 6000ms and not 4000ms (2026-09-06). The paragraph above sized 5M
+//   against a BEST case and left only ~2.2x margin, and that margin is gone. Two
+//   effects, both measured in the prod container: the host is a shared Railway box
+//   whose load swings the SAME search by ~1.5x (5M cost 2227ms at loadavg 14.9 and
+//   3587ms at loadavg 86.3, twenty minutes apart — not the container, which used 1.49
+//   of 24 vCPU with zero cgroup throttling), and the box is ~1.45x slower than whatever
+//   produced the 1839ms baseline (200k measures 94-99ms here against the ~66ms above).
+//   Together those pushed 5M past 4000ms, and game timestamps show jungle pinned at the
+//   cap on essentially every ply from 2026-09-03 (p50 4022ms, p90 4028ms) against a
+//   node-bound p50 of 2167ms before 08-31 — i.e. the invariant this comment claims,
+//   that strength stays CPU-independent, had quietly stopped holding.
+//
+//   6000ms restores ~1.7x margin over the worst measured 3587ms. It is a latency cost
+//   and nothing else: budgetForMove still clips the ceiling under time pressure, so the
+//   fast controls are unaffected and the 1+1 caveat above is unchanged.
+//
+//   The rule this got wrong, and the reason it is worth writing down: a work budget must
+//   fit inside its ceiling at the SLOWEST throughput you are willing to tolerate, not
+//   the fastest you happened to measure. A limit sized against a best case is not a
+//   limit, it is a race between two numbers nobody is comparing.
+//
+//   Caveat on verifying any of this: the jungle binary emits only `info score cp .. pv ..`
+//   — no nodes, no time — so the per-move artifact records nothing for jungle and the
+//   only observable is wall time. Confirming this fix means watching p50 settle BELOW
+//   the cap rather than pinning to it. Making nodes observable needs a change in the
+//   misty-jungle repo.
+//
 // The retired tiers keep the budgets they shipped with, so a legacy room that somehow
 // resumes plays as it originally did rather than at a strength nobody chose.
 const JUNGLE_RUST_TIERS: ReadonlyMap<string, JungleRustTier> = new Map([
   ['misty-jungle-level-1', { id: 'misty-jungle-level-1', nodes: 20_000, movetimeCapMs: 1_500 }],
-  ['misty-jungle-level-2', { id: 'misty-jungle-level-2', nodes: 5_000_000, movetimeCapMs: 4_000 }],
+  ['misty-jungle-level-2', { id: 'misty-jungle-level-2', nodes: 5_000_000, movetimeCapMs: 6_000 }],
   ['misty-jungle-level-3', { id: 'misty-jungle-level-3', nodes: 1_000_000, movetimeCapMs: 5_000 }],
 ]);
 
