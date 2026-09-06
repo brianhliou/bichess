@@ -32,6 +32,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Try an exercise',
   },
   {
+    date: '2026-09-06',
+    kind: 'release',
+    headline: 'Misty is open source.',
+    body: 'The Fog of War chess engine you play here is on GitHub under the GPL, and installs from PyPI as misty-chess. It is a build of the architecture behind Obscuro, the first superhuman Fog of War chess AI, whose own code was never released. The engine article now says how it works, what version 1.6 fixed, and what is still wrong with it.',
+    href: '/blog/misty',
+    cta: 'How Misty plays',
+  },
+  {
     // Dated to the article's own date, a day after the platform page it links
     // back to, so the News row and the page never disagree about a post.
     date: '2026-09-04',
