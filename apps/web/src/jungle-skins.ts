@@ -80,8 +80,12 @@ export const JUNGLE_BARE_TERRAIN = {
   trap: '#e8d3ae',
   /** Ink for the vector den/trap marks. */
   mark: '#8a6534',
-  markSoft: 'rgba(138,101,52,0.75)',
 } as const;
+
+/** How far the trap mark is softened against the den's full-strength ink.
+ *  Applied as a GROUP opacity, never as a translucent stroke colour: see
+ *  lucideMarkSvg. */
+const TRAP_MARK_OPACITY = 0.75;
 
 // Lucide icons are IconNode data ([tag, attrs][]) drawn on a 24-unit box with
 // stroke-based geometry. The board renderers build SVG STRINGS (they also run in
@@ -89,14 +93,23 @@ export const JUNGLE_BARE_TERRAIN = {
 // DOM createElement the way ui-icon.ts does.
 const LUCIDE_BOX = 24;
 
+// Softening is a GROUP opacity, not a translucent stroke colour. A Lucide icon is
+// several separate stroked elements, so a translucent stroke composites once per
+// element and every overlap doubles up: Crosshair's four ticks end exactly on the
+// circle's centreline with round caps, and at rgba(...,0.75) those four contact
+// points rendered at 0.947 ink against the circle's own 0.755 (measured). Nothing
+// overlapped the circle geometrically, but four patches ~25% darker than the curve
+// they sat on read as bumps pushing out of it. A group opacity flattens the icon
+// first and composites the result once, so overlaps cost nothing.
 function lucideMarkSvg(
   icon: IconNode,
   cx: number,
   cy: number,
   size: number,
   color: string,
-  strokeWidth = 2,
+  opts: { opacity?: number; strokeWidth?: number } = {},
 ): string {
+  const { opacity, strokeWidth = 2 } = opts;
   const scale = size / LUCIDE_BOX;
   const body = icon
     .map(([tag, attrs]) => {
@@ -106,8 +119,9 @@ function lucideMarkSvg(
       return `<${tag} ${serialized}/>`;
     })
     .join('');
+  const softness = opacity === undefined ? '' : ` opacity="${opacity}"`;
   return (
-    `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${scale})" fill="none" ` +
+    `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${scale})"${softness} fill="none" ` +
     `stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">` +
     `${body}</g>`
   );
@@ -126,7 +140,9 @@ export function jungleBareTrapSvg(x: number, y: number, cell: number): string {
   const tile = `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${JUNGLE_BARE_TERRAIN.trap}"/>`;
   return (
     tile +
-    lucideMarkSvg(Crosshair, x + cell / 2, y + cell / 2, cell * 0.5, JUNGLE_BARE_TERRAIN.markSoft)
+    lucideMarkSvg(Crosshair, x + cell / 2, y + cell / 2, cell * 0.5, JUNGLE_BARE_TERRAIN.mark, {
+      opacity: TRAP_MARK_OPACITY,
+    })
   );
 }
 
