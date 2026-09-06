@@ -11,9 +11,11 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
+import { initLiveSound, playSound } from '../live-sound.js';
+import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { displayComment } from '../study-i18n.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
-import { createGamebookSession } from './gamebook-play.js';
+import { createGamebookSession, type GamebookFeedback } from './gamebook-play.js';
 import { deserializeTree, type SerializedTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 import './gamebook.css';
@@ -30,6 +32,9 @@ export interface XiangqiGamebookOptions {
 }
 
 export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOptions): void {
+  // Same reasoning as the practice player: a lesson board is played, not read.
+  initLiveSound();
+
   // A composition chapter roots the lesson at its hand-set position (an invalid
   // rootFen degrades to the standard start, same posture as a corrupt blob).
   const rootParsed = opts.tree.rootFen ? parseStandardXiangqiFen(opts.tree.rootFen) : null;
@@ -97,8 +102,18 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     seatFor: () => (session.view().awaitingMove ? opts.orientation : null),
     enabled: () => session.view().awaitingMove,
     onMove: (move) => {
+      // Captured before the attempt: a correct move advances the cursor past the
+      // opponent's reply too, so afterwards the position it was played from is
+      // already two plies behind.
+      const parent = session.node().truth;
       const result = session.attempt(move);
       if (result === 'invalid') return;
+      if (result === 'good') {
+        playSound(soundForOwnXiangqiMove(xiangqiTreeAdapter.project(parent)[0]!.view, move));
+      } else {
+        // The lesson's own "not that one", never the ranked defeat sting.
+        playSound('learn-failure');
+      }
       render(result);
     },
   });
@@ -116,11 +131,17 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     render();
   });
 
+  // Transition bookkeeping, so completing the lesson chimes once and a retry or
+  // a re-render of the finished position does not chime again.
+  let lastFeedback: GamebookFeedback | null = null;
+
   function render(justAttempted?: 'good' | 'bad'): void {
     const view = session.view();
     interactive.render(currentView(), opts.orientation);
     coach.dataset.state = view.feedback;
     hintText.textContent = '';
+    if (view.feedback === 'end' && lastFeedback !== 'end') playSound('level-end');
+    lastFeedback = view.feedback;
 
     if (view.feedback === 'bad') {
       comment.textContent = '';

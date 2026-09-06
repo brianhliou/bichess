@@ -1,6 +1,15 @@
 {
-  "_comment": "Videos deliberately kept out of the /videos catalogue. videos-mine.mjs skips these, so a sweep stops re-proposing what was already judged. Removing an id here puts it back in play.",
+  "_comment": "Videos deliberately kept out of the /videos catalogue. videos-mine.mjs skips these, so a sweep stops re-proposing what was already judged, and videos.test.ts asserts none of them is in the catalogue, so a cut cannot be silently undone. Removing an id here puts it back in play.",
   "declined": {
+    "yyCFmc83rLs": "policy 2026-07-21: headlines Wang Tianyi (王天一), lifetime-banned in the 2024 match-fixing sweep",
+    "aUPyuAv-Hhs": "policy 2026-07-21: Wang Tianyi vs Jiang Chuan. Cut in 386e9256, then re-added by the miner in 73cc8104 because this ledger did not yet record the July removals. That round trip is why the catalogue test exists",
+    "z1Ips8QglVs": "policy 2026-07-21: 2023 National Championship final, a Wang Tianyi game labelled only by event. Top-scoring English candidate on every sweep since",
+    "NhW77GsjcFM": "policy 2026-09-05: Wang Tianyi vs Zhao Guorong, proposed by the sweep",
+    "0TRXO6mjPT8": "policy 2026-09-05: 王天一vs许银川. Added 2026-08-28, a month after the policy, because the July pass swept only the English block",
+    "khNTfp_hzt4": "policy 2026-09-05: 许银川血战王天一. Held the Chinese homepage arc's ceiling slot until today",
+    "smK4wnG6ZC0": "policy 2026-09-05: Wang Tianyi playing in the park, proposed by the sweep",
+    "AGKCpniU3vE": "policy 2026-09-05: 曹岩磊VS王天一, proposed by the sweep",
+    "x3wQoQ46ow4": "policy 2026-09-05: 王天一VS谢靖, proposed by the sweep",
     "MtyZ_qUNA0g": "cut 2026-08-28: xqinenglish 2003 A League, 9th game commentary on a shelf of 8",
     "RMGw9pKNvLM": "cut 2026-08-28: xqinenglish 2001 BGN Finals, same shelf, 164 views",
     "ltn57_UWwgg": "cut 2026-08-28: xqinenglish Basic Midgame Tactics, 7th tactics entry, 75 views",

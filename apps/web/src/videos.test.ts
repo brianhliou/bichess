@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import {
@@ -5,6 +8,7 @@ import {
   buildVideoCard,
   buildVideosPage,
   filterVideos,
+  freshHomeVideos,
   mountVideos,
   orderHomeVideos,
   sortVideos,
@@ -149,6 +153,32 @@ describe('videos data', () => {
       expect(
         VIDEOS.some((video) => video.language === language && video.tags.includes('basics')),
       ).toBe(true);
+    }
+  });
+
+  // A cut has to stay cut. The declined ledger already stopped `videos:mine`
+  // re-PROPOSING what was judged, but nothing stopped a session ACCEPTING it
+  // back, and nothing put the July banned-player removals in the ledger at all
+  // — so 386e9256 removed `aUPyuAv-Hhs` and 73cc8104, the commit that built the
+  // miner, restored it. This closes that loop from the other side: the ledger is
+  // the list of ids this catalogue may not contain, whatever the reason for the
+  // cut, and it fails here rather than shipping.
+  it('contains nothing the declined ledger has ruled out', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const ledger = JSON.parse(
+      readFileSync(resolve(here, '../../../scripts/data/videos-declined.json'), 'utf8'),
+    ) as { declined: Record<string, string> };
+
+    const declined = Object.keys(ledger.declined);
+    expect(declined.length).toBeGreaterThan(0);
+    for (const id of declined) expect(id).toMatch(/^[A-Za-z0-9_-]{11}$/);
+
+    for (const video of VIDEOS) {
+      if (video.source !== 'youtube') continue;
+      expect(
+        declined,
+        `${video.id} (${video.title}) is in the declined ledger: ${ledger.declined[video.id]}`,
+      ).not.toContain(video.id);
     }
   });
 });
@@ -524,6 +554,84 @@ describe('buildHomeVideoCards', () => {
       const id = new URL(href).searchParams.get('v');
       expect(known.has(`yt:${id}`)).toBe(true);
     }
+  });
+
+  // The whole point of the fresh slots: the homepage used to be decoupled from
+  // the catalogue, so `videos:mine` could add twenty entries and this row stayed
+  // byte-identical. These assertions are what make that wire load-bearing --
+  // delete the top-up and they go red, which is the only way a later session
+  // learns the row is supposed to move.
+  describe('fresh slots', () => {
+    const idsOf = (row: HTMLElement) =>
+      [...row.querySelectorAll<HTMLAnchorElement>('.landing-video-card')].map(
+        (card) => new URL(card.href).searchParams.get('v') ?? '',
+      );
+
+    it('tops the arc up with catalogue entries at the default limit', () => {
+      for (const locale of ['en', 'zh-Hans'] as const) {
+        const ids = idsOf(buildHomeVideoCards(undefined, locale)!);
+        // Arc is 8; the row is longer, so the extra slots came from elsewhere.
+        expect(ids.length, `${locale} row did not grow past the arc`).toBeGreaterThan(8);
+        expect(new Set(ids).size, `${locale} row repeats a video`).toBe(ids.length);
+      }
+    });
+
+    it('never displaces a curated arc entry to make room', () => {
+      const curated = new Set(idsOf(buildHomeVideoCards(8, 'en')!));
+      const full = new Set(idsOf(buildHomeVideoCards(undefined, 'en')!));
+      for (const id of curated) expect(full.has(id), `arc entry ${id} was dropped`).toBe(true);
+    });
+
+    it('trims freshness before the arc when the limit is tight', () => {
+      // Eight is exactly the arc, so there is no room left to top up.
+      expect(idsOf(buildHomeVideoCards(8, 'en')!).length).toBe(8);
+      expect(idsOf(buildHomeVideoCards(3, 'en')!).length).toBe(3);
+    });
+
+    it('draws fresh entries in the language the row actually rendered', () => {
+      const byId = new Map(
+        VIDEOS.flatMap((video) => (video.source === 'youtube' ? [[video.id, video] as const] : [])),
+      );
+      for (const [locale, language] of [
+        ['en', 'en'],
+        ['zh-Hans', 'zh'],
+        ['zh-Hant', 'zh'],
+      ] as const) {
+        for (const id of idsOf(buildHomeVideoCards(undefined, locale)!)) {
+          const entry = byId.get(id);
+          // Ours are pinned by orderHomeVideos and live outside VIDEOS.
+          if (entry) expect(entry.language, `${locale} row shows ${id}`).toBe(language);
+        }
+      }
+    });
+
+    it('picks the newest additions, tie-broken by catalogue rank', () => {
+      const exclude = new Set<string>();
+      const picks = freshHomeVideos('en', exclude, 3);
+      expect(picks.length).toBe(3);
+
+      const newest = [...VIDEOS]
+        .filter((video) => video.language === 'en')
+        .map((video) => video.addedAt)
+        .sort()
+        .at(-1);
+      expect(picks[0]?.addedAt).toBe(newest);
+
+      // Within one date the catalogue order IS the ranking (videos-data.ts is
+      // written best-first), so a batch that lands fifteen entries on one day
+      // must promote its best, not whichever was typed last.
+      const sameDay = picks.filter((video) => video.addedAt === newest);
+      const ranks = sameDay.map((video) => VIDEOS.indexOf(video));
+      expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    });
+
+    it('honours the exclusion set so the arc is never shown twice', () => {
+      const first = freshHomeVideos('en', new Set(), 1)[0];
+      expect(first).toBeDefined();
+      const next = freshHomeVideos('en', new Set([videoKey(first!)]), 1)[0];
+      expect(next).toBeDefined();
+      expect(videoKey(next!)).not.toBe(videoKey(first!));
+    });
   });
 });
 

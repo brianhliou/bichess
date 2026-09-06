@@ -25,6 +25,8 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
+import { initLiveSound, playSound } from '../live-sound.js';
+import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { renderXiangqiPiece } from '../xiangqi-pieces.js';
 import {
@@ -95,12 +97,29 @@ export function mountXiangqiPractice(
   root: HTMLElement,
   opts: XiangqiPracticeOptions,
 ): XiangqiPracticeHandle {
+  // The review tree is silent everywhere else, and for an analysis board that is
+  // right. A practice board is not one: the learner is PLAYING here, against an
+  // opponent that answers, so it gets the same voice a live board has. Idempotent,
+  // and a no-op in a test (no AudioContext, no sound).
+  initLiveSound();
+
   const session = createPracticeSession(
     xiangqiPracticeConfig({
       goal: opts.goal,
       learner: opts.orientation,
       initialTruth: opts.initialTruth,
       evaluate: opts.evaluate,
+      onMovePlayed: (move, parentTruth, by) => {
+        // The full standard-xiangqi voice, including the cannon boom, from the
+        // classifier the live rooms use: a drill that clicks where a game booms
+        // teaches the wrong ear for the piece.
+        playSound(soundForOwnXiangqiMove(xiangqiTreeAdapter.project(parentTruth)[0]!.view, move));
+        // Paint the learner's own move NOW rather than when the engine has
+        // finished answering. Without this the board holds the old position for
+        // the whole search and then jumps two plies at once, so the sound they
+        // just heard describes a position they cannot see yet.
+        if (by === 'learner') render();
+      },
     }),
   );
 
@@ -341,12 +360,21 @@ export function mountXiangqiPractice(
     // runs on retry and restart and would otherwise re-report.
     if (view.phase === 'success' && !reportedSolved) {
       reportedSolved = true;
+      playSound('level-end');
       opts.onSolved?.(view.movesPlayed);
     }
     // On the TRANSITION into failed, so a re-render of the same failed state
     // (asking for a hint, say) does not count as a second failure.
     if (view.phase === 'failed' && lastPhase !== 'failed' && view.verdict) {
+      playSound('learn-failure');
       opts.onFailed?.(view.verdict, view.movesPlayed);
+    }
+    // Losing the exercise outright gets the same soft note as failing a move,
+    // NOT the ranked defeat sting. A learning surface needs its own reward and
+    // failure voice: the game's win/lose stings make a drill failure feel
+    // punitive and a drill solve feel generic (learn course, 2026-07-15).
+    if (view.phase === 'defeat' && lastPhase !== 'defeat') {
+      playSound('learn-failure');
     }
     lastPhase = view.phase;
 

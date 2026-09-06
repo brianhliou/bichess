@@ -96,6 +96,18 @@ export interface PracticeConfig<M, T> {
    * confidently wrong verdict rather than an uncertain one.
    */
   evaluate(truth: T): Promise<PracticeEval>;
+  /**
+   * Notified as each ply lands, with the position it was played FROM, BEFORE
+   * the evaluation of the new position is awaited.
+   *
+   * The runner deliberately keeps no sound or view dependency, and a view layer
+   * driving it sees only the settled position: one repaint carrying the
+   * learner's move and the engine's reply together, a second or more after the
+   * piece was dropped. That is too coarse to sound or to paint. This is the
+   * seam for both, and it is optional so the state machine stays testable
+   * against a fake engine with nothing attached.
+   */
+  onMovePlayed?(move: M, parentTruth: T, by: 'learner' | 'defender'): void;
 }
 
 export interface PracticeSession<M, T> {
@@ -202,12 +214,14 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       phase = 'defeat';
       return true;
     }
+    const parent = frame.truth;
     frame = {
-      truth: config.applyMove(frame.truth, reply),
+      truth: config.applyMove(parent, reply),
       evaluation: null,
       movesPlayed: frame.movesPlayed,
-      moves: [...frame.moves, config.moveLabel(reply, frame.truth)],
+      moves: [...frame.moves, config.moveLabel(reply, parent)],
     };
+    config.onMovePlayed?.(reply, parent, 'defender');
     await evaluateInto(frame);
     return false;
   }
@@ -240,6 +254,9 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       movesPlayed: before.movesPlayed + 1,
       moves: [...before.moves, config.moveLabel(move, before.truth)],
     };
+    // Announced before the search, not after it: this is the moment the learner
+    // let go of the piece.
+    config.onMovePlayed?.(move, before.truth, 'learner');
     await evaluateInto(frame);
 
     const winAfter =

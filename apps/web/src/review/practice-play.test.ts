@@ -30,10 +30,14 @@ interface FakeGame {
   legal?: Record<string, string[]>;
 }
 
+/** One ply as the runner announced it, for the sound/repaint hook's tests. */
+type Ply = { move: string; parent: string; by: 'learner' | 'defender' };
+
 function harness(
   game: FakeGame,
   goal: PracticeGoal,
   start: Truth = { moves: [], turn: 'learner' },
+  onMovePlayed?: (move: string, parentTruth: Truth, by: 'learner' | 'defender') => void,
 ) {
   let evaluations = 0;
   const terminationAt = (truth: Truth): PracticeTermination =>
@@ -66,6 +70,7 @@ function harness(
       expectOk(found, `test did not script an evaluation for position "${key(truth)}"`);
       return found;
     },
+    onMovePlayed,
   });
   return { session, evaluations: () => evaluations };
 }
@@ -402,3 +407,49 @@ test('a draw goal is failed by drifting out of the level band', async () => {
 function practiceFails(verdict: string): boolean {
   return verdict === 'mistake' || verdict === 'blunder';
 }
+
+test('every ply is announced once, with the position it was played from', async () => {
+  const plies: Ply[] = [];
+  const { session } = harness(
+    {
+      // Side-to-move POV, as a real engine reports: +700 when the learner is on
+      // the move, -700 when the defender is (both mean "the learner is winning").
+      evals: {
+        '': ev(700, 'd'),
+        a: ev(-700, 'd'),
+        'a d': ev(700, 'x'),
+      },
+    },
+    { kind: 'mate' },
+    { moves: [], turn: 'learner' },
+    (move, parentTruth, by) => plies.push({ move, parent: key(parentTruth), by }),
+  );
+  await session.start();
+  await session.attempt('a');
+
+  // The learner's move and the engine's reply are each announced exactly once,
+  // in play order. The view layer sounds and repaints off this, so a missing or
+  // doubled call is a missing or doubled click.
+  expectBe(plies.length, 2, 'one announcement per ply, learner then defender');
+  expectBe(plies[0]?.by, 'learner');
+  expectBe(plies[1]?.by, 'defender');
+
+  // And each carries the position the move was played FROM, not the one it
+  // produced. A sound classifier reads the captured piece off that square, so
+  // handing it the successor position silently mutes every capture.
+  expectBe(plies[0]?.parent, '', "the learner's move was played from the start");
+  expectBe(plies[1]?.parent, 'a', "the reply was played from after the learner's move");
+});
+
+test('a run driven with no ply observer behaves identically', async () => {
+  // The hook is optional on purpose: the state machine stays drivable by a test
+  // (or any caller) with nothing attached.
+  const { session } = harness(
+    { evals: { '': ev(700, 'd'), a: ev(-700, 'd'), 'a d': ev(700, 'x') } },
+    { kind: 'mate' },
+  );
+  await session.start();
+  await session.attempt('a');
+  expectBe(session.view().phase, 'play');
+  expectBe(session.view().moves.length, 2);
+});

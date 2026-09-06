@@ -39,6 +39,20 @@
 // The catalogue is swept for new entries by `npm run videos:mine`, which ranks
 // candidates on the same measure so a proposal is comparable to the entries it
 // would sit between, and skips anything in scripts/data/videos-declined.json.
+//
+// THIS SHELF IS AN ENDORSEMENT SURFACE, so it does not headline a player banned
+// for match-fixing — currently Wang Tianyi (王天一), lifetime-banned in the 2024
+// sweep. The historical games DB is a RECORD surface and is deliberately left
+// untouched; scrubbing records is a different and worse precedent.
+//
+// Enforcing that by reading titles is not enough and never was. The 2026-07-21
+// pass (386e9256) removed three English entries by name, and by 2026-09-05 three
+// more were live: one the miner re-proposed and a session accepted back the same
+// day the miner was written (73cc8104), and two in the Chinese block, which that
+// pass never swept because the ban is not legible in a 中文 title to whoever is
+// doing the reading. The ledger is the durable half of the fix: a declined id is
+// skipped by the sweep AND asserted absent from this array by videos.test.ts, so
+// a deliberate cut cannot quietly come back. Add to the ledger, not just here.
 
 export type VideoTag =
   | 'basics'
@@ -235,6 +249,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'Sy4xpZVFn5c',
+    title: 'Chinese Chess (xiangqi) Lesson #1',
+    author: 'Michael G',
+    durationMinutes: 3,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'HOGPpwMyjoU',
     title: 'Xiangqi opening: How to utilize the Cannons?',
     author: 'Xiangqi Chinese Chess',
@@ -392,18 +418,6 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
-    id: 'aUPyuAv-Hhs',
-    title: 'WANG TIAN YI vs JIANG CHUAN - Xiangqi Match - Learning Chinese Chess',
-    author: 'Learning Chinese Chess',
-    durationMinutes: 7,
-    tags: ['games'],
-    level: 'advanced',
-    variant: 'xiangqi',
-    language: 'en',
-    addedAt: '2026-08-28',
-  },
-  {
-    source: 'youtube',
     id: 'BdICTRAn-z8',
     title: 'My Favourite Way of Studying Xiangqi | Chinese Chess Tutorial',
     author: 'Xiangqi Chinese Chess',
@@ -417,7 +431,7 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   {
     source: 'youtube',
     id: 't9qar8u6KIQ',
-    title: 'Chinese Chess Killing Methods for Absolute Beginners — Xiangqi Step-by-Step in English',
+    title: 'Every Basic Kill in Xiangqi Explained',
     author: 'Chinese Chess Out Loud',
     durationMinutes: 234,
     tags: ['endgames', 'tactics'],
@@ -502,6 +516,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'H-0jLSIMLvM',
+    title: 'Xiangqi Chinese Chess Analysis - Breaking slowly into the position',
+    author: 'XiChess',
+    durationMinutes: 9,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'y-zY-16mlpM',
     title: 'Hu Rong Hua Best Xiangqi Match #2 - Learning Chinese Chess',
     author: 'Learning Chinese Chess',
@@ -563,6 +589,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'W0gSVWceSuc',
+    title: 'New Frontiers - Ancient Chinese games - Go and Chinese Chess 1/3',
+    author: 'semedori',
+    durationMinutes: 9,
+    tags: ['culture'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'VpnbZU1z3Lg',
     title: 'Xiangqi Openings: Central Cannon',
     author: 'Xiangqi Chinese Chess',
@@ -585,6 +623,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
     variant: 'xiangqi',
     language: 'en',
     addedAt: '2026-07-10',
+  },
+  {
+    source: 'youtube',
+    id: 'MZkYM-QQDlw',
+    title: 'This Xiangqi Endgame Looks Like a Draw. It’s Not (Chinese Chess)',
+    author: 'Hao to Xiangqi',
+    durationMinutes: 6,
+    tags: ['endgames'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-09-05',
   },
   {
     source: 'youtube',
@@ -703,15 +753,15 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
-    id: '0TRXO6mjPT8',
-    title: '王天一vs许银川 两代中国象棋一个人的交锋 攻守转换步步惊心',
-    author: '四郎讲棋',
-    durationMinutes: 15,
-    tags: ['games'],
-    level: 'advanced',
+    id: '1TFC43cAkrg',
+    title: '【象棋教學】中國象棋的必殺技：象棋殺棋方法｜Beginneros',
+    author: '網上學習平台Beginneros',
+    durationMinutes: 11,
+    tags: ['tactics'],
+    level: 'intermediate',
     variant: 'xiangqi',
     language: 'zh',
-    addedAt: '2026-08-28',
+    addedAt: '2026-09-05',
   },
   {
     source: 'youtube',
@@ -766,6 +816,19 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'PReloKy7DqI',
+    title:
+      '象棋玩法|從零開始|快來跟著老師認識帥與車的走法吃法！孩子的象棋入門課第02堂（趙奕帆象棋教學）',
+    author: '趙奕帆象棋教學',
+    durationMinutes: 32,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'u0-YMk1ndqI',
     title: '胡榮華：象棋開局要領一',
     author: '雲淡風輕',
@@ -775,6 +838,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
     variant: 'xiangqi',
     language: 'zh',
     addedAt: '2026-08-15',
+  },
+  {
+    source: 'youtube',
+    id: '42a3KZcXISs',
+    title: '花钱难买的象棋高级教程，全是棋理，看完棋艺提升两个档次',
+    author: '吾爱象棋',
+    durationMinutes: 18,
+    tags: ['strategy'],
+    level: 'advanced',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
   },
   {
     source: 'youtube',
@@ -814,15 +889,15 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
-    id: 'khNTfp_hzt4',
-    title: '许银川血战王天一最精彩对决 罕见弃车火爆对攻 登峰造极致命一击',
-    author: '京京讲棋',
-    durationMinutes: 14,
-    tags: ['games', 'tactics'],
+    id: 'ZHta2o0NOTw',
+    title: '千古名局弃双车 象棋大师郭中基的代表作 太震撼了',
+    author: '四郎讲棋',
+    durationMinutes: 11,
+    tags: ['games'],
     level: 'advanced',
     variant: 'xiangqi',
     language: 'zh',
-    addedAt: '2026-08-15',
+    addedAt: '2026-09-05',
   },
   {
     source: 'youtube',
@@ -851,6 +926,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'hfKeNdcugRo',
+    title: '【象棋教学合集】古代象棋高手，教你提高计算能力，打破常规思维走一步看三步棋',
+    author: '象棋王小叨',
+    durationMinutes: 62,
+    tags: ['strategy'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'Cc4Kl4e8-7I',
     title: '老梁看象：象棋的起源和江湖残局',
     author: '老梁',
@@ -860,6 +947,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
     variant: 'xiangqi',
     language: 'zh',
     addedAt: '2026-08-15',
+  },
+  {
+    source: 'youtube',
+    id: 'jGUT7ohrYIM',
+    title: '史上子力最少的江湖残局《力敌万众》就一个車 诱惑力却惊人',
+    author: '从宽象棋',
+    durationMinutes: 4,
+    tags: ['endgames', 'culture'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
   },
   {
     source: 'youtube',
@@ -875,6 +974,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   },
   {
     source: 'youtube',
+    id: 'C5E0pATutso',
+    title: '车炮绝妙配合，主宰残局风云，下象棋尽显这般洒脱风范',
+    author: '象棋酒馆',
+    durationMinutes: 6,
+    tags: ['endgames'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
+  },
+  {
+    source: 'youtube',
     id: 'UMmwd_bfmfg',
     title: '3、中国象棋入门快易精（3）实用残局基本杀法',
     author: '雲淡風輕',
@@ -884,6 +995,18 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
     variant: 'xiangqi',
     language: 'zh',
     addedAt: '2026-08-15',
+  },
+  {
+    source: 'youtube',
+    id: 'rxpizWyvYBQ',
+    title: '精妙残局的佼佼者 旷世疑难杂症 讲解都19分钟 #象棋 #象棋残局',
+    author: '悟空象棋',
+    durationMinutes: 20,
+    tags: ['endgames'],
+    level: 'advanced',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-09-05',
   },
 ];
 
