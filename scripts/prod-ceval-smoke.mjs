@@ -85,7 +85,75 @@ async function checkFsf(browser) {
     slug: 'fortress-xiangqi',
     boardSelector: '.fortress-xiangqi-live-board svg',
   });
-  return { surfaces: { xiangqi, fortressXiangqi } };
+  const nnue = await checkXiangqiNnueLoaded(browser);
+  return { surfaces: { xiangqi, fortressXiangqi }, nnue };
+}
+
+/**
+ * Assert the browser xiangqi engine is actually running on its NNUE net.
+ *
+ * This is a RELEASE GATE, not a nicety. `loadXiangqiNet` in ceval.ts falls back
+ * to the classical evaluation when the net cannot be fetched, deliberately, so
+ * that a CDN miss degrades the analysis instead of taking the engine panel down.
+ * The cost of that choice is that a 404 on the 11MB asset is invisible: the
+ * board keeps answering, just with the evaluation that could not tell a won
+ * basic endgame from a drawn one in 15 of 32 corpus positions (#363).
+ *
+ * So this asserts on BEHAVIOUR rather than on the asset alone. The 200 check
+ * names the cause when it breaks; the evaluation check is what actually proves
+ * the engine is using it, because a fetched-but-unloaded net would still pass a
+ * network assertion.
+ */
+async function checkXiangqiNnueLoaded(browser) {
+  // A dead-drawn basic endgame: a red soldier stranded on the last rank, where
+  // it can only shuffle sideways, plus an elephant that cannot mate either.
+  // Declared here rather than at module scope because the checks run as
+  // top-level await ABOVE this point, and a module-level const is still in its
+  // temporal dead zone when they do.
+  const probeFen = '5P3/9/3k5/9/9/2B6/9/9/9/4K4 w - - 17 17';
+  // Classical FSF reads this +0.7 ("Red is better"); with the net it reads 0.0.
+  const maxAbsEval = 0.3;
+  const assetUrl = `${baseUrl}/engine/fairy-stockfish/${xiangqiNnueNet()}?v=${encodeURIComponent(fsfAssetVersion())}`;
+  const asset = await fetch(assetUrl, { method: 'HEAD' });
+  if (!asset.ok) {
+    throw new Error(
+      `${assetUrl} returned HTTP ${asset.status}: the xiangqi NNUE net is not being served, so ` +
+        'every xiangqi board silently falls back to the classical evaluation (#363).',
+    );
+  }
+
+  const url = `${baseUrl}/analysis/xiangqi?fen=${encodeURIComponent(probeFen)}`;
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  try {
+    const errors = collectErrors(page);
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    if (!response?.ok())
+      throw new Error(`${url} returned HTTP ${response?.status() ?? 'no response'}`);
+    await page
+      .locator('.xiangqi-live-board svg')
+      .first()
+      .waitFor({ state: 'attached', timeout: timeoutMs });
+    await toggleEngineOn(page);
+    await waitForEvalAndLines(page);
+    const panel = await readPanel(page);
+    const score = Number.parseFloat(String(panel.eval ?? '').replace(/[^\d.+-]/g, ''));
+    if (!Number.isFinite(score)) {
+      throw new Error(
+        `could not read an evaluation from the panel (got ${JSON.stringify(panel.eval)})`,
+      );
+    }
+    if (Math.abs(score) > maxAbsEval) {
+      throw new Error(
+        `xiangqi analysis reads ${panel.eval} on a dead-drawn endgame; with the NNUE net it reads about 0.0, ` +
+          'so the engine is running its classical evaluation. The net was served but did not load: ' +
+          'check the FS.writeFile / EvalFile path in loadXiangqiNet (apps/web/src/review/engine/ceval.ts).',
+      );
+    }
+    assertNoFatalErrors(errors);
+    return { url, eval: panel.eval, netUrl: assetUrl };
+  } finally {
+    await page.close();
+  }
 }
 
 async function checkFsfAnalysisSurface(browser, { slug, query = '', boardSelector }) {
@@ -325,6 +393,25 @@ async function checkPika(browser) {
 // false signal this smoke exists to prevent: worker script must be JS with a
 // COEP the isolated review document accepts; the wasm must serve as
 // application/wasm.
+// The vendored net's filename and the engine asset generation both live in
+// ceval.ts; read them from source so a rename or a cache-bust cannot leave this
+// gate probing a URL that no longer exists and passing on the 404 check alone.
+function fsfSource() {
+  return readFileSync(new URL('../apps/web/src/review/engine/ceval.ts', import.meta.url), 'utf8');
+}
+
+function fsfAssetVersion() {
+  const match = fsfSource().match(/ENGINE_ASSET_VERSION = '([^']+)'/);
+  if (!match) throw new Error('ENGINE_ASSET_VERSION not found in ceval.ts');
+  return match[1];
+}
+
+function xiangqiNnueNet() {
+  const match = fsfSource().match(/XIANGQI_NNUE_NET = '([^']+)'/);
+  if (!match) throw new Error('XIANGQI_NNUE_NET not found in ceval.ts');
+  return match[1];
+}
+
 function mistyAssetVersion() {
   const source = readFileSync(
     new URL('../apps/web/src/review/engine/misty-ceval.ts', import.meta.url),

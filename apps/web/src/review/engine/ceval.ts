@@ -215,10 +215,17 @@ function loadXiangqiNet(core: EngineCore): Promise<boolean> {
         core.writeFile(XIANGQI_NNUE_NET, new Uint8Array(bytes));
         core.send(`setoption name EvalFile value ${XIANGQI_NNUE_NET}`);
         return true;
-      } catch {
+      } catch (err) {
         // Fall back to the classical evaluation rather than failing the board.
         // The analysis is weaker, not broken, and a null result here would take
         // the whole engine panel down with it.
+        //
+        // Say so out loud. A silent fallback is how the classical evaluation was
+        // shipping in the first place, and it is invisible from the outside: the
+        // board keeps answering, just with the evaluation that could not read an
+        // endgame. `prod:smoke:ceval` gates on the resulting numbers, and this
+        // line is what tells a human WHY when it fires.
+        console.error('ceval: xiangqi NNUE net failed to load, falling back to classical', err);
         return false;
       }
     })();
