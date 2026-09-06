@@ -218,6 +218,35 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-board-card-live .xqb-badge-live')).not.toBeNull();
   });
 
+  // The round grid draws every board at once, and .xq-piece in live-xiangqi.css
+  // carries a drop-shadow. A filter is an offscreen surface plus a blur re-run
+  // per raster tile, so twenty boards was 396 live filters and dropped 382 of
+  // 722 frames while scrolling (2026-09-06, 1280x800; 3 of 724 with them off).
+  // xiangqi-broadcast.css turns them off, scoped to .xqb-card-board.
+  //
+  // That scoping is the fragile part, so assert it rather than the rule text:
+  // the override only reaches a piece that is INSIDE a card board. A future
+  // card that renders a board anywhere else silently gets the filters back, and
+  // nothing else in the suite would notice.
+  it('keeps every grid piece inside .xqb-card-board, where the filter override reaches', async () => {
+    stubFetchJson(() => ROUND);
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const pieces = root.querySelectorAll('.xq-piece');
+    expect(pieces.length).toBeGreaterThan(0);
+    for (const piece of pieces) {
+      expect(piece.closest('.xqb-card-board')).not.toBeNull();
+    }
+
+    const rings = root.querySelectorAll('.xq-live-lastmove-ring');
+    for (const ring of rings) {
+      expect(ring.closest('.xqb-card-board')).not.toBeNull();
+    }
+  });
+
   it('repaints mini-board cards when the board layout changes', async () => {
     stubFetchJson(() => ROUND);
     stubEventSource();

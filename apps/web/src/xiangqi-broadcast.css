@@ -236,6 +236,25 @@
   border-radius: 10px;
 }
 
+/* Drop the per-piece drop-shadow inside the round grid. A filter gets its own
+   offscreen surface and a Gaussian blur, re-run per raster tile, and this page
+   draws twenty boards at once: 376 pieces plus 20 last-move rings is 396 live
+   filters. Measured 2026-09-06 on /broadcast/xiangqi/.../round/...-r02 at
+   1280x800, five seconds of scroll: 382 of 722 frames dropped and 1,456 ms of
+   GPU, against 3 of 724 and 544 ms with these two rules. A 4K window is worse
+   still, because auto-fill puts every board in the raster region at once.
+   The cost is on the compositor, so a requestAnimationFrame histogram reads
+   clean and main-thread paint reads LOWER while it janks. Do not go looking for
+   it with blocking-time metrics.
+   Scoped to the card grid: full-size boards keep their shadow. At a ~34px
+   thumbnail the blur is about a pixel, and the piece disc and stroke carry the
+   silhouette without it. Two classes to out-specify .xq-piece in live-xiangqi.css,
+   for the same chunk-order reason as the rules below. */
+.xqb-card-board .xq-piece,
+.xqb-card-board .xq-live-lastmove-ring {
+  filter: none;
+}
+
 /* These cards render with coordinates suppressed whatever the reader's
    preference says, so they must not inherit .xiangqi-live-board's
    coordinates-on ratio: the host clips, and a ratio wider than the board
