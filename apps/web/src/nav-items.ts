@@ -1,4 +1,3 @@
-import { practiceEnabled } from './feature-flags.js';
 import type { I18nKey } from './i18n/catalog.js';
 import { STREAMERS } from './streamers-data.js';
 
@@ -106,10 +105,7 @@ export function learnNavItems(): NavItem[] {
     { label: 'Xiangqi Basics', labelKey: 'nav.learnXiangqi', href: '/learn/xiangqi' },
     // Between the course and studies, which is where it sits pedagogically: the
     // course teaches the moves, practice drills positions, a study is reading.
-    // Parked in prod behind practiceEnabled (#363).
-    ...(practiceEnabled()
-      ? [{ label: 'Practice', labelKey: 'nav.practice' as const, href: '/practice' }]
-      : []),
+    { label: 'Practice', labelKey: 'nav.practice', href: '/practice' },
     { label: 'Study', labelKey: 'nav.studies', href: '/study' },
     { label: 'Coaches', labelKey: 'nav.coaches', href: '/coach' },
   ];

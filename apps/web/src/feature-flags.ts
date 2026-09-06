@@ -145,15 +145,3 @@ export function learnEnabled(): boolean {
 export function coordinateTrainerEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_COORDINATE_TRAINER_ENABLED === 'true';
 }
-
-// The engine-adjudicated practice surface (/practice, plus practice mode on a
-// study chapter). PARKED IN PROD as of 2026-09-05: the grader asks the browser
-// ceval how winning a position is and fails a move that drops it, but the
-// Fairy-Stockfish xiangqi build behind that handle has no endgame knowledge and
-// cannot tell a won basic endgame from a drawn one, so it graded a 32-ply slide
-// into a dead draw as sixteen good moves. Read #363 before unparking; the fix is
-// exact tablebase data for this card set, not a threshold tweak. On in dev so
-// the code stays reachable and cannot rot silently.
-export function practiceEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_PRACTICE_ENABLED === 'true';
-}

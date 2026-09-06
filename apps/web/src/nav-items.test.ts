@@ -48,49 +48,6 @@ describe('watch nav', () => {
   });
 });
 
-// The dev/test environment has practiceEnabled() true (import.meta.env.DEV), so
-// the shipped nav in every other test carries Practice. This is the only place
-// the PARKED shape is exercised, and without it the prod nav is untested: the
-// suite would stay green with the entry still linking a route that 404s.
-describe('learn nav', () => {
-  it('drops Practice while the surface is parked (#363)', async () => {
-    vi.resetModules();
-    vi.doMock('./feature-flags.js', async () => ({
-      ...(await vi.importActual<typeof import('./feature-flags.js')>('./feature-flags.js')),
-      practiceEnabled: () => false,
-    }));
-    const { learnNavItems } = await import('./nav-items.js');
-
-    expect(learnNavItems().map((item) => item.label)).toEqual([
-      'Rules',
-      'Xiangqi Basics',
-      'Study',
-      'Coaches',
-    ]);
-    vi.doUnmock('./feature-flags.js');
-  });
-
-  it('restores Practice between the course and studies once unparked', async () => {
-    vi.resetModules();
-    vi.doMock('./feature-flags.js', async () => ({
-      ...(await vi.importActual<typeof import('./feature-flags.js')>('./feature-flags.js')),
-      practiceEnabled: () => true,
-    }));
-    const { learnNavItems } = await import('./nav-items.js');
-
-    const items = learnNavItems();
-    expect(items.map((item) => item.label)).toEqual([
-      'Rules',
-      'Xiangqi Basics',
-      'Practice',
-      'Study',
-      'Coaches',
-    ]);
-    expect(items.find((item) => item.label === 'Practice')?.href).toBe('/practice');
-    vi.doUnmock('./feature-flags.js');
-  });
-});
-
 describe('tools nav', () => {
   it('lists the analysis board first and the board editor beside it', async () => {
     const { toolsNavItems } = await import('./nav-items.js');

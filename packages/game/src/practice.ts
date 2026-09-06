@@ -174,6 +174,66 @@ export function practiceJudgment(winBefore: number, winAfter: number): PracticeV
   return 'good';
 }
 
+/**
+ * The RESULT CLASS of an evaluation, from the learner's point of view. This is
+ * the coarse read the corpus verification uses (decisive at 300, level under
+ * 100), and with the NNUE net it separates the basic endgames cleanly: measured
+ * over all 32 corpus positions the won ones read 328-1055cp and the drawn ones
+ * 0-13cp, so the band between is genuinely "unclear" rather than a coin flip.
+ */
+export type PracticeClass = 'winning' | 'unclear' | 'level' | 'losing';
+
+/** Centipawns at which the learner's position reads as decisively won or lost. */
+export const PRACTICE_DECISIVE_CP = 300;
+/** Centipawns inside which the position reads as level. */
+export const PRACTICE_LEVEL_CP = 100;
+
+export function practiceClass(cp: number | null, mate: number | null): PracticeClass {
+  if (mate !== null) return mate > 0 ? 'winning' : 'losing';
+  if (cp === null) return 'unclear';
+  if (cp >= PRACTICE_DECISIVE_CP) return 'winning';
+  if (cp <= -PRACTICE_DECISIVE_CP) return 'losing';
+  if (Math.abs(cp) < PRACTICE_LEVEL_CP) return 'level';
+  return 'unclear';
+}
+
+/** The class a goal requires the learner to keep. */
+export function practiceGoalClass(goal: PracticeGoal): PracticeClass {
+  return goal.kind === 'draw' ? 'level' : 'winning';
+}
+
+/**
+ * Whether the learner's move gave up the exercise, judged on RESULT CLASS
+ * rather than on the size of the win% drop.
+ *
+ * The drop thresholds alone are wrong here in both directions, and both were
+ * observed on one line (#363):
+ *
+ *   FALSE POSITIVE. `winPercent` maps any forced mate to 100, so stepping out
+ *     of mate-in-10 into a still-completely-won +456cp reads as a 15.7 point
+ *     collapse and fails the learner for playing a slower winning move.
+ *   FALSE NEGATIVE. A won position can bleed to level across many moves without
+ *     any single move crossing 3 points, which is exactly how a reported attempt
+ *     ran 32 plies from mate-in-9 into a dead draw graded "good" throughout.
+ *
+ * Class answers both: leaving the goal's class fails immediately however small
+ * the step, and moving around inside it never fails however large the number
+ * moves. The drop verdict stays as the LABEL the learner is shown, because
+ * "inaccuracy" is still useful feedback on a move that kept the win.
+ */
+export function practiceMoveAbandonsGoal(
+  goal: PracticeGoal,
+  before: { cp: number | null; mate: number | null },
+  after: { cp: number | null; mate: number | null },
+): boolean {
+  const required = practiceGoalClass(goal);
+  // An exercise that did not start in its own goal class (an unclear book win,
+  // a position the engine has not resolved yet) has no class to leave, so fall
+  // back to letting the goal adjudicator decide rather than failing on contact.
+  if (practiceClass(before.cp, before.mate) !== required) return false;
+  return practiceClass(after.cp, after.mate) !== required;
+}
+
 /** Convenience: grade straight from evaluations rather than win percentages. */
 export function practiceJudgmentFromEval(
   before: { cp: number | null; mate: number | null },

@@ -500,12 +500,12 @@ export async function jieqiLiveEngineMove(
   engineId: string,
   fen: string,
   opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean } = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Jieqi engine: ${engineId}`);
   const release = await enginePool.acquire();
   try {
-    return await jieqiEngineMove(fen, {
+    return await jieqiEngineSearch(fen, {
       depth: tier.depth,
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
       moves: opts.moves,
@@ -556,23 +556,33 @@ function jieqiLiveSessionSpec() {
   };
 }
 
-export function jieqiEngineMove(
+export async function jieqiEngineMove(
   fen: string,
   opts: JieqiEngineOptions = {},
 ): Promise<string | null> {
+  return (await jieqiEngineSearch(fen, opts)).best;
+}
+
+/**
+ * The same move request, but returning the whole search summary rather than just
+ * the move. Live play takes this one so the per-move decision artifact can record
+ * the depth the search actually reached next to the tier's depth cap and the
+ * movetime the server allotted; PikaJieQi has no Skill Level knob, so depth
+ * reached against depth configured IS the strength question for this engine.
+ */
+export function jieqiEngineSearch(fen: string, opts: JieqiEngineOptions = {}): Promise<UciEval> {
   const movetimeMs = opts.movetimeMs ?? 500;
   const position = buildJieqiPositionCommand(fen, opts.moves);
-  return warmSessions.withSession(jieqiLiveSessionSpec(), async (session) => {
-    const evaluated = await session.evalPosition({
+  return warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
+    session.evalPosition({
       // `ucinewgame` on a game's first move clears the previous game's hash: a memset of
       // pages already resident, ~50 ms, no allocation.
       positionCommand: opts.newGame ? `ucinewgame\n${position}` : position,
       goCommand: buildJieqiGoCommand(opts),
       timeoutMs: movetimeMs + 4000,
       timeoutMessage: 'pikafish-jieqi move timed out',
-    });
-    return evaluated.best;
-  });
+    }),
+  );
 }
 
 /**

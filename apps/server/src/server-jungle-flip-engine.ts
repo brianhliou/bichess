@@ -45,6 +45,11 @@ import {
 } from './jungle-flip-fen.js';
 import type { JungleFlipSpecId } from './jungle-flip-runtime.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
@@ -137,9 +142,25 @@ function repSeedFensForRoom(room: JungleFlipEngineRoom): string[] {
   }
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the engine actually did. Tests inject a stub.
+ */
+export type JungleFlipEngineMoveProvider = (
+  engineId: string,
+  fen: string,
+  opts: {
+    nodes?: number;
+    movetimeCapMs?: number;
+    repSeedFens?: readonly string[];
+    tieSeed?: string;
+  },
+) => Promise<UciEval>;
+
 export async function playJungleFlipEngineMoveIfReady(
   ctx: JungleFlipEngineContext,
   room: JungleFlipEngineRoom,
+  moveProvider: JungleFlipEngineMoveProvider = jungleFlipLiveEngineMove,
 ): Promise<void> {
   const seat = jungleFlipEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
@@ -173,21 +194,26 @@ export async function playJungleFlipEngineMoveIfReady(
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries, validate
   // every output against the kernel, FAIL CLOSED (resign + page) rather than silently
   // substituting a threat-blind legal move.
+  const startedAt = Date.now();
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<JungleFlipMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () =>
-      jungleFlipLiveEngineMove(engineId, fen, {
+    requestMove: async () => {
+      const search = await moveProvider(engineId, fen, {
         nodes: tier.nodes,
         movetimeCapMs,
         repSeedFens,
         // Stable per-game seed so tied choices (mainly the opening flip) vary across games
         // but replay exactly for this room; no extra state to persist (see jungleFlipTieSeed).
         tieSeed: jungleFlipTieSeed(room.id),
-      }),
+      });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => {
       const parsed = engineUciToJungleFlipMove(uci);
       return parsed && isJungleFlipLegalMove(room.projection.state, parsed) ? parsed : null;
@@ -249,6 +275,30 @@ export async function playJungleFlipEngineMoveIfReady(
     color: seat,
     move: validated,
   };
+  // Queue BEFORE the append: if this move ends the game, the tenant event writer
+  // records the game end and flushes the queue inside that same append, and a
+  // decision queued afterwards would never be written.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'jungle-flip',
+      roomId: room.id,
+      engineId,
+      engineVersion: JUNGLE_FLIP_ENGINE_VERSION,
+      seat,
+      ply: room.projection.state.moveNumber,
+      budgetMs: movetimeCapMs,
+      remainingMs,
+      incrementMs,
+      tier: { nodes: tier.nodes, movetimeMs: tier.movetimeCapMs },
+      search: lastSearch,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts,
+      move: jungleFlipMoveToEngineUci(validated),
+      fen,
+      legalCount: getJungleFlipLegalMoves(room.projection.state).length,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

@@ -44,6 +44,11 @@ import {
 import type { JieqiEvent, JieqiSpecId } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import {
   applyTenantEvent,
@@ -151,9 +156,20 @@ export function scheduleJieqiEngineMove(ctx: JieqiEngineContext, room: JieqiEngi
   room.engineTimer.unref();
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the engine actually did. Tests inject a stub.
+ */
+export type JieqiEngineMoveProvider = (
+  engineId: string,
+  fen: string,
+  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean },
+) => Promise<UciEval>;
+
 export async function playJieqiEngineMoveIfReady(
   ctx: JieqiEngineContext,
   room: JieqiEngineRoom,
+  moveProvider: JieqiEngineMoveProvider = jieqiLiveEngineMove,
 ): Promise<void> {
   const seat = jieqiEngineSeatFor(room);
   if (seat === null || !engineToMove(room, seat)) return;
@@ -185,13 +201,18 @@ export async function playJieqiEngineMoveIfReady(
   // than silently substituting a threat-blind legal move.
   const startedAt = Date.now();
   const newGame = gameMoves.length <= 1;
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () => jieqiLiveEngineMove(engineId, fen, { movetimeMs, moves, newGame }),
+    requestMove: async () => {
+      const search = await moveProvider(engineId, fen, { movetimeMs, moves, newGame });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => {
       const parsed = pikafishUciToJieqiMove(uci);
       return parsed && isJieqiLegalMove(room.projection.state, parsed) ? parsed : null;
@@ -274,6 +295,36 @@ export async function playJieqiEngineMoveIfReady(
     color: seat,
     move: validated,
   };
+  // Queue BEFORE the append: if this move ends the game, the tenant event writer
+  // records the game end and flushes the queue inside that same append, and a
+  // decision queued afterwards would never be written. The log line above is
+  // live-only and dies with the container; this is the durable copy, and it adds
+  // the depth the search reached — the one number that says whether a depth-capped
+  // rung is actually searching to its cap.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'jieqi',
+      roomId: room.id,
+      engineId,
+      engineVersion: JIEQI_ENGINE_VERSION,
+      seat,
+      ply: gameMoves.length,
+      budgetMs: movetimeMs,
+      remainingMs,
+      incrementMs,
+      tier: {
+        movetimeMs: tier.movetimeMs,
+        ...(tier.depth === undefined ? {} : { depth: tier.depth }),
+      },
+      search: lastSearch,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts,
+      move: jieqiMoveToPikafishUci(validated),
+      fen,
+      legalCount: getJieqiLegalMoves(room.projection.state).length,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }

@@ -9,7 +9,6 @@
 
 import './game-shell.css';
 import { track } from './analytics.js';
-import { practiceEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { appendLinkedText } from './link-text.js';
@@ -713,11 +712,7 @@ function renderStudy(
     // gamebook branch because the two flags are mutually exclusive in intent and
     // practice ignores the tree entirely: a chapter carrying both is a bug, and
     // silently rendering the tree-based player would hide it.
-    // Parked in prod (#363): with practiceEnabled false a practice chapter falls
-    // through to the ordinary chapter view, so a direct link is a readable
-    // position with its concept note rather than a drill that grades wrong.
-    const practiceGoal =
-      chapter.practice && practiceEnabled() ? parsePracticeGoal(chapter.practiceGoal) : null;
+    const practiceGoal = chapter.practice ? parsePracticeGoal(chapter.practiceGoal) : null;
     if (practiceGoal && gamebookable && (!study.isOwner || previewMode)) {
       const aside = document.createElement('div');
       aside.className = 'study-aside';

@@ -19,7 +19,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runUciBestmove, runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
+import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // Bump on every shipped eval/search change; the binary self-reports "MistyJungleFlip
 // <version>" over UCI, and the engines registry records it (configHash) per game.
@@ -200,12 +200,12 @@ export async function jungleFlipLiveEngineMove(
   engineId: string,
   fen: string,
   opts: JungleFlipEngineOptions = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = jungleFlipEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Flip Jungle engine: ${engineId}`);
   const release = await enginePool.acquire();
   try {
-    return await jungleFlipEngineMove(fen, {
+    return await jungleFlipEngineSearch(fen, {
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
@@ -216,10 +216,24 @@ export async function jungleFlipLiveEngineMove(
   }
 }
 
-export function jungleFlipEngineMove(
+export async function jungleFlipEngineMove(
   fen: string,
   opts: JungleFlipEngineOptions = {},
 ): Promise<string | null> {
+  return (await jungleFlipEngineSearch(fen, opts)).best;
+}
+
+/**
+ * The same move request, but returning the whole search summary rather than just
+ * the move. Live play takes this one so the per-move decision artifact can record
+ * what the engine actually consumed (depth, nodes, time) next to the node budget
+ * it was configured with. `opts.tieSeed` still travels as JF_TIE_SEED — runUciEval
+ * honours `env` (it did not before this call site existed).
+ */
+export function jungleFlipEngineSearch(
+  fen: string,
+  opts: JungleFlipEngineOptions = {},
+): Promise<UciEval> {
   const nodes = opts.nodes ?? 512_000;
   const movetimeCapMs = opts.movetimeCapMs ?? 2500;
   // Node budget = CPU-independent strength; movetime cap bounds latency (halt at
@@ -232,7 +246,7 @@ export function jungleFlipEngineMove(
     buildJungleFlipPositionCommand(fen, opts.repSeedFens),
     `go nodes ${nodes} movetime ${movetimeCapMs}`,
   ];
-  return runUciBestmove({
+  return runUciEval({
     bin: jungleFlipEnginePath(),
     commands,
     timeoutMs: movetimeCapMs + 4000,

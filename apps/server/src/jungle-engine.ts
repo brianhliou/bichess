@@ -17,7 +17,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runUciBestmove, runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
+import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // The binary self-reports "MistyJungle <version>" over UCI; bump on every shipped
 // eval/search change so the per-game configHash stays meaningful.
@@ -141,12 +141,12 @@ export async function jungleLiveEngineMove(
   engineId: string,
   fen: string,
   opts: { nodes?: number; movetimeCapMs?: number; repSeedFens?: readonly string[] } = {},
-): Promise<string | null> {
+): Promise<UciEval> {
   const tier = jungleRustTierFor(engineId);
   if (!tier) throw new Error(`unknown Jungle engine: ${engineId}`);
   const release = await enginePool.acquire();
   try {
-    return await jungleEngineMove(fen, {
+    return await jungleEngineSearch(fen, {
       nodes: opts.nodes ?? tier.nodes,
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       repSeedFens: opts.repSeedFens,
@@ -156,7 +156,7 @@ export async function jungleLiveEngineMove(
   }
 }
 
-export function jungleEngineMove(
+export async function jungleEngineMove(
   fen: string,
   opts: {
     nodes?: number;
@@ -164,6 +164,24 @@ export function jungleEngineMove(
     repSeedFens?: readonly string[];
   } = {},
 ): Promise<string | null> {
+  return (await jungleEngineSearch(fen, opts)).best;
+}
+
+/**
+ * The same move request, but returning the whole search summary rather than just
+ * the move. Live play takes this one so the per-move decision artifact can record
+ * what the engine actually consumed (depth, nodes, time) next to the node budget
+ * it was configured with; the gap between those two is what says whether a bot is
+ * playing at its rated strength or being cut short by the movetime cap.
+ */
+export function jungleEngineSearch(
+  fen: string,
+  opts: {
+    nodes?: number;
+    movetimeCapMs?: number;
+    repSeedFens?: readonly string[];
+  } = {},
+): Promise<UciEval> {
   const nodes = opts.nodes ?? 1_000_000;
   const movetimeCapMs = opts.movetimeCapMs ?? 5_000;
   // Node budget = CPU-independent strength; movetime cap bounds latency (halt at
@@ -175,7 +193,7 @@ export function jungleEngineMove(
     buildJunglePositionCommand(fen, opts.repSeedFens),
     `go nodes ${nodes} movetime ${movetimeCapMs}`,
   ];
-  return runUciBestmove({
+  return runUciEval({
     bin: jungleEnginePath(),
     commands,
     timeoutMs: movetimeCapMs + 4000,

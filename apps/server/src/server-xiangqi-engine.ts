@@ -37,8 +37,8 @@ import {
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
 import { logger } from './obs.js';
-import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './persistence-game-lifecycle.js';
 import type { UciEval } from './uci-engine-harness.js';
+import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
@@ -229,7 +229,7 @@ export async function playXiangqiEngineMoveIfReady(
     };
     // Queue BEFORE the append: the resign finishes the game, and the tenant
     // event writer flushes the queue in the same append.
-    queueXiangqiEngineDecision(
+    queueEngineDecision(
       room,
       buildXiangqiEngineDecisionPayload({ ...decisionBase, move: null, guardReplaced: false }),
     );
@@ -266,7 +266,7 @@ export async function playXiangqiEngineMoveIfReady(
   // Queue BEFORE the append: if this move mates, the tenant event writer records
   // the game end and flushes the queue inside the same append, and a decision
   // queued afterwards would never be written.
-  queueXiangqiEngineDecision(
+  queueEngineDecision(
     room,
     buildXiangqiEngineDecisionPayload({
       ...decisionBase,
@@ -358,32 +358,6 @@ export function buildXiangqiEngineDecisionPayload(
             pv: (input.search.pv ?? []).slice(0, DECISION_PV_MAX_PLIES),
           },
   };
-}
-
-/** Longest game the queue will hold; past this the oldest decisions are kept. */
-const MAX_QUEUED_DECISIONS = 400;
-
-/**
- * Queue one decision on the room for the tenant event writer to persist at game
- * end. Xiangqi rooms have no games row until then (recordGameStart is omitted on
- * purpose, matching dark xiangqi), and game_debug_artifacts.game_id is a foreign
- * key onto that row, so writing here at move time fails on every ply; the first
- * prod attempt (2026-09-02) did exactly that. Exported for tests.
- */
-export function queueXiangqiEngineDecision(
-  room: Pick<XiangqiEngineRoom, 'id' | 'pendingDebugArtifacts'>,
-  payload: Record<string, unknown>,
-): void {
-  if (!room.pendingDebugArtifacts) room.pendingDebugArtifacts = [];
-  const queue = room.pendingDebugArtifacts;
-  if (queue.length >= MAX_QUEUED_DECISIONS) return;
-  queue.push({
-    gameId: room.id,
-    ply: typeof payload.ply === 'number' ? payload.ply : null,
-    engineColor: null,
-    artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
-    payload,
-  });
 }
 
 function bothSeatsFilled(room: XiangqiEngineRoom): boolean {

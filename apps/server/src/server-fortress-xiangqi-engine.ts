@@ -40,6 +40,11 @@ import {
   isFortressXiangqiEngineClientId,
 } from './fortress-xiangqi-fsf-engine.js';
 import { logger } from './obs.js';
+import type { UciEval } from './uci-engine-harness.js';
+import {
+  buildLiveEngineDecisionPayload,
+  queueEngineDecision,
+} from './variant-tenant/engine-decisions.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
@@ -127,11 +132,15 @@ export function scheduleFortressXiangqiEngineMove(
   room.engineTimer.unref();
 }
 
+/**
+ * The move provider returns the whole search summary, not just the move, so the
+ * decision artifact can record what the engine did. Tests inject a stub.
+ */
 export type FortressXiangqiEngineMoveProvider = (
   engineId: string,
   moves: string[],
   opts: { movetimeMs?: number },
-) => Promise<string | null>;
+) => Promise<UciEval>;
 
 export async function playFortressXiangqiEngineMoveIfReady(
   ctx: FortressXiangqiEngineContext,
@@ -165,13 +174,19 @@ export async function playFortressXiangqiEngineMoveIfReady(
     floorMs: MIN_MOVETIME_MS,
   });
 
+  const startedAt = Date.now();
+  let lastSearch: UciEval | null = null;
   const {
     chosen: validated,
     attempts,
     aborted,
   } = await resolveValidatedEngineMove({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
-    requestMove: () => moveProvider(engineId, history, { movetimeMs }),
+    requestMove: async () => {
+      const search = await moveProvider(engineId, history, { movetimeMs });
+      lastSearch = search;
+      return search.best;
+    },
     validate: (uci) => legalMoveForUci(getFortressXiangqiLegalMoves(room.projection.state), uci),
     stillOnTurn: () => engineToMove(room, seat),
     onReject: ({ attempt, maxAttempts, uci, reason, error }) =>
@@ -246,6 +261,30 @@ export async function playFortressXiangqiEngineMoveIfReady(
     color: seat,
     move: chosen,
   };
+  // Queue BEFORE the append: if this move mates, the tenant event writer records
+  // the game end and flushes the queue inside that same append, and a decision
+  // queued afterwards would never be written.
+  queueEngineDecision(
+    room,
+    buildLiveEngineDecisionPayload({
+      variant: 'fortress-xiangqi',
+      roomId: room.id,
+      engineId,
+      engineVersion: FORTRESS_XIANGQI_ENGINE_VERSION,
+      seat,
+      ply: history.length,
+      budgetMs: movetimeMs,
+      remainingMs,
+      incrementMs,
+      tier,
+      search: lastSearch,
+      thinkTimeMs: Date.now() - startedAt,
+      attempts,
+      move: fortressXiangqiMoveToUci(chosen),
+      legalCount: legalMoves.length,
+      guardReplaced: guarded !== validated,
+    }),
+  );
   const seq = await ctx.appendEvent(room, event);
   ctx.broadcastEventAppended(room, event, seq);
 }
