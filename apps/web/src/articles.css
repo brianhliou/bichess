@@ -675,13 +675,67 @@
 /* Variant rail entries: finalized markers read like lichess/playstrategy
    monochrome glyphs, with mini-board fallback art only for unfinished variants. */
 .article-toc-nav a.article-variant-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
+  /* The right padding is the gutter the state bar lives in, so the bar never
+     crowds the longest label in this max-content column. */
+  padding: 4px 12px 4px 0;
   /* Brighter than the muted TOC default; the marker glyph tracks this via
-     currentColor, and the active entry still stands out (bold + accent). */
+     currentColor, and the current entry still stands out (accent + bar). */
   color: var(--site-text);
+  transition: color 150ms ease;
+}
+
+/* State indicator: playstrategy's variant-rail grammar, an accent bar at the
+   rail's right edge that scales in from the centre on hover and back out on
+   leave, and sits static on the page you are on. It replaces a filled
+   highlight block (dark theme) that read as chunky chrome next to an
+   otherwise chrome-free rail. The bar is absolutely positioned, so no rail
+   state changes a layout metric of this max-content column. */
+.article-toc-nav a.article-variant-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--site-accent);
+  transform: scaleY(0);
+  opacity: 0;
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+  pointer-events: none;
+}
+
+.article-toc-nav a.article-variant-link:hover::after,
+.article-toc-nav a.article-variant-link:focus-visible::after,
+.article-toc-nav a.article-variant-link.active::after {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+/* The bar carries the state, so the label only lifts to heading strength on
+   hover; the accent tint stays reserved for the page you are on. */
+.article-toc-nav a.article-variant-link:hover,
+.article-toc-nav a.article-variant-link:focus-visible {
+  color: var(--site-heading);
+}
+
+.article-toc-nav a.article-variant-link.active {
+  /* -strong is the theme-flipping text tint (dark teal on light, lifted green
+     on dark); the flat -accent used by the bar is too dim for a label here. */
+  color: var(--site-accent-strong);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-toc-nav a.article-variant-link::after {
+    transition: none;
+  }
 }
 
 .article-variant-sidebar .articles-index-card-thumb {
@@ -716,15 +770,6 @@
 :root[data-effective-theme="dark"] .article-variant-sidebar .variant-marker-thumb {
   background: transparent;
   border-color: transparent;
-}
-
-/* Dark theme routes .article-toc-nav a through a broad :is() muted rule that
-   outranks the base .article-variant-link brightening above. Lift the resting
-   rail label to full text colour without touching the hover/active accent. */
-:root[data-effective-theme="dark"]
-  .article-toc-nav
-  a.article-variant-link:not(.active):not(:hover) {
-  color: var(--site-text);
 }
 
 .article-variant-sidebar .variant-marker-thumb .variant-marker {

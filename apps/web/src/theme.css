@@ -932,7 +932,7 @@
     .watch-status-hint,
     .watch-queue-scope,
     .article-figure-caption,
-    .article-toc-nav a
+    .article-toc-nav a:not(.article-variant-link)
   ) {
   color: var(--site-muted);
 }
@@ -956,8 +956,8 @@
     .watch-queue-item.active,
     .watch-queue-row:hover,
     .watch-queue-row:focus-visible,
-    .article-toc-nav a:hover,
-    .article-toc-nav a.active
+    .article-toc-nav a:not(.article-variant-link):hover,
+    .article-toc-nav a:not(.article-variant-link).active
   ) {
   border-color: color-mix(in srgb, var(--site-accent) 44%, var(--site-border));
   background: var(--site-accent-soft);
