@@ -605,30 +605,98 @@ describe('buildHomeVideoCards', () => {
       }
     });
 
-    it('picks the newest additions, tie-broken by catalogue rank', () => {
-      const exclude = new Set<string>();
-      const picks = freshHomeVideos('en', exclude, 3);
-      expect(picks.length).toBe(3);
-
-      const newest = [...VIDEOS]
+    it('draws only from the newest end of the catalogue, never the whole shelf', () => {
+      // The pool cap is the quality floor. Without it the rotation eventually
+      // seats a 94-view clip or a 90-minute lecture beside the rules primer,
+      // which is the thing the curated arc exists to prevent. So: whatever the
+      // week, every rotated pick is one of the ten most recent entries.
+      const eligible = [...VIDEOS]
         .filter((video) => video.language === 'en')
-        .map((video) => video.addedAt)
-        .sort()
-        .at(-1);
-      expect(picks[0]?.addedAt).toBe(newest);
+        .sort((a, b) =>
+          a.addedAt === b.addedAt
+            ? VIDEOS.indexOf(a) - VIDEOS.indexOf(b)
+            : a.addedAt < b.addedAt
+              ? 1
+              : -1,
+        )
+        .slice(0, 10)
+        .map(videoKey);
 
-      // Within one date the catalogue order IS the ranking (videos-data.ts is
-      // written best-first), so a batch that lands fifteen entries on one day
-      // must promote its best, not whichever was typed last.
-      const sameDay = picks.filter((video) => video.addedAt === newest);
-      const ranks = sameDay.map((video) => VIDEOS.indexOf(video));
-      expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+      for (let week = 0; week < 30; week += 1) {
+        const at = new Date(Date.UTC(2026, 8, 6) + week * 7 * 24 * 60 * 60 * 1000);
+        for (const pick of freshHomeVideos('en', new Set(), 2, at)) {
+          expect(eligible, `week ${week} reached outside the pool`).toContain(videoKey(pick));
+        }
+      }
+    });
+
+    // The whole point of the rotation: the row has to change without anyone
+    // editing a file, and it has to change to something *else* rather than
+    // reshuffling the same pair.
+    it('advances every week and covers the pool over a cycle', () => {
+      const weekOf = (week: number) =>
+        freshHomeVideos(
+          'en',
+          new Set(),
+          2,
+          new Date(Date.UTC(2026, 8, 6) + week * 7 * 24 * 60 * 60 * 1000),
+        ).map(videoKey);
+
+      // Consecutive weeks share nothing.
+      for (let week = 0; week < 10; week += 1) {
+        const now = weekOf(week);
+        const next = weekOf(week + 1);
+        expect(now.length).toBe(2);
+        expect(new Set(now).size, `week ${week} repeats a video within one row`).toBe(2);
+        for (const key of next)
+          expect(now, `week ${week + 1} reuses week ${week}`).not.toContain(key);
+      }
+
+      // And a full cycle reaches every entry in the pool, so nothing sits in the
+      // catalogue's top ten and never gets a slot.
+      const seen = new Set<string>();
+      for (let week = 0; week < 5; week += 1) for (const key of weekOf(week)) seen.add(key);
+      expect(seen.size).toBe(10);
+    });
+
+    // Anchoring the cycle to the newest entry is what preserves the property the
+    // rotating slots were built for: ingest, and the front door moves. Without
+    // it the phase is epoch-derived and a batch added today can wait most of a
+    // cycle for a slot, which is the manual-edit problem wearing a timer.
+    it('seats the best of a new batch in its first week', () => {
+      for (const language of ['en', 'zh'] as const) {
+        const newest = [...VIDEOS]
+          .filter((video) => video.language === language)
+          .map((video) => video.addedAt)
+          .sort()
+          .at(-1);
+        expect(newest).toBeDefined();
+
+        const dayOfBatch = new Date(`${newest}T12:00:00Z`);
+        const picks = freshHomeVideos(language, new Set(), 2, dayOfBatch);
+        for (const pick of picks) {
+          expect(pick.addedAt, `${language} did not lead with the new batch`).toBe(newest);
+        }
+      }
+    });
+
+    it('is stable within a week, so every visitor sees the same row', () => {
+      const monday = new Date(Date.UTC(2026, 8, 7, 0, 30));
+      const friday = new Date(Date.UTC(2026, 8, 10, 23, 45));
+      const a = freshHomeVideos('zh', new Set(), 2, monday).map(videoKey);
+      const b = freshHomeVideos('zh', new Set(), 2, monday).map(videoKey);
+      expect(a).toEqual(b);
+      // Same rotation period, different moment inside it.
+      const sameWeek =
+        Math.floor(monday.getTime() / 6.048e8) === Math.floor(friday.getTime() / 6.048e8);
+      if (sameWeek) expect(freshHomeVideos('zh', new Set(), 2, friday).map(videoKey)).toEqual(a);
     });
 
     it('honours the exclusion set so the arc is never shown twice', () => {
-      const first = freshHomeVideos('en', new Set(), 1)[0];
+      const at = new Date(Date.UTC(2026, 8, 6));
+      const first = freshHomeVideos('en', new Set(), 1, at)[0];
       expect(first).toBeDefined();
-      const next = freshHomeVideos('en', new Set([videoKey(first!)]), 1)[0];
+      const next = freshHomeVideos('en', new Set([videoKey(first!)]), 1, at)[0];
       expect(next).toBeDefined();
       expect(videoKey(next!)).not.toBe(videoKey(first!));
     });
