@@ -1,3 +1,5 @@
+import { rememberPveEngine } from './pve-memory.js';
+
 // One-click PvE room creation against a public bot identity. The server
 // resolves the per-variant engine from the bot profile (routes/rooms.ts
 // resolveBotRoomRequest), so callers only name the bot, the variant, and
@@ -61,8 +63,13 @@ export function bindBotPlayControl(
     if (pending) return;
     pending = true;
     setState('pending');
-    createBotGame(request()).then(
+    const req = request();
+    createBotGame(req).then(
       (url) => {
+        // A one-click start skips the setup dialog, so it records the engine
+        // itself; otherwise the device never "remembers" the game it just
+        // played and the next visit hands out the first-game rung again (#365).
+        rememberPveEngine(req.gameSpecId, req.botId);
         window.location.href = url;
       },
       () => {

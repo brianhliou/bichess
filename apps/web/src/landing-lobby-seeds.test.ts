@@ -319,7 +319,8 @@ describe('landing lobby bot seeks', () => {
     const chip = panel.querySelector<HTMLButtonElement>(
       '.landing-quickpair-row[data-game-spec="xiangqi"] .landing-quickpair-bot',
     );
-    expect(chip?.dataset.botId).toBe('fairy-stockfish-level-5');
+    // A fresh device (no remembered xiangqi engine) starts at the bottom rung.
+    expect(chip?.dataset.botId).toBe('fairy-stockfish-level-2');
     chip!.click();
     await flushPromises();
 
@@ -328,13 +329,46 @@ describe('landing lobby bot seeks', () => {
         String(input) === '/api/rooms' && (init as RequestInit | undefined)?.method === 'POST',
     );
     expect(JSON.parse(String((post![1] as RequestInit).body))).toMatchObject({
-      botId: 'fairy-stockfish-level-5',
+      botId: 'fairy-stockfish-level-2',
       gameSpecId: 'xiangqi',
       // 10+5, xiangqi's own default: the chip advertises it, and the room the
       // click creates has to actually start there. This is the end of the
       // chain the guest-timeout fix depends on.
       timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
+  });
+
+  it('starts a returning device at the xiangqi level it last chose, and records one-click starts', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/quick_bot' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const restoreStorage = installMemoryStorage();
+    window.localStorage.setItem(
+      'mistboard:setup:pve',
+      JSON.stringify({ engineIdByGameSpec: { xiangqi: 'fairy-stockfish-level-8' } }),
+    );
+    try {
+      const panel = buildLobbyPanel('en', { hydrate: false });
+      document.body.append(panel);
+      const chip = panel.querySelector<HTMLButtonElement>(
+        '.landing-quickpair-row[data-game-spec="xiangqi"] .landing-quickpair-bot',
+      );
+      expect(chip?.dataset.botId).toBe('fairy-stockfish-level-8');
+
+      // A one-click Lobby row start records its engine, so the memory follows
+      // the player's actual last game rather than only the setup dialog.
+      const row = panel.querySelector<HTMLButtonElement>(
+        '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-5"][data-game-spec="xiangqi"]',
+      );
+      row!.click();
+      await flushPromises();
+      const stored = JSON.parse(window.localStorage.getItem('mistboard:setup:pve') ?? '{}');
+      expect(stored.engineIdByGameSpec.xiangqi).toBe('fairy-stockfish-level-5');
+    } finally {
+      restoreStorage();
+    }
   });
 
   it('opens the correspondence CTA on days-per-move, not real-time clocks', () => {
@@ -488,4 +522,31 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+// happy-dom's window carries no usable localStorage under vitest (Node's own
+// experimental global shadows it), so the memory test installs a minimal
+// in-memory Storage, the way puzzles/storage.test.ts does.
+function installMemoryStorage(): () => void {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value));
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    clear: () => store.clear(),
+    key: (index: number) => [...store.keys()][index] ?? null,
+    get length() {
+      return store.size;
+    },
+  };
+  const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
+  return () => {
+    if (original) Object.defineProperty(window, 'localStorage', original);
+    else delete (window as { localStorage?: unknown }).localStorage;
+  };
 }

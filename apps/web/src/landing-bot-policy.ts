@@ -59,12 +59,34 @@ const ROTATING_LINEUPS: readonly (readonly LandingBotGameSpecId[])[] = [
 // the setup dialog's engine list, not a step on the human ladder.
 const XIANGQI_LADDER_LEVELS = [2, 5, 8] as const;
 
-// One stable primary per Fairy-Stockfish variant. The same control must never
-// silently hand out a different opponent strength, and Quick Pairing's Computer
-// chip shows no name at all, so a rotating identity there is invisible. Xiangqi
-// takes the ladder's middle rung; Fortress shows a single mid-ladder opponent.
-const XIANGQI_PRIMARY_LEVEL = 5;
+// Which level the "Computer" control hands a xiangqi player (#365). With the
+// middle rung as the fixed default, 38% of started xiangqi games ever finished
+// and the commonest ending sitewide was red resigning after four moves, so a
+// device with no remembered xiangqi engine (no bot game started here) gets the
+// bottom rung. A remembered Fairy-Stockfish level is kept, so a player climbs
+// by choosing; a remembered non-ladder engine (Pikafish) means a returning
+// player who is not a newcomer, who gets the middle rung. Quick Pairing's chip
+// shows no name, so the control must still never rotate on its own.
+export const XIANGQI_FIRST_GAME_LEVEL = 2;
+const XIANGQI_RETURNING_LEVEL = 5;
 const FORTRESS_XIANGQI_LEVEL = 4;
+const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
+
+export type LandingBotOfferContext = {
+  /** The xiangqi engine this device last started a bot game against, if any. */
+  rememberedXiangqiBotId?: string | null;
+};
+
+export function fairyStockfishLevel(botId: string | null | undefined): number | null {
+  if (!botId?.startsWith(LADDER_BOT_ID_PREFIX)) return null;
+  const level = Number.parseInt(botId.slice(LADDER_BOT_ID_PREFIX.length), 10);
+  return Number.isInteger(level) && level >= 1 && level <= 8 ? level : null;
+}
+
+export function xiangqiPrimaryLevel(rememberedBotId: string | null | undefined): number {
+  if (!rememberedBotId) return XIANGQI_FIRST_GAME_LEVEL;
+  return fairyStockfishLevel(rememberedBotId) ?? XIANGQI_RETURNING_LEVEL;
+}
 
 export function landingBotRotationBucket(now: Date = new Date()): number {
   return Math.floor(now.getTime() / ROTATION_BUCKET_MS);
@@ -79,9 +101,14 @@ export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[
 
 // Which variants appear still rotates by bucket; WHICH OPPONENT a variant
 // offers does not.
-export function landingBotOffer(gameSpecId: string): LandingBotOffer | null {
+export function landingBotOffer(
+  gameSpecId: string,
+  context: LandingBotOfferContext = {},
+): LandingBotOffer | null {
   if (!isLandingBotGameSpecId(gameSpecId)) return null;
-  if (gameSpecId === XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, XIANGQI_PRIMARY_LEVEL);
+  if (gameSpecId === XIANGQI_SPEC_ID) {
+    return fsfOffer(gameSpecId, xiangqiPrimaryLevel(context.rememberedXiangqiBotId));
+  }
   if (gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, FORTRESS_XIANGQI_LEVEL);
   if (gameSpecId === JIEQI_SPEC_ID) {
     return {
@@ -106,9 +133,9 @@ function offerPace(gameSpecId: LandingBotGameSpecId): TimeControlId {
   return engineTimeControlPin(gameSpecId)?.id ?? defaultTimePresetForSpec(gameSpecId);
 }
 
-// The Lobby carries the whole Xiangqi ladder at once, weakest rung first. The
-// middle rung is also the canonical offer Quick Pairing starts, so the two
-// surfaces never disagree about who "the computer" is.
+// The Lobby carries the whole Xiangqi ladder at once, weakest rung first. Quick
+// Pairing starts the level the device last chose (the bottom rung on a first
+// visit), so "the computer" is always a step on this same ladder.
 export function landingXiangqiBotOffers(): readonly LandingBotOffer[] {
   return XIANGQI_LADDER_LEVELS.map((level) => fsfOffer(XIANGQI_SPEC_ID, level));
 }

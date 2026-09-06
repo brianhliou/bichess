@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fairyStockfishLevel,
   LANDING_BOT_GAME_SPEC_IDS,
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
   landingXiangqiBotOffers,
+  xiangqiPrimaryLevel,
 } from './landing-bot-policy.js';
 
 describe('landing bot policy', () => {
@@ -31,9 +33,11 @@ describe('landing bot policy', () => {
     // Xiangqi is a deliberate variant: it defaults to 10+5, not the 3+2 house
     // pace, because guests flagged 36% of their games at 3+2. The offer has to
     // advertise that, since the click starts the picker on the same default.
+    // A device with no remembered xiangqi engine is a first-time visitor and
+    // gets the bottom rung (#365); see the memory cases below.
     expect(landingBotOffer('xiangqi')).toMatchObject({
-      botId: 'fairy-stockfish-level-5',
-      botName: 'Fairy-Stockfish Level 5',
+      botId: 'fairy-stockfish-level-2',
+      botName: 'Fairy-Stockfish Level 2',
       timeControlId: '10m5',
     });
     // Fortress xiangqi has no default of its own, so it keeps the house pace.
@@ -62,6 +66,29 @@ describe('landing bot policy', () => {
     expect(offers.map((offer) => offer.botId)).toContain(landingBotOffer('xiangqi')?.botId);
     // Pikafish is the separate elite challenge, never a rung on this ladder.
     expect(offers.every((offer) => offer.botId.startsWith('fairy-stockfish-level-'))).toBe(true);
+  });
+
+  it('starts a first-time device at the bottom rung and a returning one at its last level', () => {
+    expect(xiangqiPrimaryLevel(undefined)).toBe(2);
+    expect(xiangqiPrimaryLevel(null)).toBe(2);
+    expect(xiangqiPrimaryLevel('')).toBe(2);
+    // A remembered Fairy-Stockfish level is kept exactly, rung or not: the
+    // player climbs by choosing, and the chip never silently moves them.
+    expect(xiangqiPrimaryLevel('fairy-stockfish-level-8')).toBe(8);
+    expect(xiangqiPrimaryLevel('fairy-stockfish-level-3')).toBe(3);
+    // A remembered non-ladder engine is a returning player, not a newcomer.
+    expect(xiangqiPrimaryLevel('pikafish')).toBe(5);
+    // Garbage in the store never produces an impossible level.
+    expect(xiangqiPrimaryLevel('fairy-stockfish-level-42')).toBe(5);
+    expect(fairyStockfishLevel('fairy-stockfish-level-0')).toBeNull();
+
+    expect(
+      landingBotOffer('xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+    ).toMatchObject({ botId: 'fairy-stockfish-level-8', timeControlId: '10m5' });
+    // Only xiangqi reads the memory; the other variants keep their fixed bot.
+    expect(
+      landingBotOffer('fortress-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+    ).toMatchObject({ botId: 'fairy-stockfish-level-4' });
   });
 
   it('uses the established house bot for every other supported variant', () => {

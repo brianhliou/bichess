@@ -45,6 +45,7 @@ import {
   landingBotRotationBucket,
   landingXiangqiBotOffers,
 } from './landing-bot-policy.js';
+import { rememberedPveEngine } from './pve-memory.js';
 import { isRatedModeEnabled } from './rated-flag.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
@@ -889,7 +890,11 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
       row.append(chip);
     }
 
-    const botOffer = landingVariantSupportsPve(gameSpecId) ? landingBotOffer(gameSpecId) : null;
+    const botOffer = landingVariantSupportsPve(gameSpecId)
+      ? landingBotOffer(gameSpecId, {
+          rememberedXiangqiBotId: rememberedPveEngine(XIANGQI_SPEC_ID),
+        })
+      : null;
     if (botOffer) {
       // The shared bot policy names the pace; retain the first-offered fallback
       // so a future variant with narrower clocks cannot render a dead control.
