@@ -604,7 +604,19 @@ async function runSmoke({ deployRequired, headRevision }) {
   // stays truthful, so nothing on the page looks wrong. Cheap (a handful of
   // public GETs) and it runs after the deploy like every other smoke, so a
   // finding is an alarm rather than a gate on shipping code.
-  runTimed('prod practice catalogue', npmCommand('prod:smoke:practice', baseArgs()));
+  // Invoked by absolute path from the RELEASE checkout, not as an npm script
+  // from `workdir`. Post-push steps run from the control worktree (see
+  // enterPostPushWorkdir), which is whatever commit that tree happens to sit
+  // on -- so a release that ADDS a script cannot run it by name in its own
+  // smoke phase. This one did exactly that on 2026-09-06 and died on
+  // `Missing script: "prod:smoke:practice"` after a green deploy. The audit
+  // only makes HTTP calls, so the working directory is irrelevant to it and
+  // the path is the whole fix.
+  runTimed('prod practice catalogue', [
+    'node',
+    path.join(releaseRoot, 'scripts/check-practice-catalog.mjs'),
+    ...baseArgs(),
+  ]);
   if (smoke !== 'full') return;
 
   // The engine-family smokes are independent (separate rooms, separate engines)
