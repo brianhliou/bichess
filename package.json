@@ -48,6 +48,7 @@
     "engine:queue-status": "npm run engine:queue-status --workspace=@mistboard/server",
     "engine:tournament-status": "npm run engine:tournament-status --workspace=@mistboard/server",
     "ops:test-engine-alert": "npm run ops:test-engine-alert --workspace=@mistboard/server --",
+    "railway:secret": "node scripts/railway-secret.mjs",
     "worker": "npm run worker --workspace=@mistboard/server",
     "worker:execute": "npm run worker:execute --workspace=@mistboard/server",
     "worker:service": "npm run worker:service --workspace=@mistboard/server",
