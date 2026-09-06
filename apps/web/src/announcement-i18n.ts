@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-06 (patron checkout) ── 沿用 08-13 条目的说法：「支持 Mistboard」页面、
+  // 赞助、个人资料上的徽章、不影响对局；订阅 / 管理你的订阅 取自 content.zh-hans.ts。
+  'Patron checkout is open.': '赞助结账已开放。',
+  'The Support page takes monthly subscriptions now, at $5, $10, $20, or $50. A subscription puts a heart badge on your profile and does nothing else: no Patron-only content, no gameplay advantage. Core play and learning stay free and are meant to. Subscriptions pay for the servers and the development time. Cancel from the billing portal at any point and the period you already paid for runs out.':
+    '「支持 Mistboard」页面现已开放每月订阅，金额为 5、10、20 或 50 美元。订阅只会在你的个人资料上加一枚心形徽章，除此之外没有别的：没有赞助者专属内容，也不影响对局。核心的对弈与学习功能始终免费，这是有意为之。订阅费用于支付服务器和开发时间。你可以随时在「管理你的订阅」处取消，已经付费的周期会走完。',
+  'Become a Patron': '成为赞助者',
   // ── 2026-09-06 (practice endgames) ── 术语用棋界通行说法：残局、士象全、单车难破士象全。
   'Practice the basic endgames against the engine.': '与引擎对弈，练习基本残局。',
   'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':
@@ -316,6 +322,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-06 (patron checkout) ── 沿用 08-13 條目的說法：「支持 Mistboard」頁面、
+  // 贊助、個人資料上的徽章、不影響對局；訂閱 / 管理你的訂閱 取自 content.zh-hant.ts。
+  'Patron checkout is open.': '贊助結帳已開放。',
+  'The Support page takes monthly subscriptions now, at $5, $10, $20, or $50. A subscription puts a heart badge on your profile and does nothing else: no Patron-only content, no gameplay advantage. Core play and learning stay free and are meant to. Subscriptions pay for the servers and the development time. Cancel from the billing portal at any point and the period you already paid for runs out.':
+    '「支持 Mistboard」頁面現已開放每月訂閱，金額為 5、10、20 或 50 美元。訂閱只會在你的個人資料上加一枚心形徽章，除此之外沒有別的：沒有贊助者專屬內容，也不影響對局。核心的對弈與學習功能始終免費，這是有意為之。訂閱費用於支付伺服器和開發時間。你可以隨時在「管理你的訂閱」處取消，已經付費的週期會走完。',
+  'Become a Patron': '成為贊助者',
   // ── 2026-09-06 (practice endgames) ── 術語用棋界通行說法：殘局、士象全、單車難破士象全。
   'Practice the basic endgames against the engine.': '與引擎對弈，練習基本殘局。',
   'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':

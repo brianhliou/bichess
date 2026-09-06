@@ -25,6 +25,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-06',
+    kind: 'update',
+    headline: 'Patron checkout is open.',
+    body: 'The Support page takes monthly subscriptions now, at $5, $10, $20, or $50. A subscription puts a heart badge on your profile and does nothing else: no Patron-only content, no gameplay advantage. Core play and learning stay free and are meant to. Subscriptions pay for the servers and the development time. Cancel from the billing portal at any point and the period you already paid for runs out.',
+    href: '/patron',
+    cta: 'Become a Patron',
+  },
+  {
+    date: '2026-09-06',
     kind: 'release',
     headline: 'Practice the basic endgames against the engine.',
     body: 'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.',
