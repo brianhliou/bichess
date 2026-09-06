@@ -11,6 +11,7 @@
       "!/apps/server/scripts/**",
       "/packages/game/**",
       "/packages/board-render/**",
+      "/stockfish.ref",
       "/engine.ref",
       "/scripts/build.mjs",
       "/scripts/start.mjs",
