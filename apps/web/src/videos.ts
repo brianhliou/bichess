@@ -16,6 +16,7 @@ import './videos.css';
 
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { YOUTUBE_BLOCKED_IN } from './nav-items.js';
 import { buildNav } from './site-shell.js';
 import {
   FIRST_PARTY_VIDEOS,
@@ -31,6 +32,7 @@ import {
   type VideoVariant,
   videoKey,
 } from './videos-data.js';
+import { isBlockedForViewer } from './viewer-geo.js';
 
 const TAG_LABEL_KEYS: Record<VideoTag, `videos.tag.${VideoTag}`> = {
   basics: 'videos.tag.basics',
@@ -610,14 +612,13 @@ const HOME_VIDEO_KEYS: Record<VideoLanguage, readonly string[]> = {
 // before it displaces English; below that the row reads as a stub.
 const MIN_HOME_VIDEOS_PER_LANGUAGE = 4;
 
-// Slots the arc does NOT own, filled from the newest catalogue entries in the
-// row's language. The arc above is evergreen on purpose -- it is what a
-// first-time visitor should meet, and reach cannot tell a lesson from a reaction
-// video -- but being evergreen also meant the homepage was decoupled from the
-// catalogue entirely: `npm run videos:mine` could add twenty videos and this row
-// stayed byte-identical, so keeping the front door current was a manual edit
-// nobody remembered to make. These slots are the wire between the two. Ingest,
-// and the front door moves on its own.
+// Slots the arc does NOT own, drawn from the catalogue and rotated weekly. The
+// arc above is evergreen on purpose -- it is what a first-time visitor should
+// meet, and reach cannot tell a lesson from a reaction video -- but being
+// evergreen also meant the homepage was decoupled from the catalogue entirely:
+// `npm run videos:mine` could add twenty videos and this row stayed
+// byte-identical, so keeping the front door current was a manual edit nobody
+// remembered to make. These slots are the wire between the two.
 //
 // Two, not more: the arc is the row's identity and freshness is the garnish. And
 // they are shuffled in with the rest rather than pinned to the tail, because the
@@ -629,18 +630,45 @@ const HOME_VIDEO_FRESH_SLOTS = 2;
 // trims freshness first and never silently shortens the curated roles.
 const HOME_VIDEO_ROW_LIMIT = 10;
 
-// Newest-added catalogue entries in one spoken language, minus whatever the arc
-// already holds. Ordered by `addedAt` descending and, within a date, by
-// catalogue order -- videos-data.ts is written best-first, so a mining batch
-// that lands fifteen entries on one day promotes its best, not its last.
-// First-party videos are excluded: they are already pinned by orderHomeVideos,
-// and a promoted entry appearing twice would read as a bug.
+// A week. Long enough that a returning visitor meets a settled row instead of
+// churn, short enough that the front door moves on its own between mining runs
+// -- which is the whole ask: adding to the catalogue is a deliberate act, and the
+// row should not sit still in the weeks when nobody performs it.
+const HOME_VIDEO_ROTATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+// How deep the rotation reaches. Everything in this pool has to be good enough
+// for the front door, so it is the TOP of the catalogue's own ordering, never the
+// whole shelf: rotating through all 71 entries would eventually seat a 90-minute
+// lecture or a 94-view clip beside the rules primer, which is exactly what the
+// curated arc exists to prevent. Ten is two slots x a five-week cycle.
+const HOME_VIDEO_ROTATION_POOL = 10;
+
+// The rotating slots: catalogue entries in one spoken language, minus whatever
+// the arc already holds, advanced by week.
+//
+// The pool is ordered newest-first (and within a date by catalogue order, since
+// videos-data.ts is written best-first, so a batch that lands fifteen entries on
+// one day offers its best rather than its last). That ordering is what keeps
+// ingestion wired to the homepage: a fresh batch enters at the front and pushes
+// older entries out of the pool entirely, so `videos:mine` still reaches the
+// front door -- within a cycle rather than the same day, which is the one thing
+// this trades away for a row that moves by itself.
+//
+// The offset advances by `count` per period, so consecutive weeks do not overlap
+// and a full cycle shows the whole pool. It is derived from the clock rather than
+// stored, which means no state, no cron, and no deploy: the same week yields the
+// same row for every visitor, and that determinism is what makes it testable.
+// `now` is a parameter for exactly that reason.
+//
+// First-party videos are excluded -- orderHomeVideos already pins them, and a
+// promoted entry appearing twice would read as a bug.
 export function freshHomeVideos(
   language: VideoLanguage,
   exclude: ReadonlySet<string>,
   count: number,
+  now: Date = new Date(),
 ): VideoEntry[] {
-  return VIDEOS.map((video, index) => ({ video, index }))
+  const pool = VIDEOS.map((video, index) => ({ video, index }))
     .filter(
       ({ video }) =>
         video.language === language && !isPromotedVideo(video) && !exclude.has(videoKey(video)),
@@ -652,8 +680,27 @@ export function freshHomeVideos(
           ? 1
           : -1,
     )
-    .slice(0, Math.max(0, count))
+    .slice(0, HOME_VIDEO_ROTATION_POOL)
     .map(({ video }) => video);
+
+  const take = Math.min(Math.max(0, count), pool.length);
+  if (take === 0) return [];
+
+  // The cycle is anchored to the newest entry, not to the epoch, and that anchor
+  // is what keeps `videos:mine` wired to the homepage. Count weeks from the epoch
+  // instead and the phase lands wherever the arithmetic puts it: a batch added
+  // today can sit four weeks before its slot comes up, which is the whole point
+  // of ingesting undone. Anchored, week zero of a batch shows its two best
+  // entries the day it deploys, and every week after that advances by two.
+  const anchor = Date.parse(`${pool[0].addedAt}T00:00:00Z`);
+  const elapsed = now.getTime() - (Number.isNaN(anchor) ? 0 : anchor);
+
+  // Math.floor, not truncation, and the double modulo after it: a clock behind
+  // the anchor (skew, or an entry dated ahead) would otherwise rotate backwards
+  // into a negative index, and a negative index is a hole in the row.
+  const period = Math.floor(elapsed / HOME_VIDEO_ROTATION_MS);
+  const start = (((period * take) % pool.length) + pool.length) % pool.length;
+  return Array.from({ length: take }, (_, i) => pool[(start + i) % pool.length]);
 }
 
 // Ours lead, pinned and in curated order; everything after them is another
@@ -698,6 +745,13 @@ export function buildHomeVideoCards(
   limit = HOME_VIDEO_ROW_LIMIT,
   locale: Locale = currentLocale(),
 ): HTMLElement | null {
+  // Where YouTube is blocked the row is not merely useless, it is visibly
+  // broken: the thumbnails come from img.youtube.com, so every card renders as
+  // a failed image. Omitting the row is the honest version of that. Returning
+  // null is the same signal the caller already handles when no curated key
+  // resolves, and landing.css drops the grid's fourth row to match. See #378.
+  if (isBlockedForViewer(YOUTUBE_BLOCKED_IN)) return null;
+
   // Ours resolve here too. They are not in VIDEOS (that list is the catalogue
   // the /videos page filters), so without this the strip would silently drop the
   // one entry it most wants to lead with.

@@ -17,6 +17,7 @@
       "/package.json",
       "/package-lock.json",
       "/fairy-stockfish-xiangqi.ref",
+      "/stockfish.ref",
       "/railpack.json",
       "/railway.engine-worker.json",
       "/railway.json",

@@ -4,6 +4,10 @@ import {
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
+  puzzleAttemptedProps,
+  reviewOpenedProps,
+  reviewRouteForAnalytics,
+  roomModeAnalyticsProps,
   setPostHogInstance,
 } from './analytics.js';
 
@@ -136,5 +140,91 @@ describe('createGameLifecycleTracker', () => {
     // Both fire independently; one tracker reaching 'playing' must not suppress
     // the other's game_started.
     expect(named('game_started')).toHaveLength(2);
+  });
+});
+
+describe('roomModeAnalyticsProps', () => {
+  it('flags a bot room and carries the bot name', () => {
+    expect(roomModeAnalyticsProps('pve', 'Misty')).toEqual({
+      roomMode: 'pve',
+      pve: true,
+      bot_name: 'Misty',
+    });
+  });
+
+  it('never names a bot in a human room', () => {
+    expect(roomModeAnalyticsProps('pvp', 'Misty')).toEqual({
+      roomMode: 'pvp',
+      pve: false,
+      bot_name: null,
+    });
+  });
+
+  it('treats an unknown mode as human play', () => {
+    expect(roomModeAnalyticsProps(undefined)).toEqual({
+      roomMode: 'pvp',
+      pve: false,
+      bot_name: null,
+    });
+  });
+});
+
+describe('reviewOpenedProps', () => {
+  it('strips ids from the route but keeps variant slugs, including ones with digits', () => {
+    expect(reviewRouteForAnalytics('/xiangqi/games/hxq_fbd5991a8240047ccb2f9145')).toBe(
+      '/xiangqi/games/:id',
+    );
+    expect(reviewRouteForAnalytics('/game/b8054d34')).toBe('/game/:id');
+    expect(reviewRouteForAnalytics(`/${DARK_DRAFT960_SPEC_ID}/game/abc123`)).toBe(
+      `/${DARK_DRAFT960_SPEC_ID}/game/:id`,
+    );
+  });
+
+  it('resolves the variant from the route and classifies the referrer', () => {
+    const base = {
+      pathname: '/xiangqi/games/hxq_1',
+      referrer: 'https://mistboard.com/room/xq_1',
+      origin: 'https://mistboard.com',
+      reviewSurface: 'game',
+      hasAnalysis: true,
+      pageClassName: 'xiangqi-review',
+    };
+    const props = reviewOpenedProps(base);
+    expect(props.route).toBe('/xiangqi/games/:id');
+    expect(props.variant).toBe('xiangqi');
+    expect(props.game_spec).toBe('xiangqi');
+    expect(props.referrer_kind).toBe('same-site');
+    expect(props.has_analysis).toBe(true);
+    expect(props.page_class).toBe('xiangqi-review');
+    expect(reviewOpenedProps({ ...base, referrer: '' }).referrer_kind).toBe('none');
+    expect(reviewOpenedProps({ ...base, referrer: 'https://lichess.org/' }).referrer_kind).toBe(
+      'external',
+    );
+    expect(reviewOpenedProps({ ...base, pathname: '/game/b8054d34' }).variant).toBeNull();
+  });
+});
+
+describe('puzzleAttemptedProps', () => {
+  it('carries the spec identity, themes, and the clean-solve flag', () => {
+    expect(
+      puzzleAttemptedProps({
+        puzzleId: 'p1',
+        variant: 'xiangqi',
+        themes: ['checkmate', 'matein2'],
+        rated: true,
+        mode: 'session',
+        outcome: 'solved',
+        clean: true,
+      }),
+    ).toMatchObject({
+      puzzle_id: 'p1',
+      variant: 'xiangqi',
+      game_spec: 'xiangqi',
+      themes: ['checkmate', 'matein2'],
+      rated: true,
+      mode: 'session',
+      outcome: 'solved',
+      clean: true,
+    });
   });
 });

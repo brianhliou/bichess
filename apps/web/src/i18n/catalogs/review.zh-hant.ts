@@ -354,6 +354,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.prev': '上一步',
   'broadcast.next': '下一步',
   'broadcast.source': '來源',
+  'broadcast.recordsFrom': '棋譜來源：{source}',
   'broadcast.analyseWithEngine': '用引擎分析',
   'broadcast.exportJson': '匯出 JSON',
   'broadcast.redWins': '紅方獲勝',

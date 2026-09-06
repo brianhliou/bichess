@@ -189,16 +189,23 @@ describe('landing lobby bot seeks', () => {
     const misty = panel.querySelector(
       '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="dark-chess"] .landing-lobby-seed-rating',
     );
-    expect(misty?.textContent).toBe('1874');
+    // The pool number never renders as text (#373): it reads as a player
+    // rating and is not one. It rides the tooltip, labelled with its scale.
+    expect(misty?.textContent).toBe('—');
+    expect(misty?.getAttribute('data-pool-rating')).toBe('1874');
+    expect(misty?.getAttribute('title')).toContain('1874');
+    expect(misty?.getAttribute('title')).toContain('Not a player rating');
     const xiangqi = panel.querySelector(
       '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-5"][data-game-spec="xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(xiangqi?.textContent).toBe('2450?');
+    expect(xiangqi?.textContent).toBe('—');
+    expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
     const banqi = panel.querySelector(
       '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="banqi"] .landing-lobby-seed-rating',
     );
     expect(banqi?.textContent).toBe('—');
+    expect(banqi?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {

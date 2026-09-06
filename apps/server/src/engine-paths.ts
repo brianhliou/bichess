@@ -79,11 +79,12 @@ export function engineFeedbackPath(...parts: string[]): string {
 }
 
 /**
- * Where Stockfish lives in this environment. apt installs it at
- * /usr/games/stockfish, which is NOT on the container PATH, so anything that
- * resolves the binary by PATH alone fails in prod — the live engine forfeited
- * move 1 that way once (room 81e7b246), and the fog analyzer failed its first
- * production run the same way.
+ * Where Stockfish lives in this environment. Nothing here resolves by PATH
+ * alone: the old apt package landed at /usr/games/stockfish, which is NOT on
+ * the container PATH, and the live engine forfeited move 1 that way once
+ * (room 81e7b246) while the fog analyzer failed its first production run the
+ * same way. Since 2026-09-06 prod builds a pinned Stockfish from
+ * `stockfish.ref` into /app/bin instead of apt-installing an unpinned one.
  *
  * One definition on purpose: this was copied into python-pool and engine-runner,
  * and a third copy was about to be written for the analysis spawn. Any caller
@@ -91,6 +92,14 @@ export function engineFeedbackPath(...parts: string[]): string {
  */
 export function defaultStockfishPath(): string | undefined {
   for (const candidate of [
+    // The pinned build (stockfish.ref -> railpack build step) comes FIRST and
+    // deliberately outranks the apt paths. Until 2026-09-06 prod installed a
+    // bare `stockfish` apt package, so the leaf evaluator was whatever Debian
+    // shipped on the last rebuild while every local rig ran homebrew Stockfish:
+    // a production move could not be reproduced offline. The apt entry is gone
+    // from railpack, and this ordering means a leftover distro copy in an older
+    // image still loses to the pinned one.
+    '/app/bin/stockfish',
     '/usr/games/stockfish',
     '/usr/bin/stockfish',
     '/opt/homebrew/bin/stockfish',

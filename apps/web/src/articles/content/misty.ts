@@ -15,7 +15,7 @@ export const mistyArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-21',
-    updatedAt: '2026-07-01',
+    updatedAt: '2026-09-05',
     audience:
       'Dark chess players and chess-engine builders curious about how the Mistboard engine works.',
     intro: [
@@ -52,7 +52,7 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'That family of approach is called perfect-information Monte Carlo. It is also the family used by Obscuro, the strongest published Fog of War chess engine. The hard part is not just playing chess. It is keeping the hidden-board model honest while the clock is running.',
+              'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.',
           },
         ],
       },
@@ -77,12 +77,37 @@ export const mistyArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'The current production engine is Misty 1.5. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book.',
+              'The current production engine is Misty 1.6. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book. Version 1.6 closes one specific queen hang. The safety check that vetoes catastrophic captures was subtracting the value of the piece being taken, so giving up a queen for a defended rook scored as a small loss rather than a disaster, and Misty walked into it in two real games before the floor that catches it shipped.',
           },
           {
             kind: 'paragraph',
             text:
               "That does not make Misty solved or perfectly safe. It means the cheap fog-specific failures that made earlier versions look silly are much rarer, so games against it test your understanding instead of your patience.",
+          },
+        ],
+      },
+      {
+        heading: 'The engine is open source',
+        blocks: [
+          {
+            kind: 'paragraph',
+            text:
+              "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.",
+          },
+          {
+            kind: 'paragraph',
+            text:
+              'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.',
+          },
+          {
+            kind: 'cta',
+            buttons: [
+              {
+                label: 'Misty on GitHub',
+                href: 'https://github.com/brianhliou/misty',
+                emphasis: 'secondary',
+              },
+            ],
           },
         ],
       },

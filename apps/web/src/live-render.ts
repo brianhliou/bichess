@@ -18,6 +18,7 @@ import {
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
+  roomModeAnalyticsProps,
 } from './analytics.js';
 import { chessgroundAnimation } from './board-anim.js';
 import { type I18nKey, t } from './i18n/catalog.js';
@@ -308,7 +309,7 @@ function trackGameLifecycle(view: PlayerView | null): void {
       hiddenDraft960: isDraft960RoomForAnalytics(),
     }),
     rated: liveState.rated,
-    roomMode: liveState.roomMode,
+    ...roomModeAnalyticsProps(liveState.roomMode),
     initialMs: view.clock?.initialMs ?? null,
     incrementMs: view.clock?.incrementMs ?? null,
     time_class:

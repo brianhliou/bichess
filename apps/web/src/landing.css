@@ -68,6 +68,29 @@
   margin: 0 auto;
 }
 
+/* No video row: span the rails over what is actually there.
+ *
+ * The rails are tuned for TWO centre rows -- news and studies each top-align
+ * with the blog row and bottom-align with the video row. Drop the video row and
+ * that tuning inverts: row four collapses toward zero, the rails stand taller
+ * than the one remaining blog row, and a row-gap of dead space is stranded
+ * under the centre column.
+ *
+ * This is NOT only the mainland case. buildHomeVideoCards has always returned
+ * null when no curated key resolves, and landing.ts has always guarded on it, so
+ * this state has been reachable since the row shipped and the grid never
+ * handled it. The CN gate (#378) is simply the first thing to trigger it.
+ *
+ * Keyed on :has() rather than a class from JS on purpose: the rule reacts to
+ * whether the row is in the DOM, so it cannot drift out of sync with the
+ * condition that omitted it. :has() is already used elsewhere in this file. */
+.landing-demo:not(:has(.landing-videos-row)) {
+  grid-template-areas:
+    "left   panel  play"
+    "puzzle forum  chat"
+    "news   blogs  studies";
+}
+
 /* The homepage's single h1. Sized as a headline rather than a footnote: it is
    the only thing above the fold that says what the site is, and at 13px muted
    a first-time visitor read the bot lobby before they read the product. Kept in

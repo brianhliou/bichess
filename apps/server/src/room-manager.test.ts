@@ -16,6 +16,7 @@ import {
   applyOrphanRecoveryIfNeeded,
   broadcastSnapshot,
   buildGameSummary,
+  buildLiveEngineDecisionArtifactPayload,
   clearAbortTimer,
   clearForfeitTimer,
   expireActiveClock,
@@ -1405,6 +1406,70 @@ test('playRandomEngineMoveIfReady: no-op on paused room (defense in depth)', asy
     before,
     'paused room must not record an engine move even if the callback fires',
   );
+});
+
+// ── live-engine-decision artifact ─────────────────────────────────────────────
+
+function decisionArtifactInput(
+  overrides: Partial<Parameters<typeof buildLiveEngineDecisionArtifactPayload>[0]> = {},
+) {
+  const move = { from: 'e2', to: 'e4' } as const;
+  return {
+    contextPly: 8,
+    durationMs: 4900,
+    engineId: 'python-v2-v1.6',
+    fallback: false,
+    fallbackEvent: null,
+    move,
+    requestedEngineId: 'python-v2-v1.6',
+    scores: [{ move, score: 0, reason: 'engine-worker:v2' }],
+    thinkTimeMs: 4800,
+    budgetMs: 12_000,
+    ...overrides,
+  };
+}
+
+// Chess / dark chess is the most-played surface and this payload is its only
+// durable record of an engine decision. It carried think time against NOTHING
+// until 2026-09-06, so scripts/engine-budget-report.mjs could only report the
+// fog bots as CEILING-UNKNOWN: think time with no ceiling cannot say whether the
+// engine finished its work or ran out of clock.
+test('live-engine-decision artifact records the compute budget the move ran under', () => {
+  const payload = buildLiveEngineDecisionArtifactPayload(decisionArtifactInput());
+
+  // Named movetime_ms to match the tenant and standard-xiangqi writers: it is
+  // the key every artifact reader already looks for, and a fourth spelling would
+  // leave the fog path unreadable to all of them.
+  assert.equal(payload.movetime_ms, 12_000);
+  assert.equal(payload.think_time_ms, 4800);
+  assert.equal(payload.duration_ms, 4900);
+  assert.equal(payload.engine_id, 'python-v2-v1.6');
+  assert.equal(payload.requested_engine_id, 'python-v2-v1.6');
+  assert.equal(payload.fallback, false);
+});
+
+// The in-process builtin engines are handed no movetime at all. Null and 0 are
+// very different claims here: 0 would report an engine starved of time.
+test('live-engine-decision artifact keeps an absent budget null, never 0', () => {
+  const payload = buildLiveEngineDecisionArtifactPayload(decisionArtifactInput({ budgetMs: null }));
+
+  assert.ok('movetime_ms' in payload, 'the budget key must be present even when there is none');
+  assert.equal(payload.movetime_ms, null);
+  assert.notEqual(payload.movetime_ms, 0);
+});
+
+// engine_diagnostics is the worker's own telemetry and is absent for the builtin
+// engines; the budget must not start riding on its presence.
+test('live-engine-decision artifact records the budget with or without diagnostics', () => {
+  const withDiagnostics = buildLiveEngineDecisionArtifactPayload(
+    decisionArtifactInput({ engineDiagnostics: { iters: 900, searchSeconds: 4.5 } }),
+  );
+  assert.equal(withDiagnostics.movetime_ms, 12_000);
+  assert.deepEqual(withDiagnostics.engine_diagnostics, { iters: 900, searchSeconds: 4.5 });
+
+  const withoutDiagnostics = buildLiveEngineDecisionArtifactPayload(decisionArtifactInput());
+  assert.equal(withoutDiagnostics.movetime_ms, 12_000);
+  assert.equal('engine_diagnostics' in withoutDiagnostics, false);
 });
 
 // ── scheduleAbortTimeout ──────────────────────────────────────────────────────

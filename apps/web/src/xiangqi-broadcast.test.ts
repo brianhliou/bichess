@@ -4,6 +4,7 @@ import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
+  broadcastRecordsCredit,
   formatBroadcastFreshness,
   mountXiangqiBroadcastBoard,
   mountXiangqiBroadcastIndex,
@@ -36,6 +37,28 @@ function stubEventSource(): void {
       close(): void {}
     },
   );
+}
+
+// The no-op stub above is enough for mount-only tests. This one keeps the
+// listener so a test can push a round update the way the server would.
+function stubPushableEventSource(): { push: (payload: unknown, version: string) => void } {
+  const listeners = new Map<string, (event: Event) => void>();
+  vi.stubGlobal(
+    'EventSource',
+    class {
+      addEventListener(type: string, fn: (event: Event) => void): void {
+        listeners.set(type, fn);
+      }
+      close(): void {}
+    },
+  );
+  return {
+    push(payload, version) {
+      const fn = listeners.get('round');
+      if (!fn) throw new Error('nothing listening for round events');
+      fn(new MessageEvent('round', { data: JSON.stringify({ version, payload }) }));
+    },
+  };
 }
 
 function stubFetchJson(payloadForUrl: (url: string) => unknown): void {
@@ -218,6 +241,86 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-board-card-live .xqb-badge-live')).not.toBeNull();
   });
 
+  // The round grid draws every board at once, and .xq-piece in live-xiangqi.css
+  // carries a drop-shadow. A filter is an offscreen surface plus a blur re-run
+  // per raster tile, so twenty boards was 396 live filters and dropped 382 of
+  // 722 frames while scrolling (2026-09-06, 1280x800; 3 of 724 with them off).
+  // xiangqi-broadcast.css turns them off, scoped to .xqb-card-board.
+  //
+  // That scoping is the fragile part, so assert it rather than the rule text:
+  // the override only reaches a piece that is INSIDE a card board. A future
+  // card that renders a board anywhere else silently gets the filters back, and
+  // nothing else in the suite would notice.
+  it('keeps every grid piece inside .xqb-card-board, where the filter override reaches', async () => {
+    stubFetchJson(() => ROUND);
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const pieces = root.querySelectorAll('.xq-piece');
+    expect(pieces.length).toBeGreaterThan(0);
+    for (const piece of pieces) {
+      expect(piece.closest('.xqb-card-board')).not.toBeNull();
+    }
+
+    const rings = root.querySelectorAll('.xq-live-lastmove-ring');
+    for (const ring of rings) {
+      expect(ring.closest('.xqb-card-board')).not.toBeNull();
+    }
+  });
+
+  // A live round pushes on every board change, and each card replays its game
+  // from move one to rebuild its SVG. Repainting all twenty per push blocked the
+  // main thread for 400-700ms, so cards are cached and only changed ones rebuild.
+  //
+  // Asserted by DOM node IDENTITY rather than by counting work: identity is what
+  // "did not rebuild" actually means, and it cannot pass by accident.
+  it('reuses the card element for a board that did not change across a stream push', async () => {
+    stubFetchJson(() => ROUND);
+    const stream = stubPushableEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const before = [...root.querySelectorAll('.xqb-board-card')];
+    expect(before.length).toBe(2);
+
+    // One board gains a move; the other is untouched.
+    const next = structuredClone(ROUND) as typeof ROUND & {
+      boards: { id: string; plyCount?: number; updatedAt?: string }[];
+    };
+    next.boards[0]!.plyCount = (next.boards[0]!.plyCount ?? 0) + 1;
+    next.boards[0]!.updatedAt = '2026-09-06T12:00:00.000Z';
+    stream.push(next, 'v2');
+
+    const after = [...root.querySelectorAll('.xqb-board-card')];
+    expect(after.length).toBe(2);
+
+    const idOf = (card: Element) => card.querySelector('.xqb-card-number')?.textContent ?? '';
+    const changedBefore = before.find((c) => idOf(c) === idOf(after[0]!));
+    // The untouched board keeps its exact element; the changed one is replaced.
+    const untouched = after.filter((card) => before.includes(card));
+    expect(untouched.length).toBe(1);
+    expect(changedBefore && after.includes(changedBefore)).toBeFalsy();
+  });
+
+  it('rebuilds every card when board appearance changes', async () => {
+    stubFetchJson(() => ROUND);
+    stubPushableEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const before = [...root.querySelectorAll('.xqb-board-card')];
+
+    // A skin or layout change rewrites every board SVG, so no card may survive.
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+
+    const after = [...root.querySelectorAll('.xqb-board-card')];
+    expect(after.length).toBe(before.length);
+    expect(after.some((card) => before.includes(card))).toBe(false);
+  });
+
   it('repaints mini-board cards when the board layout changes', async () => {
     stubFetchJson(() => ROUND);
     stubEventSource();
@@ -312,6 +415,50 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-board-card-live .xqb-card-foot')?.textContent).toContain(
       'live',
     );
+  });
+});
+
+describe('broadcastRecordsCredit', () => {
+  // Games imported from an archive carry their origin per board. The credit is
+  // derived from that, because tour.sourceUrl is a poll target: it has to be
+  // fetchable and parseable, so an archive-imported tour cannot carry one.
+  it('credits the single origin the boards came from, without the www', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142539.html' },
+        { sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142540.html' },
+      ]),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
+  it('says nothing when the boards are ours', () => {
+    expect(broadcastRecordsCredit([{}, {}])).toBeNull();
+  });
+
+  // A mixed-origin round would need a list, and crediting only the first source
+  // would be worse than crediting none.
+  it('says nothing when boards come from more than one origin', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/a.html' },
+        { sourceUrl: 'https://example.org/b.html' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('ignores a board whose source will not parse rather than dropping the credit', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'http://www.dpxq.com/a.html' },
+        { sourceUrl: 'not a url' },
+      ]),
+    ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
+  it('ignores non-http schemes so a discovery source never becomes a credit', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'mistboard-discover://dpxq-live?tourSlug=x' }]),
+    ).toBeNull();
   });
 });
 

@@ -35,6 +35,17 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-06 (practice endgames) ── 术语用棋界通行说法：残局、士象全、单车难破士象全。
+  'Practice the basic endgames against the engine.': '与引擎对弈，练习基本残局。',
+  'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':
+    '三十二个基本残局，每局只给目标，不给标准答案。引擎负责防守，并按你走完这一步之后胜势是否还在来评判。单车难破士象全，三兵却能破，这种结论只有在自己证明失败之后才会真正相信。先做残局，是因为这些定论正是英文读者最难接触到的部分。后面还会有更多。',
+  'Try an exercise': '试做一题',
+  // ── 2026-09-06 (Misty open source) ── 引擎名 Misty、包名 misty-chess 保持原文。
+  'Misty is open source.': 'Misty 已开源。',
+  'The Fog of War chess engine you play here is on GitHub under the GPL, and installs from PyPI as misty-chess. It is a build of the architecture behind Obscuro, the first superhuman Fog of War chess AI, whose own code was never released. The engine article now says how it works, what version 1.6 fixed, and what is still wrong with it.':
+    '你在这里对弈的迷雾国际象棋引擎已以 GPL 协议发布在 GitHub 上，也可以从 PyPI 安装，包名是 misty-chess。它实现的是 Obscuro 背后的架构；Obscuro 是第一个达到超人水平的迷雾国际象棋 AI，其自身代码从未公开。引擎文章现在讲清楚了它如何工作、1.6 版修正了什么，以及它还有哪些问题。',
+  'How Misty plays': 'Misty 如何思考',
+
   // ── 2026-09-04 (jieqi openings) ── 开局术语跟文章一致：仙人指路、炮二进四、揭子。
   'What strong jieqi players believe about the opening.': '强手眼中的揭棋开局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':
@@ -305,6 +316,17 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-06 (practice endgames) ── 術語用棋界通行說法：殘局、士象全、單車難破士象全。
+  'Practice the basic endgames against the engine.': '與引擎對弈，練習基本殘局。',
+  'Thirty-two positions from the book endgames, each with a goal instead of a stored answer. The engine plays the defense and grades you on whether the win is still there after your move. A chariot cannot break the full defense and three soldiers can, which is the sort of claim you only believe after failing to prove it. Endgames come first because their verdicts are the part of xiangqi an English speaker has the least access to. More sets will follow.':
+    '三十二個基本殘局，每局只給目標，不給標準答案。引擎負責防守，並按你走完這一步之後勝勢是否還在來評判。單車難破士象全，三兵卻能破，這種結論只有在自己證明失敗之後才會真正相信。先做殘局，是因為這些定論正是英文讀者最難接觸到的部分。後面還會有更多。',
+  'Try an exercise': '試做一題',
+  // ── 2026-09-06 (Misty open source) ── 引擎名 Misty、套件名 misty-chess 保持原文。
+  'Misty is open source.': 'Misty 已開源。',
+  'The Fog of War chess engine you play here is on GitHub under the GPL, and installs from PyPI as misty-chess. It is a build of the architecture behind Obscuro, the first superhuman Fog of War chess AI, whose own code was never released. The engine article now says how it works, what version 1.6 fixed, and what is still wrong with it.':
+    '你在這裡對弈的迷霧國際象棋引擎已以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。它實作的是 Obscuro 背後的架構；Obscuro 是第一個達到超人水準的迷霧國際象棋 AI，其自身程式碼從未公開。引擎文章現在講清楚了它如何運作、1.6 版修正了什麼，以及它還有哪些問題。',
+  'How Misty plays': 'Misty 如何思考',
+
   // ── 2026-09-04 (jieqi openings) ── 開局術語與文章一致：仙人指路、炮二進四、揭子。
   'What strong jieqi players believe about the opening.': '強手眼中的揭棋開局。',
   'Jieqi has no opening book. What it has is an argument, running on Chinese forums for years among players with thousands of games, that has never appeared in English. Five first moves ranked, why a face-down piece is a one-shot option you can waste, and the pawn push weighed against the crossed cannon on all six things you might reveal. Our own fifty games disagree with the ranking, and the engine declines the list altogether.':

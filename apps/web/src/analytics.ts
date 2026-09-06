@@ -64,6 +64,106 @@ export function maybeGameSpecAnalyticsProps(
   return spec ? analyticsPropsFromSpec(spec) : null;
 }
 
+export type RoomModeAnalyticsProps = {
+  roomMode: 'pvp' | 'pve';
+  pve: boolean;
+  bot_name: string | null;
+};
+
+// `roomMode` has ridden on game_started since the funnel existed, but a
+// dashboard tile cannot split human-vs-human from human-vs-bot without a
+// boolean to filter on, and nothing ever named the bot. `bot_name` is the
+// opponent seat's branded display name where the runtime carries one (the
+// tenant stack); the chess stack has no seat names and reports null.
+export function roomModeAnalyticsProps(
+  roomMode: string | null | undefined,
+  botName?: string | null,
+): RoomModeAnalyticsProps {
+  const pve = roomMode === 'pve';
+  return { roomMode: pve ? 'pve' : 'pvp', pve, bot_name: pve ? (botName ?? null) : null };
+}
+
+// A path segment that carries a digit or an underscore is an id (room ids,
+// game ids, short ids) unless it is a registered game spec, which is how
+// `dark-draft960` survives. Everything else is a route word and stays.
+const ID_SEGMENT = /[\d_]/;
+
+export function reviewRouteForAnalytics(pathname: string): string {
+  const segments = pathname.split('/').filter((segment) => segment.length > 0);
+  const normalized = segments.map((segment) =>
+    maybeGameSpecForId(segment) || !ID_SEGMENT.test(segment) ? segment : ':id',
+  );
+  return `/${normalized.join('/')}`;
+}
+
+export type ReviewOpenedProps = Partial<GameSpecAnalyticsProps> & {
+  review_surface: string;
+  route: string;
+  variant: string | null;
+  has_analysis: boolean;
+  page_class: string | null;
+  referrer_kind: 'none' | 'same-site' | 'external';
+};
+
+// Every game review page builds its chrome from one scaffold, so one call site
+// counts them all; the props are derived from the URL rather than threaded
+// through eleven adapters. The route is id-stripped so it stays low-cardinality.
+export function reviewOpenedProps(input: {
+  pathname: string;
+  referrer: string;
+  origin: string;
+  reviewSurface: string;
+  hasAnalysis: boolean;
+  pageClassName?: string | null;
+}): ReviewOpenedProps {
+  const segments = input.pathname.split('/').filter((segment) => segment.length > 0);
+  const specSegment = segments.find((segment) => maybeGameSpecForId(segment) !== null) ?? null;
+  const specProps = maybeGameSpecAnalyticsProps(specSegment);
+  const referrerKind =
+    input.referrer === ''
+      ? 'none'
+      : input.referrer.startsWith(input.origin)
+        ? 'same-site'
+        : 'external';
+  return {
+    review_surface: input.reviewSurface,
+    route: reviewRouteForAnalytics(input.pathname),
+    variant: specProps?.game_spec ?? null,
+    ...(specProps ?? {}),
+    has_analysis: input.hasAnalysis,
+    page_class: input.pageClassName ?? null,
+    referrer_kind: referrerKind,
+  };
+}
+
+export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned';
+export type PuzzleAttemptMode = 'session' | 'embed';
+
+// One event per terminal outcome, mirroring the server-side quality session's
+// first terminal outcome so the two counts reconcile. `clean` is a solve with
+// no wrong move, hint or reveal before it: a failed-then-solved puzzle still
+// counts for a streak, but it is not the same difficulty signal.
+export function puzzleAttemptedProps(input: {
+  puzzleId: string;
+  variant: string;
+  themes?: readonly string[];
+  rated: boolean;
+  mode: PuzzleAttemptMode;
+  outcome: PuzzleAttemptOutcome;
+  clean: boolean;
+}): Record<string, unknown> {
+  return {
+    puzzle_id: input.puzzleId,
+    variant: input.variant,
+    ...(maybeGameSpecAnalyticsProps(input.variant) ?? {}),
+    themes: [...(input.themes ?? [])],
+    rated: input.rated,
+    mode: input.mode,
+    outcome: input.outcome,
+    clean: input.clean,
+  };
+}
+
 type PostHogLike = {
   capture: (name: string, props?: Record<string, unknown>) => void;
   captureException?: (error: unknown, props?: Record<string, unknown>) => void;

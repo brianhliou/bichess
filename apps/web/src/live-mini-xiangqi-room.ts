@@ -10,6 +10,7 @@ import {
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsPropsForId,
+  roomModeAnalyticsProps,
 } from './analytics.js';
 import { darkMiniXiangqiEnabled } from './feature-flags.js';
 import { setLiveLayoutGameSpec } from './live-layout.js';
@@ -265,7 +266,7 @@ function trackMiniXiangqiLifecycle(view: MiniXiangqiPlayerView | null): void {
     gameId: view.id,
     ...gameSpecAnalyticsPropsForId(currentMiniXiangqiSpecId()),
     rated: liveState.rated,
-    roomMode: liveState.roomMode,
+    ...roomModeAnalyticsProps(liveState.roomMode),
     initialMs: tc?.initialMs ?? null,
     incrementMs: tc?.incrementMs ?? null,
     time_class: tc ? classifyTimeControl(tc.initialMs, tc.incrementMs) : null,

@@ -170,9 +170,20 @@ export async function mountXiangqiBroadcastRound(
         roundId,
       )}`,
     );
-    const paint = (): void => root.replaceChildren(buildNav(), renderRound(data));
+    // Every stream push repaints the whole round, and a card is expensive:
+    // boardCard replays its game from move one and builds a board SVG. Twenty
+    // boards is ~1,700 plies, so rebuilding all of them per push blocks the
+    // main thread for hundreds of milliseconds on exactly the rounds that push
+    // most. Cards survive across paints and only the changed ones are rebuilt.
+    const cards: BoardCardCache = new Map();
+    const paint = (): void => root.replaceChildren(buildNav(), renderRound(data, cards));
     paint();
-    installBroadcastAppearanceRefresh(paint);
+    // A skin or layout change rewrites every board SVG, so no cached card
+    // survives it.
+    installBroadcastAppearanceRefresh(() => {
+      cards.clear();
+      paint();
+    });
     connectRoundStream(tourSlug, roundId, roundVersion(data), (next) => {
       data = next;
       paint();
@@ -494,7 +505,84 @@ function roundSwitcher(
   return select;
 }
 
-function renderRound(data: BroadcastRoundResponse): HTMLElement {
+// A rendered card plus the inputs it was built from. Keyed by board id.
+type BoardCardCache = Map<string, { signature: string; el: HTMLElement }>;
+
+// Deliberately the same inputs roundVersion feeds the stream gate, plus the
+// small fields the card paints. That coupling is the point: a change the gate
+// cannot see never arrives as a push, so a card the gate would not fire for is
+// a card that genuinely has not moved. If roundVersion ever grows a field,
+// grow this one with it.
+function boardCardSignature(board: BroadcastBoardSummary): string {
+  return JSON.stringify([
+    board.updatedAt ?? null,
+    board.plyCount ?? board.moves?.length ?? 0,
+    board.status,
+    board.result,
+    board.boardNumber,
+    board.red,
+    board.black,
+  ]);
+}
+
+function boardCardFor(board: BroadcastBoardSummary, cache?: BoardCardCache): HTMLElement {
+  if (!cache) return boardCard(board);
+  const signature = boardCardSignature(board);
+  const cached = cache.get(board.id);
+  // Appending an element that is already in the DOM moves it, so a reused card
+  // reorders (live boards lead the grid) without being rebuilt.
+  if (cached && cached.signature === signature) return cached.el;
+  const el = boardCard(board);
+  cache.set(board.id, { signature, el });
+  return el;
+}
+
+// Where these games came from, taken from the provenance each board already
+// carries rather than from tour.sourceUrl.
+//
+// tour.sourceUrl is a POLL TARGET, not a credit. It has to be fetchable and
+// parseable, the poller re-anchors it on every run, and for a tour imported
+// from an archive there is no URL shape that expresses "all of this came from
+// there": the source interpreter only understands a dpxq page carrying move
+// data, so a tour index is rejected as malformed. A credit is editorial and
+// should not depend on any of that.
+export function broadcastRecordsCredit(
+  boards: readonly { sourceUrl?: string }[],
+): { host: string; href: string } | null {
+  const origins = new Map<string, string>();
+  for (const board of boards) {
+    if (!board.sourceUrl) continue;
+    try {
+      const url = new URL(board.sourceUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
+      origins.set(url.host.replace(/^www\./, ''), url.origin);
+    } catch {
+      // A board with an unparseable source simply does not vote.
+    }
+  }
+  // Two origins would need a list, and no import path produces one today.
+  // Credit only what can be stated without qualification.
+  if (origins.size !== 1) return null;
+  const [entry] = [...origins.entries()];
+  const [host, href] = entry!;
+  return { host, href };
+}
+
+function recordsCreditLine(boards: readonly { sourceUrl?: string }[]): HTMLElement | null {
+  const credit = broadcastRecordsCredit(boards);
+  if (!credit) return null;
+  const line = document.createElement('p');
+  line.className = 'xqb-records-credit';
+  const link = document.createElement('a');
+  link.href = credit.href;
+  link.rel = 'noreferrer';
+  link.textContent = credit.host;
+  const [before, after] = t('broadcast.recordsFrom').split('{source}');
+  line.append(document.createTextNode(before ?? ''), link, document.createTextNode(after ?? ''));
+  return line;
+}
+
+function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTMLElement {
   document.title = `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`;
   const main = broadcastShell();
   const liveCount = data.boards.filter((board) => board.status === 'live').length;
@@ -527,9 +615,16 @@ function renderRound(data: BroadcastRoundResponse): HTMLElement {
       Number(a.status !== 'live') - Number(b.status !== 'live') || a.boardNumber - b.boardNumber,
   );
   for (const board of boards) {
-    grid.append(boardCard(board));
+    grid.append(boardCardFor(board, cards));
+  }
+  // Boards that left the round entirely must not pin their cards in memory.
+  if (cards) {
+    const live = new Set(boards.map((board) => board.id));
+    for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
   }
   section.append(heading, grid);
+  const credit = recordsCreditLine(data.boards);
+  if (credit) section.append(credit);
   main.append(section);
   return main;
 }

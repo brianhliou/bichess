@@ -5,6 +5,7 @@ import type { EngineDefinition, EngineId, EngineMoveContext } from './engine-reg
 import {
   chooseLiveEngineMove,
   type LiveEngineFallbackEvent,
+  liveEngineComputeBudgetMs,
   pythonLiveTimeoutBudgetMs,
   pythonLiveWatchdogTimeoutMs,
 } from './live-engine.js';
@@ -223,6 +224,54 @@ test('python live watchdog stays bounded under clock pressure', () => {
   assert.equal(budget.computeBudgetMs, 50);
   assert.equal(budget.watchdogTimeoutMs, 1_900);
   assert.equal(timeoutMs, 1_900);
+});
+
+// The number the live-engine-decision artifact records as movetime_ms. It has to
+// be the allocator's own output: a second formula in the writer would drift on
+// the next knob change and the artifact would describe a budget no engine was
+// ever handed, which is worse than recording none.
+test('the recorded compute budget is the allocator output for a python engine', () => {
+  const pythonEngine: EngineDefinition = {
+    ...testEngine('python-selected', legalMove),
+    kind: 'container',
+    config: { kind: 'python-subprocess', strategy: 'test', version: 1 },
+    chooseMove: undefined,
+  };
+  const moveContext = { ...context([legalMove]), clockRemainingMs: 180_000, incrementMs: 2_000 };
+
+  assert.equal(
+    liveEngineComputeBudgetMs(pythonEngine, moveContext, 5_000),
+    pythonLiveTimeoutBudgetMs(moveContext, 5_000).computeBudgetMs,
+  );
+  assert.equal(liveEngineComputeBudgetMs(pythonEngine, moveContext, 5_000), 12_000);
+});
+
+test('an engine with no time budget reports null, not zero', () => {
+  // The in-process builtin engines are handed no movetime at all. Zero would
+  // read as an engine starved of time, which is a different (and false) claim.
+  assert.equal(
+    liveEngineComputeBudgetMs(testEngine('builtin', legalMove), {
+      ...context([legalMove]),
+      clockRemainingMs: 180_000,
+      incrementMs: 2_000,
+    }),
+    null,
+  );
+});
+
+test('the recorded budget uses the engine own live timeout, as the move itself does', () => {
+  // chooseLiveEngineMove resolves the timeout as `livePolicy?.timeoutMs ??
+  // timeoutMs`, and that value reaches the allocator as the UNTIMED fallback —
+  // so on a clockless room the two must not disagree.
+  const pythonEngine: EngineDefinition = {
+    ...testEngine('python-selected', legalMove),
+    kind: 'container',
+    config: { kind: 'python-subprocess', strategy: 'test', version: 1 },
+    livePolicy: { timeoutMs: 7_000 },
+    chooseMove: undefined,
+  };
+
+  assert.equal(liveEngineComputeBudgetMs(pythonEngine, context([legalMove]), 5_000), 7_000);
 });
 
 function testEngine(id: string, move: Move): EngineDefinition {

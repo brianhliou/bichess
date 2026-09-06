@@ -50,6 +50,10 @@ export function setPuzzleRatedPref(enabled: boolean): void {
   puzzleRatedPref = enabled;
 }
 
+export function getPuzzleRatedPref(): boolean {
+  return puzzleRatedPref;
+}
+
 export function setOnAttemptRating(callback: ((rating: PuzzleAttemptRating) => void) | null): void {
   onAttemptRating = callback;
 }

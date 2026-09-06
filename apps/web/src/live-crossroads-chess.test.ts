@@ -117,6 +117,8 @@ describe('Crossroads Chess live room terminal actions', () => {
         rating_pool: spec.ratingPoolBase,
         rated: false,
         roomMode: 'pve',
+        pve: true,
+        bot_name: null,
         initialMs: 300_000,
         incrementMs: 5_000,
         time_class: 'rapid',

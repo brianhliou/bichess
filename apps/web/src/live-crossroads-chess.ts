@@ -33,6 +33,7 @@ import {
   createGameLifecycleTracker,
   type GameLifecycleStatusType,
   gameSpecAnalyticsPropsForId,
+  roomModeAnalyticsProps,
 } from './analytics.js';
 import {
   CROSSROADS_CHESS_BOARD_PX,
@@ -575,7 +576,7 @@ export function crossroadsChessLifecycleAnalyticsInput(
     gameId: view.id,
     ...gameSpecAnalyticsPropsForId(CROSSROADS_CHESS_SPEC_ID),
     rated: false,
-    roomMode: context.roomMode,
+    ...roomModeAnalyticsProps(context.roomMode),
     initialMs: tc?.initialMs ?? null,
     incrementMs: tc?.incrementMs ?? null,
     time_class: tc ? classifyTimeControl(tc.initialMs, tc.incrementMs) : null,

@@ -13,6 +13,12 @@
 
 import { resolvePuzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
 import './puzzles.css';
+import {
+  type PuzzleAttemptMode,
+  type PuzzleAttemptOutcome,
+  puzzleAttemptedProps,
+  track,
+} from './analytics.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
 import { initLiveSound, playSound } from './live-sound.js';
@@ -32,6 +38,7 @@ import {
   fetchPuzzleListWithAttempts,
   fetchPuzzleSolution,
   fetchUserPuzzleRating,
+  getPuzzleRatedPref,
   PuzzlePlayDisabledError,
   reportAttemptRating,
   sendPuzzleQualityEvent,
@@ -262,6 +269,7 @@ export async function mountPuzzles(
       void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
         () => {},
       );
+      trackPuzzleAttempted(session, 'abandoned');
     }
     session?.analysis?.dispose();
     session = createPuzzleSession(puzzle);
@@ -360,6 +368,7 @@ export async function mountPuzzles(
     void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
       () => {},
     );
+    trackPuzzleAttempted(session, 'abandoned');
   });
 
   // The variant boards render pieces as inline SVG, so a live piece-set or
@@ -596,6 +605,25 @@ function showPlayLocked(session: PuzzleSession, renderSession: () => void): void
   renderSession();
 }
 
+// Which host mounted the solver: the /puzzles page or a third-party embed
+// frame. The two never share a document, so a module flag is enough.
+let puzzleAnalyticsMode: PuzzleAttemptMode = 'session';
+
+function trackPuzzleAttempted(session: PuzzleSession, outcome: PuzzleAttemptOutcome): void {
+  track(
+    'puzzle_attempted',
+    puzzleAttemptedProps({
+      puzzleId: session.puzzle.id,
+      variant: session.puzzle.variant,
+      themes: (session.puzzle as { themes?: readonly string[] }).themes,
+      rated: getPuzzleRatedPref(),
+      mode: puzzleAnalyticsMode,
+      outcome,
+      clean: outcome === 'solved' && !session.failed,
+    }),
+  );
+}
+
 async function submitMove(
   session: PuzzleSession,
   move: PuzzleMove,
@@ -629,6 +657,7 @@ async function submitMove(
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
+      trackPuzzleAttempted(session, 'solved');
       onSolved?.(session.puzzle.id);
     }
     // A solve by a mate we did not store says so. Silently reading it as the
@@ -734,6 +763,7 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
   }
   session.failed = true;
   session.revealed = true;
+  trackPuzzleAttempted(session, 'revealed');
   session.selectedSquare = null;
   session.selectedDrop = null;
   // Play the answer out from wherever the user got to. Their correct moves are a
@@ -1014,6 +1044,7 @@ export function mountPuzzleSolver(
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
+  puzzleAnalyticsMode = 'embed';
   restoreBoardScale();
   installPuzzleGripFit();
   const session = createPuzzleSession(puzzle);

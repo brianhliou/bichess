@@ -24,6 +24,7 @@ import {
   createGameLifecycleTracker,
   type GameLifecycleStatusType,
   maybeGameSpecAnalyticsProps,
+  roomModeAnalyticsProps,
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
@@ -607,6 +608,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     return status === 'setup' ? 'pregame' : (status as GameLifecycleStatusType);
   }
 
+  // The seat the viewer is not sitting in. In a bot room that is the engine,
+  // already collapsed to its brand by brandSeatDisplayNames, so the funnel can
+  // say which bot a first game was played against.
+  function opponentSeatName(): string | null {
+    // A spectator has no opponent: without the seat we cannot tell which name
+    // is the engine, and guessing would put a human account in bot_name.
+    if (state.seat === null || state.seat === 'spectator') return null;
+    for (const [color, name] of Object.entries(state.seatDisplayNames)) {
+      if (color !== state.seat && typeof name === 'string') return name;
+    }
+    return null;
+  }
+
   function trackGameLifecycle(view: V | null): void {
     if (config.emitsOwnLifecycleAnalytics) return;
     // Scrubbing a replay is not playing, and re-entering a finished room must
@@ -621,7 +635,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       // here rather than false. Do not substitute a guess: the legacy stack
       // reports a real value and a fabricated one would silently pool with it.
       rated: null,
-      roomMode: config.chrome?.roomMode?.() ?? 'pvp',
+      ...roomModeAnalyticsProps(config.chrome?.roomMode?.() ?? 'pvp', opponentSeatName()),
       initialMs: timeControl?.initialMs ?? null,
       incrementMs: timeControl?.incrementMs ?? null,
       time_class: timeControl
