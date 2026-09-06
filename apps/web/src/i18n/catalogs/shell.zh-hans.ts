@@ -13,6 +13,7 @@ export const ZH_HANS_SHELL = {
   'nav.puzzles': '题目',
   'nav.learn': '学习',
   'nav.learnXiangqi': '象棋入门',
+  'nav.practice': '练习',
   'nav.rules': '规则',
   'nav.articles': '文章',
   'nav.watch': '观看',

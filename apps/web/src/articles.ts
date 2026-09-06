@@ -94,9 +94,11 @@ import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
 import { hasFinalVariantMarker, renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
+  gameSpecIdFromRulesSlug,
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
+  variantSupportsPve,
 } from './variant-public-surfaces.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import { mountXiangqiReplay, type XiangqiReplayController } from './xiangqi-replay.js';
@@ -847,6 +849,14 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     sheet.append(breadcrumb);
   }
   sheet.append(header);
+
+  // Above the intro on purpose: the reader who arrived from a search for this
+  // game already knows they want it, and should not have to read to the bottom
+  // to find the board.
+  if (article.kind === 'rules') {
+    const playCta = buildRulesPlayCta(base.slug, article.title, locale);
+    if (playCta) sheet.append(playCta);
+  }
 
   if (article.intro && article.intro.length > 0) {
     const intro = document.createElement('div');
@@ -2149,6 +2159,75 @@ function pointsAtHiddenArticle(href: string): boolean {
   return !isArticleVisibleInThisEnv(target);
 }
 
+/** What a CTA actually offers the reader: a game, or another page. */
+function ctaKindForHref(href: string): 'play' | 'nav' {
+  return /[?&]play=/.test(href) ? 'play' : 'nav';
+}
+
+/** The play row on a rules page.
+ *
+ *  Rules pages are where search traffic lands (they are the pages that rank),
+ *  and until this existed 22 of them, including every flagship variant, had no
+ *  path to a board at all: a reader who arrived on /rules/banqi wanting to play
+ *  banqi had to find "Play" in the nav, land back on the homepage, and pick the
+ *  variant again from scratch. The play CTA was an authored body block, so it
+ *  was present only where someone had remembered to add one.
+ *
+ *  Whether a bot is offered comes from `variantSupportsPve`, the same helper the
+ *  play dialog uses, so this row can never advertise an opponent the dialog then
+ *  fails to provide. Variants with no bot get the friend link alone rather than
+ *  a dead "play the computer".
+ */
+function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLElement | null {
+  const gameSpecId = gameSpecIdFromRulesSlug(slug);
+  if (!gameSpecId) return null;
+  if (!rulesSlugPublicSurfaceEnabled(slug)) return null;
+
+  const game = variantNavLabel(title);
+  const row = document.createElement('div');
+  row.className = 'article-cta-row article-play-cta';
+
+  const buttons: { label: string; href: string; emphasis: 'primary' | 'secondary' }[] = [];
+  const spec = encodeURIComponent(gameSpecId);
+  if (variantSupportsPve(gameSpecId)) {
+    buttons.push({
+      label: t('articles.playThisGame', { game }, locale),
+      href: `/?play=computer&gameSpecId=${spec}`,
+      emphasis: 'primary',
+    });
+    buttons.push({
+      label: t('articles.playAFriend', {}, locale),
+      href: `/?play=friend&gameSpecId=${spec}`,
+      emphasis: 'secondary',
+    });
+  } else {
+    buttons.push({
+      label: t('articles.playThisGame', { game }, locale),
+      href: `/?play=friend&gameSpecId=${spec}`,
+      emphasis: 'primary',
+    });
+  }
+
+  for (const btn of buttons) {
+    const a = document.createElement('a');
+    a.className = `article-cta article-cta-${btn.emphasis}`;
+    a.href = btn.href;
+    a.textContent = btn.label;
+    a.addEventListener('click', () => {
+      track('article_cta_clicked', {
+        slug,
+        label: btn.label,
+        href: btn.href,
+        emphasis: btn.emphasis,
+        kind: 'play',
+        placement: 'rules-header',
+      });
+    });
+    row.append(a);
+  }
+  return row;
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
@@ -2166,12 +2245,19 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
     // Article CTAs were the one conversion step on these pages with no signal
     // at all: navigation to another route fires its own pageview, but nothing
     // said which article sent the reader or which button they took.
+    //
+    // `kind` splits the two things this event was conflating. Most authored CTA
+    // blocks are cross-links to another article ("Back to all rules"), and
+    // counting those beside the handful that open the play dialog made the
+    // event's conversion rate meaningless: it read as "CTA clickers convert at
+    // 89%" when the denominator was mostly navigation.
     a.addEventListener('click', () => {
       track('article_cta_clicked', {
         slug: currentArticleSlug(),
         label: btn.label,
         href: btn.href,
         emphasis: btn.emphasis ?? 'primary',
+        kind: ctaKindForHref(btn.href),
       });
     });
     row.append(a);

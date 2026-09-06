@@ -67,6 +67,13 @@ type BotProfile = {
   rating: BotRatingSnapshot | null;
   ratings?: BotRatingSnapshot[];
   games?: FeaturedGame[];
+  // Per-variant record and recent games, keyed by game spec id. The profile
+  // shows ONE variant at a time, so these are what its header, side stats and
+  // games list read; `gamesTotal`/`record`/`games` stay lifetime-across-variants
+  // for the /bots directory card. Optional so an older payload still renders --
+  // botRecordFor/botGamesFor fall back to the lifetime figures.
+  recordsByGameSpecId?: Record<string, BotRecord>;
+  gamesByGameSpecId?: Record<string, FeaturedGame[]>;
 };
 
 class BotNotFound extends Error {}
@@ -185,18 +192,27 @@ export async function mountBotProfile(root: HTMLElement, botId: string): Promise
     options[0]?.gameSpecId ??
     bot.defaultGameSpecId;
   let overview = buildBotOverview(bot, selectedGameSpecId);
+  // The games panel is rebuilt on variant switch too. It used to be built once,
+  // outside this closure, so the list stayed on whatever variant loaded first --
+  // and since the flat list was "most recent across all variants", the xiangqi
+  // view could show an all-jieqi list.
+  let games = buildRecentGames(bot, selectedGameSpecId);
+  games.id = `bot-games-${bot.id}`;
   const ratings = buildBotRatingsRail(bot, {
     selectedGameSpecId,
     onSelect: (gameSpecId) => {
       selectedGameSpecId = gameSpecId;
-      const next = buildBotOverview(bot, selectedGameSpecId);
-      overview.replaceWith(next);
-      overview = next;
+      const nextOverview = buildBotOverview(bot, selectedGameSpecId);
+      overview.replaceWith(nextOverview);
+      overview = nextOverview;
+      const nextGames = buildRecentGames(bot, selectedGameSpecId);
+      // The tab panel is addressed by id, so carry it across the swap.
+      nextGames.id = games.id;
+      games.replaceWith(nextGames);
+      games = nextGames;
       syncSelectedBotRating(ratings, selectedGameSpecId);
     },
   });
-  const games = buildRecentGames(bot);
-  games.id = `bot-games-${bot.id}`;
   const tabs = buildProfileTabsShell([
     {
       label: 'Recent games',
@@ -303,14 +319,14 @@ function buildBotOverview(bot: BotProfile, gameSpecId: string): HTMLElement {
     playOptionsFor(bot).find((candidate) => candidate.gameSpecId === gameSpecId) ??
     playOptionsFor(bot)[0];
   return buildProfileOverviewShell({
-    identity: buildBotIdentity(bot),
+    identity: buildBotIdentity(bot, gameSpecId),
     actions: option ? buildBotPlayAction(bot, option) : null,
     primary: buildBotRatingSpotlight(bot, gameSpecId),
     side: buildBotSideInfo(bot, gameSpecId),
   });
 }
 
-function buildBotIdentity(bot: BotProfile): HTMLElement {
+function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   const identity = document.createElement('div');
   identity.className = 'profile-identity';
 
@@ -332,9 +348,23 @@ function buildBotIdentity(bot: BotProfile): HTMLElement {
 
   const counts = document.createElement('div');
   counts.className = 'profile-counts';
+  // Games and Record are scoped to the SELECTED variant: they sit directly under
+  // a variant selector, so lifetime totals there read as a broken filter (they
+  // stayed at 100 / 82-18-0 across both of pikafish's variants). Variants stays
+  // a whole-bot figure, which is what it is about.
+  //
+  // "here" is load-bearing, not filler. These count games played ON THE SITE,
+  // while the rating beside them reads "Elo from 36 engine games" -- a different
+  // population entirely (a clockless engine-vs-engine ladder anchored to
+  // random-legal = 1500, see ratingSampleLabel). Naming only one of the two
+  // populations is what makes the pair read as a contradiction: pikafish shows
+  // 2,334 from 36 engine games next to 12 games and a 12-0-0 record, and a bare
+  // "Games" invites the reader to reconcile numbers that were never the same
+  // measurement.
+  const record = botRecordFor(bot, gameSpecId);
   counts.append(
-    buildBotCount(new Intl.NumberFormat().format(bot.gamesTotal), 'Games'),
-    buildBotCount(recordLabel(bot.record), 'Record'),
+    buildBotCount(new Intl.NumberFormat().format(record.games), 'Games here'),
+    buildBotCount(recordLabel(record), 'Record here'),
     buildBotCount(String(playOptionsFor(bot).length), 'Variants'),
   );
   identity.append(counts);
@@ -398,7 +428,7 @@ function buildBotRatingSpotlight(bot: BotProfile, gameSpecId: string): HTMLEleme
       q.textContent = '?';
       value.append(q);
     }
-    detail.textContent = `${rating.games} rated ${rating.games === 1 ? 'game' : 'games'} · ${timeClassLabel(rating.timeClass)}`;
+    detail.textContent = ratingSampleLabel(rating, { style: 'spotlight' });
   } else {
     value.textContent = '—';
     value.classList.add('profile-chart-value-empty');
@@ -442,7 +472,9 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
   if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));
-  side.append(buildBotSideStat('Record', recordLabel(bot.record)));
+  // Sits directly under "Published rating", which is an engine-ladder number.
+  // Same disambiguation as the header counts: say which population this counts.
+  side.append(buildBotSideStat('Record here', recordLabel(botRecordFor(bot, gameSpecId))));
 
   const engineId = playOptionsFor(bot).find(
     (candidate) => candidate.gameSpecId === gameSpecId,
@@ -535,7 +567,7 @@ function buildBotRatingRow(
   const games = document.createElement('span');
   games.className = 'profile-rating-games';
   games.textContent = rating
-    ? `${rating.games} rated ${rating.games === 1 ? 'game' : 'games'}`
+    ? ratingSampleLabel(rating, { style: 'rail' })
     : option.playable
       ? 'Unrated'
       : 'Unavailable';
@@ -559,15 +591,17 @@ function syncSelectedBotRating(section: HTMLElement, gameSpecId: string): void {
   }
 }
 
-function buildRecentGames(bot: BotProfile): HTMLElement {
+function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-games bot-profile-games';
 
-  const games = bot.games ?? [];
+  const games = botGamesFor(bot, gameSpecId);
   if (games.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'landing-games-empty';
-    empty.textContent = 'No completed games yet.';
+    // Names the variant: on a page with a variant selector, a bare "no games"
+    // reads as "this bot has never played", which is a different claim.
+    empty.textContent = `No completed ${variantDisplayLabel(gameSpecId)} games yet.`;
     section.append(empty);
     return section;
   }
@@ -577,6 +611,22 @@ function buildRecentGames(bot: BotProfile): HTMLElement {
   for (const game of games) list.append(buildProfileGameRow(game));
   section.append(list);
   return section;
+}
+
+// The bot's record in ONE variant. Falls back to the lifetime record only when
+// the payload predates recordsByGameSpecId; a supported variant the bot has
+// never played is present in the map as a real 0-0-0, so the fallback does not
+// fire for it and the page never reports lifetime numbers under a variant label.
+function botRecordFor(bot: BotProfile, gameSpecId: string): BotRecord {
+  return bot.recordsByGameSpecId?.[gameSpecId] ?? bot.record;
+}
+
+// The bot's recent games in ONE variant. Same fallback rule; note the flat
+// `bot.games` list is NOT filtered as a fallback, because its row cap is applied
+// before any variant split -- filtering it would silently show an empty list for
+// a variant that has games (see gamesByGameSpecId on the server).
+function botGamesFor(bot: BotProfile, gameSpecId: string): FeaturedGame[] {
+  return bot.gamesByGameSpecId?.[gameSpecId] ?? bot.games ?? [];
 }
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
@@ -662,4 +712,38 @@ function ratingLabel(rating: BotRatingSnapshot): string {
 
 function timeClassLabel(timeClass: BotRatingSnapshot['timeClass']): string {
   return timeClass[0].toUpperCase() + timeClass.slice(1);
+}
+
+/**
+ * What a bot rating's sample actually is, in words.
+ *
+ * `rating.games` is the snapshot's sample size, NOT games played on the site --
+ * two different populations that used to sit inches apart on the profile as
+ * "36 rated games" beside a "12 Games" header, reading as though 36 of the
+ * bot's games counted and 12 did not.
+ *
+ * For an `eve-anchor` snapshot (every published bot rating today) the sample is
+ * an engine-vs-engine ladder, on a scale anchored to random-legal = 1500. It is
+ * not the human rated pool: PvE is unrated by decision, so calling these "rated
+ * games" on a page whose other numbers are casual PvE games is the wrong claim.
+ * The time class is omitted for the same reason -- that ladder is run clockless
+ * (sourceRef carries `time=untimed`) and 'blitz' is only the bucket the
+ * snapshot was published into, so printing "Blitz" states something false.
+ */
+function ratingSampleLabel(
+  rating: BotRatingSnapshot,
+  opts: { style: 'rail' | 'spotlight' },
+): string {
+  const plural = rating.games === 1 ? 'game' : 'games';
+  const spotlight = opts.style === 'spotlight';
+  if (rating.source === 'eve-anchor') {
+    // The rail row is a narrow fixed-width cell beside the number, so it takes
+    // the bare sample; "Elo from ..." overflowed it into an ellipsis. The
+    // spotlight has the room to say what the number is.
+    return spotlight
+      ? `Elo from ${rating.games} engine ${plural}`
+      : `${rating.games} engine ${plural}`;
+  }
+  const suffix = spotlight ? ` · ${timeClassLabel(rating.timeClass)}` : '';
+  return `${rating.games} rated ${plural}${suffix}`;
 }

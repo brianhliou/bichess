@@ -1980,21 +1980,48 @@
   transition:
     background 120ms ease,
     box-shadow 120ms ease;
+  /* Anchors the stretched overlay link below. The row is a DIV, not an <a>, so
+     the opponent name inside it can be its own link to their profile — an <a>
+     inside an <a> is invalid and breaks the outer one. See buildProfileGameRow. */
+  position: relative;
+}
+
+/* The row's click target: covers the whole row and carries the game href. Sits
+   under the content in paint order (it is appended first and has no z-index), so
+   only the elements that opt out with a z-index — the opponent link — take
+   clicks away from it. */
+.profile-game-row-open {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* The opponent name link, lifted above the overlay so it is clickable and
+   hoverable in its own right. */
+.profile-game-opponent-name {
+  position: relative;
+  z-index: 1;
 }
 
 .profile-game-list li:last-child .profile-game-row {
   border-bottom: 0;
 }
 
+/* Focus now lands on the overlay link rather than the row, so the row's own
+   affordances key off it. */
 .profile-game-row:hover,
-.profile-game-row:focus-visible {
+.profile-game-row:has(.profile-game-row-open:focus-visible) {
   background: var(--site-hover);
   box-shadow: inset 4px 0 0 var(--profile-game-tone, var(--site-accent));
 }
 
-.profile-game-row:focus-visible {
+.profile-game-row:has(.profile-game-row-open:focus-visible) {
   outline: 2px solid var(--site-focus);
   outline-offset: -2px;
+}
+
+.profile-game-row-open:focus-visible {
+  outline: none;
 }
 
 .profile-game-row-win {
@@ -2150,6 +2177,39 @@
   border-color: var(--site-border-soft);
   background: transparent;
   color: var(--site-muted);
+}
+
+/* The "showing one variant" chip above a filtered games list. Sits inside the
+   games group, above the list, so the scope of what follows is stated rather
+   than inferred from the rows. Hidden entirely when the list is unfiltered. */
+.profile-games-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.profile-games-filter-label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--site-heading);
+}
+
+.profile-games-filter-clear {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--site-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.profile-games-filter-clear:hover,
+.profile-games-filter-clear:focus-visible {
+  text-decoration: underline;
 }
 
 .profile-games-more {

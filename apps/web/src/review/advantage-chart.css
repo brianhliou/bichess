@@ -37,6 +37,9 @@
 .advantage-chart__zone--red {
   --advantage-zone-ink: #c7a06a;
 }
+.advantage-chart__zone--white {
+  --advantage-zone-ink: #c9c3b6;
+}
 .advantage-chart__zone-stop--near {
   stop-color: var(--advantage-zone-ink);
   stop-opacity: 0.09;
@@ -87,6 +90,12 @@
 .advantage-chart__area--black {
   fill: #34302e;
 }
+/* Chess: the first analysis slot is named 'red' but plays White, so it resolves to
+   a white ink. Light theme wants a near-white that still reads as a filled AREA
+   against the panel rather than as a hole in it. */
+.advantage-chart__area--white {
+  fill: #e9e5dc;
+}
 /* Dark theme: a dark fill vanishes against the dark panel; Black's area reads as
    a light neutral instead (lichess dark does the same). */
 :root[data-effective-theme="dark"] .advantage-chart__area--black {
@@ -97,6 +106,26 @@
 }
 :root[data-effective-theme="dark"] .advantage-chart__area--red {
   fill: #d4674c;
+}
+/* Dark theme: White's area keeps a light fill, but pulled off pure white so it does
+   not out-glare Black's #d8d2c6 sitting directly opposite it. */
+/* Chess pairing on dark: Black's generic lift (#d8d2c6) exists so a dark fill is
+   not lost against the panel, and it works when the other half is Red. Against
+   WHITE it collapses -- both halves render cream, 1.28:1, which reads as one
+   undifferentiated block. Black takes a mid warm grey here instead: 4.05:1
+   against White's area and 3.82:1 against the panel, so it separates from both
+   rather than trading one invisibility for another. */
+:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__area--black {
+  fill: #7a716a;
+}
+:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__zone--black {
+  --advantage-zone-ink: #7a716a;
+}
+:root[data-effective-theme="dark"] .advantage-chart__area--white {
+  fill: #f0ece3;
+}
+:root[data-effective-theme="dark"] .advantage-chart__zone--white {
+  --advantage-zone-ink: #f0ece3;
 }
 /* Jungle family (Jungle Chess + Flip Jungle): the "black" side is Blue, so its
    advantage area/zone wear the piece navy (lifted to read clearly as blue),

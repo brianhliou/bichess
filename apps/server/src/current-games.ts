@@ -27,6 +27,7 @@
 
 import { clockPolicyKindFor, maybeGameSpecForId, timeClassForPace } from '@mistboard/game';
 import { isGameInPlay } from './deploy-gate.js';
+import { liveSeatProfileIdentity } from './first-party-bots.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -51,6 +52,10 @@ export type CurrentGamePlayer = {
   // Profile handle when the seat is a signed-in account; null for guests and
   // engines. Lets the card link the name without exposing a user id.
   handle: string | null;
+  // The /bot/:id slug when the seat is a first-party bot; null otherwise —
+  // including a raw engine version, which has no public page. Paired with
+  // `handle` as the seat's linkable identity; at most one is ever set.
+  botId: string | null;
   isEngine: boolean;
 };
 
@@ -175,9 +180,11 @@ function gameFromChessRoom(
     const token = room.seatTokens[color];
     players.push({
       color,
-      handle: token?.userHandle ?? null,
+      handle: null,
+      botId: null,
       isEngine,
       name: token?.userDisplayName ?? token?.userHandle ?? (isEngine ? clientId : null),
+      ...liveSeatProfileIdentity(isEngine ? clientId : null, token?.userHandle ?? null),
     });
   }
   return finishGame({
@@ -215,9 +222,11 @@ function gameFromTenantRoom(
     const engineName = engineSeat ? (registration.engineDisplayName?.(clientId) ?? clientId) : null;
     players.push({
       color,
-      handle: token?.userHandle ?? null,
+      handle: null,
+      botId: null,
       isEngine: engineSeat,
       name: token?.userDisplayName ?? token?.userHandle ?? engineName,
+      ...liveSeatProfileIdentity(engineSeat ? clientId : null, token?.userHandle ?? null),
     });
   }
   if (players.length < 2) return null;

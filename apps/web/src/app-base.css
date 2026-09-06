@@ -446,6 +446,24 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Player-name links (profile-link.ts). Deliberately inherit every visual
+   property from the name element they replace: these sit inside dense seat rows,
+   clock lines and table cells that each own their colour, size and weight, and a
+   link that repainted them would fight ~15 surfaces' typography. The affordance
+   is hover/focus underline only, which is why the rule can be global and single.
+   Two-class selector so it survives chunk-order cascade against the surface's own
+   `.clock-name`-style rules (see feedback_css_chunk_order_cascade). */
+a.player-name-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.player-name-link:hover,
+a.player-name-link:focus-visible {
+  text-decoration: underline;
+}
+
 .landing-page {
   display: flex;
   flex-direction: column;

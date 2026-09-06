@@ -74,9 +74,55 @@ describe('reviewMetaPlayers', () => {
         { color: 'black', name: 'Pikafish', rating: null, kind: 'engine' },
       ]),
     ).toEqual([
-      { color: 'red', name: 'Alice', rating: 2200, isEngine: false, score: null },
-      { color: 'black', name: 'Pikafish', rating: null, isEngine: true, score: null },
+      { color: 'red', name: 'Alice', rating: 2200, isEngine: false, score: null, profile: null },
+      {
+        color: 'black',
+        name: 'Pikafish',
+        rating: null,
+        isEngine: true,
+        score: null,
+        profile: null,
+      },
     ]);
+  });
+
+  it('links a user seat by handle and a bot seat by bot id, and leaves the rest plain', () => {
+    expect(
+      reviewMetaPlayers([
+        { color: 'red', name: 'Alice', rating: null, kind: 'account', handle: 'alice' },
+        { color: 'black', name: 'Misty', rating: null, kind: 'account', botId: 'misty' },
+      ]),
+    ).toEqual([
+      {
+        color: 'red',
+        name: 'Alice',
+        rating: null,
+        isEngine: false,
+        score: null,
+        profile: { kind: 'user', handle: 'alice' },
+      },
+      {
+        // `kind` is 'account' for a bot too, so botId is the only thing that can
+        // both raise the BOT tag and address the /bot page.
+        color: 'black',
+        name: 'Misty',
+        rating: null,
+        isEngine: true,
+        score: null,
+        profile: { kind: 'bot', botId: 'misty' },
+      },
+    ]);
+  });
+
+  it('never builds a user link from a seat that carries no handle', () => {
+    // A guest, a corpus seat, and a redacted 'Anonymous' row all arrive with no
+    // handle; none of them may be linked off the display name.
+    expect(
+      reviewMetaPlayers([
+        { color: 'red', name: 'Anonymous', rating: null, kind: 'account' },
+        { color: 'black', name: 'Guest', rating: null, kind: 'guest' },
+      ]).map((player) => player.profile),
+    ).toEqual([null, null]);
   });
 
   it('scores the rows off the seat the result names', () => {
@@ -106,8 +152,8 @@ describe('reviewMetaPlayers', () => {
         'red-wins',
       ),
     ).toEqual([
-      { color: 'black', name: 'First', rating: null, isEngine: false, score: '1' },
-      { color: 'red', name: 'Second', rating: null, isEngine: false, score: '0' },
+      { color: 'black', name: 'First', rating: null, isEngine: false, score: '1', profile: null },
+      { color: 'red', name: 'Second', rating: null, isEngine: false, score: '0', profile: null },
     ]);
   });
 
@@ -138,8 +184,8 @@ describe('reviewMetaPlayers', () => {
         { red: 'black', black: 'red' },
       ),
     ).toEqual([
-      { color: 'black', name: 'First', rating: null, isEngine: false, score: null },
-      { color: 'red', name: 'Second', rating: null, isEngine: true, score: null },
+      { color: 'black', name: 'First', rating: null, isEngine: false, score: null, profile: null },
+      { color: 'red', name: 'Second', rating: null, isEngine: true, score: null, profile: null },
     ]);
   });
 

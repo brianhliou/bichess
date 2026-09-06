@@ -22,6 +22,8 @@ function chapter(overrides: Partial<StudyChapterRecord> = {}): StudyChapterRecor
     denorm: {},
     version: 0,
     gamebook: false,
+    practice: false,
+    practiceGoal: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -32,6 +34,7 @@ function study(overrides: Partial<StudyWithChapters> = {}): StudyWithChapters {
   return {
     id: 'S1',
     ownerId: 'u1',
+    slug: null,
     name: 'A study',
     description: 'About the study.',
     i18n: {},

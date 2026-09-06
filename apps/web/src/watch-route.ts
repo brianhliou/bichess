@@ -23,6 +23,7 @@ import {
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
 import { initLiveSound, playSound } from './live-sound.js';
+import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import {
@@ -36,7 +37,7 @@ import { createReviewShell } from './review/review-shell.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
-import { seatColorWord } from './variant-seat-label.js';
+import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
 import { formatClock } from './web-utils.js';
 
 // replay.js statically pulls in chessground (~64KB). Importing it dynamically
@@ -126,7 +127,15 @@ type LiveFeatured = {
   roomId: string;
   gameSpecId: string;
   ply: number;
-  players?: Array<{ color: string; name: string | null; isEngine: boolean }>;
+  // `handle`/`botId` are the seat's linkable identity (LiveTvPlayer on the
+  // server); at most one is ever set, and both are absent for a guest seat.
+  players?: Array<{
+    color: string;
+    name: string | null;
+    isEngine: boolean;
+    handle?: string | null;
+    botId?: string | null;
+  }>;
   payload?: Record<string, unknown>;
 };
 
@@ -838,6 +847,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       name: displayLiveName(p.name, t('watch.guest')),
       rating: null,
       isEngine: p.isEngine,
+      profile: profileTargetFor(p),
     }));
   };
 
@@ -845,6 +855,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const renderLiveMeta = (featured: LiveFeatured): void => {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
+    setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
     renderWatchMainReviewLink(watch.reviewLink, null);
     watch.metaRoot.replaceChildren();
     const badge = document.createElement('div');
@@ -1587,6 +1598,7 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
       rating: watchParticipantRating(participant),
       isEngine: participant?.subjectType === 'engine-version' || participant?.subjectType === 'bot',
       score: scores[index] ?? null,
+      profile: participantProfileTarget(participant),
     };
   });
 }
@@ -1594,6 +1606,23 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
 function watchParticipantRating(participant: GameParticipant | null): number | null {
   if (!participant) return null;
   return participant.ratingAfter ?? participant.ratingBefore ?? null;
+}
+
+// Stamp the showing variant's seat-ink family on the shell, so seat-disc-ink.css
+// can hang per-family disc colours off it (today: the Jungle family's second seat
+// is Blue, not black). Review pages get this from a static `.jungle-review` page
+// class; /watch is ONE page that swaps variants as you change channel, so it has
+// to be re-stamped per game and CLEARED when the next game is not in the family.
+//
+// Called from BOTH row-builders. The completed-feed path and the live-follow path
+// render the meta card and seat rows independently -- renderWatchActiveGame returns
+// early while a live game is airing -- so a stamp in only one of them leaves the
+// other painting the wrong colour, the same way each of this page's seat-vs-ink
+// builders had to learn `firstColor` separately.
+export function setWatchSeatInkFamily(watch: WatchSection, variant: string | null): void {
+  const family = seatInkFamily(variant);
+  if (family) watch.el.dataset.seatInkFamily = family;
+  else delete watch.el.dataset.seatInkFamily;
 }
 
 // Re-render the left meta card + right-rail player rows from the active game.
@@ -1604,6 +1633,7 @@ function renderWatchActiveGame(
   activeRoomId: string | null,
 ): void {
   const game = activeWatchGame(feed, activeRoomId);
+  setWatchSeatInkFamily(watch, game?.variant ?? null);
   renderWatchMetaCard(watch.metaRoot, game);
   renderWatchHeadline(
     watch.headlineRoot,
@@ -1722,11 +1752,7 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   // render the neutral ring rather than guessing a side.
   disc.className = `watch-player-disc watch-player-disc--${player.color ?? 'unbound'}`;
   disc.setAttribute('aria-hidden', 'true');
-  const name = document.createElement('span');
-  name.className = 'clock-name';
-  name.textContent = player.name;
-  name.title = player.name;
-  row.append(disc, name);
+  row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');
     bot.className = 'watch-player-bot';

@@ -74,7 +74,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: {
       'dark-chess': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
       'dark-draft960': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
-      'dark-xiangqi': 'python-fdx-v1.1',
+      'dark-xiangqi': 'python-fdx-v1.2',
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',
       'jungle-flip': 'misty-jungle-flip',
@@ -88,6 +88,10 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'python-v2-v1.4',
       'python-v2-v1.5',
       'python-dmx-v1.0',
+      // Earlier fog-xiangqi builds. Misty is the only bot that has ever fronted
+      // a dark-xiangqi engine, so a room on any of them still attributes to her.
+      'python-fdx-v1.0',
+      'python-fdx-v1.1',
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
@@ -212,6 +216,29 @@ export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
 
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {
   return botByEngineId.get(engineId) ?? null;
+}
+
+/**
+ * The linkable profile identity behind a live seat, as the `handle`/`botId`
+ * fields the live feeds carry (LiveTvPlayer, CurrentGamePlayer). At most one is
+ * ever set.
+ *
+ * An engine seat resolves through the first-party bot table, so a raw engine
+ * version with no bot in front of it stays unlinked: /bot/:id would 404 for it,
+ * and /engine/:id is an admin surface. Shared by the two live feeds so a seat
+ * cannot be linkable on /watch and plain on /games.
+ */
+export type LiveSeatProfile = { handle?: string; botId?: string };
+
+export function liveSeatProfileIdentity(
+  engineClientId: string | null,
+  userHandle: string | null,
+): LiveSeatProfile {
+  if (engineClientId) {
+    const bot = firstPartyBotForEngine(engineClientId);
+    return bot ? { botId: bot.id } : {};
+  }
+  return userHandle ? { handle: userHandle } : {};
 }
 
 /** The engine a first-party bot currently fronts for a variant, or null when it

@@ -4,6 +4,7 @@ import { isLive } from './live-replay.js';
 import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { connectionNoticeMode } from './live-status.js';
+import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { formatClock, formatDayClock, isColor } from './web-utils.js';
 
 type ClockRefs = Pick<
@@ -41,12 +42,18 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       const isTurn = color === toMove;
       const playerLine = document.createElement('span');
       playerLine.className = isTurn ? 'clock-player-line active' : 'clock-player-line';
-      const nameEl = document.createElement('span');
-      nameEl.className = 'clock-name';
       const name = liveState.seatDisplayNames[color] ?? capitalize(color);
-      nameEl.textContent = name;
-      nameEl.title = name;
-      playerLine.append(nameEl);
+      // Only a real seat name links; the capitalized colour fallback names
+      // nobody, so it must not carry the seat's profile href.
+      playerLine.append(
+        playerNameEl(
+          name,
+          liveState.seatDisplayNames[color]
+            ? profileTargetFor(liveState.seatProfiles[color])
+            : null,
+          'clock-name',
+        ),
+      );
       if (isTurn) {
         const pill = document.createElement('span');
         pill.className = 'clock-to-move';
@@ -118,11 +125,15 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     const playerName =
       serverName ??
       (color === humanColor ? 'You' : liveState.roomMode === 'pve' ? 'Bot' : capitalize(color));
-    const nameEl = document.createElement('span');
-    nameEl.className = 'clock-name';
-    nameEl.textContent = playerName;
-    nameEl.title = playerName;
-    playerLine.append(nameEl);
+    // 'You' / 'Bot' / the colour word are placeholders for an unnamed seat, so
+    // they stay plain text; only a server-supplied name gets its profile link.
+    playerLine.append(
+      playerNameEl(
+        playerName,
+        serverName ? profileTargetFor(liveState.seatProfiles[color]) : null,
+        'clock-name',
+      ),
+    );
     const toMove = document.createElement('span');
     toMove.className = 'clock-to-move';
     toMove.textContent = 'to move';

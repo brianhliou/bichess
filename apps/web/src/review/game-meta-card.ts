@@ -16,7 +16,9 @@
 // pregame / live / finished copy, and setPlayers re-renders the player rows as
 // seats fill. Every field is plain data — no variant coupling.
 
+import '../seat-disc-ink.css';
 import './game-meta-card.css';
+import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 
@@ -38,6 +40,10 @@ export type GameMetaPlayer = {
   /** Final score for this seat, shown at the end of the row. Omit while the game
    *  is unfinished — a blank row is right there, a wrong number is not. */
   score?: GameMetaScore | null;
+  /** Where this name links, or null/absent for a seat with no page (guest,
+   *  corpus seat, redacted 'Anonymous'). Built by profile-link.ts from
+   *  server-supplied identity — never derived from `name`. */
+  profile?: ProfileTarget | null;
 };
 
 /** Chess-notation score for one seat: winner, loser, draw. */
@@ -180,11 +186,7 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
         bot.textContent = 'BOT';
         row.append(bot);
       }
-      const name = document.createElement('span');
-      name.className = 'game-meta-card__name';
-      name.textContent = player.name;
-      name.title = player.name;
-      row.append(name);
+      row.append(playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name'));
       if (player.rating !== null && player.rating !== undefined) {
         const rating = document.createElement('span');
         rating.className = 'game-meta-card__rating';

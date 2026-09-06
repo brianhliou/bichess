@@ -1,0 +1,57 @@
+/* Seat-disc ink tokens: the ONE place that says what colour a variant's
+   second ("black") seat paints as in page chrome.
+
+   Background. Most variants seat red vs black and the disc can just be dark. The
+   Jungle family (Jungle Chess + Flip Jungle) does not: its second side is navy
+   (`JUNGLE_ART.ink.black` = #28323c) and the product brands it BLUE. That rename
+   was already done for the WORD -- `seatColorWord()` returns "Blue" for the
+   family, so a jungle game's result line reads "Blue is victorious" -- and for
+   the eval bar and advantage chart. The seat DISCS were the half that never
+   followed, so every jungle page showed a black dot beside the word Blue and
+   beside a board full of navy pieces.
+
+   Why tokens rather than five scoped overrides. Five different components draw a
+   seat disc (meta card, watch player rows, review seat strips, analysis summary,
+   retro box), each owning its own stylesheet and its own hardcoded hex. Scoping
+   each one to `.jungle-review` would put the same two hexes in five files and
+   make the next variant that wants this a five-file change. A custom property
+   declared on an ancestor is also immune to the chunk-ordering hazard that bites
+   same-specificity overrides on prod builds (memory:
+   feedback_css_chunk_order_cascade): there is no competing declaration to lose an
+   order fight with, only a fallback.
+
+   Consumers write `background: var(--seat-dark-ink, <their existing hex>)`, so a
+   surface with no family scope above it renders exactly as it did before.
+
+   The blues are NOT the piece navy. #28323c is nearly black at 9-14px, which is
+   the whole defect; these are the lifted values the eval bar and advantage chart
+   already settled on for the same reason. */
+
+/* Three hooks, because the three surfaces already scope themselves differently and
+   inventing a fourth convention would be worse than listing them:
+
+   - Review pages carry `.jungle-review` / `.jungle-flip-review` on the review shell
+     (set by `pageClassName` in live-jungle-postgame / live-jungle-flip-postgame),
+     the same hook eval-bar.css and advantage-chart.css already scope against.
+   - Live rooms carry `.live-route--jungle` / `--jungle-flip` on the route root
+     (setLiveLayoutGameSpec). Included so the room you just played in and the review
+     of that same game do not disagree about what colour you were.
+   - /watch has neither: it is ONE page that swaps variants as you change channel,
+     so it stamps `data-seat-ink-family` on the section per active game. */
+.jungle-review,
+.jungle-flip-review,
+.live-route--jungle,
+.live-route--jungle-flip,
+[data-seat-ink-family="jungle"] {
+  --seat-dark-ink: #34557a;
+  --seat-dark-ink-border: #22354f;
+}
+
+:root[data-effective-theme="dark"] .jungle-review,
+:root[data-effective-theme="dark"] .jungle-flip-review,
+:root[data-effective-theme="dark"] .live-route--jungle,
+:root[data-effective-theme="dark"] .live-route--jungle-flip,
+:root[data-effective-theme="dark"] [data-seat-ink-family="jungle"] {
+  --seat-dark-ink: #6b96c8;
+  --seat-dark-ink-border: #3f6690;
+}

@@ -669,7 +669,17 @@ describe('article public listing gates', () => {
         (heading) => heading.textContent === 'Play on Mistboard',
       );
       expect(closing, slug).toBeTruthy();
-      expect(page.querySelectorAll('.article-cta'), slug).toHaveLength(2);
+
+      // Two play affordances, deliberately: the header row for a reader who
+      // arrived from a search already knowing they want this game, and the
+      // standardized closing for one who read the doc through. The closing is
+      // still exactly two buttons; counting them separately keeps this test
+      // honest about which one it is asserting.
+      const headerRow = page.querySelector('.article-cta-row.article-play-cta');
+      expect(headerRow, slug).toBeTruthy();
+      expect(headerRow?.querySelectorAll('.article-cta').length, slug).toBeGreaterThan(0);
+      const headerCtas = headerRow?.querySelectorAll('.article-cta').length ?? 0;
+      expect(page.querySelectorAll('.article-cta').length - headerCtas, slug).toBe(2);
       expect(page.textContent, slug).toContain('No account required.');
     }
   });
@@ -952,7 +962,9 @@ describe('rules variant sidebar', () => {
     expect(figureText).toContain('FIRST FLIP ASSIGNS COLOR');
     expect(figureText).toContain('CAPTURE RANK LADDER');
     expect(figureText).toContain('CANNON SCREEN CAPTURE');
-    expect(page.querySelectorAll('.article-cta')).toHaveLength(2);
+    // Header play row plus the two-button closing.
+    expect(page.querySelectorAll('.article-cta-row.article-play-cta .article-cta')).toHaveLength(2);
+    expect(page.querySelectorAll('.article-cta')).toHaveLength(4);
   });
 
   it('keeps the first rules-polish pass on a consistent editorial path', () => {

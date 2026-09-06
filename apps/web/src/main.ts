@@ -24,6 +24,7 @@ import {
   correspondenceEnabled,
   friendsOnlineEnabled,
   learnEnabled,
+  practiceEnabled,
 } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
@@ -339,6 +340,9 @@ const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
+// Parked in prod: practiceEnabled is false there, so /practice falls through to
+// the branded 404 shell the same way the legacy /learn hub does (#363).
+const wantsPractice = practiceEnabled() && path === '/practice';
 // Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
 const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
 // Hidden DEV-only spike for the candidate 7x7 Dark Mini Xiangqi ruleset.
@@ -349,6 +353,8 @@ const wantsXiangqiDemo = import.meta.env.DEV && path === '/xiangqi-demo';
 const wantsPixelLab = import.meta.env.DEV && path === '/pixel-lab';
 // Hidden DEV-only identity lab for candidate variant marks. No nav entry.
 const wantsVariantMarksLab = import.meta.env.DEV && path === '/variant-marks';
+// Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
+const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
 // Hidden DEV-only board lab for mapping Dobutsu animal art onto chess pieces.
 const wantsDobutsuChessPreview = import.meta.env.DEV && path === '/dobutsu-chess-preview';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
@@ -450,6 +456,13 @@ if (replaySample) {
     import('./editor/editor-page.js').then(({ mountEditorPage }) =>
       mountEditorPage(appRoot, editorVariant),
     ),
+  );
+} else if (wantsPractice) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-index.js').then(({ mountPracticeIndex }) => {
+      mountPracticeIndex(appRoot);
+    }),
   );
 } else if (wantsStudyIndex) {
   setTitleKey('nav.studies');
@@ -675,6 +688,11 @@ if (replaySample) {
   setTitle('Pixel lab');
   void mountOrReport(() =>
     import('./pixel-lab.js').then(({ mountPixelLab }) => mountPixelLab(appRoot)),
+  );
+} else if (wantsJungleCuesLab) {
+  setTitle('Jungle movement cues');
+  void mountOrReport(() =>
+    import('./jungle-cues-lab.js').then(({ mountJungleCuesLab }) => mountJungleCuesLab(appRoot)),
   );
 } else if (wantsVariantMarksLab) {
   setTitle('Variant marks');

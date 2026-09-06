@@ -17,6 +17,101 @@ type ResponseCapture = {
 };
 
 definePersistenceTests('bot profiles', () => {
+  test('splits a multi-variant bot record and recent games per game spec', async () => {
+    // The pikafish bug (2026-09-04): one aggregate GROUP BY bot id meant the
+    // profile could only ever show lifetime numbers, and the flat games list
+    // was "most recent N across all variants" -- which for pikafish was 100%
+    // jieqi, so the xiangqi view showed an all-jieqi list.
+    await insertBotProfile('multi-bot', 'Multi Bot', 'public', {
+      gameSpecId: 'xiangqi',
+      supportedGameSpecIds: ['xiangqi', 'jieqi', 'banqi'],
+    });
+
+    const endGame = async (
+      roomId: string,
+      variant: string,
+      result: 'black-wins' | 'white-wins' | 'draw',
+      endedAt: Date,
+    ) => {
+      await recordGameEnd(roomId, {
+        variant,
+        mode: 'pve',
+        result,
+        termination: result === 'draw' ? 'draw' : 'king-captured',
+        plyCount: 20,
+        startedAt: new Date('2026-01-01T00:00:00Z'),
+        endedAt,
+        whiteClient: 'human-client',
+        blackClient: 'python-v2-v1.5',
+        whiteName: null,
+        blackName: 'Multi Bot',
+        corpusId: null,
+        rated: false,
+        visibility: 'public',
+        initialMs: 180_000,
+        incrementMs: 2_000,
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Multi Bot',
+            subjectType: 'bot',
+            subjectId: 'multi-bot',
+            visibility: 'public',
+          },
+        ],
+      });
+    };
+
+    // The bot plays black. Two xiangqi (1 win, 1 loss), three jieqi (2 wins,
+    // 1 draw), no banqi. The jieqi games are the MOST RECENT, reproducing the
+    // shape that hid xiangqi behind a global row cap.
+    await endGame('mb-xq-1', 'xiangqi', 'black-wins', new Date('2026-01-01T01:00:00Z'));
+    await endGame('mb-xq-2', 'xiangqi', 'white-wins', new Date('2026-01-01T02:00:00Z'));
+    await endGame('mb-jq-1', 'jieqi', 'black-wins', new Date('2026-01-01T03:00:00Z'));
+    await endGame('mb-jq-2', 'jieqi', 'black-wins', new Date('2026-01-01T04:00:00Z'));
+    await endGame('mb-jq-3', 'jieqi', 'draw', new Date('2026-01-01T05:00:00Z'));
+
+    const profile = await getPublicBotProfile('multi-bot');
+
+    // The lifetime figures are unchanged -- the /bots directory card reads them.
+    assert.equal(profile?.gamesTotal, 5);
+    assert.deepEqual(profile?.record, { games: 5, wins: 3, losses: 1, draws: 1 });
+
+    // ...and each variant now carries its own, including a supported variant
+    // with no games at all, which must be a real 0-0-0 and not a missing key.
+    assert.deepEqual(profile?.recordsByGameSpecId, {
+      xiangqi: { games: 2, wins: 1, losses: 1, draws: 0 },
+      jieqi: { games: 3, wins: 2, losses: 0, draws: 1 },
+      banqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+    });
+
+    // The per-variant lists are partitioned server-side, so xiangqi is NOT
+    // empty even though every one of the most recent games is jieqi.
+    assert.deepEqual(
+      profile?.gamesByGameSpecId.xiangqi?.map((game) => game.roomId),
+      ['mb-xq-2', 'mb-xq-1'],
+    );
+    assert.deepEqual(
+      profile?.gamesByGameSpecId.jieqi?.map((game) => game.roomId),
+      ['mb-jq-3', 'mb-jq-2', 'mb-jq-1'],
+    );
+    assert.deepEqual(profile?.gamesByGameSpecId.banqi, []);
+
+    // The flat list is still newest-first across variants; this is exactly the
+    // list a client-side filter would wrongly narrow.
+    assert.deepEqual(
+      profile?.games.slice(0, 3).map((game) => game.roomId),
+      ['mb-jq-3', 'mb-jq-2', 'mb-jq-1'],
+    );
+  });
+
   test('lists public bot profiles with public recent games', async () => {
     await insertBotProfile('test-bot', 'Test Bot', 'public');
     await insertBotProfile('private-bot', 'Private Bot', 'private');
@@ -324,18 +419,25 @@ async function insertBotProfile(
   id: string,
   displayName: string,
   visibility: 'private' | 'unlisted' | 'public',
-  opts: { gameSpecId?: string } = {},
+  opts: { gameSpecId?: string; supportedGameSpecIds?: string[] } = {},
 ): Promise<void> {
   const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
   await client.connect();
+  const defaultGameSpecId = opts.gameSpecId ?? 'dark-chess';
   try {
     await client.query(
       `INSERT INTO bot_profiles
          (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
           supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
        VALUES ($1, $2, '', 'system', 'python-v2-v1.5', $3,
-               ARRAY[$3], 180000, 2000, $4)`,
-      [id, displayName, opts.gameSpecId ?? 'dark-chess', visibility],
+               $5, 180000, 2000, $4)`,
+      [
+        id,
+        displayName,
+        defaultGameSpecId,
+        visibility,
+        opts.supportedGameSpecIds ?? [defaultGameSpecId],
+      ],
     );
   } finally {
     await client.end();

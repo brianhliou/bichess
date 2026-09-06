@@ -1,0 +1,326 @@
+// Practice (engine-adjudicated exercise) play engine — the counterpart to
+// gamebook-play.ts, and deliberately its opposite.
+//
+// A gamebook walks an AUTHORED tree: the solution is the mainline, the opponent
+// replies are whatever the author wrote, and a wrong move is wrong because it
+// left the line. That costs an author per exercise.
+//
+// A practice exercise has no tree at all. It is a position plus a goal string.
+// The opponent's replies come from the engine's best move, and the learner's
+// move is judged by how much win probability it gave up — so nobody has to
+// write down the answer, and any position with a known verdict is an exercise.
+// That is the whole reason this exists: it is the only lesson surface that
+// scales without authoring.
+//
+// Variant-agnostic and view-agnostic, exactly like gamebook-play: a view layer
+// drives it with attempted moves and renders what it returns. The engine is
+// injected as a plain async function, so this file has no dependency on ceval
+// and is testable against a fake engine.
+
+import {
+  evaluatePracticeGoal,
+  type PracticeGoal,
+  type PracticeOutcome,
+  type PracticeTermination,
+  type PracticeVerdict,
+  practiceJudgment,
+  practiceMoveFails,
+  winPercent,
+} from '@mistboard/game';
+
+/** An engine evaluation of one position, from the SIDE TO MOVE's point of view. */
+export interface PracticeEval {
+  cp: number | null;
+  mate: number | null;
+  /** Engine UCI of the best move here; the defender plays this. */
+  bestUci: string | null;
+}
+
+export type PracticePhase =
+  /** Waiting on the engine (opening evaluation, or the defender thinking). */
+  | 'thinking'
+  /** The learner is on the move. */
+  | 'play'
+  /** The learner's last move failed the exercise; they may retry or restart. */
+  | 'failed'
+  /** Goal achieved. */
+  | 'success'
+  /** The exercise ended against the learner (mated, or the goal became unreachable). */
+  | 'defeat';
+
+export interface PracticeView {
+  phase: PracticePhase;
+  /** The learner's own moves played so far. */
+  movesPlayed: number;
+  /** Verdict on the most recent learner move, when there is one. */
+  verdict: PracticeVerdict | null;
+  /** Win% from the learner's POV at the current position; null before the first eval. */
+  winPercent: number | null;
+  /** Whether the board should accept a move from the learner. */
+  awaitingMove: boolean;
+  /**
+   * The line played so far, in board notation, learner and defender alternating.
+   * A practice exercise has no move list of its own the way a study chapter
+   * does, so without this the learner cannot see what they just did -- which is
+   * most of what makes a failed attempt legible.
+   */
+  moves: readonly string[];
+  /**
+   * Engine-derived hint for the move to find, revealed in two stages the way
+   * lila does it: 'origin' names only the square to move FROM, 'move' gives the
+   * whole move. Null when no hint has been asked for, or none is available.
+   */
+  hint: { level: 'origin'; uci: string } | { level: 'move'; uci: string } | null;
+}
+
+export interface PracticeConfig<M, T> {
+  goal: PracticeGoal;
+  /** The side the learner plays; the engine plays every other move. */
+  learner: string;
+  initialTruth: T;
+  isLegal(truth: T, move: M): boolean;
+  /** Apply a legal move, returning the successor truth (pure; no mutation). */
+  applyMove(truth: T, move: M): T;
+  /** Whose turn at this truth, or null when the game has ended. */
+  sideToMove(truth: T): string | null;
+  /** How (and whether) the game has ended here, from the learner's point of view. */
+  termination(truth: T, learner: string): PracticeTermination;
+  /** Rebuild a move from the engine's UCI token, for playing the defender's reply. */
+  fromUci(uci: string, truth: T): M | null;
+  /** Render a move for the move list, given the position it was played FROM
+   *  (notation usually needs the parent position to disambiguate). */
+  moveLabel(move: M, parentTruth: T): string;
+  /**
+   * Evaluate a position. MUST come from a search deep enough to trust — lila
+   * gates its own goal checks at depth 16, and a shallow eval here produces a
+   * confidently wrong verdict rather than an uncertain one.
+   */
+  evaluate(truth: T): Promise<PracticeEval>;
+}
+
+export interface PracticeSession<M, T> {
+  truth(): T;
+  view(): PracticeView;
+  /** Kick off the opening evaluation. Resolves once the learner may move. */
+  start(): Promise<void>;
+  /**
+   * The learner attempts a move.
+   * 'invalid' = not playable from here (illegal, or not their turn).
+   * Otherwise the returned verdict is the grade; check `view().phase` for the
+   * consequence, since a mistake both grades badly and ends the attempt.
+   */
+  attempt(move: M): Promise<PracticeVerdict | 'invalid'>;
+  /** Ask for a hint; call twice to escalate from the origin square to the move. */
+  hint(): void;
+  /** Take back a failed move and stand again at the position before it. */
+  retry(): void;
+  /** Restart from the exercise's start position. */
+  reset(): Promise<void>;
+}
+
+interface Frame<T> {
+  truth: T;
+  /** Learner-POV evaluation of this position. */
+  evaluation: PracticeEval | null;
+  movesPlayed: number;
+  /** The line that reached this position. Carried ON the frame so retry and
+   *  reset restore it by restoring the frame, with no separate bookkeeping to
+   *  fall out of step with the board. */
+  moves: readonly string[];
+}
+
+export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): PracticeSession<M, T> {
+  let frame: Frame<T> = {
+    truth: config.initialTruth,
+    evaluation: null,
+    movesPlayed: 0,
+    moves: [],
+  };
+  /** The position the learner stood at before their most recent move, for retry. */
+  let previous: Frame<T> | null = null;
+  let phase: PracticePhase = 'thinking';
+  let verdict: PracticeVerdict | null = null;
+  let hintLevel = 0;
+
+  /** Flip a side-to-move-POV evaluation into the learner's POV. */
+  function toLearnerPov(raw: PracticeEval, truth: T): PracticeEval {
+    const mover = config.sideToMove(truth);
+    if (mover === null || mover === config.learner) return raw;
+    return {
+      cp: raw.cp === null ? null : -raw.cp,
+      mate: raw.mate === null ? null : -raw.mate,
+      bestUci: raw.bestUci,
+    };
+  }
+
+  async function evaluateInto(target: Frame<T>): Promise<void> {
+    const raw = await config.evaluate(target.truth);
+    target.evaluation = toLearnerPov(raw, target.truth);
+  }
+
+  function adjudicate(): PracticeOutcome {
+    return evaluatePracticeGoal({
+      goal: config.goal,
+      movesPlayed: frame.movesPlayed,
+      cp: frame.evaluation?.cp ?? null,
+      mate: frame.evaluation?.mate ?? null,
+      termination: config.termination(frame.truth, config.learner),
+    });
+  }
+
+  /** Settle the outcome at the current frame; returns true when the run ended. */
+  function settle(): boolean {
+    const outcome = adjudicate();
+    if (outcome === 'success') {
+      phase = 'success';
+      return true;
+    }
+    if (outcome === 'failure') {
+      phase = 'defeat';
+      return true;
+    }
+    return false;
+  }
+
+  /** Play the defender's reply. Returns true when the run ended instead. */
+  async function playDefender(): Promise<boolean> {
+    // The defender only moves when the game is still running and it is not the
+    // learner's turn.
+    const mover = config.sideToMove(frame.truth);
+    if (mover === null || mover === config.learner) return false;
+
+    const best = frame.evaluation?.bestUci ?? null;
+    if (best === null) {
+      // No reply available. Stopping here is the honest failure: inventing a
+      // random legal move would silently change the exercise into a different
+      // one, and the learner would be graded against it.
+      phase = 'defeat';
+      return true;
+    }
+    const reply = config.fromUci(best, frame.truth);
+    if (reply === null || !config.isLegal(frame.truth, reply)) {
+      phase = 'defeat';
+      return true;
+    }
+    frame = {
+      truth: config.applyMove(frame.truth, reply),
+      evaluation: null,
+      movesPlayed: frame.movesPlayed,
+      moves: [...frame.moves, config.moveLabel(reply, frame.truth)],
+    };
+    await evaluateInto(frame);
+    return false;
+  }
+
+  async function start(): Promise<void> {
+    phase = 'thinking';
+    await evaluateInto(frame);
+    // An exercise may open on the defender's move.
+    if (config.sideToMove(frame.truth) !== config.learner) {
+      if (await playDefender()) return;
+    }
+    if (settle()) return;
+    phase = 'play';
+  }
+
+  async function attempt(move: M): Promise<PracticeVerdict | 'invalid'> {
+    if (phase !== 'play') return 'invalid';
+    if (config.sideToMove(frame.truth) !== config.learner) return 'invalid';
+    if (!config.isLegal(frame.truth, move)) return 'invalid';
+
+    const before = frame;
+    const winBefore =
+      before.evaluation === null ? null : winPercent(before.evaluation.cp, before.evaluation.mate);
+
+    phase = 'thinking';
+    hintLevel = 0;
+    frame = {
+      truth: config.applyMove(before.truth, move),
+      evaluation: null,
+      movesPlayed: before.movesPlayed + 1,
+      moves: [...before.moves, config.moveLabel(move, before.truth)],
+    };
+    await evaluateInto(frame);
+
+    const winAfter =
+      frame.evaluation === null ? null : winPercent(frame.evaluation.cp, frame.evaluation.mate);
+
+    // Grade only when both sides of the comparison are real. An unknown
+    // evaluation must never manufacture a verdict.
+    verdict =
+      winBefore === null || winAfter === null ? 'good' : practiceJudgment(winBefore, winAfter);
+
+    // A move that ends the game in the learner's favour is never a failure,
+    // however the curve reads it: delivering mate can look like a huge swing.
+    const termination = config.termination(frame.truth, config.learner);
+    if (termination === 'learner-wins') {
+      verdict = 'good';
+      phase = 'success';
+      return verdict;
+    }
+
+    if (practiceMoveFails(verdict)) {
+      previous = before;
+      phase = 'failed';
+      return verdict;
+    }
+
+    if (settle()) return verdict;
+
+    if (await playDefender()) return verdict;
+    if (settle()) return verdict;
+    phase = 'play';
+    return verdict;
+  }
+
+  function hint(): void {
+    if (phase !== 'play') return;
+    if (!frame.evaluation?.bestUci) return;
+    hintLevel = Math.min(hintLevel + 1, 2);
+  }
+
+  function retry(): void {
+    if (phase !== 'failed' || previous === null) return;
+    frame = previous;
+    previous = null;
+    verdict = null;
+    hintLevel = 0;
+    phase = 'play';
+  }
+
+  async function reset(): Promise<void> {
+    frame = { truth: config.initialTruth, evaluation: null, movesPlayed: 0, moves: [] };
+    previous = null;
+    verdict = null;
+    hintLevel = 0;
+    await start();
+  }
+
+  function view(): PracticeView {
+    const best = frame.evaluation?.bestUci ?? null;
+    let hintView: PracticeView['hint'] = null;
+    if (hintLevel > 0 && best) {
+      hintView = hintLevel === 1 ? { level: 'origin', uci: best } : { level: 'move', uci: best };
+    }
+    return {
+      phase,
+      movesPlayed: frame.movesPlayed,
+      verdict,
+      winPercent:
+        frame.evaluation === null ? null : winPercent(frame.evaluation.cp, frame.evaluation.mate),
+      awaitingMove: phase === 'play',
+      moves: frame.moves,
+      hint: hintView,
+    };
+  }
+
+  return {
+    truth: () => frame.truth,
+    view,
+    start,
+    attempt,
+    hint,
+    retry,
+    reset,
+  };
+}

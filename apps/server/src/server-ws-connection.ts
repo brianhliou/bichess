@@ -26,6 +26,7 @@ import {
   scheduleForfeitTimeout,
   scheduleRandomEngineMove,
   seatDisplayNamesForRoom,
+  seatProfilesForRoom,
 } from './room-manager.js';
 import {
   adminDebugTokenFromProtocolHeader,
@@ -233,7 +234,11 @@ export async function handleWebSocketConnection(
   }
 
   const snapshot = snapshotPayload(
-    { ...room, seatDisplayNames: seatDisplayNamesForRoom(room, ctx.roomMgrCtx) },
+    {
+      ...room,
+      seatDisplayNames: seatDisplayNamesForRoom(room, ctx.roomMgrCtx),
+      seatProfiles: seatProfilesForRoom(room, ctx.roomMgrCtx),
+    },
     client,
   );
   ctx.send(client, {
@@ -316,7 +321,11 @@ async function handleMessage(
       ctx.send(
         client,
         snapshotPayload(
-          { ...room, seatDisplayNames: seatDisplayNamesForRoom(room, ctx.roomMgrCtx) },
+          {
+            ...room,
+            seatDisplayNames: seatDisplayNamesForRoom(room, ctx.roomMgrCtx),
+            seatProfiles: seatProfilesForRoom(room, ctx.roomMgrCtx),
+          },
           client,
         ),
       );

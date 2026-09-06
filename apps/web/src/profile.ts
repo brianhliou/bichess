@@ -252,6 +252,7 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const overview = buildProfileOverview(profile, spotlight, locale);
   void hydrateProfilePresence(overview, profile.user.handle, locale);
 
+  const tabs = buildProfileTabs(profile, locale);
   const ratings = buildProfileRatings(profile.ratings, locale, {
     selectedVariant,
     onSelect: (variant, timeClass) => {
@@ -266,11 +267,14 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
         timeClass,
       );
       syncSelectedRating(ratings, variant);
+      // Picking a variant scopes the games list to it as well; the spotlight
+      // alone used to move while the list kept showing every variant.
+      tabs.setGamesVariant(variant);
     },
   });
   appendProfilePuzzleRatings(ratings, profile.puzzleRatings ?? [], locale);
 
-  shell.append(buildProfileDashboard(ratings, overview, buildProfileTabs(profile, locale)));
+  shell.append(buildProfileDashboard(ratings, overview, tabs.el));
 }
 
 // Static frame of the players page: community rail, twin headings (Online
@@ -1638,9 +1642,20 @@ function chartDateLabel(
 // second-level Games / Saved switch inside Games, mirroring the way Lichess
 // keeps bookmarks under its games area instead of making them a peer of
 // Activity.
-function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
+// The profile's tab block, plus a handle to re-scope the Games panel.
+//
+// `setGamesVariant` exists because the rating rail lives OUTSIDE this block: the
+// tabs used to be built once inline and dropped, so nothing could re-render them
+// and picking a variant left the games list showing every variant.
+type ProfileTabsHandle = { el: HTMLElement; setGamesVariant(variant: ProfileRatingVariant): void };
+
+function buildProfileTabs(
+  profile: UserProfile,
+  locale: Locale = currentLocale(),
+): ProfileTabsHandle {
   const activityPanel = buildProfileActivity(profile, locale);
-  const gamesPanel = buildProfileGames(profile, locale);
+  let gamesVariant: ProfileRatingVariant | null = null;
+  let gamesPanel = buildProfileGames(profile, locale, null);
   const saved = profile.isViewer ? buildSavedGamesPanel(locale) : null;
   const gamesGroup = document.createElement('section');
   gamesGroup.className = 'profile-games-group';
@@ -1651,6 +1666,8 @@ function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()
   if (saved) saved.panel.hidden = true;
 
   let loadSaved: (() => void) | null = null;
+  // Set when the viewer's own profile renders the All-games / Saved sub-tabs.
+  let setAllGamesCount: (total: number) => void = () => {};
   if (saved) {
     const gameSubtabs = document.createElement('div');
     gameSubtabs.className = 'profile-games-subtab-list';
@@ -1674,6 +1691,7 @@ function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()
       gamesPanel.hidden = panel !== gamesPanel;
       saved.panel.hidden = panel !== saved.panel;
     };
+    setAllGamesCount = (total) => setProfileGamesSubtabCount(allGamesSubtab, total);
     allGamesSubtab.addEventListener('click', () => activateGamesSubtab(allGamesSubtab, gamesPanel));
     savedSubtab.addEventListener('click', () => activateGamesSubtab(savedSubtab, saved.panel));
     gameSubtabs.append(allGamesSubtab, savedSubtab);
@@ -1685,15 +1703,53 @@ function buildProfileTabs(profile: UserProfile, locale: Locale = currentLocale()
     gamesGroup.append(gamesPanel);
   }
 
-  return buildProfileTabsShell([
+  // A visible, clearable chip. Without it the list would silently be a subset --
+  // the same "is this filtered or broken?" ambiguity this change is fixing.
+  const filterBar = document.createElement('div');
+  filterBar.className = 'profile-games-filter';
+  filterBar.hidden = true;
+  const filterLabel = document.createElement('span');
+  filterLabel.className = 'profile-games-filter-label';
+  const clearButton = document.createElement('button');
+  clearButton.type = 'button';
+  clearButton.className = 'profile-games-filter-clear';
+  clearButton.textContent = t('profile.showAllGames', {}, locale);
+  filterBar.append(filterLabel, clearButton);
+
+  const renderGames = (variant: ProfileRatingVariant | null) => {
+    gamesVariant = variant;
+    const next = buildProfileGames(profile, locale, variant, setAllGamesCount);
+    next.id = gamesPanel.id;
+    next.hidden = gamesPanel.hidden;
+    gamesPanel.replaceWith(next);
+    gamesPanel = next;
+    filterBar.hidden = variant === null;
+    if (variant) filterLabel.textContent = profileVariantLabel(variant, locale);
+  };
+  clearButton.addEventListener('click', () => {
+    renderGames(null);
+    setAllGamesCount(profile.gamesTotal);
+  });
+  gamesGroup.prepend(filterBar);
+
+  const shellEl = buildProfileTabsShell([
     { label: t('profile.activity', {}, locale), panel: activityPanel },
     {
+      // The badge stays the LIFETIME total: it labels the tab ("you have N
+      // games"), while the chip above the list says what is currently shown.
       label: t('profile.games', {}, locale),
       panel: gamesGroup,
       count: profile.gamesTotal > 0 ? profile.gamesTotal : undefined,
       onActivate: () => loadSaved?.(),
     },
   ]);
+
+  return {
+    el: shellEl,
+    setGamesVariant: (variant) => {
+      if (variant !== gamesVariant) renderGames(variant);
+    },
+  };
 }
 
 function setProfileGamesSubtabCount(button: HTMLButtonElement, count: number): void {
@@ -2296,26 +2352,12 @@ function syncSelectedRating(section: HTMLElement, variant: ProfileRatingVariant)
   }
 }
 
-function buildProfileGames(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'profile-games';
-  // No heading: the Games tab (with its count) is this panel's label.
-
-  if (profile.gamesTotal === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'landing-games-empty';
-    empty.textContent = t('profile.noAccountGames', {}, locale);
-    section.append(empty);
-    return section;
-  }
-
-  const list = document.createElement('ol');
-  list.className = 'profile-game-list profile-activity';
-
-  // Group rows under day headers; the cursor persists across "Load more" pages
-  // so an appended page that continues the same day doesn't repeat its header.
+// Day-grouped game rows appended into `list`. The day cursor lives with the
+// closure so an appended "Load more" page that continues the same day does not
+// repeat its header.
+function profileGameAppender(list: HTMLElement, locale: Locale): (games: FeaturedGame[]) => void {
   let lastDay = '';
-  const appendGames = (games: FeaturedGame[]) => {
+  return (games: FeaturedGame[]) => {
     for (const game of games) {
       const day = dayKey(game.endedAt);
       if (day !== lastDay) {
@@ -2328,15 +2370,19 @@ function buildProfileGames(profile: UserProfile, locale: Locale = currentLocale(
       list.append(buildProfileGameRow(game, { timeOnly: true, locale }));
     }
   };
+}
 
-  appendGames(profile.games);
-  section.append(list);
-
-  // Track how many rows are rendered so "Load more" knows the next offset and
-  // when the list is exhausted.
-  let rendered = profile.games.length;
-  if (rendered >= profile.gamesTotal) return section;
-
+// A "Load more" control for a games list, wired to one page fetch. Shared so the
+// filtered and unfiltered panels page identically -- including the exhaustion
+// rule, which reads the FILTERED total the server returns.
+function profileGamesMore(
+  handle: string,
+  locale: Locale,
+  variant: ProfileRatingVariant | null,
+  startRendered: number,
+  appendGames: (games: FeaturedGame[]) => void,
+): HTMLElement {
+  let rendered = startRendered;
   const moreWrap = document.createElement('div');
   moreWrap.className = 'profile-games-more';
   const button = document.createElement('button');
@@ -2346,7 +2392,7 @@ function buildProfileGames(profile: UserProfile, locale: Locale = currentLocale(
   button.addEventListener('click', async () => {
     button.disabled = true;
     button.textContent = t('profile.loadingMore', {}, locale);
-    const page = await fetchUserGamesPage(profile.user.handle, rendered, PROFILE_GAMES_PAGE).catch(
+    const page = await fetchUserGamesPage(handle, rendered, PROFILE_GAMES_PAGE, variant).catch(
       (err) => {
         console.warn(err);
         return null;
@@ -2367,7 +2413,106 @@ function buildProfileGames(profile: UserProfile, locale: Locale = currentLocale(
     }
   });
   moreWrap.append(button);
-  section.append(moreWrap);
+  return moreWrap;
+}
+
+// The Games panel scoped to one pool. Renders immediately with a placeholder so
+// the click feels instant, then fills in from the server-filtered first page.
+function buildFilteredProfileGames(
+  profile: UserProfile,
+  locale: Locale,
+  variant: ProfileRatingVariant,
+  // Reports the FILTERED total once it lands, so counts rendered outside this
+  // panel (the All-games sub-tab) follow the list instead of sitting on the
+  // lifetime figure above a shorter list.
+  onTotal?: (total: number) => void,
+): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'profile-games';
+
+  const body = document.createElement('div');
+  const loading = document.createElement('p');
+  loading.className = 'landing-games-empty';
+  loading.textContent = t('profile.loadingMore', {}, locale);
+  body.append(loading);
+  section.append(body);
+
+  void (async () => {
+    const page = await fetchUserGamesPage(
+      profile.user.handle,
+      0,
+      PROFILE_GAMES_PAGE,
+      variant,
+    ).catch((err) => {
+      console.warn(err);
+      return null;
+    });
+    body.replaceChildren();
+    onTotal?.(page?.total ?? 0);
+    if (!page || page.games.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'landing-games-empty';
+      // Names the variant: a bare "no games" under a variant selector reads as
+      // "this player has never played", which is a different claim.
+      empty.textContent = t(
+        'profile.noVariantGames',
+        { variant: profileVariantLabel(variant, locale) },
+        locale,
+      );
+      body.append(empty);
+      return;
+    }
+    const list = document.createElement('ol');
+    list.className = 'profile-game-list profile-activity';
+    const appendGames = profileGameAppender(list, locale);
+    appendGames(page.games);
+    body.append(list);
+    if (page.games.length < page.total) {
+      body.append(
+        profileGamesMore(profile.user.handle, locale, variant, page.games.length, appendGames),
+      );
+    }
+  })();
+
+  return section;
+}
+
+// The Games panel, optionally scoped to one rating pool.
+//
+// `variant` null renders the profile's own first page with no fetch (the common
+// case, and what the initial mount does). A pool renders a placeholder and then
+// swaps in the server-filtered first page: the list is paginated, so the filter
+// has to be a query, not a client-side narrowing of a page that may not contain
+// the pool's games at all.
+function buildProfileGames(
+  profile: UserProfile,
+  locale: Locale = currentLocale(),
+  variant: ProfileRatingVariant | null = null,
+  onTotal?: (total: number) => void,
+): HTMLElement {
+  if (variant) return buildFilteredProfileGames(profile, locale, variant, onTotal);
+  const section = document.createElement('section');
+  section.className = 'profile-games';
+  // No heading: the Games tab (with its count) is this panel's label.
+
+  if (profile.gamesTotal === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'landing-games-empty';
+    empty.textContent = t('profile.noAccountGames', {}, locale);
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement('ol');
+  list.className = 'profile-game-list profile-activity';
+  const appendGames = profileGameAppender(list, locale);
+  appendGames(profile.games);
+  section.append(list);
+
+  if (profile.games.length >= profile.gamesTotal) return section;
+  section.append(
+    profileGamesMore(profile.user.handle, locale, null, profile.games.length, appendGames),
+  );
   return section;
 }
 
@@ -2382,9 +2527,13 @@ async function fetchUserGamesPage(
   handle: string,
   offset: number,
   limit: number,
+  variant: ProfileRatingVariant | null = null,
 ): Promise<{ games: FeaturedGame[]; total: number } | null> {
+  // `total` comes back scoped to the same filter, so callers can page a filtered
+  // list without tracking two different totals.
+  const query = variant ? `&variant=${encodeURIComponent(variant)}` : '';
   const resp = await fetch(
-    `/api/users/${encodeURIComponent(handle)}/games?offset=${offset}&limit=${limit}`,
+    `/api/users/${encodeURIComponent(handle)}/games?offset=${offset}&limit=${limit}${query}`,
   );
   if (!resp.ok) throw new Error(`failed to load games: ${resp.status}`);
   return (await resp.json()) as { games: FeaturedGame[]; total: number };

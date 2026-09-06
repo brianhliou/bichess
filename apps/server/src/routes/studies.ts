@@ -16,7 +16,12 @@
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { initialStartFen, isStudyEligibleSpecId, startIsDealt } from '@mistboard/game';
+import {
+  initialStartFen,
+  isStudyEligibleSpecId,
+  parsePracticeGoal,
+  startIsDealt,
+} from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
 import {
@@ -34,6 +39,7 @@ const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
+const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
 function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -55,6 +61,9 @@ function parseI18nField(value: unknown): Record<string, unknown> | undefined {
 function studyView(study: persistence.StudyRecord, isOwner: boolean) {
   return {
     id: study.id,
+    // Curated identity, when the study has one. The practice player uses it to
+    // pick the piece its rail header illustrates.
+    slug: study.slug,
     name: study.name,
     description: study.description,
     // Per-locale overrides; the client resolves against its current locale and
@@ -130,6 +139,8 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     tags: chapter.tags,
     version: chapter.version,
     gamebook: chapter.gamebook,
+    practice: chapter.practice,
+    practiceGoal: chapter.practiceGoal,
   };
 }
 
@@ -162,8 +173,36 @@ export async function tryHandle(
   pathname: string,
 ): Promise<boolean> {
   const featuredMatch = FEATURED_PATH.exec(pathname);
-  if (pathname !== '/api/studies' && !pathname.startsWith('/api/studies/') && !featuredMatch) {
+  const slugMatch = SLUG_PATH.exec(pathname);
+  if (
+    pathname !== '/api/studies' &&
+    !pathname.startsWith('/api/studies/') &&
+    !featuredMatch &&
+    !slugMatch
+  ) {
     return false;
+  }
+
+  // ── Curated slug write (admin) ──
+  // Admin-only because the slug is what the /practice catalogue points at:
+  // a user able to set their own could claim a curated card's slot.
+  if (slugMatch) {
+    if (!requireMethod(request, response, 'PUT')) return true;
+    if (!(await requireAdminSession(request, response))) return true;
+    if (!requirePersistence(response)) return true;
+    const body = await readJsonBody(request);
+    const raw = typeof body.slug === 'string' ? body.slug.trim() : null;
+    if (raw !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(raw)) {
+      writeJson(response, 400, { error: 'invalid_slug' });
+      return true;
+    }
+    const result = await persistence.setStudySlug(slugMatch[1]!, raw);
+    if (!result.ok) {
+      writeJson(response, result.error === 'slug_taken' ? 409 : 404, { error: result.error });
+      return true;
+    }
+    writeJson(response, 200, { slug: result.study.slug });
+    return true;
   }
 
   // ── Staff curation write ──
@@ -425,13 +464,26 @@ async function readStudy(
     return true;
   }
   const likeState = await persistence.getStudyLikeState(id, user?.id);
+  // Which practice chapters this reader has solved, so the rail can tick them.
+  // Asked only when the study actually has practice chapters and someone is
+  // signed in -- a plain study should not pay for a progress query.
+  const practiceChapterIds = study.chapters
+    .filter((chapter) => chapter.practice)
+    .map((chapter) => chapter.id);
+  const solved =
+    user && practiceChapterIds.length > 0
+      ? await persistence.solvedChapterIds(user.id, practiceChapterIds)
+      : new Set<string>();
   writeJson(response, 200, {
     study: {
       ...studyView(study, isOwner),
       ...likeState,
       canFeature: user?.accountRole === 'admin',
     },
-    chapters: study.chapters.map(chapterView),
+    chapters: study.chapters.map((chapter) => ({
+      ...chapterView(chapter),
+      ...(solved.has(chapter.id) ? { solved: true } : {}),
+    })),
   });
   return true;
 }
@@ -565,6 +617,31 @@ async function patchChapter(
     const result = await persistence.setChapterGamebook(chapterId, ownerId, body.gamebook);
     if (!result.ok) {
       writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });
+      return true;
+    }
+    writeJson(response, 200, { chapter: chapterView(result.chapter) });
+    return true;
+  }
+  if (typeof body.practice === 'boolean') {
+    // The goal is validated HERE rather than trusted as free text, because it is
+    // what decides whether a learner has won or lost. An unparseable goal that
+    // reaches storage becomes a silent fallback later; lila's regex-with-default
+    // is precisely how 27 of its practice chapters lost their authored goal.
+    const rawGoal = typeof body.practiceGoal === 'string' ? body.practiceGoal.trim() : '';
+    if (body.practice && !parsePracticeGoal(rawGoal)) {
+      writeJson(response, 400, { error: 'invalid_goal' });
+      return true;
+    }
+    const result = await persistence.setChapterPractice(
+      chapterId,
+      ownerId,
+      body.practice,
+      body.practice ? rawGoal : null,
+    );
+    if (!result.ok) {
+      const status =
+        result.error === 'forbidden' ? 403 : result.error === 'invalid_goal' ? 400 : 404;
+      writeJson(response, status, { error: result.error });
       return true;
     }
     writeJson(response, 200, { chapter: chapterView(result.chapter) });

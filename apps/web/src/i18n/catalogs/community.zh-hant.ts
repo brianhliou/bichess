@@ -215,6 +215,8 @@ export const ZH_HANT_COMMUNITY = {
   'profile.savedGames': '收藏',
   'profile.noSavedGames': '還沒有收藏的對局。',
   'profile.noAccountGames': '還沒有帳號對局。',
+  'profile.noVariantGames': '還沒有{variant}對局。',
+  'profile.showAllGames': '顯示全部對局',
   'profile.loadMore': '載入更多',
   'profile.loadingMore': '載入中...',
   'profile.finishedGame': '已結束的對局',

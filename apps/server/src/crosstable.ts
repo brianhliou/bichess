@@ -38,7 +38,14 @@ export const CROSSTABLE_GAME_LIMIT = 20;
 export type CrosstableSeat = 'white' | 'black';
 export type CrosstableOutcome = 'a' | 'b' | 'draw';
 export type CrosstableUnavailableReason = 'guest' | 'private' | 'unsupported';
-export type CrosstablePlayer = { name: string; kind: 'account' | 'engine' };
+export type CrosstablePlayer = {
+  name: string;
+  kind: 'account' | 'engine';
+  // Linkable profile identity, at most one set. Sourced from postgamePlayers,
+  // so the private-seat redaction that drops the name drops these too.
+  handle: string | null;
+  botId: string | null;
+};
 export type CrosstableScore = { a: number; b: number; draws: number; total: number };
 export type CrosstableGame = {
   roomId: string;
@@ -204,8 +211,18 @@ export function resolveCrosstablePair(
     ok: true,
     pair: { a, b },
     players: [
-      { name: rowA!.name, kind: rowA!.kind as CrosstablePlayer['kind'] },
-      { name: rowB!.name, kind: rowB!.kind as CrosstablePlayer['kind'] },
+      {
+        name: rowA!.name,
+        kind: rowA!.kind as CrosstablePlayer['kind'],
+        handle: rowA!.handle,
+        botId: rowA!.botId,
+      },
+      {
+        name: rowB!.name,
+        kind: rowB!.kind as CrosstablePlayer['kind'],
+        handle: rowB!.handle,
+        botId: rowB!.botId,
+      },
     ],
   };
 }

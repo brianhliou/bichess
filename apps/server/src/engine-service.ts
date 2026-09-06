@@ -1,6 +1,7 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { EngineTurnRequest, EngineTurnResponse, Move, Square } from '@mistboard/game';
+import { runDarkChessAnalysisJob } from './dark-chess-analysis-job.js';
 import { engineCounters, logger } from './obs.js';
 import { getPythonPool } from './python-pool.js';
 
@@ -9,6 +10,7 @@ const CAPACITY_PATH = '/internal/engine/capacity';
 const RESERVATIONS_PATH = '/internal/engine/reservations';
 const ENGINE_TURN_PATH = '/internal/engine/turn';
 const ENGINE_OBSERVE_PATH = '/internal/engine/observe';
+const ENGINE_ANALYZE_PATH = '/internal/engine/analyze';
 const MAX_BODY_BYTES = 1_000_000;
 const DEFAULT_ENGINE_SERVICE_POOL_SIZE = 4;
 const DEFAULT_ENGINE_SERVICE_TIMEOUT_MS = 15_000;
@@ -219,6 +221,51 @@ async function handleRequest(
     // follow-up). We ack so the arbiter's best-effort push succeeds; the same
     // own-move observation still reaches the engine in its next turn request.
     writeJson(res, 200, { protocolVersion: '1', gameId, sessionId, received: true });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === ENGINE_ANALYZE_PATH) {
+    // Post-game fog analysis: spawn the engine repo's analyze_job.py with the
+    // finished game's publication payload. Serialized to one job at a time
+    // inside runDarkChessAnalysisJob so live-move compute is never starved by
+    // more than one analysis process. Long-running by design — the web side
+    // calls with a generous timeout and its own job queue in front.
+    // Refuse while a live game holds a seat. An analysis peaks around 10 GiB for
+    // ~2 minutes (measured: 53-ply human game at production parity) on the SAME
+    // box that serves live bot moves, and this host runs THP `always` with
+    // compaction failing most of the time — the conditions that made jieqi's
+    // spawn-per-move stall for seconds. Live latency wins; analysis is offline,
+    // async and cached, so it can wait. 503 is the retryable answer, and the
+    // caller's job queue surfaces it rather than burning the request.
+    context.reservations.pruneExpired();
+    const activeSeats = context.reservations.activeCount();
+    if (activeSeats > 0) {
+      logger.info(
+        { kind: 'engine_analysis_deferred', active_seats: activeSeats },
+        'analysis refused while live engine seats are held',
+      );
+      writeJson(res, 503, { error: 'engine_busy', activeSeats });
+      return;
+    }
+    const body = await readJson(req);
+    const publication = body.publication;
+    if (!publication || typeof publication !== 'object') {
+      throw new HttpError(400, 'invalid analysis request');
+    }
+    const options = (body.options ?? {}) as Record<string, unknown>;
+    const doc = await runDarkChessAnalysisJob(publication, {
+      sfDepth: typeof options.sfDepth === 'number' ? options.sfDepth : undefined,
+      iterations: typeof options.iterations === 'number' ? options.iterations : undefined,
+      iSample: typeof options.iSample === 'number' ? options.iSample : undefined,
+      timeBudgetSeconds:
+        typeof options.timeBudgetSeconds === 'number' ? options.timeBudgetSeconds : undefined,
+      seat:
+        options.seat === 'white' || options.seat === 'black' || options.seat === 'both'
+          ? options.seat
+          : undefined,
+      search: typeof options.search === 'boolean' ? options.search : undefined,
+    });
+    writeJson(res, 200, doc as Record<string, unknown>);
     return;
   }
 

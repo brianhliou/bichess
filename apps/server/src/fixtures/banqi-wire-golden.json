@@ -59,6 +59,7 @@
               ],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -358,6 +359,7 @@
               ],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -630,6 +632,7 @@
               "events": [],
               "seats": {},
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -717,6 +720,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -1025,6 +1029,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -1299,6 +1304,7 @@
                 "red": "client-red"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -1411,6 +1417,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -1727,6 +1734,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -2002,6 +2010,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -2125,6 +2134,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -2454,6 +2464,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -2731,6 +2742,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -2873,6 +2885,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -3211,6 +3224,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -3486,6 +3500,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -3639,6 +3654,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -3986,6 +4002,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -4263,6 +4280,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -4427,6 +4445,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -4789,6 +4808,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -5070,6 +5090,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -5245,6 +5266,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -5621,6 +5643,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -5893,6 +5916,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -6079,6 +6103,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -6468,6 +6493,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -6738,6 +6764,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -6935,6 +6962,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -7331,6 +7359,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -7601,6 +7630,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -7809,6 +7839,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -8214,6 +8245,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -8486,6 +8518,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -8705,6 +8738,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -9125,6 +9159,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -9397,6 +9432,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -9627,6 +9663,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -10054,6 +10091,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -10330,6 +10368,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -10566,6 +10605,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -10883,6 +10923,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "black",
@@ -11043,6 +11084,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
@@ -11123,6 +11165,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
@@ -11400,6 +11447,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "black",
@@ -11662,6 +11714,11 @@
               },
               "seatDisplayNames": {
                 "red": "Misty"
+              },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
               },
               "state": {
                 "id": "bq_golden-b",
@@ -11727,6 +11784,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
@@ -12012,6 +12074,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "black",
@@ -12275,6 +12342,11 @@
               },
               "seatDisplayNames": {
                 "red": "Misty"
+              },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
               },
               "state": {
                 "id": "bq_golden-b",
@@ -12363,6 +12435,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
@@ -12525,6 +12602,11 @@
               "seatDisplayNames": {
                 "red": "Misty"
               },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
+              },
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "black",
@@ -12659,6 +12741,11 @@
               },
               "seatDisplayNames": {
                 "red": "Misty"
+              },
+              "seatProfiles": {
+                "red": {
+                  "botId": "misty"
+                }
               },
               "state": {
                 "id": "bq_golden-b",
@@ -12771,6 +12858,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -13086,6 +13174,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "black",
@@ -13361,6 +13450,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -13466,6 +13556,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -13794,6 +13885,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "black",
@@ -14071,6 +14163,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -14212,6 +14305,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -14549,6 +14643,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "black",
@@ -14824,6 +14919,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -14981,6 +15077,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
@@ -15214,6 +15311,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "black",
@@ -15369,6 +15467,7 @@
                 "black": "client-black"
               },
               "seatDisplayNames": {},
+              "seatProfiles": {},
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",

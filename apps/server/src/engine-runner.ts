@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import {
   type Color,
   capturedRoleFor,
@@ -17,7 +16,7 @@ import {
   heartbeatEngineGameTask,
   reconcileExperimentJob,
 } from './engine-experiments.js';
-import { engineDir, enginePython, engineScript } from './engine-paths.js';
+import { defaultStockfishPath, engineDir, enginePython, engineScript } from './engine-paths.js';
 import {
   type EngineDefinition,
   type EngineMoveDecision,
@@ -776,16 +775,7 @@ async function runPythonGameProcess(request: PythonGameRequest): Promise<PythonG
   });
 }
 
-function defaultStockfishPath(): string | undefined {
-  for (const candidate of [
-    '/usr/games/stockfish',
-    '/usr/bin/stockfish',
-    '/opt/homebrew/bin/stockfish',
-  ]) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
+// defaultStockfishPath now lives in engine-paths (one definition, three callers).
 
 function parsePythonGameResult(value: unknown): PythonGameResult {
   if (!isObject(value)) throw new Error('top-level response is not an object');

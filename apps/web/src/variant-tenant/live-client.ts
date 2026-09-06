@@ -33,6 +33,7 @@ import {
 } from '../live-lifecycle-effects.js';
 import { initLiveSound, resetLiveSoundState } from '../live-sound.js';
 import { clearSeatTokenForRoom, type LiveRefs } from '../live-state.js';
+import type { ProfileIdentity } from '../profile-link.js';
 import { roomIdFromPath } from '../room-url.js';
 import { syncMoveListScroll } from './chrome-dom.js';
 import {
@@ -79,6 +80,7 @@ export type TenantLiveFrame<C extends string, V> = {
   seats: Partial<Record<C, string>>;
   // Public player names per seat (account/bot/engine); guests omitted.
   seatDisplayNames?: Partial<Record<C, string>>;
+  seatProfiles?: Partial<Record<C, ProfileIdentity>>;
   state: V;
   clock?: TenantLiveClock<C> | null;
   connectedSeats?: Record<C, boolean>;
@@ -100,6 +102,9 @@ export type TenantLiveState<C extends string, V> = {
   timeControl: { initialMs: number; incrementMs: number } | null;
   seats: Partial<Record<C, string>>;
   seatDisplayNames: Partial<Record<C, string>>;
+  // Where each seat name links, parallel to seatDisplayNames. A seat with no
+  // public page (guest, engine with no bot fronting it) is simply absent.
+  seatProfiles: Partial<Record<C, ProfileIdentity>>;
   connectedSeats: Partial<Record<C, boolean>>;
   events: TenantLiveEvent[];
   abortDeadline: number | null;
@@ -307,6 +312,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     timeControl: null,
     seats: {},
     seatDisplayNames: {},
+    seatProfiles: {},
     connectedSeats: {},
     events: [],
     abortDeadline: null,
@@ -360,6 +366,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     timeControl: () => state.timeControl,
     connectedSeats: () => state.connectedSeats,
     seatDisplayNames: () => state.seatDisplayNames,
+    seatProfiles: () => state.seatProfiles,
     abortDeadline: () => state.abortDeadline,
     forfeitDeadline: config.chrome?.forfeitDeadline ?? (() => null),
     roomMode: config.chrome?.roomMode ?? (() => 'pvp'),
@@ -387,6 +394,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.seatDisplayNames = frame.seatDisplayNames
       ? brandSeatDisplayNames(frame.seatDisplayNames)
       : state.seatDisplayNames;
+    // Kept in lockstep with the names above: a frame that carries one carries
+    // the other, so a re-branded name never keeps a stale seat's link.
+    state.seatProfiles = frame.seatDisplayNames ? (frame.seatProfiles ?? {}) : state.seatProfiles;
     if (frame.connectedSeats) state.connectedSeats = frame.connectedSeats;
     state.abortDeadline = frame.abortDeadline ?? null;
     if (frame.events) state.events = frame.events;

@@ -14,7 +14,7 @@ test('the merged Misty identity fronts every house variant', () => {
   assert.ok(misty);
   assert.equal(misty.displayName, 'Misty');
   assert.equal(firstPartyBotEngineFor('misty', 'dark-chess'), 'python-v2-v1.6');
-  assert.equal(firstPartyBotEngineFor('misty', 'dark-xiangqi'), 'python-fdx-v1.1');
+  assert.equal(firstPartyBotEngineFor('misty', 'dark-xiangqi'), 'python-fdx-v1.2');
   assert.equal(firstPartyBotEngineFor('misty', 'banqi'), 'misty-banqi');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle'), 'misty-jungle-level-2');
   assert.equal(firstPartyBotEngineFor('misty', 'jungle-flip'), 'misty-jungle-flip');
@@ -28,6 +28,10 @@ test('the merged Misty identity fronts every house variant', () => {
   for (const engineId of [
     'python-v2-v1.0',
     'python-dmx-v1.0',
+    // Superseded fog-xiangqi builds. Every finished dxq game was played on one
+    // of these, so dropping either would strand its record on the bot profile.
+    'python-fdx-v1.0',
+    'python-fdx-v1.1',
     'misty-jungle-level-1',
     'misty-jungle-level-3',
   ]) {

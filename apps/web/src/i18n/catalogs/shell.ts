@@ -7,6 +7,7 @@ export const EN_SHELL = {
   'nav.puzzles': 'Puzzles',
   'nav.learn': 'Learn',
   'nav.learnXiangqi': 'Xiangqi Basics',
+  'nav.practice': 'Practice',
   'nav.rules': 'Rules',
   'nav.articles': 'Articles',
   'nav.watch': 'Watch',

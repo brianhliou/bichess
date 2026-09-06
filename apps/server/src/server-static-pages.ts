@@ -142,6 +142,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Free xiangqi (Chinese chess) puzzles drawn from real games, with puzzles for Mistboard variants alongside.',
   },
+  '/practice': {
+    title: 'Xiangqi Practice | Mistboard',
+    description:
+      'Practise xiangqi (Chinese chess) endgames against the engine: each position sets a goal, the engine defends, and it tells you when the win has slipped.',
+  },
   '/study': {
     title: 'Xiangqi Studies | Mistboard',
     description:
@@ -633,7 +638,8 @@ export async function servePrerenderedPage(params: {
     | 'player.html'
     | 'learn-xiangqi.html'
     | 'feed.html'
-    | 'puzzles.html';
+    | 'puzzles.html'
+    | 'patron.html';
 }): Promise<void> {
   const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -656,6 +662,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/stats',
   '/puzzles',
   '/learn/xiangqi',
+  // '/practice' is parked (#363) and 404s in prod; never advertise a 404.
   '/analysis',
   '/editor',
   '/study',

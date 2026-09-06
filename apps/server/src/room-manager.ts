@@ -20,7 +20,12 @@ import {
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import { engineFailureAbort } from './engine-failure-abort.js';
 import { engineVersionDisplayName, loadEngine } from './engine-registry.js';
-import { firstPartyBotForEngine, firstPartyBotForId } from './first-party-bots.js';
+import {
+  firstPartyBotForEngine,
+  firstPartyBotForId,
+  type LiveSeatProfile,
+  liveSeatProfileIdentity,
+} from './first-party-bots.js';
 import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
 import { chooseLiveEngineMove, type LiveEngineFallbackEvent } from './live-engine.js';
 import { engineCounters, logger } from './obs.js';
@@ -422,6 +427,29 @@ export function seatDisplayNamesForRoom(
   return names;
 }
 
+// Linkable profile identity per seat, the companion to seatDisplayNamesForRoom:
+// same seats, same resolution order, so the name a client renders and the page it
+// links to can never come from different seats. Absent for a seat with no public
+// page (a guest, or a raw engine version with no bot in front of it).
+export function seatProfilesForRoom(
+  room: Room,
+  ctx: RoomManagerContext,
+): Partial<Record<Color, LiveSeatProfile>> {
+  const profiles: Partial<Record<Color, LiveSeatProfile>> = {};
+  for (const color of ['white', 'black'] as Color[]) {
+    const clientId = room.projection.seats[color];
+    if (!clientId) continue;
+    const engineId = isServerEngineClient(clientId)
+      ? clientId === 'random-engine'
+        ? ctx.pveBuiltinEngineClientId
+        : clientId
+      : null;
+    const profile = liveSeatProfileIdentity(engineId, room.seatTokens[color]?.userHandle ?? null);
+    if (profile.handle || profile.botId) profiles[color] = profile;
+  }
+  return profiles;
+}
+
 function engineSeatDisplayName(engineId: string): string {
   try {
     return loadEngine(engineId).engineName;
@@ -432,8 +460,9 @@ function engineSeatDisplayName(engineId: string): string {
 
 export function broadcastSnapshot(ctx: RoomManagerContext, room: Room): void {
   const seatDisplayNames = seatDisplayNamesForRoom(room, ctx);
+  const seatProfiles = seatProfilesForRoom(room, ctx);
   for (const client of room.clients) {
-    ctx.send(client, snapshotPayload({ ...room, seatDisplayNames }, client));
+    ctx.send(client, snapshotPayload({ ...room, seatDisplayNames, seatProfiles }, client));
   }
 }
 
@@ -452,7 +481,7 @@ export function broadcastSnapshot(ctx: RoomManagerContext, room: Room): void {
 // at the /game/:id replay endpoint.
 export function broadcastEventAppended(ctx: RoomManagerContext, room: Room, fromSeq: number): void {
   const seatDisplayNames = seatDisplayNamesForRoom(room, ctx);
-  const enrichedRoom = { ...room, seatDisplayNames };
+  const enrichedRoom = { ...room, seatDisplayNames, seatProfiles: seatProfilesForRoom(room, ctx) };
   const statusType = room.projection.state.status.type;
   const isGameEnd = statusType === 'finished' || statusType === 'aborted';
   for (const client of room.clients) {

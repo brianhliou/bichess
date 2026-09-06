@@ -424,8 +424,12 @@
 .review-move-times__bar--black {
   background: #34302e;
 }
-/* Chess-family reviews: the first seat plays white, so its bars read as white. */
-.dark-chess-review .review-move-times__bar--red {
+/* Chess: the first seat plays White. This used to be a `.dark-chess-review
+   .review-move-times__bar--red` override -- the bar was still CALLED red and a page
+   class repainted it. The seat now resolves to a 'white' ink upstream and the bar is
+   named for what it is, so the override is REMOVED in the same change rather than
+   left to rot beside the rule that replaced it. */
+.review-move-times__bar--white {
   background: #e9e5dc;
   border: 1px solid #b8b1a5;
   box-sizing: border-box;

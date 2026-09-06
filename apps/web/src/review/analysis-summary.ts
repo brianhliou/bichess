@@ -18,7 +18,7 @@ import {
   type PlayerAnalysis,
   playerPhaseAccuracies,
 } from './game-analysis.js';
-import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
+import { type ReviewInk, type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
 
 /** Optional real player names; fall back to the side colors for anonymous games. */
 export type AnalysisSummaryLabels = { red?: string; black?: string };
@@ -85,7 +85,8 @@ export function createAnalysisSummary(
   return el;
 }
 
-function colorLabel(color: 'red' | 'black'): string {
+function colorLabel(color: ReviewInk): string {
+  if (color === 'white') return t('summary.white');
   return color === 'red' ? t('summary.red') : t('summary.black');
 }
 
@@ -108,7 +109,9 @@ function learnButton(onLearn: () => void, active: boolean): HTMLElement {
 
 function playerBlock(
   label: string,
-  color: 'red' | 'black',
+  // The INK the dot paints (chess's first seat is White) ...
+  color: ReviewInk,
+  // ... and the analysis SLOT the stats and judgment callbacks are keyed by.
   side: 'red' | 'black',
   player: PlayerAnalysis,
   hideAcpl: boolean,

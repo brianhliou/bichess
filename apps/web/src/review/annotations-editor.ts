@@ -35,6 +35,8 @@ export interface AnnotationEditorOptions {
    *  per-position hint fields. Supplying this keeps Lesson discoverable even
    *  before the current chapter has gamebook mode enabled. */
   lessonControls?: HTMLElement;
+  /** Practice-mode dock (flag + goal + preview), the sibling of lessonControls. */
+  practiceControls?: HTMLElement;
   /** Set the current node's gamebook hint/deviation. Per keystroke; no re-render. */
   onGamebook?(patch: { hint?: string; deviation?: string }): void;
 }
@@ -96,6 +98,7 @@ export function createAnnotationEditor(opts: AnnotationEditorOptions): Annotatio
   const lessonPanel = document.createElement('section');
   lessonPanel.className = 'annotation-editor annotation-editor--lesson';
   if (opts.lessonControls) lessonPanel.append(opts.lessonControls);
+  if (opts.practiceControls) lessonPanel.append(opts.practiceControls);
   let hint: HTMLTextAreaElement | null = null;
   let deviation: HTMLTextAreaElement | null = null;
   if (opts.gamebook) {

@@ -17,10 +17,12 @@
 // tree, engine, and analysis machinery is identical. The board is INTERACTIVE
 // (play a move → it branches the tree, promote/delete variations).
 
+import '../seat-disc-ink.css';
 import './seat-labels.css';
 import { type MoveJudgment, winPercent } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
+import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
 import {
@@ -33,6 +35,11 @@ import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
+import {
+  alternativesEnabled,
+  setAlternativesEnabled,
+  trimAlternatives,
+} from './alternatives-pref.js';
 import type { CevalLine, CevalVariant } from './engine/ceval.js';
 import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engine-arrow-pref.js';
 import { createEnginePanel } from './engine/engine-panel.js';
@@ -68,7 +75,8 @@ import {
   installReviewKeyboard,
   type ReviewSurface,
 } from './review-layout.js';
-import type { ReviewSeatColors } from './review-seat-colors.js';
+import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
+import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
 import { createStudyFromTree, studyExportMessage } from './study-export.js';
 import { deserializeTree, type SerializedTree, serializeTree } from './tree-serialize.js';
 import { underboardPanel } from './underboard-tabs.js';
@@ -196,6 +204,16 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
 export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   /** Rules seam: the concrete VariantTreeAdapter (already generic). */
   adapter: VariantTreeAdapter<Move, Truth, View>;
+  /**
+   * Whether the eval track's `best` may be quoted as advice ("X was best").
+   * Default true. FALSE for imperfect-information variants: there the eval is
+   * Stockfish on the REVEALED truth, a fair record of what a move cost but NOT
+   * advice the mover could have acted on. Quoting it grades the player against
+   * information they never had, and contradicts the belief-relative recommendation
+   * the decision layer renders directly beneath it. Those variants let their own
+   * decision layer name the better move.
+   */
+  quoteEvalBestMove?: boolean;
   /** Client-engine hooks (local ceval panel + eval gauge + engine arrows + Share
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
@@ -298,8 +316,11 @@ export type DecisionMoveInfo = {
   /** Luck-free accuracy of the CHOICE in [0, 100] (best-vs-played pool means). Feeds the headline
    *  accuracy so a reveal ply is graded on skill, not the dice. */
   accuracy: number;
-  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky). */
-  luck: number;
+  /** Signed win% swing the reveal produced vs its own expectation (+ lucky, - unlucky).
+   *  OPTIONAL: a variant whose luck axis is not a scalar omits it rather than sending 0, which
+   *  would render as "average luck" instead of "no such number". Fog is the case — its error
+   *  classes (belief_lost_truth / sample_error / decision_error) are categorical. */
+  luck?: number;
   /** The played reveal's rank among the alternatives (1 = best), or null when off the table. */
   playedRank: number | null;
   /** Ranked alternatives for this chance ply, best first, ALREADY formatted by the variant
@@ -312,6 +333,14 @@ export type DecisionMoveInfo = {
 export type DecisionCandidate = {
   /** Board-notation move text, e.g. "e8-a8". */
   label: string;
+  /**
+   * The engine's OWN rank for this move, 1-based. Optional: where a variant's
+   * candidate list is exactly the set it ranked (jieqi), row position already is
+   * the rank and this can be omitted. Supply it wherever the displayed rows are a
+   * SUBSET of what was ranked — otherwise the row index silently reads as a rank
+   * and tells the reader their 21st-choice move was second best.
+   */
+  rank?: number;
   /** Luck-free win% for this choice, already rounded for display. */
   win: number;
   /** True when this is the move actually played. */
@@ -394,6 +423,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  page supplies the enable/preview controls; the annotation editor adds the
    *  current position's hint/deviation fields when gamebook mode is active. */
   annotationLessonControls?: HTMLElement;
+  /** Practice-mode dock for the same under-board tab. */
+  annotationPracticeControls?: HTMLElement;
   /** Show the study annotation controls (glyph picker + comment box + clear-shapes)
    *  in the under-board authoring dock. Only editable studies set this; the
    *  postgame/analysis surfaces are read-only and omit it. Board shape-drawing
@@ -411,6 +442,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Real player names — label the accuracy summary and crosstable stub. Absent =
    *  the side's displayed ink is used. */
   players?: { red?: string; black?: string };
+  /** Where each seat strip's name links, keyed like `players` (so `red` is the
+   *  first-mover slot, which is White on the chess boards). Absent or null for a
+   *  seat with no page, which renders as plain text. */
+  playerProfiles?: { red?: ProfileTarget | null; black?: ProfileTarget | null };
   /**
    * Draw the names as strips above and below the board. OPT-IN, and separate
    * from `players` on purpose: every game-review surface already passes
@@ -423,6 +458,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Visual ink bound to the first/second analysis seats. Flip variants set this
    *  after the opening reveal; analysis ownership remains keyed by seat. */
   seatColors?: ReviewSeatColors;
+  /** True for variants whose seats are move-order slots until an opening flip binds
+   *  their ink (Banqi, Flip Jungle). With no `seatColors` yet, the seat strips render
+   *  a neutral disc rather than naming a colour nobody owns. */
+  seatInkBindsOnFlip?: boolean;
   /** Show the "Crosstable" underboard tab. */
   showCrosstable?: boolean;
   /** Lazy head-to-head body for the Crosstable tab (review/crosstable.ts). */
@@ -670,23 +709,50 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const bottomIsRed = orientation() === presentation.perspective(false);
     const near = bottomIsRed ? seatNames.red : seatNames.black;
     const far = bottomIsRed ? seatNames.black : seatNames.red;
+    // The INK each slot renders as, in two steps. `perspective()` gives the
+    // variant's own side id -- an ink already for chess ('white') and the xiangqi
+    // family ('red'), but a move-order SEAT for the flip variants, whose colour is
+    // only decided by the opening reveal. seatStripDisplayInk finishes the job by
+    // routing that seat through the same `seatColors` mapping the meta card, the
+    // advantage chart and the move-time bars all use, so the strips can no longer
+    // contradict them.
+    const { top: topSeat_, bottom: bottomSeat_ } = seatStripInks(presentation.perspective, flipped);
+    const toInk = (seat: Color): string =>
+      seatStripDisplayInk(String(seat), config.seatColors, config.seatInkBindsOnFlip ?? false);
+    const topInk = toInk(topSeat_);
+    const bottomInk = toInk(bottomSeat_);
+    const profiles = config.playerProfiles;
+    const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
+    const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
+    // A nameless seat falls back to a word. Before the flip binds, no colour word
+    // is true, so it falls back to the move order instead of picking a side.
+    const inkWord = (ink: string, isFirstMover: boolean): string => {
+      if (ink === UNBOUND_SEAT_INK) return isFirstMover ? 'First' : 'Second';
+      return `${ink.charAt(0).toUpperCase()}${ink.slice(1)}`;
+    };
     const paint = (
       el: HTMLElement,
       name: string | undefined,
-      isRed: boolean,
+      profile: ProfileTarget | null | undefined,
+      ink: string,
+      isFirstMover: boolean,
       slot: 'top' | 'bottom',
     ): void => {
-      el.className = `review-seat review-seat--${slot} review-seat--${isRed ? 'red' : 'black'}`;
+      el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
       el.replaceChildren();
       const disc = document.createElement('span');
       disc.className = 'review-seat__disc';
-      const label = document.createElement('span');
-      label.className = 'review-seat__name';
-      label.textContent = name ?? (isRed ? 'Red' : 'Black');
+      // A seat with no name falls back to its ink word, which names nobody, so
+      // the link is bound to the resolved name rather than the slot.
+      const label = name
+        ? playerNameEl(name, profile ?? null, 'review-seat__name')
+        : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
     };
-    paint(topSeat, far, !bottomIsRed, 'top');
-    paint(bottomSeat, near, bottomIsRed, 'bottom');
+    // The first-mover SEAT is the one `perspective(false)` names, whatever ink it
+    // ended up with; it is the bottom strip exactly when the board is unflipped.
+    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top');
+    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom');
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding
@@ -954,6 +1020,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const MAX_INJECTED_PV_PLIES = 24;
 
   function injectBestLines(analysis: GameAnalysis): void {
+    // Same rule as the "… was best" sentence: a variant that will not QUOTE the
+    // truth eval's best move must not GRAFT it either. Suppressing only the text
+    // left the line behind with nothing to explain it, which read worse than
+    // before — the omniscient recommendation was still on screen, just mute.
+    if (presentation.quoteEvalBestMove === false) return;
     // Which parser turns an analysis PV token into a move. A variant whose
     // analysis-engine UCI diverges from the board's move dialect (banqi,
     // jungle-flip, jieqi, jungle) ships its own `moveFromEngineUci`; it is the
@@ -1031,6 +1102,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // analysis does. Continue-from-here (create a live game from a FEN) and
   // Settings are still absent. Re-add an item WITH its implementation, not
   // ahead of it.
+  // Ranked alternatives are opt-in (see alternatives-pref): the glyph and the
+  // advice line already name the best move, so the win% table is a second layer
+  // the reader asks for rather than one they scroll past.
+  let showAlternatives = alternativesEnabled();
   const menuItems: ReviewMenuItem[] = [
     { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
   ];
@@ -1092,6 +1167,19 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         hiddenRevealed = !hiddenRevealed;
         config.revealHidden?.setRevealed(hiddenRevealed);
         render();
+      },
+    });
+  }
+  // Only offered where there is something to show — a variant whose analysis
+  // carries no candidate sets never gets a dead menu row.
+  if (config.decisions) {
+    menuItems.push({
+      label: () => (showAlternatives ? t('review.hideAlternatives') : t('review.showAlternatives')),
+      icon: REVIEW_MENU_ICONS.analyse,
+      onClick: () => {
+        showAlternatives = !showAlternatives;
+        setAlternativesEnabled(showAlternatives);
+        refreshMoveTreeAnnotations();
       },
     });
   }
@@ -1287,6 +1375,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     retro = controller;
     retroPanel = createRetroPanel(controller, {
       labelFor: plyMoveLabel,
+      discInk: reviewColorForSeat(side, config.seatColors),
       onClose: closeRetro,
       onFlip: () => {
         // Look at the game from the other side, then start on its mistakes.
@@ -1361,6 +1450,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         },
         gamebook: config.gamebookEditing,
         lessonControls: config.annotationLessonControls,
+        practiceControls: config.annotationPracticeControls,
         onGamebook: (patch) => {
           tree.annotateAt(currentPath, {
             gamebook: {
@@ -1389,8 +1479,22 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   });
 
   // The tree truncates an illegal seed to the legal prefix; surface a notice.
+  // This used to be `config.details ?? notice`, which meant any variant supplying
+  // its own left-rail panel could never show it — dark-chess always does, so a
+  // truncated fog game rendered as a SHORT GAME with no explanation, which reads
+  // as corruption rather than as a bad import. A truncation is a data problem the
+  // reader has to see, so it now wins and the variant's panel follows it. The
+  // wrapper is display:contents so the rail lays out exactly as before.
   const truncated = !config.initialTree && mainlineLen < config.moves.length;
-  const details = config.details ?? (truncated ? truncationNotice(mainlineLen) : undefined);
+  const details = ((): HTMLElement | undefined => {
+    if (!truncated) return config.details;
+    const notice = truncationNotice(mainlineLen);
+    if (!config.details) return notice;
+    const stack = document.createElement('div');
+    stack.style.display = 'contents';
+    stack.append(notice, config.details);
+    return stack;
+  })();
 
   // Material rows (variant opt-in): create the hosts before the scaffold so
   // they land in the rail's mat-top/mat-bot slots; render() drives the updater.
@@ -1831,7 +1935,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         // Judged moves carry their advice INLINE in the move list (lichess:
         // "Blunder. h3-e3 was best." right under the move, ahead of the grafted
         // refutation line).
-        const best = move.judgment ? evalByPly.get(move.ply - 1)?.best : null;
+        const quoteBest = presentation.quoteEvalBestMove !== false;
+        const best = move.judgment && quoteBest ? evalByPly.get(move.ply - 1)?.best : null;
         byPathKey.set(pathKey(tree.pathTo(node)), {
           suffix: glyph?.suffix,
           suffixClass: glyph?.suffixClass,
@@ -1864,17 +1969,32 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           if (!node) continue;
           const key = pathKey(tree.pathTo(node));
           const glyph = judgmentGlyph(info.judgment);
-          const luck = Math.round(info.luck);
+          const luck = info.luck === undefined ? null : Math.round(info.luck);
           byPathKey.set(key, {
             ...byPathKey.get(key),
             suffix: glyph?.suffix,
             suffixClass: glyph?.suffixClass,
-            luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
-            luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+            ...(luck === null
+              ? {}
+              : {
+                  luck: `🎲 ${luck > 0 ? '+' : ''}${luck}%`,
+                  luckTone: luck > 0 ? 'lucky' : luck < 0 ? 'unlucky' : 'even',
+                }),
             // Chance plies get the ranked alternatives instead of a refutation line: past a
             // reveal nothing is knowable, so a LINE would be a fiction while a ranked SET is
             // exactly what the server scored.
-            ...(info.candidates?.length ? { candidates: info.candidates } : {}),
+            // The judge supplies the word too. With the eval track no longer
+            // grading these plies there is no comment to inherit, and a bare
+            // glyph makes the reader guess at severity.
+            ...(info.judgment
+              ? {
+                  comment: `${ADVICE_LABEL[info.judgment]}.`,
+                  commentClass: info.judgment,
+                }
+              : {}),
+            ...(showAlternatives && info.candidates?.length
+              ? { candidates: trimAlternatives(info.candidates) }
+              : {}),
           });
         }
       }

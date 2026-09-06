@@ -61,6 +61,19 @@ export type BotDirectoryEntry = BotProfile & {
 
 export type BotProfilePage = BotDirectoryEntry & {
   games: ProfileGameRecord[];
+  // Per-variant play record, keyed by game spec id. `record`/`gamesTotal` above
+  // stay LIFETIME totals across every variant (the /bots directory card wants
+  // those); these are what a profile showing one selected variant reads. Every
+  // id in `supportedGameSpecIds` is present, including variants the bot has
+  // never played: a missing key and a real 0-0-0 are different claims, and the
+  // profile has to be able to say "no games yet" rather than render nothing.
+  recordsByGameSpecId: Record<string, BotModeRecord>;
+  // Recent games per variant, newest first, capped per variant. Partitioned on
+  // the SERVER because the row cap has to be applied after the variant split: a
+  // flat "most recent N across all variants" list can be 100% one variant, so
+  // filtering it client-side shows an empty list for the others while real games
+  // exist (pikafish's 15 most recent were all jieqi, hiding ~64 xiangqi games).
+  gamesByGameSpecId: Record<string, ProfileGameRecord[]>;
 };
 
 export type BotPlayProfile = Pick<
@@ -100,6 +113,60 @@ type BotDirectoryRow = BotProfileRow & {
 };
 
 const BOT_GAMES_PAGE = 15;
+// Per-variant cap for the profile's recent-games list. Smaller than the flat
+// page because the payload now carries one list per supported variant.
+const BOT_VARIANT_GAMES_PAGE = 10;
+
+// "The bot's seat won this game", as a SQL predicate over a game_participants
+// row joined to its game. Shared by the lifetime and per-variant aggregates so
+// the two can never disagree about what a win is.
+const BOT_SEAT_WON = `games.room_id IS NOT NULL
+                AND (
+                  (game_participants.color = 'white' AND games.result = 'white-wins')
+                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
+                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
+                )`;
+
+type BotGameRow = {
+  room_id: string;
+  player_color: GameParticipantColor;
+  variant: string;
+  mode: GameMode;
+  result: GameResult;
+  termination: GameTermination;
+  ply_count: number;
+  started_at: Date;
+  ended_at: Date;
+  white_name: string | null;
+  black_name: string | null;
+  corpus_id: string | null;
+  rated: boolean;
+  visibility: GameVisibility;
+  initial_ms: number | null;
+  increment_ms: number | null;
+};
+
+function botGameFromRow(row: BotGameRow): ProfileGameRecord {
+  return {
+    roomId: row.room_id,
+    playerColor: row.player_color,
+    variant: row.variant,
+    mode: row.mode,
+    result: row.result,
+    termination: row.termination,
+    plyCount: row.ply_count,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    whiteName: row.white_name,
+    blackName: row.black_name,
+    corpusId: row.corpus_id,
+    rated: row.rated,
+    visibility: row.visibility,
+    participants: [],
+    initialMs: row.initial_ms,
+    incrementMs: row.increment_ms,
+  };
+}
 const RATING_TIME_CLASS_ORDER: Record<RatingTimeClass, number> = {
   bullet: 0,
   blitz: 1,
@@ -178,21 +245,12 @@ export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
               WHERE games.result = 'draw'
             )::text AS draws,
             COUNT(*) FILTER (
-              WHERE games.room_id IS NOT NULL
-                AND (
-                  (game_participants.color = 'white' AND games.result = 'white-wins')
-                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                )
+              WHERE ${BOT_SEAT_WON}
             )::text AS wins,
             COUNT(*) FILTER (
               WHERE games.room_id IS NOT NULL
                 AND games.result <> 'draw'
-                AND NOT (
-                  (game_participants.color = 'white' AND games.result = 'white-wins')
-                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                )
+                AND NOT (${BOT_SEAT_WON})
             )::text AS losses
        FROM bot_profiles
        LEFT JOIN game_participants
@@ -245,21 +303,12 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
               WHERE games.result = 'draw'
             )::text AS draws,
             COUNT(*) FILTER (
-              WHERE games.room_id IS NOT NULL
-                AND (
-                  (game_participants.color = 'white' AND games.result = 'white-wins')
-                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                )
+              WHERE ${BOT_SEAT_WON}
             )::text AS wins,
             COUNT(*) FILTER (
               WHERE games.room_id IS NOT NULL
                 AND games.result <> 'draw'
-                AND NOT (
-                  (game_participants.color = 'white' AND games.result = 'white-wins')
-                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                )
+                AND NOT (${BOT_SEAT_WON})
             )::text AS losses
        FROM bot_profiles
        LEFT JOIN game_participants
@@ -293,16 +342,128 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
   const row = rows[0];
   if (!row) return null;
 
-  const games = await queryBotGames(botId, BOT_GAMES_PAGE);
+  const base = botFromRow(row);
+  const [games, recordsByGameSpecId, gamesByGameSpecId] = await Promise.all([
+    queryBotGames(botId, BOT_GAMES_PAGE),
+    queryBotRecordsByGameSpecId(botId, base.supportedGameSpecIds),
+    queryBotGamesByGameSpecId(botId, base.supportedGameSpecIds, BOT_VARIANT_GAMES_PAGE),
+  ]);
   const [profile] = await attachLatestRatings([
     {
-      ...botFromRow(row),
+      ...base,
       gamesTotal: Number(row.games_total),
       record: recordFromRow(row),
       games,
+      recordsByGameSpecId,
+      gamesByGameSpecId,
     },
   ]);
   return profile ?? null;
+}
+
+// Per-variant play record. Deliberately a SECOND aggregate rather than a
+// regrouping of the one above: the directory card and the profile header still
+// want the lifetime totals, so both shapes have to survive. Seeded with an
+// explicit 0-0-0 for every supported variant so a bot that has never played one
+// reports "no games" instead of a missing key the caller has to guess about.
+async function queryBotRecordsByGameSpecId(
+  botId: string,
+  supportedGameSpecIds: readonly string[],
+): Promise<Record<string, BotModeRecord>> {
+  const records: Record<string, BotModeRecord> = {};
+  for (const gameSpecId of supportedGameSpecIds) {
+    records[gameSpecId] = { games: 0, wins: 0, losses: 0, draws: 0 };
+  }
+  const { rows } = await getPool().query<{
+    variant: string;
+    games_total: string;
+    wins: string;
+    losses: string;
+    draws: string;
+  }>(
+    `SELECT games.variant,
+            COUNT(games.room_id)::text AS games_total,
+            COUNT(*) FILTER (WHERE games.result = 'draw')::text AS draws,
+            COUNT(*) FILTER (
+              WHERE ${BOT_SEAT_WON}
+            )::text AS wins,
+            COUNT(*) FILTER (
+              WHERE games.result <> 'draw' AND NOT (${BOT_SEAT_WON})
+            )::text AS losses
+       FROM game_participants
+       JOIN games ON games.room_id = game_participants.game_id
+      WHERE game_participants.subject_type = 'bot'
+        AND game_participants.subject_id = $1
+        AND game_participants.visibility = 'public'
+        AND games.status = 'completed'
+        AND games.visibility = 'public'
+      GROUP BY games.variant`,
+    [botId],
+  );
+  for (const row of rows) {
+    records[row.variant] = {
+      games: Number(row.games_total),
+      wins: Number(row.wins),
+      losses: Number(row.losses),
+      draws: Number(row.draws),
+    };
+  }
+  return records;
+}
+
+// The most recent `perVariant` games for each supported variant. One round trip
+// via a window function; ranking inside the partition is what makes the cap
+// per-variant rather than global.
+async function queryBotGamesByGameSpecId(
+  botId: string,
+  supportedGameSpecIds: readonly string[],
+  perVariant: number,
+): Promise<Record<string, ProfileGameRecord[]>> {
+  const byGameSpecId: Record<string, ProfileGameRecord[]> = {};
+  for (const gameSpecId of supportedGameSpecIds) byGameSpecId[gameSpecId] = [];
+  const { rows } = await getPool().query<BotGameRow>(
+    `SELECT * FROM (
+       SELECT games.room_id,
+              game_participants.color AS player_color,
+              games.variant,
+              games.mode,
+              games.result,
+              games.termination,
+              games.ply_count,
+              games.started_at,
+              games.ended_at,
+              games.white_name,
+              games.black_name,
+              games.corpus_id,
+              COALESCE(games.rated, false) AS rated,
+              games.visibility,
+              games.initial_ms,
+              games.increment_ms,
+              ROW_NUMBER() OVER (
+                PARTITION BY games.variant
+                ORDER BY games.ended_at DESC, games.room_id DESC
+              ) AS variant_rank
+         FROM game_participants
+         JOIN games ON games.room_id = game_participants.game_id
+        WHERE game_participants.subject_type = 'bot'
+          AND game_participants.subject_id = $1
+          AND games.status = 'completed'
+          AND games.visibility = 'public'
+          AND game_participants.visibility = 'public'
+     ) ranked
+      WHERE ranked.variant_rank <= $2
+      ORDER BY ranked.variant, ranked.ended_at DESC, ranked.room_id DESC`,
+    [botId, Math.max(1, Math.min(perVariant, 50))],
+  );
+  const records = await attachGameParticipants(rows.map(botGameFromRow));
+  for (const record of records) {
+    // A variant the bot has played but no longer lists as supported still has
+    // rows here; keep them rather than dropping history on a registry change.
+    const bucket = byGameSpecId[record.variant];
+    if (bucket) bucket.push(record);
+    else byGameSpecId[record.variant] = [record];
+  }
+  return byGameSpecId;
 }
 
 async function attachLatestRatings<T extends BotProfile>(bots: readonly T[]): Promise<T[]> {
@@ -383,24 +544,7 @@ async function queryLatestPublishedRatings(
 }
 
 async function queryBotGames(botId: string, limit: number): Promise<ProfileGameRecord[]> {
-  const { rows } = await getPool().query<{
-    room_id: string;
-    player_color: GameParticipantColor;
-    variant: string;
-    mode: GameMode;
-    result: GameResult;
-    termination: GameTermination;
-    ply_count: number;
-    started_at: Date;
-    ended_at: Date;
-    white_name: string | null;
-    black_name: string | null;
-    corpus_id: string | null;
-    rated: boolean;
-    visibility: GameVisibility;
-    initial_ms: number | null;
-    increment_ms: number | null;
-  }>(
+  const { rows } = await getPool().query<BotGameRow>(
     `SELECT games.room_id,
             game_participants.color AS player_color,
             games.variant,
@@ -428,27 +572,7 @@ async function queryBotGames(botId: string, limit: number): Promise<ProfileGameR
       LIMIT $2`,
     [botId, Math.max(1, Math.min(limit, 50))],
   );
-  return attachGameParticipants(
-    rows.map((row) => ({
-      roomId: row.room_id,
-      playerColor: row.player_color,
-      variant: row.variant,
-      mode: row.mode,
-      result: row.result,
-      termination: row.termination,
-      plyCount: row.ply_count,
-      startedAt: row.started_at,
-      endedAt: row.ended_at,
-      whiteName: row.white_name,
-      blackName: row.black_name,
-      corpusId: row.corpus_id,
-      rated: row.rated,
-      visibility: row.visibility,
-      participants: [],
-      initialMs: row.initial_ms,
-      incrementMs: row.increment_ms,
-    })),
-  );
+  return attachGameParticipants(rows.map(botGameFromRow));
 }
 
 function botFromRow(row: BotProfileRow): BotProfile {

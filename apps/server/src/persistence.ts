@@ -365,6 +365,11 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
+export {
+  recordPracticeSolved,
+  solvedChapterIds,
+  solvedCountsByStudy,
+} from './persistence-practice.js';
 export type {
   ProfileBucketRating,
   ProfileRatingHistory,
@@ -472,6 +477,7 @@ export {
   createStudy,
   deleteChapter,
   deleteStudy,
+  getPracticeStudiesBySlug,
   getStudyById,
   getStudyLikeState,
   isStudyVisibility,
@@ -483,9 +489,11 @@ export {
   reorderStudyChapters,
   setChapterGamebook,
   setChapterOrientation,
+  setChapterPractice,
   setChapterTags,
   setStudyFeatured,
   setStudyLike,
+  setStudySlug,
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';

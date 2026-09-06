@@ -15,6 +15,7 @@ import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { banqiResultLabel } from './banqi-result-label.js';
 import { banqiEnabled } from './feature-flags.js';
 import { installBanqiBoardStyles } from './live-banqi-render.js';
+import { reviewSeatProfiles } from './profile-link.js';
 import {
   type BanqiDecisionSummary,
   fetchCachedBanqiDecisions,
@@ -204,7 +205,10 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: playerNames,
+    playerProfiles: reviewSeatProfiles(gamePlayers),
     seatColors,
+    // Seats here are move-order slots; the opening flip decides the ink.
+    seatInkBindsOnFlip: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the

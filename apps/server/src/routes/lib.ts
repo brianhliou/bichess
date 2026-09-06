@@ -111,6 +111,15 @@ export type PostgamePlayer = {
   name: string;
   rating: number | null;
   kind: 'account' | 'guest' | 'engine';
+  // Linkable profile identity for the seat. At most one is ever set: `handle`
+  // addresses /@/<handle>, `botId` addresses /bot/<id>. `kind` cannot stand in
+  // for either — it deliberately collapses users and bots into 'account', and a
+  // user's participant subject_id is an internal user id the profile route
+  // cannot address. Both null whenever the seat must not be linked: guests,
+  // imported/manual corpus seats, raw engine versions with no bot in front of
+  // them, name-redacted private seats, and closed or private-profile accounts.
+  handle: string | null;
+  botId: string | null;
 };
 
 export type PostgameGameSummary = {
@@ -158,13 +167,17 @@ export function postgamePlayers(
       kind === 'guest'
         ? ((secondSide ? corpusNames?.blackName : corpusNames?.whiteName) ?? null)
         : null;
+    // A redacted seat shows 'Anonymous', so it must not carry a link that names
+    // the account behind it. Gating both ids on the same condition as the name
+    // keeps the two from ever disagreeing.
+    const redacted = participant.visibility === 'private';
     return {
       color: participant.color,
-      name:
-        corpusName ??
-        (participant.visibility === 'private' ? 'Anonymous' : participant.displayName),
+      name: corpusName ?? (redacted ? 'Anonymous' : participant.displayName),
       rating: participant.ratingAfter ?? participant.ratingBefore ?? null,
       kind,
+      handle: !redacted && participant.subjectType === 'user' ? (participant.handle ?? null) : null,
+      botId: !redacted && participant.subjectType === 'bot' ? participant.subjectId : null,
     };
   });
 }

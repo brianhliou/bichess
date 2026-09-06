@@ -33,6 +33,13 @@ export type StudyChapterRecord = {
   /** Gamebook (interactive-lesson) chapter: the guess-the-move player is the
    *  default presentation. Same tree data; per-node hint/deviation live in it. */
   gamebook: boolean;
+  /** Practice (engine-adjudicated) chapter: played from the root position against
+   *  the engine, which also grades. The tree is IGNORED — unlike a gamebook, the
+   *  exercise is the position plus `practiceGoal`, not an authored line. */
+  practice: boolean;
+  /** Authored goal text ("mate in 3", "win", "draw in 20"); parsed by
+   *  parsePracticeGoal. Non-null whenever `practice` is true (DB CHECK). */
+  practiceGoal: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -40,6 +47,10 @@ export type StudyChapterRecord = {
 export type StudyRecord = {
   id: string;
   ownerId: string;
+  /** Stable curated identity (migration 132). Null for user-created studies;
+   *  set by a seeder so the /practice catalogue can name a study without
+   *  depending on its generated id or its editable name. */
+  slug: string | null;
   /** Present only where the query joined `users`. The detail read does (so an
    *  export can credit the author); the owner's own listing does not need it. */
   ownerHandle?: string;
@@ -108,6 +119,8 @@ export type NewChapterInput = {
 
 export type CreateStudyInput = {
   ownerId: string;
+  /** Curated identity (migration 132). Seeders set it; the UI never does. */
+  slug?: string;
   name: string;
   description: string;
   /** Optional per-locale overrides for `name`/`description`. */
@@ -118,7 +131,7 @@ export type CreateStudyInput = {
 
 export type UpdateChapterResult =
   | { ok: true; chapter: StudyChapterRecord }
-  | { ok: false; error: 'not_found' | 'forbidden' | 'conflict' };
+  | { ok: false; error: 'not_found' | 'forbidden' | 'conflict' | 'invalid_goal' };
 
 const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -134,6 +147,7 @@ function shortId(len = 8): string {
 type StudyRow = {
   id: string;
   owner_id: string;
+  slug: string | null;
   owner_handle?: string;
   owner_display_name?: string;
   name: string;
@@ -158,6 +172,8 @@ type ChapterRow = {
   tags: StudyChapterTags;
   version: number;
   gamebook: boolean;
+  practice: boolean;
+  practice_goal: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -166,6 +182,7 @@ function mapStudy(row: StudyRow): StudyRecord {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    slug: row.slug ?? null,
     ...(row.owner_handle ? { ownerHandle: row.owner_handle } : {}),
     ...(row.owner_display_name ? { ownerDisplayName: row.owner_display_name } : {}),
     name: row.name,
@@ -192,15 +209,17 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
     tags: row.tags ?? {},
     version: row.version,
     gamebook: row.gamebook,
+    practice: row.practice,
+    practiceGoal: row.practice_goal,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 const STUDY_COLS =
-  'id, owner_id, name, description, i18n, visibility, featured_at, created_at, updated_at';
+  'id, owner_id, slug, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
-  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, created_at, updated_at';
+  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, created_at, updated_at';
 
 /** Correlated scalar subquery yielding the first few chapters (by ordinal) as a
  *  jsonb array of `{name, i18n}`, for a study aliased `s`. This is the preview
@@ -273,11 +292,12 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
     await client.query('BEGIN');
     const studyId = shortId();
     await client.query(
-      `INSERT INTO studies (id, owner_id, name, description, i18n, visibility)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+      `INSERT INTO studies (id, owner_id, slug, name, description, i18n, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
       [
         studyId,
         input.ownerId,
+        input.slug ?? null,
         input.name,
         input.description,
         JSON.stringify(input.i18n ?? {}),
@@ -332,6 +352,58 @@ export async function getStudyById(id: string): Promise<StudyWithChapters | null
     [id],
   );
   return { ...mapStudy(row), chapters: chapters.rows.map(mapChapter) };
+}
+
+/** One curated practice study, as the /practice index needs it. */
+export type PracticeStudySummary = {
+  slug: string;
+  id: string;
+  name: string;
+  description: string;
+  i18n: Record<string, unknown>;
+  /** Chapters in practice mode. This is the card's "N exercises", and it counts
+   *  practice chapters rather than all chapters so a stray note chapter in a
+   *  curated study cannot inflate it. */
+  exerciseCount: number;
+};
+
+/**
+ * Resolve curated slugs to studies, in ONE query rather than per card.
+ *
+ * Private studies are skipped: the index is a public page, and a curated slug
+ * pointing at something unpublished should render as a missing card rather than
+ * leak a title. The caller decides what to do about a slug that resolves to
+ * nothing -- the honest options are to omit the card or to show it disabled,
+ * never to silently renumber the section.
+ */
+export async function getPracticeStudiesBySlug(
+  slugs: readonly string[],
+): Promise<PracticeStudySummary[]> {
+  if (!isInitialized() || slugs.length === 0) return [];
+  const { rows } = await getPool().query<{
+    slug: string;
+    id: string;
+    name: string;
+    description: string;
+    i18n: Record<string, unknown> | null;
+    exercise_count: string;
+  }>(
+    `SELECT s.slug, s.id, s.name, s.description, s.i18n,
+            (SELECT count(*) FROM study_chapters c
+               WHERE c.study_id = s.id AND c.practice) AS exercise_count
+       FROM studies s
+      WHERE s.slug = ANY($1::text[])
+        AND s.visibility <> 'private'`,
+    [[...slugs]],
+  );
+  return rows.map((row) => ({
+    slug: row.slug,
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    i18n: row.i18n ?? {},
+    exerciseCount: Number.parseInt(row.exercise_count, 10) || 0,
+  }));
 }
 
 export async function listStudiesForOwner(ownerId: string, q?: string): Promise<StudySummary[]> {
@@ -426,6 +498,35 @@ export type SetStudyFeaturedResult =
 
 /** Admin-facing curation write. Re-selecting a current pick is idempotent and
  * preserves its ordering timestamp; private/unlisted studies fail closed. */
+/**
+ * Set (or clear) a study's curated slug. ADMIN-ONLY at the route layer.
+ *
+ * Privileged on purpose: the slug is what the /practice catalogue points at, so
+ * a user able to set their own would be able to take over a curated card by
+ * claiming its slug. Uniqueness is enforced by the index from migration 132; a
+ * collision surfaces here as a rejected write rather than a silent swap.
+ */
+export async function setStudySlug(
+  studyId: string,
+  slug: string | null,
+): Promise<{ ok: true; study: StudyRecord } | { ok: false; error: 'not_found' | 'slug_taken' }> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  if (slug) {
+    const clash = await getPool().query<{ id: string }>(
+      'SELECT id FROM studies WHERE slug = $1 AND id <> $2',
+      [slug, studyId],
+    );
+    if (clash.rows[0]) return { ok: false, error: 'slug_taken' };
+  }
+  const { rows } = await getPool().query<StudyRow>(
+    `UPDATE studies SET slug = $1, updated_at = now() WHERE id = $2 RETURNING ${STUDY_COLS}`,
+    [slug, studyId],
+  );
+  const row = rows[0];
+  if (!row) return { ok: false, error: 'not_found' };
+  return { ok: true, study: mapStudy(row) };
+}
+
 export async function setStudyFeatured(
   studyId: string,
   featured: boolean,
@@ -855,6 +956,40 @@ export async function setChapterGamebook(
   const updated = await getPool().query<ChapterRow>(
     `UPDATE study_chapters SET gamebook = $1, updated_at = now() WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
     [gamebook, chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
+/**
+ * Flip a chapter between vanilla and practice (engine-adjudicated) mode (owner).
+ *
+ * The goal moves with the flag on purpose. A practice chapter without a goal is
+ * not a half-configured exercise, it is an exercise with no way to be won or
+ * lost, and lila's separate-fields arrangement is exactly how 27 of its chapters
+ * ended up silently defaulting. Turning practice OFF clears the goal rather than
+ * leaving it behind as dead data the next author would have to notice.
+ */
+export async function setChapterPractice(
+  chapterId: string,
+  ownerId: string,
+  practice: boolean,
+  goal: string | null,
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  if (practice && !goal) return { ok: false, error: 'invalid_goal' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET practice = $1, practice_goal = $2, updated_at = now()
+       WHERE id = $3 RETURNING ${CHAPTER_COLS}`,
+    [practice, practice ? goal : null, chapterId],
   );
   return { ok: true, chapter: mapChapter(updated.rows[0]!) };
 }

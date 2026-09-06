@@ -162,6 +162,34 @@ const ORTHO: ReadonlyArray<readonly [number, number]> = [
   [0, -1],
 ];
 
+/**
+ * River-jump directions by role, as [fileDelta, rankDelta]. The TIGER jumps
+ * vertically only; the LION jumps vertically or horizontally; nobody else jumps.
+ *
+ * Exported because the board's movement cue draws from it. A cue that restated
+ * "tiger = vertical" in the art layer would be a second copy of a rule, free to
+ * drift into telling the player something the move generator will not honour;
+ * reading the same table means the arcs cannot claim a jump that does not exist.
+ */
+export const JUNGLE_JUMP_DIRS: Readonly<
+  Partial<Record<JunglePieceRole, ReadonlyArray<readonly [number, number]>>>
+> = {
+  tiger: [
+    [0, 1],
+    [0, -1],
+  ],
+  lion: ORTHO,
+};
+
+/**
+ * True when this role may occupy a water square. Only the Rat may -- exported for
+ * the same reason as JUNGLE_JUMP_DIRS: the cue and the move generator read one
+ * predicate.
+ */
+export function jungleRoleMayEnterWater(role: JunglePieceRole): boolean {
+  return role === 'rat';
+}
+
 export function jungleInBounds(file: number, rank: number): boolean {
   return file >= 0 && file < JUNGLE_WIDTH && rank >= 1 && rank <= JUNGLE_HEIGHT;
 }
@@ -334,19 +362,13 @@ export function getJungleLegalMovesFrom(state: JungleGameState, from: JungleSqua
     const r = rank + dr;
     if (!jungleInBounds(f, r)) continue;
     const to = jungleSquareOf(f, r);
-    if (jungleIsWater(to) && piece.role !== 'rat') continue;
+    if (jungleIsWater(to) && !jungleRoleMayEnterWater(piece.role)) continue;
     tryLand(to);
   }
 
   // Lion/Tiger river jumps. Tiger: vertical only. Lion: vertical or horizontal.
-  if (piece.role === 'lion' || piece.role === 'tiger') {
-    const jumpDirs =
-      piece.role === 'lion'
-        ? ORTHO
-        : ([
-            [0, 1],
-            [0, -1],
-          ] as ReadonlyArray<readonly [number, number]>);
+  const jumpDirs = JUNGLE_JUMP_DIRS[piece.role];
+  if (jumpDirs) {
     for (const [df, dr] of jumpDirs) {
       let f = file + df;
       let r = rank + dr;

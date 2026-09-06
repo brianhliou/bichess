@@ -865,6 +865,8 @@ function jungleBody(): string {
   // channel rail), not a play surface, so a viewer's board-skin preference must
   // not repaint the site's iconography.
   const svg = renderJungleBoardSvg(board, {
+    // Marker boards render a few dozen pixels wide; the badge would be a smudge.
+    cueBadges: false,
     idSuffix: '-mk-jungle',
     shadow: false,
     boardSkin: 'illustrated',
