@@ -17,6 +17,13 @@
 //   wastefully       Latency budget the player already agreed to wait is being
 //                    handed back. Jungle-flip spends ~4% of its 5 s ceiling.
 //
+// Not every engine HAS a work limit, and that changes what the first verdict
+// means. `pikafish-jieqi-strongest` is configured `go movetime 4000` with no
+// depth and no node cap, so stopping on the clock is the design, not a defect;
+// it reports TIME-BOUND-BY-DESIGN. The distinction is read off the tier fields
+// the artifact records, never an engine-id list — a list goes stale the first
+// time a tier is added, and stale in the direction that hides findings.
+//
 // This is the standing answer to that question, read off the per-move
 // `live-engine-decision` artifacts the platform now persists for every PvE move.
 // Fog xiangqi spent ~1.8% of its allotted budget for weeks because a 64-iteration
@@ -73,7 +80,27 @@ export const WORK_BOUND_UTILIZATION = 0.25;
  */
 export const MIN_PLIES_FOR_VERDICT = 30;
 
+/**
+ * Pinned at the ceiling WITH a work limit (nodes or depth) configured that the
+ * search never reaches. This is the finding: the configured strength is
+ * unreachable, so what the bot actually plays is set by how busy the box is.
+ */
 export const VERDICT_TIME_BOUND = 'TIME-BOUND';
+/**
+ * Pinned at the ceiling with NO work limit configured at all. Movetime is the
+ * only limit the tier has, so time-binding is the design working, not a defect —
+ * `pikafish-jieqi-strongest` runs a bare `go movetime 4000`, and reporting it
+ * identically to a jungle bot whose node cap is unreachable made the TIME-BOUND
+ * verdict useless. The lever here is the ceiling itself, not the work limit.
+ */
+export const VERDICT_TIME_BOUND_BY_DESIGN = 'TIME-BOUND-BY-DESIGN';
+/**
+ * Pinned at the ceiling, and the payload records no tier configuration at all,
+ * so which of the two above applies is unknowable from the artifact. Saying so
+ * is the finding, exactly as with CEILING-UNKNOWN: guessing here would either
+ * invent a defect or excuse one.
+ */
+export const VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN = 'TIME-BOUND-WORK-LIMIT-UNKNOWN';
 export const VERDICT_WORK_BOUND_WASTEFUL = 'WORK-BOUND-WASTEFUL';
 export const VERDICT_HEALTHY = 'HEALTHY';
 export const VERDICT_INSUFFICIENT_DATA = 'INSUFFICIENT-DATA';
@@ -128,9 +155,11 @@ export function isDifficultyLadderEngine(engineId) {
 //   'xiangqi' apps/server/src/server-xiangqi-engine.ts — older, and the tier
 //             limits live in a NESTED `tier` block (plus hash_mb / nnue).
 //   'chess'   apps/server/src/room-manager.ts — the chess/dark-chess path.
-//             Different again, and materially poorer: it records think time and
-//             free-form `engine_diagnostics`, but NO budget and NO node count.
-//             Misty's work unit is search iterations (`iters`), not nodes.
+//             Different again, and still the poorest: think time, free-form
+//             `engine_diagnostics`, and (from 2026-09-06) the allotted
+//             `movetime_ms`, but no tier block, so it can say what the ceiling
+//             was and never what work limit the engine had. Misty's work unit is
+//             search iterations (`iters`), not nodes.
 //
 // The rule everywhere below: an absent field becomes null, never 0. A missing
 // node count means "this writer does not tell us", and reporting that as zero
@@ -142,16 +171,31 @@ export function finiteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * Keys no writer but room-manager.ts emits. `requested_engine_id` is the
+ * strongest of them: only the chess path distinguishes the engine asked from the
+ * engine that answered.
+ */
+const CHESS_PAYLOAD_MARKERS = [
+  'requested_engine_id',
+  'engine_diagnostics',
+  'scores',
+  'duration_ms',
+];
+
 export function detectPayloadShape(payload) {
   if (!payload || typeof payload !== 'object') return 'unknown';
-  // Check the nested tier block FIRST: the xiangqi payload also carries a
-  // top-level `movetime_ms`, so testing that key first would misread it as the
-  // tenant shape and silently drop its configured limits.
+  // Check the CHESS markers FIRST. Since 2026-09-06 that writer records a
+  // `movetime_ms` of its own, so the old order — which reached the bare
+  // `movetime_ms` test before any chess key — would now classify every fog/chess
+  // row as the tenant shape and read its engine id, work count and exclusions
+  // out of fields that shape does not have.
+  if (CHESS_PAYLOAD_MARKERS.some((marker) => marker in payload)) return 'chess';
+  // Then the nested tier block: the xiangqi payload also carries a top-level
+  // `movetime_ms`, so testing that key first would misread it as the tenant
+  // shape and silently drop its configured limits.
   if (payload.tier && typeof payload.tier === 'object') return 'xiangqi';
   if ('movetime_ms' in payload) return 'tenant';
-  if ('engine_diagnostics' in payload || 'scores' in payload || 'duration_ms' in payload) {
-    return 'chess';
-  }
   return 'unknown';
 }
 
@@ -187,8 +231,10 @@ export function normalizeDecisionRow(input) {
       // The chess writer names it think_time_ms; older rows only have duration_ms.
       thinkTimeMs: finiteNumber(payload.think_time_ms) ?? finiteNumber(payload.duration_ms),
       searchTimeMs: searchSeconds === null ? null : Math.round(searchSeconds * 1000),
-      // No budget is persisted on this path at all. Null, emphatically not zero.
-      allottedMs: null,
+      // The per-move compute budget the live-cap allocator granted. Recorded
+      // only from 2026-09-06 — rows written before that carry no budget at all
+      // and stay null, which is why CEILING-UNKNOWN still has to exist.
+      allottedMs: finiteNumber(payload.movetime_ms),
       tierMovetimeMs: null,
       // Misty counts search iterations, not nodes. Reporting `iters` in a column
       // headed "nodes" would compare two different units, so the unit rides along.
@@ -196,6 +242,11 @@ export function normalizeDecisionRow(input) {
       workBudget: null,
       workUnit: 'iters',
       depth: null,
+      tierDepth: null,
+      // This writer persists no tier configuration, so it cannot say whether the
+      // engine has a work limit. False here means "unknowable", which is a
+      // different answer from "none configured" and must not collapse into it.
+      tierConfigured: false,
       // `fallback` means the requested engine did not produce the move, so the
       // timing describes the fallback path rather than the engine we are grading.
       excluded: payload.fallback === true,
@@ -204,6 +255,12 @@ export function normalizeDecisionRow(input) {
 
   const search = payload.search && typeof payload.search === 'object' ? payload.search : null;
   const tier = shape === 'xiangqi' && payload.tier ? payload.tier : null;
+  const tierSkill = tier ? finiteNumber(tier.skill) : finiteNumber(payload.tier_skill);
+  const tierDepth = tier ? finiteNumber(tier.depth) : finiteNumber(payload.tier_depth);
+  const tierNodes = tier ? finiteNumber(tier.nodes) : finiteNumber(payload.tier_nodes);
+  const tierMovetimeMs = tier
+    ? finiteNumber(tier.movetime_ms)
+    : finiteNumber(payload.tier_movetime_ms);
   return {
     ...base,
     engineId: payload.engine_id ?? null,
@@ -214,11 +271,23 @@ export function normalizeDecisionRow(input) {
     // "this engine gets no time budget at all" (the depth-limited in-process
     // searches), which is a different statement from a budget of zero.
     allottedMs: finiteNumber(payload.movetime_ms),
-    tierMovetimeMs: tier ? finiteNumber(tier.movetime_ms) : finiteNumber(payload.tier_movetime_ms),
+    tierMovetimeMs,
     workDone: search ? finiteNumber(search.nodes) : null,
-    workBudget: tier ? finiteNumber(tier.nodes) : finiteNumber(payload.tier_nodes),
+    workBudget: tierNodes,
     workUnit: 'nodes',
     depth: search ? finiteNumber(search.depth) : null,
+    // A depth cap is a WORK limit too, and for the engines that have no Skill
+    // Level knob (PikaJieQi, the depth-capped rungs) it is the only one. Missing
+    // it here would call a depth-limited engine "no work limit configured" and
+    // excuse a ceiling that is genuinely cutting its search short.
+    tierDepth,
+    // Did this writer record the tier's configuration at all? Value-based, not
+    // key-based, on purpose: the tenant writer always EMITS tier_skill /
+    // tier_depth / tier_nodes / tier_movetime_ms, and emits them all null for a
+    // caller that passed no tier. Reading key presence would then assert "no
+    // work limit configured" about an engine whose configuration we never saw.
+    tierConfigured:
+      tierSkill !== null || tierDepth !== null || tierNodes !== null || tierMovetimeMs !== null,
     // A failed-closed or unreachable ply times out AT the ceiling by definition.
     // Leaving those in the percentiles would manufacture TIME-BOUND verdicts out
     // of engine outages, which is a different problem with a different fix.
@@ -268,6 +337,13 @@ export function summarizeRows(rows) {
         tierMovetimes: [],
         workDone: [],
         workBudgets: [],
+        tierDepths: [],
+        // Plies whose payload described the tier at all, and of those, plies
+        // that named a work limit. Counted separately so "the tier configures no
+        // work limit" and "no ply told us what the tier configures" stay
+        // distinguishable all the way to the verdict.
+        tierConfiguredPlies: 0,
+        workLimitPlies: 0,
         workUnit: row.workUnit,
         firstEndedAt: null,
         lastEndedAt: null,
@@ -286,6 +362,11 @@ export function summarizeRows(rows) {
     // from plies whose timing we throw away.
     if (row.tierMovetimeMs !== null) group.tierMovetimes.push(row.tierMovetimeMs);
     if (row.workBudget !== null) group.workBudgets.push(row.workBudget);
+    if (row.tierDepth !== null && row.tierDepth !== undefined) group.tierDepths.push(row.tierDepth);
+    if (row.tierConfigured) group.tierConfiguredPlies += 1;
+    if (row.workBudget !== null || (row.tierDepth !== null && row.tierDepth !== undefined)) {
+      group.workLimitPlies += 1;
+    }
     if (row.excluded) {
       group.excludedPlies += 1;
       continue;
@@ -333,6 +414,18 @@ function finalizeGroup(group) {
     workUnit: group.workUnit,
     workP50: percentile(group.workDone, 0.5),
     workBudget: percentile(group.workBudgets, 0.5),
+    tierDepth: percentile(group.tierDepths, 0.5),
+    // Tri-state, and the null case is load-bearing:
+    //   true  — a node or depth cap is configured (the cap can be unreachable,
+    //           which is what TIME-BOUND means).
+    //   false — the tier was recorded and configures NO work limit, so movetime
+    //           is the only limit it has and binding on it is correct.
+    //   null  — no ply described the tier, so we cannot tell which. Derived from
+    //           the recorded tier fields rather than an engine-id list on
+    //           purpose: a hardcoded list goes stale the first time a tier is
+    //           added, and silently, since a missing id just reads as "has one".
+    workLimitConfigured:
+      group.workLimitPlies > 0 ? true : group.tierConfiguredPlies > 0 ? false : null,
     // How many scored plies actually reported a work count. A group where this
     // is 0 tells you nothing about node consumption, and must not read as zero
     // nodes consumed.
@@ -347,6 +440,13 @@ function finalizeGroup(group) {
  * The verdict for one summarized group. Pure, and deliberately ordered: data
  * sufficiency is checked before any ratio, so a thin or shapeless sample can
  * never produce a confident-looking TIME-BOUND.
+ *
+ * `summary.workLimitConfigured` splits the time-bound case three ways. A bot
+ * with no work limit at all is SUPPOSED to stop on the clock, and calling that
+ * a finding is what emptied the verdict of meaning: on the 2026-09-06 prod run
+ * `pikafish-jieqi-strongest` (a bare `go movetime 4000`, no depth, no nodes)
+ * scored the same 100% utilization as jungle, whose node cap the search never
+ * gets near. Only the second of those is a defect.
  */
 export function verdictFor(summary, thresholds = {}) {
   const timeBound = thresholds.timeBound ?? TIME_BOUND_UTILIZATION;
@@ -359,7 +459,14 @@ export function verdictFor(summary, thresholds = {}) {
   if (!summary.ceilingMs) return VERDICT_CEILING_UNKNOWN;
 
   const utilization = summary.thinkP50Ms / summary.ceilingMs;
-  if (utilization >= timeBound) return VERDICT_TIME_BOUND;
+  if (utilization >= timeBound) {
+    if (summary.workLimitConfigured === true) return VERDICT_TIME_BOUND;
+    if (summary.workLimitConfigured === false) return VERDICT_TIME_BOUND_BY_DESIGN;
+    // null/undefined: the payload never described the tier. Default to saying so
+    // rather than to the finding — an unknown that renders as a defect gets
+    // acted on, and there is nothing to act on here but the writer.
+    return VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN;
+  }
   if (utilization < workBound) return VERDICT_WORK_BOUND_WASTEFUL;
   return VERDICT_HEALTHY;
 }
@@ -402,6 +509,25 @@ export function formatCount(value) {
 export function formatPercent(value) {
   if (value === null || value === undefined) return '-';
   return `${(value * 100).toFixed(1)}%`;
+}
+
+/**
+ * The work-limit cell. Three outcomes, and they must read differently, because
+ * they are the reason the verdict beside them says what it says:
+ *   "524K nodes" / "depth 10"  a work limit IS configured
+ *   "none"                     the tier was recorded and configures none
+ *   "unknown"                  no ply described the tier
+ * The old cell printed "unknown" for the middle case too, which is how a
+ * correctly time-bound bot read as a broken one.
+ */
+export function formatWorkBudget(summary) {
+  if (summary.workBudget !== null && summary.workBudget !== undefined) {
+    return `${formatCount(summary.workBudget)} ${summary.workUnit}`;
+  }
+  if (summary.tierDepth !== null && summary.tierDepth !== undefined) {
+    return `depth ${formatCount(summary.tierDepth)}`;
+  }
+  return summary.workLimitConfigured === false ? 'none' : 'unknown';
 }
 
 /** Left-aligned fixed-width table, matching the plain-text style of the other ops scripts. */
@@ -465,9 +591,7 @@ export function renderReport(summaries, meta) {
         : `${formatMs(summary.ceilingMs)}${summary.ceilingSource === 'tier' ? '*' : ''}`,
       formatPercent(summary.utilization),
       summary.workSamples === 0 ? 'unknown' : `${formatCount(summary.workP50)} ${summary.workUnit}`,
-      summary.workBudget === null
-        ? 'unknown'
-        : `${formatCount(summary.workBudget)} ${summary.workUnit}`,
+      formatWorkBudget(summary),
       // The marker belongs only on the two verdicts that would otherwise read as
       // findings; "INSUFFICIENT-DATA (by design)" says nothing.
       summary.byDesign &&
@@ -489,13 +613,24 @@ export function renderReport(summaries, meta) {
 
   lines.push(
     '',
-    `verdicts: TIME-BOUND at p50 >= ${Math.round(TIME_BOUND_UTILIZATION * 100)}% of ceiling ` +
-      `(work limit unreachable; strength follows host load), ` +
-      `WORK-BOUND-WASTEFUL below ${Math.round(WORK_BOUND_UTILIZATION * 100)}% ` +
-      `(latency budget unspent), HEALTHY between, ` +
-      `INSUFFICIENT-DATA under ${MIN_PLIES_FOR_VERDICT} scored plies.`,
-    'CEILING-UNKNOWN means the writer persists no budget for that move (the chess /',
-    '  dark-chess path in room-manager.ts). It is not a ceiling of zero.',
+    `verdicts: at p50 >= ${Math.round(TIME_BOUND_UTILIZATION * 100)}% of ceiling the clock is ` +
+      `what stops the search, and the work-limit column says whether that is a fault:`,
+    '  TIME-BOUND                     a node/depth cap IS configured and is never reached, so',
+    '                                 the configured strength is fiction and the real strength',
+    '                                 follows host load. This is the finding.',
+    '  TIME-BOUND-BY-DESIGN           the tier configures NO work limit, so movetime is its only',
+    '                                 limit and binding on it is correct (pikafish-jieqi-strongest',
+    '                                 runs a bare `go movetime 4000`). Raise the ceiling to buy',
+    '                                 strength; there is no work cap to raise.',
+    '  TIME-BOUND-WORK-LIMIT-UNKNOWN  pinned at the ceiling, but no ply recorded the tier at all,',
+    '                                 so which of the two above applies cannot be told from here.',
+    `  WORK-BOUND-WASTEFUL            below ${Math.round(WORK_BOUND_UTILIZATION * 100)}% of the ceiling: the latency the player already`,
+    '                                 agreed to wait is being handed back.',
+    `  HEALTHY                        between the two. INSUFFICIENT-DATA under ${MIN_PLIES_FOR_VERDICT} scored plies.`,
+    'CEILING-UNKNOWN means the writer persisted no budget for that move. The chess /',
+    '  dark-chess path records one from 2026-09-06; rows written before that do not.',
+    '  It is not a ceiling of zero.',
+    'work budget "none" = the tier configures no work limit; "unknown" = no ply said.',
     '"(by design)" marks the Fairy-Stockfish ladder rungs 1-7: their movetime IS the',
     '  difficulty setting and their Elo anchors were measured at it, so a low',
     '  utilization there is the configuration working, not a finding. --exclude-ladder',

@@ -196,6 +196,42 @@ export function pythonLiveWatchdogTimeoutMs(
 }
 
 /**
+ * The per-move COMPUTE budget this engine turn is granted, or null for an engine
+ * the server hands no time budget at all.
+ *
+ * This exists so the `live-engine-decision` artifact can record the ceiling the
+ * move actually ran under. Without it the fog/chess path persists think time
+ * against nothing, and no report can say whether Misty stopped because it
+ * finished its work or because it ran out of clock — the two look identical from
+ * outside, and only one of them is a defect.
+ *
+ * It reads the SAME allocator the move itself runs under
+ * (`pythonLiveTimeoutBudgetMs` -> `computeEngineBudget('live-cap')`) instead of
+ * re-deriving a number from the clock here. A second formula would drift from
+ * the first on the next knob change and the artifact would then describe a
+ * budget no engine was ever handed, which is worse than recording none.
+ *
+ * Only the python-subprocess path is time-budgeted; the in-process builtin
+ * engines (random-legal and friends) get no movetime, so they report null.
+ * Null is emphatically not zero: a reader that saw 0 would report a starved
+ * engine where there is simply no budget to speak of.
+ *
+ * `timeoutMs` is resolved exactly as `chooseLiveEngineMove` resolves it
+ * (`engine.livePolicy?.timeoutMs ?? timeoutMs`) so the recorded budget matches
+ * the one the request was built with. It only reaches the allocator as the
+ * untimed fallback, i.e. on a clockless room.
+ */
+export function liveEngineComputeBudgetMs(
+  engine: EngineDefinition,
+  context: EngineMoveContext,
+  timeoutMs: number = DEFAULT_LIVE_ENGINE_TIMEOUT_MS,
+): number | null {
+  if (engine.config.kind !== 'python-subprocess') return null;
+  return pythonLiveTimeoutBudgetMs(context, engine.livePolicy?.timeoutMs ?? timeoutMs)
+    .computeBudgetMs;
+}
+
+/**
  * Live PvE per-move budget. Delegates to the shared `computeEngineBudget`
  * ('live-cap' policy) — the SAME code the bot-match arbiter uses — so PvE and
  * EvE-3P cannot diverge in how much time Misty is granted. See fow-engine-budget.ts

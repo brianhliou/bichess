@@ -27,7 +27,11 @@ import {
   liveSeatProfileIdentity,
 } from './first-party-bots.js';
 import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
-import { chooseLiveEngineMove, type LiveEngineFallbackEvent } from './live-engine.js';
+import {
+  chooseLiveEngineMove,
+  type LiveEngineFallbackEvent,
+  liveEngineComputeBudgetMs,
+} from './live-engine.js';
 import { engineCounters, logger } from './obs.js';
 import { computeConnectedSeats, eventAppendedPayload, snapshotPayload } from './payloads.js';
 import type { GameSummary } from './persistence.js';
@@ -1176,8 +1180,45 @@ type LiveEngineDecisionArtifactInput = {
   requestedEngineId: string;
   scores: Array<{ move: Move; score: number; reason: string }>;
   thinkTimeMs: number;
+  /**
+   * What the SERVER allotted this move (`liveEngineComputeBudgetMs`), or null
+   * for an engine that is handed no time budget at all. Null, never 0.
+   */
+  budgetMs: number | null;
   engineDiagnostics?: Record<string, unknown>;
 };
+
+/**
+ * The `live-engine-decision` payload for one chess / dark-chess engine turn.
+ *
+ * Split out of the writer below so it can be asserted directly: the writer is
+ * fire-and-forget behind `persistence.isInitialized()`, so a unit test cannot
+ * see what it wrote, and this payload is the only durable record of an engine
+ * decision on the most-played surface we have.
+ *
+ * `movetime_ms` names the allotted budget the same way the tenant and standard
+ * xiangqi writers do, deliberately: it is the field every artifact reader keys
+ * on, and a fourth spelling here would mean the fog path stayed unreadable to
+ * them. Until 2026-09-06 this payload carried think time against NOTHING, so
+ * `scripts/engine-budget-report.mjs` could only report the fog bots as
+ * CEILING-UNKNOWN — think time with no ceiling cannot say whether the engine
+ * finished its work or ran out of clock.
+ */
+export function buildLiveEngineDecisionArtifactPayload(
+  input: LiveEngineDecisionArtifactInput,
+): Record<string, unknown> {
+  return {
+    requested_engine_id: input.requestedEngineId,
+    engine_id: input.engineId,
+    fallback: input.fallback,
+    move: input.move,
+    movetime_ms: input.budgetMs,
+    think_time_ms: input.thinkTimeMs,
+    duration_ms: input.durationMs,
+    scores: input.scores,
+    ...(input.engineDiagnostics ? { engine_diagnostics: input.engineDiagnostics } : {}),
+  };
+}
 
 async function recordLiveEngineDecisionArtifact(
   room: Room,
@@ -1190,16 +1231,7 @@ async function recordLiveEngineDecisionArtifact(
       ply: input.contextPly,
       engineColor: engineSeatFor(room) ?? 'black',
       artifactType: LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
-      payload: {
-        requested_engine_id: input.requestedEngineId,
-        engine_id: input.engineId,
-        fallback: input.fallback,
-        move: input.move,
-        think_time_ms: input.thinkTimeMs,
-        duration_ms: input.durationMs,
-        scores: input.scores,
-        ...(input.engineDiagnostics ? { engine_diagnostics: input.engineDiagnostics } : {}),
-      },
+      payload: buildLiveEngineDecisionArtifactPayload(input),
     });
     if (input.fallbackEvent) {
       await persistence.recordGameDebugArtifact({
@@ -1310,6 +1342,11 @@ export async function playRandomEngineMoveIfReady(
     seed: liveEngineMoveSeed(room),
     ply: room.events.filter((event) => event.type === 'move-played').length,
   } as const;
+  // Read the allocation BEFORE the move so the artifact records the budget this
+  // turn actually ran under: the allocator is a function of the clock, and the
+  // clock has moved by the time the decision comes back. Pure arithmetic, no
+  // I/O — it does not touch the engine or the timing of the move below.
+  const engineBudgetMs = liveEngineComputeBudgetMs(engine, context, ctx.liveEngineTimeoutMs);
   const startedAt = Date.now();
   let fallbackEvent: LiveEngineFallbackEvent | null = null;
   const result = await chooseLiveEngineMove({
@@ -1395,6 +1432,7 @@ export async function playRandomEngineMoveIfReady(
     requestedEngineId: engine.id,
     scores: result.decision.scores,
     thinkTimeMs: engineThinkTimeMs,
+    budgetMs: engineBudgetMs,
     ...(result.decision.diagnostics ? { engineDiagnostics: result.decision.diagnostics } : {}),
   });
 }

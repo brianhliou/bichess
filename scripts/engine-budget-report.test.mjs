@@ -12,6 +12,7 @@ import test from 'node:test';
 import {
   detectPayloadShape,
   finiteNumber,
+  formatWorkBudget,
   isDifficultyLadderEngine,
   MIN_PLIES_FOR_VERDICT,
   normalizeDecisionRow,
@@ -24,6 +25,8 @@ import {
   VERDICT_INSUFFICIENT_DATA,
   VERDICT_NO_TIMING,
   VERDICT_TIME_BOUND,
+  VERDICT_TIME_BOUND_BY_DESIGN,
+  VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN,
   VERDICT_WORK_BOUND_WASTEFUL,
   verdictFor,
   WORK_BOUND_UTILIZATION,
@@ -90,24 +93,70 @@ const xiangqiPayload = {
   search: { depth: 20, nodes: 1_000_000, time_ms: 3350, cp: 15, mate: null, pv: ['b0c2'] },
 };
 
-// room-manager.ts — the chess / dark-chess path. No budget, no node count.
+// room-manager.ts — the chess / dark-chess path, as it writes from 2026-09-06:
+// the live-cap allocation now rides in movetime_ms. Still no tier block and no
+// node count.
 const chessPayload = {
   requested_engine_id: 'misty',
   engine_id: 'misty',
   fallback: false,
   move: { from: 'e2', to: 'e4' },
+  movetime_ms: 12_000,
   think_time_ms: 4800,
   duration_ms: 4900,
   scores: [{ move: { from: 'e2', to: 'e4' }, score: 0, reason: 'engine-worker:v2' }],
   engine_diagnostics: { beliefSize: 120, iters: 900, searchSeconds: 4.5, decisionSource: 'v2' },
 };
 
+// The same writer BEFORE the budget landed. Every fog-chess row already in prod
+// looks like this, so the reader has to keep handling it.
+const legacyChessPayload = (() => {
+  const { movetime_ms: _dropped, ...rest } = chessPayload;
+  return rest;
+})();
+
+// pikafish-jieqi-strongest: `go movetime 4000`, no depth cap and no node cap.
+// Time is the ONLY limit this tier has, which is the case the by-design verdict
+// exists for.
+const jieqiPayload = {
+  ...tenantPayload,
+  variant: 'jieqi',
+  engine_id: 'pikafish-jieqi-strongest',
+  engine_version: 'e75cee3a',
+  movetime_ms: 4000,
+  think_time_ms: 4003,
+  tier_skill: null,
+  tier_depth: null,
+  tier_nodes: null,
+  tier_movetime_ms: 4000,
+  search: { depth: 28, nodes: 3_100_000, time_ms: 3990, cp: 40, mate: null, pv: ['b2e2'] },
+};
+
 test('detectPayloadShape separates the three writers', () => {
   assert.equal(detectPayloadShape(tenantPayload), 'tenant');
   assert.equal(detectPayloadShape(xiangqiPayload), 'xiangqi');
   assert.equal(detectPayloadShape(chessPayload), 'chess');
+  assert.equal(detectPayloadShape(legacyChessPayload), 'chess');
   assert.equal(detectPayloadShape(null), 'unknown');
   assert.equal(detectPayloadShape({ some: 'other artifact' }), 'unknown');
+});
+
+// The chess writer now emits movetime_ms too, so a reader that tested that key
+// before any chess marker would read every fog-chess row as the tenant shape and
+// pull its engine id, work count and exclusion flag out of fields that shape
+// does not have.
+test('a chess payload with a budget is still the chess shape, not the tenant shape', () => {
+  assert.equal(detectPayloadShape(chessPayload), 'chess');
+  const row = normalizeDecisionRow({
+    gameId: 'g',
+    ply: 8,
+    payload: chessPayload,
+    variant: 'dark-chess',
+  });
+  assert.equal(row.shape, 'chess');
+  assert.equal(row.engineId, 'misty');
+  assert.equal(row.workUnit, 'iters');
+  assert.equal(row.workDone, 900);
 });
 
 // The xiangqi payload also carries a top-level movetime_ms. Testing that key
@@ -153,6 +202,9 @@ test('all three shapes normalize into one row type', () => {
   assert.equal(rows[1].engineId, 'fairy-stockfish-xiangqi-level-8');
   assert.equal(rows[2].engineId, 'misty');
   assert.equal(rows[2].thinkTimeMs, 4800);
+  // The chess path's per-move allocation, read from the same key the other two
+  // writers use so one comparison covers all three.
+  assert.equal(rows[2].allottedMs, 12_000);
   // Misty counts iterations, so the unit must travel with the number.
   assert.equal(rows[2].workDone, 900);
   assert.equal(rows[2].workUnit, 'iters');
@@ -238,12 +290,16 @@ test('failed-closed, unreachable and fallback plies are flagged as excluded', ()
 
 const enoughPlies = MIN_PLIES_FOR_VERDICT;
 
+// Default the group to "a work limit IS configured": that is the case the
+// utilization thresholds are about, and it keeps these boundary tests reading as
+// the strength question rather than the writer-coverage question.
 function summaryAt(utilization, overrides = {}) {
   const ceilingMs = 1000;
   return {
     scoredPlies: enoughPlies,
     thinkP50Ms: utilization * ceilingMs,
     ceilingMs,
+    workLimitConfigured: true,
     ...overrides,
   };
 }
@@ -252,11 +308,60 @@ test('TIME-BOUND begins exactly at the threshold', () => {
   assert.equal(verdictFor(summaryAt(TIME_BOUND_UTILIZATION)), VERDICT_TIME_BOUND);
   assert.equal(verdictFor(summaryAt(TIME_BOUND_UTILIZATION + 0.01)), VERDICT_TIME_BOUND);
   assert.equal(verdictFor(summaryAt(TIME_BOUND_UTILIZATION - 0.01)), VERDICT_HEALTHY);
-  // The jungle regression: pinned at its 4,000 ms cap every ply.
+  // The jungle regression: a node cap the search never reaches, pinned at its
+  // 4,000 ms ceiling every ply.
   assert.equal(
-    verdictFor({ scoredPlies: 120, thinkP50Ms: 4000, ceilingMs: 4000 }),
+    verdictFor({
+      scoredPlies: 120,
+      thinkP50Ms: 4000,
+      ceilingMs: 4000,
+      workLimitConfigured: true,
+    }),
     VERDICT_TIME_BOUND,
   );
+});
+
+// The whole point of the split. Both of these sit at 100% utilization and only
+// one is a fault; before the split they printed the same verdict, which made the
+// verdict worth nothing.
+test('at the same utilization, a configured work limit is the fault and no work limit is not', () => {
+  const pinned = { scoredPlies: 120, thinkP50Ms: 4000, ceilingMs: 4000 };
+  assert.equal(verdictFor({ ...pinned, workLimitConfigured: true }), VERDICT_TIME_BOUND);
+  assert.equal(verdictFor({ ...pinned, workLimitConfigured: false }), VERDICT_TIME_BOUND_BY_DESIGN);
+});
+
+test('the by-design split holds at both edges of the time-bound threshold', () => {
+  const noWorkLimit = { workLimitConfigured: false };
+  // At the threshold and above: time-bound, and correctly so.
+  assert.equal(
+    verdictFor(summaryAt(TIME_BOUND_UTILIZATION, noWorkLimit)),
+    VERDICT_TIME_BOUND_BY_DESIGN,
+  );
+  assert.equal(
+    verdictFor(summaryAt(TIME_BOUND_UTILIZATION + 0.2, noWorkLimit)),
+    VERDICT_TIME_BOUND_BY_DESIGN,
+  );
+  // Just below it the split stops applying: an engine with no work limit that
+  // finishes early is finishing early for some other reason, and the ordinary
+  // bands describe it.
+  assert.equal(verdictFor(summaryAt(TIME_BOUND_UTILIZATION - 0.01, noWorkLimit)), VERDICT_HEALTHY);
+  assert.equal(
+    verdictFor(summaryAt(WORK_BOUND_UTILIZATION - 0.01, noWorkLimit)),
+    VERDICT_WORK_BOUND_WASTEFUL,
+  );
+});
+
+// An unknown must never render as the finding. Nothing is actionable about an
+// engine whose configuration we never recorded except the writer.
+test('a time-bound group whose tier was never recorded says so instead of guessing', () => {
+  const pinned = { scoredPlies: 120, thinkP50Ms: 4000, ceilingMs: 4000 };
+  assert.equal(
+    verdictFor({ ...pinned, workLimitConfigured: null }),
+    VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN,
+  );
+  // A caller that omits the field entirely gets the same answer: defaulting to
+  // TIME-BOUND would manufacture findings out of missing telemetry.
+  assert.equal(verdictFor(pinned), VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN);
 });
 
 test('WORK-BOUND-WASTEFUL ends just below the threshold', () => {
@@ -310,7 +415,7 @@ test('an absent ceiling is CEILING-UNKNOWN, not a wasteful verdict', () => {
 });
 
 test('thresholds are overridable for tuning', () => {
-  const summary = summaryAt(0.5);
+  const summary = summaryAt(0.5, { workLimitConfigured: true });
   assert.equal(verdictFor(summary, { timeBound: 0.4 }), VERDICT_TIME_BOUND);
   assert.equal(verdictFor(summary, { workBound: 0.6 }), VERDICT_WORK_BOUND_WASTEFUL);
   assert.equal(verdictFor(summary, { minPlies: enoughPlies + 1 }), VERDICT_INSUFFICIENT_DATA);
@@ -398,17 +503,20 @@ test('a group with no recorded work count reports unknown, not zero', () => {
   assert.equal(summary.workBudget, null);
 });
 
-test('the chess path lands on CEILING-UNKNOWN rather than 0% utilization', () => {
-  const rows = Array.from({ length: 50 }, (_, index) =>
+function chessRows(count, payload) {
+  return Array.from({ length: count }, (_, index) =>
     normalizeDecisionRow({
       gameId: `c${index}`,
       ply: index,
-      payload: chessPayload,
+      payload,
       variant: 'dark-chess',
       endedAt: new Date(2026, 8, 3),
     }),
   );
-  const [summary] = summarizeRows(rows);
+}
+
+test('a pre-2026-09-06 chess row lands on CEILING-UNKNOWN rather than 0% utilization', () => {
+  const [summary] = summarizeRows(chessRows(50, legacyChessPayload));
   assert.equal(summary.ceilingMs, null);
   assert.equal(summary.ceilingSource, null);
   assert.equal(summary.utilization, null);
@@ -416,11 +524,97 @@ test('the chess path lands on CEILING-UNKNOWN rather than 0% utilization', () =>
   assert.equal(summary.workUnit, 'iters');
 });
 
+test('a chess row with the recorded budget gets a real utilization and verdict', () => {
+  const [summary] = summarizeRows(chessRows(50, chessPayload));
+  assert.equal(summary.ceilingMs, 12_000);
+  assert.equal(summary.ceilingSource, 'allotted');
+  assert.ok(Math.abs(summary.utilization - 4800 / 12_000) < 1e-9);
+  assert.equal(summary.verdict, VERDICT_HEALTHY);
+  // This writer persists no tier, so it can say what the ceiling was and never
+  // what work limit the engine had.
+  assert.equal(summary.workLimitConfigured, null);
+  assert.equal(formatWorkBudget(summary), 'unknown');
+});
+
+test('a pinned chess group reports the unknown work limit, not a TIME-BOUND finding', () => {
+  const [summary] = summarizeRows(
+    chessRows(50, { ...chessPayload, movetime_ms: 5000, think_time_ms: 4990 }),
+  );
+  assert.equal(summary.verdict, VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN);
+});
+
 test('the tier movetime backfills a ceiling when no per-ply budget was recorded', () => {
   const rows = tenantRows(40, { movetime_ms: null });
   const [summary] = summarizeRows(rows);
   assert.equal(summary.ceilingMs, 5000);
   assert.equal(summary.ceilingSource, 'tier');
+});
+
+// --- work limit configured, or not, or unknown ----------------------------
+
+// The prod case this split was built for: jieqi at 100.1% utilization scored the
+// same verdict as jungle, whose node cap is genuinely unreachable.
+test('a tier with a movetime and no nodes or depth is time-bound BY DESIGN', () => {
+  const rows = Array.from({ length: 40 }, (_, index) =>
+    normalizeDecisionRow({
+      gameId: `j${Math.floor(index / 20)}`,
+      ply: index,
+      payload: jieqiPayload,
+      variant: 'jieqi',
+      endedAt: new Date(2026, 8, 4),
+    }),
+  );
+  const [summary] = summarizeRows(rows);
+  assert.equal(summary.ceilingMs, 4000);
+  assert.ok(summary.utilization >= 1);
+  assert.equal(summary.workLimitConfigured, false);
+  assert.equal(summary.verdict, VERDICT_TIME_BOUND_BY_DESIGN);
+  // And the cell beside it has to explain the verdict, not repeat "unknown".
+  assert.equal(formatWorkBudget(summary), 'none');
+});
+
+test('a tier with an unreached node cap is the TIME-BOUND finding', () => {
+  // Same 100% utilization as the jieqi group above; the node cap is what makes
+  // it a fault.
+  const rows = tenantRows(40, { think_time_ms: 5000 });
+  const [summary] = summarizeRows(rows);
+  assert.equal(summary.workLimitConfigured, true);
+  assert.equal(summary.verdict, VERDICT_TIME_BOUND);
+  assert.equal(formatWorkBudget(summary), '524K nodes');
+});
+
+// A depth cap is a work limit too, and it is the ONLY one the depth-capped
+// rungs have (PikaJieQi has no Skill Level knob at all). Missing it would excuse
+// a ceiling that really is cutting the search short.
+test('a depth cap counts as a work limit', () => {
+  const rows = tenantRows(40, {
+    think_time_ms: 5000,
+    tier_nodes: null,
+    tier_depth: 10,
+    search: { depth: 8, nodes: 90_000, time_ms: 4990, cp: 12, mate: null, pv: [] },
+  });
+  const [summary] = summarizeRows(rows);
+  assert.equal(summary.tierDepth, 10);
+  assert.equal(summary.workLimitConfigured, true);
+  assert.equal(summary.verdict, VERDICT_TIME_BOUND);
+  assert.equal(formatWorkBudget(summary), 'depth 10');
+});
+
+// The tenant writer ALWAYS emits the four tier_* keys, all null when its caller
+// passed no tier. Key presence would read that as "no work limit configured" and
+// clear an engine we know nothing about; the values are what decide.
+test('an all-null tier block is unknown, not "no work limit configured"', () => {
+  const rows = tenantRows(40, {
+    think_time_ms: 5000,
+    tier_skill: null,
+    tier_depth: null,
+    tier_nodes: null,
+    tier_movetime_ms: null,
+  });
+  const [summary] = summarizeRows(rows);
+  assert.equal(summary.workLimitConfigured, null);
+  assert.equal(summary.verdict, VERDICT_TIME_BOUND_WORK_LIMIT_UNKNOWN);
+  assert.equal(formatWorkBudget(summary), 'unknown');
 });
 
 test('a ladder rung is marked by design without changing its raw verdict', () => {
