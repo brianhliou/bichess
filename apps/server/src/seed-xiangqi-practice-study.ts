@@ -33,18 +33,19 @@
  * Local dev (server on 3001), signing itself in with the dev auth code:
  *   npx tsx apps/server/src/seed-xiangqi-practice-study.ts --email you@example.com
  *
- * Production, with a session you already established in your own browser:
- *   MISTBOARD_SESSION_COOKIE='mistboard_session=...' \
- *     npx tsx apps/server/src/seed-xiangqi-practice-study.ts \
- *       --base https://mistboard.com --visibility public
+ * Production, with the cookie `npm run auth:cookie` writes:
+ *   npx tsx apps/server/src/seed-xiangqi-practice-study.ts \
+ *     --base https://mistboard.com --visibility public
  *
- * Copy that cookie out of your own devtools and run this yourself. It is a live
- * credential: read from the environment, never logged, and it must not be pasted
- * anywhere it would be recorded. The account must be an ADMIN, because setting a
- * curated slug is an admin write.
+ * The credential is read from ~/.mistboard-cookie (override with --cookie), never
+ * from the command line and never logged. The account must be an ADMIN, because
+ * setting a curated slug is an admin write.
  *
  * `--dry-run` needs no credentials and prints the split.
  */
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   type EndgameCategory,
@@ -287,6 +288,28 @@ class Session {
   }
 }
 
+/**
+ * The session cookie: from a file, or from the environment for a one-off.
+ *
+ * A path rather than the value, so the credential never appears in a command
+ * line. `--cookie` names the file; with no flag the shared default is used only
+ * if it exists, which keeps `--dry-run` and `--email` working with no file
+ * present.
+ */
+function readCookie(path: string | null): string | null {
+  const fromEnv = process.env.MISTBOARD_SESSION_COOKIE;
+  if (fromEnv) return fromEnv;
+  const file = path ?? join(homedir(), '.mistboard-cookie');
+  try {
+    const cookie = readFileSync(file, 'utf8').trim();
+    return cookie || null;
+  } catch {
+    // Missing is not an error here: dev runs sign in with --email instead.
+    if (path) throw new Error(`cannot read cookie file ${file}`);
+    return null;
+  }
+}
+
 function parseArgs(): {
   email: string | null;
   cookie: string | null;
@@ -303,9 +326,12 @@ function parseArgs(): {
   const visibility = (read('--visibility') ?? 'public') as Visibility;
   return {
     email: read('--email'),
-    // Never a flag: a credential passed on the command line lands in shell
-    // history and in any process listing.
-    cookie: process.env.MISTBOARD_SESSION_COOKIE ?? null,
+    // Never a VALUE on the command line: that lands in shell history and in any
+    // process listing. A PATH is fine, and is how the other study scripts do it
+    // (study-name-i18n.mjs, world-title-study.mjs), so `npm run auth:cookie`
+    // fills one file that all of them read. The env var still works for a
+    // one-off.
+    cookie: readCookie(read('--cookie')),
     base: read('--base') ?? DEFAULT_BASE,
     visibility,
     dryRun: argv.includes('--dry-run'),
@@ -438,8 +464,10 @@ async function main(): Promise<void> {
   }
 
   const session = new Session(args.base);
-  if (args.cookie) session.useCookie(args.cookie);
-  else if (args.email) await session.signIn(args.email);
+  // --email wins: a dev run against localhost must not pick up the prod cookie
+  // that happens to be sitting in the default file.
+  if (args.email) await session.signIn(args.email);
+  else if (args.cookie) session.useCookie(args.cookie);
   else throw new Error('pass --email (dev) or set MISTBOARD_SESSION_COOKIE (prod), or --dry-run');
 
   if (args.update) {
