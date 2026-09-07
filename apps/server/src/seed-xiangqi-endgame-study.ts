@@ -30,6 +30,8 @@
  * logged, and must not be pasted anywhere it would be recorded.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import {
   applyStandardXiangqiMove,
   type EndgameEntry,
@@ -241,6 +243,17 @@ class Session {
     return response;
   }
 
+  async patch(path: string, body: unknown): Promise<Response> {
+    return fetch(`${this.base}${path}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...(this.cookie ? { cookie: this.cookie } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
   async signIn(email: string): Promise<void> {
     const start = await this.post('/api/auth/email/start', { email });
     if (!start.ok) throw new Error(`auth start failed: ${start.status} ${await start.text()}`);
@@ -258,6 +271,16 @@ class Session {
     if (!confirm.ok) {
       throw new Error(`auth confirm failed: ${confirm.status} ${await confirm.text()}`);
     }
+  }
+}
+
+/** The session `npm run auth:cookie` writes. A path, never a value on a command
+ *  line; missing is fine, because a dev run signs in with --email instead. */
+function readCookieFile(): string | null {
+  try {
+    return readFileSync(join(homedir(), '.mistboard-cookie'), 'utf8').trim() || null;
+  } catch {
+    return null;
   }
 }
 
@@ -291,6 +314,74 @@ async function main(): Promise<void> {
       JSON.stringify({ study: studyCreateBody(visibility, firstChapter), chapters: restChapters }),
     );
     console.log(`wrote ${chapters.length} chapter payloads to ${emitPath}`);
+    return;
+  }
+
+  // Bring an EXISTING study's chapters in line with the corpus, in place.
+  //
+  // The seeder is otherwise create-only, and the reading study is linked by id
+  // from articles and from the /practice shelf, so a re-seed to add three
+  // entries would mint a new id and strand every one of those links. This
+  // matches what is already there and PATCHes it.
+  //
+  // Chapters are matched by POSITION, not by name. A chapter IS its rootFen:
+  // the name is generated from `${attacker} vs ${defender}` and an edit to
+  // either wording renames it, while the position is the thing the entry is
+  // about. Two of the three chapters this was written for happened to match by
+  // name and the third did not, which is the whole argument.
+  const updateId = typeof args.update === 'string' ? args.update : null;
+  if (updateId) {
+    const session = new Session(base);
+    const cookie = process.env.MISTBOARD_SESSION_COOKIE ?? readCookieFile();
+    if (cookie) session.useCookie(cookie);
+    else if (email) await session.signIn(email);
+    else throw new Error('--update needs --email (dev) or ~/.mistboard-cookie (prod)');
+
+    const detail = await session.get(`/api/studies/${updateId}`);
+    if (!detail.ok) throw new Error(`read ${updateId}: ${detail.status} ${await detail.text()}`);
+    const existing = (await detail.json()) as {
+      chapters: { id: string; name: string; version: number; root?: { rootFen?: string } }[];
+    };
+    const byFen = new Map<string, (typeof existing.chapters)[number]>();
+    for (const chapter of existing.chapters) {
+      const fen = chapter.root?.rootFen;
+      if (fen) byFen.set(fen, chapter);
+    }
+
+    let updated = 0;
+    const unmatched: string[] = [];
+    for (const [index, entry] of XIANGQI_ENDGAME_CORPUS.entries()) {
+      const payload = chapters[index];
+      if (!payload) continue;
+      const target = byFen.get(endgameEntryFen(entry));
+      if (!target) {
+        unmatched.push(chapterName(entry));
+        continue;
+      }
+      const response = await session.patch(`/api/studies/${updateId}/chapters/${target.id}`, {
+        name: payload.name,
+        ...(payload.i18n ? { i18n: payload.i18n } : {}),
+        root: payload.root,
+        baseVersion: target.version,
+      });
+      if (!response.ok) {
+        throw new Error(
+          `patch ${target.id}: ${response.status} ${(await response.text()).slice(0, 140)}`,
+        );
+      }
+      updated += 1;
+      if (target.name !== payload.name)
+        console.log(`  renamed: ${target.name}\n        -> ${payload.name}`);
+    }
+
+    console.log(`${updated} chapters updated in ${updateId}`);
+    if (unmatched.length) {
+      // A corpus entry with no chapter at that position: the study predates it.
+      // Reported rather than created, because adding a chapter changes the
+      // study's shape and that should be a decision, not a side effect.
+      console.log(`\n${unmatched.length} corpus entries have no chapter at their position:`);
+      for (const name of unmatched) console.log(`  ${name}`);
+    }
     return;
   }
 

@@ -513,4 +513,55 @@ export const XIANGQI_ENDGAME_CORPUS: readonly EndgameEntry[] = [
     provenance: 'constructed',
     note: 'Two horses is the losing pair; other two-minor-piece combinations hold.',
   },
+  // ── The counterexample pairs ────────────────────────────────────────────────
+  // Three positions that differ from the entry above them by ONE point, and have
+  // the opposite verdict. Two of them were already described in prose in the
+  // notes on `chariot-vs-two-minor-pieces` and `chariot-cannon-vs-chariot`
+  // ("move that cannon one point sideways and the tablebase turns the position
+  // into a Red mate"); this makes them positions a reader can play out instead of
+  // sentences they have to take on trust. The third is new: nobody had checked
+  // what happens when three unadvanced soldiers step back a rank.
+  //
+  // All three verdicts are chessdb.cn lookups, not searches -- the mate distance
+  // falls by one every ply, which is what distinguishes a tablebase answer from
+  // an evaluation. They are `constructed`: the position is ours, built by moving
+  // one piece of a sourced diagram, and only the verdict comes from the database.
+  {
+    id: 'chariot-vs-two-minor-pieces-cannon-off',
+    category: 'chariot',
+    attacker: 'A bare chariot',
+    defender: 'A horse and cannon, cannon one point off',
+    verdict: 'win',
+    turn: 'red',
+    // chariot-vs-two-minor-pieces with the cannon on e10 instead of f10.
+    pieces: ['Ke1', 'Ra5', 'kf9', 'ce10', 'nd7'],
+    provenance: 'constructed',
+    source: 'zh-wikipedia',
+    note: 'The drawn fortress one point away from itself. Slide the defending cannon off the file behind its own general and the draw is gone: the database gives Red a forced mate. The cannon was not doing a cannon\u2019s job in the draw, it was standing in the one square where the chariot could never skewer it against the general, and a single sideways step gives that square up.',
+  },
+  {
+    id: 'chariot-cannon-vs-chariot-too-high',
+    category: 'chariot',
+    attacker: 'A chariot and cannon, no defensive pieces',
+    defender: 'A bare chariot one rank too high',
+    verdict: 'win',
+    turn: 'red',
+    // chariot-cannon-vs-chariot with the defending chariot on e6, not e5.
+    pieces: ['Kd1', 'Ra5', 'Cc5', 'kf10', 're6'],
+    provenance: 'constructed',
+    source: 'zh-wikipedia',
+    note: 'The defending chariot holds the middle file one rank too high, and that is the whole difference: Red plants the cannon underneath it, defended by the chariot on the same rank, and the database gives Red a forced mate. The drawn version of this position is the entry above; the mate it prevents (\u6d77\u5e95\u635e\u6708) is executed at the BOTTOM of the middle file, which is why the defender has to stay below the attackers rather than merely on the file.',
+  },
+  {
+    id: 'three-soldiers-pulled-back-vs-full-defence',
+    category: 'soldier',
+    attacker: 'Three soldiers, pulled back one rank',
+    defender: 'All four defensive pieces',
+    verdict: 'draw',
+    turn: 'red',
+    // three-soldiers-vs-full-defence with the soldiers on rank 6, not rank 7.
+    pieces: ['Ke1', 'Pc6', 'Pe6', 'Pg6', 'ke10', 'ae9', 'af10', 'be8', 'bc10'],
+    provenance: 'constructed',
+    note: 'The headline result of this corpus, undone by one rank. Three UNADVANCED soldiers beat the full defence; the same three soldiers a rank further back draw. An unadvanced soldier here means one standing on the fourth rank of the enemy half, close enough that the defence cannot both hold the palace and meet them. Pull them back and the win is not merely harder, it is gone: the database says draw. This is the sharpest illustration in the set that these endgames are decided by where the pieces stand and not by what they are.',
+  },
 ];

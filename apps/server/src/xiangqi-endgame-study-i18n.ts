@@ -68,6 +68,11 @@ const MATERIAL: Record<EndgameStudyLang, Record<string, string>> = {
     'A horse and two elephants, one elephant misplaced': '马双象，其中一象位置有误',
     'A horse and cannon, no defensive pieces (單車難勝馬炮)': '马炮，无士象（单车难胜马炮）',
     'A bare chariot holding the middle file': '单车占住中路',
+    // The counterexample pairs: same material as the entry they vary, one point
+    // moved. The Chinese says which point, because that is the whole entry.
+    'A horse and cannon, cannon one point off': '马炮，炮偏了一路',
+    'A bare chariot one rank too high': '单车占中，但高了一路',
+    'Three soldiers, pulled back one rank': '三个兵，各退一路',
     'A chariot with all four defensive pieces': '车士象全',
     'A chariot and all four defensive pieces': '车士象全',
     'Two horses and all four defensive pieces': '双马士象全',
@@ -113,6 +118,9 @@ const MATERIAL: Record<EndgameStudyLang, Record<string, string>> = {
     'A horse and two elephants, one elephant misplaced': '馬雙象，其中一象位置有誤',
     'A horse and cannon, no defensive pieces (單車難勝馬炮)': '馬砲，無士象（單車難勝馬炮）',
     'A bare chariot holding the middle file': '單車佔住中路',
+    'A horse and cannon, cannon one point off': '馬砲，砲偏了一路',
+    'A bare chariot one rank too high': '單車佔中，但高了一路',
+    'Three soldiers, pulled back one rank': '三個兵，各退一路',
     'A chariot with all four defensive pieces': '車士象全',
     'A chariot and all four defensive pieces': '車士象全',
     'Two horses and all four defensive pieces': '雙馬士象全',
@@ -167,6 +175,12 @@ const PROSE: Record<EndgameStudyLang, Record<string, string>> = {
     'Drawn with good defensive placement.': '防守位置得当即可求和。',
     'Two horses is the losing pair; other two-minor-piece combinations hold.':
       '双马这一组合守不住；其他两个小子的组合则可以守和。',
+    'The drawn fortress one point away from itself. Slide the defending cannon off the file behind its own general and the draw is gone: the database gives Red a forced mate. The cannon was not doing a cannon\u2019s job in the draw, it was standing in the one square where the chariot could never skewer it against the general, and a single sideways step gives that square up.':
+      '和棋阵形，只差一路。把防守方的炮从自己将的正后方平开，和棋就没有了：残局库判红方必胜。在和棋里，这个炮并不是在当炮用，它是站在唯一一个不会被车串将吃掉的位置上，平开一路，就把这个位置让了出去。',
+    'The defending chariot holds the middle file one rank too high, and that is the whole difference: Red plants the cannon underneath it, defended by the chariot on the same rank, and the database gives Red a forced mate. The drawn version of this position is the entry above; the mate it prevents (\u6d77\u5e95\u635e\u6708) is executed at the BOTTOM of the middle file, which is why the defender has to stay below the attackers rather than merely on the file.':
+      '防守方的车虽然占住了中路，却高了一路，差别全在这里：红方把炮送到它下面，由同一横线上的车保护，残局库判红方必胜。和棋的那一型就是上一条；它要防的杀法（海底捞月）是在中路的底部完成的，所以防守方必须待在进攻子力的下方，而不只是待在中路上。',
+    'The headline result of this corpus, undone by one rank. Three UNADVANCED soldiers beat the full defence; the same three soldiers a rank further back draw. An unadvanced soldier here means one standing on the fourth rank of the enemy half, close enough that the defence cannot both hold the palace and meet them. Pull them back and the win is not merely harder, it is gone: the database says draw. This is the sharpest illustration in the set that these endgames are decided by where the pieces stand and not by what they are.':
+      '本集里最出名的结论，退一路就不成立了。三个高兵能破士象全；同样这三个兵各退一路，就只能成和。这里说的高兵，是指已经推进到对方半场靠前的位置，近到防守方无法既守住九宫又兼顾它们。往回退一路，赢棋不是变难，而是没有了：残局库判和。在这一组局面里，这是最能说明问题的一例，说明这类残局由子力所在的位置决定，而不是由子力本身决定。',
   },
   'zh-Hant': {
     'Wins as long as the soldier has not reached the last rank, where it can no longer advance.':
@@ -214,6 +228,12 @@ const PROSE: Record<EndgameStudyLang, Record<string, string>> = {
     'Drawn with good defensive placement.': '防守位置得當即可求和。',
     'Two horses is the losing pair; other two-minor-piece combinations hold.':
       '雙馬這一組合守不住；其他兩個小子的組合則可以守和。',
+    'The drawn fortress one point away from itself. Slide the defending cannon off the file behind its own general and the draw is gone: the database gives Red a forced mate. The cannon was not doing a cannon\u2019s job in the draw, it was standing in the one square where the chariot could never skewer it against the general, and a single sideways step gives that square up.':
+      '和棋陣形，只差一路。把防守方的砲從自己將的正後方平開，和棋就沒有了：殘局庫判紅方必勝。在和棋裡，這個砲並不是在當砲用，它是站在唯一一個不會被車串將吃掉的位置上，平開一路，就把這個位置讓了出去。',
+    'The defending chariot holds the middle file one rank too high, and that is the whole difference: Red plants the cannon underneath it, defended by the chariot on the same rank, and the database gives Red a forced mate. The drawn version of this position is the entry above; the mate it prevents (\u6d77\u5e95\u635e\u6708) is executed at the BOTTOM of the middle file, which is why the defender has to stay below the attackers rather than merely on the file.':
+      '防守方的車雖然佔住了中路，卻高了一路，差別全在這裡：紅方把砲送到它下面，由同一橫線上的車保護，殘局庫判紅方必勝。和棋的那一型就是上一條；它要防的殺法（海底撈月）是在中路的底部完成的，所以防守方必須待在進攻子力的下方，而不只是待在中路上。',
+    'The headline result of this corpus, undone by one rank. Three UNADVANCED soldiers beat the full defence; the same three soldiers a rank further back draw. An unadvanced soldier here means one standing on the fourth rank of the enemy half, close enough that the defence cannot both hold the palace and meet them. Pull them back and the win is not merely harder, it is gone: the database says draw. This is the sharpest illustration in the set that these endgames are decided by where the pieces stand and not by what they are.':
+      '本集裡最出名的結論，退一路就不成立了。三個高兵能破士象全；同樣這三個兵各退一路，就只能成和。這裡說的高兵，是指已經推進到對方半場靠前的位置，近到防守方無法既守住九宮又兼顧它們。往回退一路，贏棋不是變難，而是沒有了：殘局庫判和。在這一組局面裡，這是最能說明問題的一例，說明這類殘局由子力所在的位置決定，而不是由子力本身決定。',
   },
 };
 
