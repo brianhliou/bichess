@@ -11,22 +11,68 @@
 // /practice indexes the same way for the same reason. Building a second card
 // language here would make two surfaces that do one job look like two products.
 //
-// Copy is English-only for now, like the /learn course it sits beside; it joins
-// the i18n catalog in the same pass rather than being half-wired.
+// Localized from two sources, which is the thing to keep straight here. The
+// chrome (heading, progress, section titles) comes from the app catalog; a
+// card's TITLE and BLURB come from the study the card points at, which carries
+// its own per-locale text, with the catalogue's English as the fallback. Reading
+// the card off the catalogue instead is what left this shelf in English while
+// every study behind it was translated: the response already carried the
+// overlay and the page threw it away.
 
 import type { XiangqiPieceRole } from '@mistboard/game';
+import { type I18nKey, t } from './i18n/catalog.js';
 import { buildNav } from './site-shell.js';
+import { localizedStudyDescription, localizedStudyName } from './study-i18n.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 import './tile-map.css';
 import './practice-index.css';
 
 interface PracticeCardDto {
   slug: string;
+  /** The catalogue's English, the fallback when the study has no text for this
+   *  reader's locale. */
   title: string;
   blurb: string;
+  /** The study's own name and description, and its locale overlay. Optional
+   *  because a client cached before this shipped will not have them. */
+  name?: string;
+  description?: string;
+  i18n?: unknown;
   studyId: string;
   exerciseCount: number;
   solvedCount: number;
+}
+
+/** A card's title and blurb for the current locale.
+ *
+ *  The study's own text wins when it has any, because that is what the page the
+ *  card opens is called; the catalogue's English is the fallback, and it is a
+ *  real one -- these two sets of words are written separately and a study that
+ *  is renamed should rename its card. */
+function cardText(entry: PracticeCardDto): { title: string; blurb: string } {
+  return {
+    title: entry.name ? localizedStudyName(entry.name, entry.i18n) : entry.title,
+    blurb: entry.description
+      ? localizedStudyDescription(entry.description, entry.i18n)
+      : entry.blurb,
+  };
+}
+
+/** The heading for a catalogue section, by id.
+ *
+ *  A map rather than a key built by interpolation: `t` returns undefined for a
+ *  key that is not in the catalog, so a constructed key would render the word
+ *  "undefined" the first time someone adds a section. A missing id here falls
+ *  back to the English the server sent, which is untranslated but correct.
+ *  Keyed at all, rather than translated in the catalogue, so packages/game keeps
+ *  holding ids and English and does not become a third dictionary. */
+const SECTION_TITLE_KEYS: Record<string, I18nKey> = {
+  endgames: 'practice.section.endgames',
+};
+
+function sectionTitle(section: PracticeSectionDto): string {
+  const key = SECTION_TITLE_KEYS[section.id];
+  return key ? t(key) : section.title;
 }
 
 interface PracticeSectionDto {
@@ -37,11 +83,11 @@ interface PracticeSectionDto {
 
 export function mountPracticeIndex(root: HTMLElement): void {
   root.classList.add('landing-page');
-  root.replaceChildren(buildNav(), notice('Loading practice…'));
+  root.replaceChildren(buildNav(), notice(t('practice.loading')));
   void load()
     .then((sections) => render(root, sections))
     .catch(() => {
-      root.replaceChildren(buildNav(), notice('Practice could not be loaded.'));
+      root.replaceChildren(buildNav(), notice(t('practice.failed')));
     });
 }
 
@@ -62,13 +108,13 @@ function render(root: HTMLElement, sections: PracticeSectionDto[]): void {
   main.className = 'learn-xq-map-main';
 
   if (sections.length === 0) {
-    main.append(notice('No practice sets are published yet.'));
+    main.append(notice(t('practice.empty')));
   }
   for (const section of sections) {
     const block = document.createElement('section');
     block.className = 'learn-xq-categ';
     const heading = document.createElement('h2');
-    heading.textContent = section.title;
+    heading.textContent = sectionTitle(section);
     const grid = document.createElement('div');
     grid.className = 'learn-xq-tile-grid';
     for (const entry of section.cards) grid.append(tile(entry));
@@ -89,11 +135,11 @@ function sidebar(sections: PracticeSectionDto[]): HTMLElement {
   illus.innerHTML = renderXiangqiPiece({ color: 'red', role: 'chariot' }, { size: 96 });
 
   const title = document.createElement('h1');
-  title.textContent = 'Practice';
+  title.textContent = t('practice.title');
   const sub = document.createElement('p');
   // Says what the surface actually is, because it is not the puzzle page: a
   // learner who expects a puzzle will read a failed conversion as a broken one.
-  sub.textContent = 'against the engine';
+  sub.textContent = t('practice.subtitle');
   side.append(illus, title, sub);
 
   // The same progress bar /learn uses, reading from practice progress.
@@ -113,13 +159,13 @@ function sidebar(sections: PracticeSectionDto[]): HTMLElement {
     fill.className = 'learn-xq-progress-fill';
     fill.style.width = `${pct}%`;
     const label = document.createElement('span');
-    label.textContent = `Progress: ${pct}%`;
+    label.textContent = t('practice.progress', { pct });
     bar.append(fill, label);
     side.append(bar);
 
     const count = document.createElement('p');
     count.className = 'practice-index__total';
-    count.textContent = `${solved} of ${total} solved`;
+    count.textContent = t('practice.solvedOfTotal', { solved, total });
     side.append(count);
   }
   return side;
@@ -140,10 +186,11 @@ function tile(entry: PracticeCardDto): HTMLElement {
 
   const text = document.createElement('div');
   text.className = 'learn-xq-tile-text';
+  const copy = cardText(entry);
   const title = document.createElement('h3');
-  title.textContent = entry.title;
+  title.textContent = copy.title;
   const blurb = document.createElement('p');
-  blurb.textContent = entry.blurb;
+  blurb.textContent = copy.blurb;
   text.append(title, blurb);
 
   link.append(illus, text);

@@ -124,6 +124,10 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       // cards mount the same live tenant renderers, so it rides this chunk.
       'games',
       'study',
+      // /practice links straight into study chapters and is played in the same
+      // shell, so its chrome rides the same lazy chunk rather than a chunk of
+      // its own.
+      'practice',
       'analysis',
       'historical',
       'broadcast',

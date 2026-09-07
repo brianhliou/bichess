@@ -223,6 +223,19 @@ export const EN_REVIEW = {
   'broadcast.blackWins': 'Black wins',
   'broadcast.draw': 'Draw',
   'broadcast.colorWins': '{color} wins',
+  // /practice, the shelf of engine-adjudicated exercise sets. The card titles
+  // are NOT here: a card names a study, and a study carries its own per-locale
+  // text (study-i18n.ts). These are the chrome around them, plus the section
+  // heading, which is keyed by the catalogue's section id so the catalogue in
+  // packages/game stays a list of ids and English rather than a third dictionary.
+  'practice.title': 'Practice',
+  'practice.subtitle': 'against the engine',
+  'practice.loading': 'Loading practice…',
+  'practice.failed': 'Practice could not be loaded.',
+  'practice.empty': 'No practice sets are published yet.',
+  'practice.progress': 'Progress: {pct}%',
+  'practice.solvedOfTotal': '{solved} of {total} solved',
+  'practice.section.endgames': 'Basic endgames',
   // Study surface chrome. Study/chapter TEXT is author-supplied and localized
   // per study (study-i18n.ts); these are the fixed labels around it.
   'study.chapterCount': '{count} Chapters',

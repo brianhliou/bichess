@@ -78,8 +78,17 @@ export async function tryHandle(
       return [
         {
           slug: card.slug,
+          // The catalogue's English, kept as the fallback a card renders when a
+          // study has no text of its own for the reader's locale.
           title: card.title,
           blurb: card.blurb,
+          // The study's OWN name and description, plus its locale overlay. The
+          // card names a study, so it should say what that study is called: this
+          // response already loaded the overlay and then dropped it, which left
+          // the shelf in English while every study behind it was translated.
+          name: study.name,
+          description: study.description,
+          i18n: study.i18n,
           studyId: study.id,
           exerciseCount: study.exerciseCount,
           solvedCount: solvedByStudy.get(study.id) ?? 0,
