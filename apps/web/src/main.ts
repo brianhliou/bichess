@@ -23,7 +23,6 @@ import {
   coordinateTrainerEnabled,
   correspondenceEnabled,
   friendsOnlineEnabled,
-  learnEnabled,
 } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
@@ -211,9 +210,6 @@ const inboxHandle = inboxMatch?.[1] ? decodeURIComponent(inboxMatch[1]) : null;
 // Signed-in-only; the page itself renders a sign-in prompt for anonymous
 // visitors. Deliberately not in the sitemap (a private, self-only surface).
 const wantsFollowing = path === '/following' || page === 'following';
-// Legacy dark-chess /learn hub — gated off in prod (see learnEnabled). When
-// disabled, /learn falls through to the branded not-found page.
-const wantsLearn = learnEnabled() && (path === '/learn' || page === 'learn');
 // Interactive beginner course (lichess /learn parity), xiangqi first. Ungated —
 // distinct from the legacy /learn hub above.
 const wantsLearnXiangqi = path === '/learn/xiangqi';
@@ -849,9 +845,6 @@ if (replaySample) {
       mountNotationTrainer(appRoot),
     ),
   );
-} else if (wantsLearn) {
-  setTitleKey('nav.learn');
-  void mountOrReport(() => import('./learn.js').then(({ mountLearn }) => mountLearn(appRoot)));
 } else if (wantsAbout) {
   setTitleKey('footer.about');
   void mountOrReport(() =>

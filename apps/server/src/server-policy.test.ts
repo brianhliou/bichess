@@ -353,7 +353,6 @@ const PARKED_CLIENT_ROUTES = new Set<string>([
   '/luzhanqi-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-chess-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/learn', // legacy dark-chess hub; gated off in prod (learnEnabled) → branded 404
   '/learn/coordinates', // coordinate trainer; parked, gated off in prod (coordinateTrainerEnabled)
 ]);
 
