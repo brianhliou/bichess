@@ -356,6 +356,13 @@ export const EN_COMMUNITY = {
   'forum.latestBy': 'by',
   'forum.categoryRestricted': '{category} is restricted',
   'forum.noTopicsOnPage': 'No forum topics on this page.',
+  // The composer note reads "<Markdown> is available for formatting." -- the link
+  // is an element, so only the text after it can be a key. Every language here
+  // happens to put the tool first too, which is what makes the split work; a
+  // language that did not would need the sentence rebuilt, not re-keyed.
+  'forum.markdownAvailable': ' is available for formatting.',
+  'forum.etiquetteLink': 'forum etiquette',
+  'forum.postDeleted': ' · deleted {date}',
   'forum.quote': 'Quote',
   'forum.startATopic': 'Start a topic',
   'forum.postAriaLabel': 'Post',

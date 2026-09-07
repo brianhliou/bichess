@@ -889,7 +889,7 @@ function postSearchResultRow(result: ForumPostSearchResult): HTMLElement {
   time.title = formatDateTime(result.createdAt);
   meta.append(time, document.createElement('br'));
   meta.append(
-    document.createTextNode('by '),
+    document.createTextNode(`${t('forum.latestBy')} `),
     authorProfileLink(result.author, 'forum-search-author'),
   );
 
@@ -1095,7 +1095,7 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
     const by = document.createElement('span');
     by.className = 'forum-topic-latest-by';
     by.append(
-      document.createTextNode('by '),
+      document.createTextNode(`${t('forum.latestBy')} `),
       authorProfileLink(topic.latestPost.author, 'forum-topic-author'),
     );
     latestCell.append(latest, by);
@@ -1265,7 +1265,9 @@ function hiddenPostTombstone(
   meta.className = 'forum-post-meta';
   meta.append(postPermalink(topic, post, page, `#${postNumber}`));
   if (post.hiddenAt) {
-    meta.append(document.createTextNode(` · deleted ${formatDate(post.hiddenAt)}`));
+    meta.append(
+      document.createTextNode(t('forum.postDeleted', { date: formatDate(post.hiddenAt) })),
+    );
   }
   const body = document.createElement('div');
   body.className = 'forum-post-body forum-post-tombstone';
@@ -1794,11 +1796,11 @@ function forumMarkdownNote(): HTMLElement {
   markdown.rel = 'nofollow noopener noreferrer';
   markdown.textContent = t('forum.markdown');
   const formatting = document.createElement('span');
-  formatting.append(markdown, document.createTextNode(' is available for formatting.'));
+  formatting.append(markdown, document.createTextNode(t('forum.markdownAvailable')));
   const etiquette = document.createElement('a');
   etiquette.className = 'forum-form-note-etiquette';
   etiquette.href = '/forum/etiquette';
-  etiquette.append(forumInfoIcon(), document.createTextNode('forum etiquette'));
+  etiquette.append(forumInfoIcon(), document.createTextNode(t('forum.etiquetteLink')));
   note.append(formatting, etiquette);
   return note;
 }
