@@ -63,19 +63,39 @@ const WHAT_NEXT_TILES: {
   doneWhenSignedIn?: boolean;
 }[] = [
   {
-    title: 'Register',
-    subtitle: 'Keep your progress on any device',
+    title: 'learn.xiangqi.next.register',
+    subtitle: 'learn.xiangqi.next.registerSub',
     href: '/account',
     glyph: '👤',
     doneWhenSignedIn: true,
   },
-  { title: 'Puzzles', subtitle: 'Sharpen your tactics', href: '/puzzles', glyph: '🎯' },
-  { title: 'Play people', subtitle: 'Opponents from around the world', href: '/', glyph: '⚔️' },
-  { title: 'Play machine', subtitle: 'Climb the bot ladder', href: '/', glyph: '🤖' },
-  { title: 'Videos', subtitle: 'Watch instructive xiangqi videos', href: '/videos', glyph: '🎬' },
   {
-    title: 'Watch',
-    subtitle: 'Follow top tournament games',
+    title: 'learn.xiangqi.next.puzzles',
+    subtitle: 'learn.xiangqi.next.puzzlesSub',
+    href: '/puzzles',
+    glyph: '🎯',
+  },
+  {
+    title: 'learn.xiangqi.next.playPeople',
+    subtitle: 'learn.xiangqi.next.playPeopleSub',
+    href: '/',
+    glyph: '⚔️',
+  },
+  {
+    title: 'learn.xiangqi.next.playMachine',
+    subtitle: 'learn.xiangqi.next.playMachineSub',
+    href: '/',
+    glyph: '🤖',
+  },
+  {
+    title: 'learn.xiangqi.next.videos',
+    subtitle: 'learn.xiangqi.next.videosSub',
+    href: '/videos',
+    glyph: '🎬',
+  },
+  {
+    title: 'learn.xiangqi.next.watch',
+    subtitle: 'learn.xiangqi.next.watchSub',
     href: '/broadcast/xiangqi',
     glyph: '📺',
   },
@@ -641,7 +661,7 @@ function buildLearnWhatNextSection(signedIn: boolean): HTMLElement {
     tile.href = item.href;
     tile.innerHTML = `
         <div class="learn-xq-tile-illus learn-xq-tile-glyph">${item.glyph}</div>
-        <div class="learn-xq-tile-text"><h3>${item.title}</h3><p>${item.subtitle}</p></div>`;
+        <div class="learn-xq-tile-text"><h3>${learnCopy(item.title)}</h3><p>${learnCopy(item.subtitle)}</p></div>`;
     // Same anatomy a finished stage uses: the folded corner ribbon is what
     // actually reads as "done" on this page, since the done and link tints are
     // the same colour.
