@@ -299,6 +299,9 @@ const wantsTitlesAdmin = path === '/titles';
 // Unlisted admin engine tracker. No nav entry; admin-gated by /api/admin/engines
 // (open in local dev). Direct-URL only.
 const wantsEngines = path === '/engines';
+// Unlisted admin readout history (/readouts): the scheduled operating readout,
+// admin-gated by /api/admin/readouts (open in local dev).
+const wantsReadoutsAdmin = path === '/readouts';
 // Unlisted admin player roster (/accounts): every registered account. Admin-
 // gated by /api/admin/accounts (open in local dev); reached from the account
 // menu's admin group.
@@ -544,6 +547,11 @@ if (replaySample) {
   setTitle('Title verification');
   void mountOrReport(() =>
     import('./titles-admin.js').then(({ mountTitlesAdmin }) => mountTitlesAdmin(appRoot)),
+  );
+} else if (wantsReadoutsAdmin) {
+  setTitle('Readouts');
+  void mountOrReport(() =>
+    import('./readouts-admin.js').then(({ mountReadoutsAdmin }) => mountReadoutsAdmin(appRoot)),
   );
 } else if (wantsAccountsAdmin) {
   setTitle('Accounts');

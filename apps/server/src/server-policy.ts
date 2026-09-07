@@ -310,6 +310,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/import' ||
     normalized === '/engines' ||
     normalized === '/accounts' ||
+    normalized === '/readouts' ||
     normalized === '/bots' ||
     normalized === '/mini-xiangqi-spike' ||
     normalized === '/xiangqi-demo' ||

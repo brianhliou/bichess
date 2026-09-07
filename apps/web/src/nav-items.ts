@@ -138,6 +138,7 @@ export function adminNavItems(): NavItem[] {
     { label: 'Engines', labelKey: 'nav.engines', href: '/engines' },
     { label: 'Accounts', labelKey: 'nav.accounts', href: '/accounts' },
     { label: 'Titles', labelKey: 'nav.titles', href: '/titles' },
+    { label: 'Readouts', labelKey: 'nav.readouts', href: '/readouts' },
     { label: 'Metrics', labelKey: 'nav.metrics', href: '/metrics' },
     { label: 'Broadcast ops', labelKey: 'nav.broadcastOps', href: '/broadcast/xiangqi/ops' },
   ];

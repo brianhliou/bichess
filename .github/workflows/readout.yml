@@ -90,7 +90,17 @@ jobs:
               });
             }
 
-            if (report.trigger === 'weekly') {
+            const needsAttention =
+              report.verdict === 'action' ||
+              report.verdict === 'blocked' ||
+              report.verdict === 'unknown';
+
+            // The anchor is resolved for daily runs too. A daily readout that
+            // finds something wrong used to route NOTHING unless one of its
+            // actions happened to own an issue, so "healthy daily checks are
+            // silent" also silenced the unhealthy ones.
+            let anchor = null;
+            if (report.trigger === 'weekly' || needsAttention) {
               const { data: anchors } = await github.rest.issues.listForRepo({
                 owner,
                 repo,
@@ -98,31 +108,37 @@ jobs:
                 labels: label,
                 per_page: 10,
               });
-              let anchor = anchors.find((issue) => issue.title === 'Mistboard weekly readout');
-              const anchorBody = [
-                'This is the durable anchor for scheduled Mistboard operating readouts.',
-                'Healthy daily checks are silent. Weekly history appears in comments.',
-                '',
-                markdown,
-                '<!-- mistboard-readout-anchor -->',
-              ].join('\n');
+              anchor = anchors.find((issue) => issue.title === 'Mistboard weekly readout') ?? null;
               if (!anchor) {
                 const created = await github.rest.issues.create({
                   owner,
                   repo,
                   title: 'Mistboard weekly readout',
-                  body: anchorBody,
+                  body: [
+                    'This is the durable anchor for scheduled Mistboard operating readouts.',
+                    'Healthy daily checks are silent. Weekly history appears in comments.',
+                    '',
+                    '<!-- mistboard-readout-anchor -->',
+                  ].join('\n'),
                   labels: [label],
                 });
                 anchor = created.data;
-              } else {
-                await github.rest.issues.update({
-                  owner,
-                  repo,
-                  issue_number: anchor.number,
-                  body: anchorBody,
-                });
               }
+            }
+
+            if (report.trigger === 'weekly' && anchor) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: anchor.number,
+                body: [
+                  'This is the durable anchor for scheduled Mistboard operating readouts.',
+                  'Healthy daily checks are silent. Weekly history appears in comments.',
+                  '',
+                  markdown,
+                  '<!-- mistboard-readout-anchor -->',
+                ].join('\n'),
+              });
               const weeklyMarker = `<!-- mistboard-readout-week:${report.snapshotKey} -->`;
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
@@ -136,6 +152,32 @@ jobs:
                   repo,
                   issue_number: anchor.number,
                   body: `${markdown}\n${weeklyMarker}`,
+                });
+              }
+            }
+
+            // Keyed by alertKey, not by the snapshot: the same problem holds
+            // its key while the counters underneath it move, so a week-long
+            // outage posts once instead of seven times.
+            if (report.trigger !== 'weekly' && needsAttention && anchor) {
+              const alertMarker = `<!-- mistboard-readout-alert:${report.alertKey} -->`;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: anchor.number,
+                per_page: 100,
+              });
+              if (!comments.some((comment) => comment.body?.includes(alertMarker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: anchor.number,
+                  body: [
+                    `**Daily check: ${report.verdict.toUpperCase()}**`,
+                    '',
+                    markdown,
+                    alertMarker,
+                  ].join('\n'),
                 });
               }
             }

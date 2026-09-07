@@ -33,6 +33,7 @@ export const EN_SHELL = {
   'nav.engines': 'Engines',
   'nav.accounts': 'Accounts',
   'nav.titles': 'Titles',
+  'nav.readouts': 'Readouts',
   'nav.metrics': 'Metrics',
   'nav.broadcastOps': 'Broadcast ops',
   'nav.lab': 'Lab',

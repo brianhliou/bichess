@@ -93,9 +93,11 @@ test('readout generation parses auto cadence and returns rendered aggregate data
       generate: async (input) => {
         assert.equal(input.trigger, 'weekly');
         assert.equal(input.dryRun, true);
-        return { report, reused: false };
+        return { report, reused: false, previousAlertKey: null };
       },
       latest: async () => report,
+      list: async () => [],
+      email: async () => ({ send: false as const, reason: 'dry-run' as const }),
     },
   );
   assert.equal(result.status, 200);
@@ -111,6 +113,8 @@ test('readout generation rejects network-supplied targets and malformed dry-run 
       throw new Error('must not generate');
     },
     latest: async () => null,
+    list: async () => [],
+    email: async () => ({ send: false as const, reason: 'disabled' as const }),
   };
   assert.deepEqual(await readoutGenerateForApi(ctx, { trigger: 'pilot-run-override' }, deps), {
     status: 400,

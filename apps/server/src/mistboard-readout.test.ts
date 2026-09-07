@@ -5,6 +5,7 @@ import {
   buildMistboardReadout,
   ELEPHANTCHESS_PILOT_RUN_ID,
   type MistboardReadoutFacts,
+  type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
   readoutPeriods,
   readoutSnapshotKey,
@@ -21,19 +22,44 @@ const runtime: MistboardReadoutRuntime = {
   persistenceErrors: { count1m: 0, lastAt: null },
 };
 
+const baseProduct: MistboardReadoutProduct = {
+  accountsCreated: 2,
+  previousAccountsCreated: 1,
+  completedGames: 8,
+  previousCompletedGames: 5,
+  completedGamesByMode: { pvp: 6, pve: 2 },
+  completedGamesByVariant: [{ variant: 'xiangqi', count: 8 }],
+  abortedGames: 0,
+  humanPlayers: 4,
+  previousHumanPlayers: 3,
+  returningPlayers: 2,
+  signedInPlayers: 1,
+};
+
 const emptyFacts: MistboardReadoutFacts = {
-  product: {
-    accountsCreated: 2,
-    previousAccountsCreated: 1,
-    completedGames: 8,
-    previousCompletedGames: 5,
-    completedGamesByMode: { pvp: 6, pve: 2 },
-    completedGamesByVariant: [{ variant: 'xiangqi', count: 8 }],
-  },
+  product: baseProduct,
   puzzles: null,
   mining: null,
   engines: { tasks: {}, failedTasks: 0, activeWorkers: 0, staleWorkers: 0 },
 };
+
+function factsWithProduct(overrides: Partial<MistboardReadoutProduct>): MistboardReadoutFacts {
+  return { ...emptyFacts, product: { ...baseProduct, ...overrides } };
+}
+
+function reportWith(
+  facts: MistboardReadoutFacts,
+  previousReport?: ReturnType<typeof buildMistboardReadout>,
+) {
+  return buildMistboardReadout({
+    snapshotId: 'readout_case',
+    trigger: 'weekly',
+    now: new Date('2026-07-20T17:23:00Z'),
+    runtime,
+    facts,
+    previousReport,
+  });
+}
 
 test('readout periods use complete UTC days and a previous comparison week', () => {
   assert.deepEqual(readoutPeriods(new Date('2026-07-22T18:30:00Z')), {
@@ -159,6 +185,154 @@ test('a cleared puzzle outlier set emits one transition action', () => {
     nextReport.actions.some((action) => action.code === 'puzzle-outliers-resolved'),
     false,
   );
+});
+
+test('a checkpoint already cleared last time does not re-announce itself', () => {
+  // The regression this file exists to prevent: sessions only go up, so the
+  // level stays true forever and every verdict from the crossing onward was
+  // pinned at watch.
+  const puzzles = buildElephantChessPuzzleQualityReport({
+    aggregates: [qualityAggregate({ sessions: 100, starts: 40 })],
+    pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    generatedAt: '2026-07-20T00:00:00Z',
+  });
+  const crossing = reportWith({ ...emptyFacts, puzzles });
+  assert.equal(
+    crossing.actions.some((action) => action.code === 'puzzle-plumbing-ready'),
+    true,
+  );
+  assert.equal(crossing.verdict, 'watch');
+
+  const stillReady = buildElephantChessPuzzleQualityReport({
+    aggregates: [qualityAggregate({ sessions: 414, starts: 239 })],
+    pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    generatedAt: '2026-07-21T00:00:00Z',
+  });
+  const later = reportWith({ ...emptyFacts, puzzles: stillReady }, crossing);
+  assert.equal(
+    later.actions.some((action) => action.code === 'puzzle-plumbing-ready'),
+    false,
+  );
+  assert.equal(later.verdict, 'healthy');
+});
+
+test('a previous report with no puzzle section does not replay an old crossing', () => {
+  const puzzles = buildElephantChessPuzzleQualityReport({
+    aggregates: [qualityAggregate({ sessions: 414, starts: 239 })],
+    pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    generatedAt: '2026-07-21T00:00:00Z',
+  });
+  const blindPrevious = reportWith({
+    ...emptyFacts,
+    puzzles: null,
+    collectorErrors: [{ section: 'puzzles', code: 'collector_failed' }],
+  });
+  const report = reportWith({ ...emptyFacts, puzzles }, blindPrevious);
+  assert.equal(
+    report.actions.some((action) => action.code === 'puzzle-plumbing-ready'),
+    false,
+  );
+});
+
+test('a halved week raises an action and a doubled week raises a watch', () => {
+  const dropped = reportWith(factsWithProduct({ completedGames: 22, previousCompletedGames: 46 }));
+  assert.equal(dropped.verdict, 'action');
+  assert.match(dropped.actions[0]!.text, /fell to 22 from 46/);
+
+  const surged = reportWith(
+    factsWithProduct({ completedGames: 78, previousCompletedGames: 22, humanPlayers: 17 }),
+  );
+  assert.equal(surged.verdict, 'watch');
+  assert.match(surged.actions[0]!.text, /rose to 78 from 22.*17 players/);
+
+  const stopped = reportWith(factsWithProduct({ completedGames: 0, previousCompletedGames: 46 }));
+  assert.equal(stopped.actions[0]!.code, 'product-activity-stopped');
+});
+
+test('week over week noise at low volume raises nothing', () => {
+  // 4 to 9 is a doubling in ratio terms and pure Poisson noise in reality.
+  const report = reportWith(factsWithProduct({ completedGames: 9, previousCompletedGames: 4 }));
+  assert.equal(report.actions.length, 0);
+  assert.equal(report.verdict, 'healthy');
+
+  const halved = reportWith(factsWithProduct({ completedGames: 4, previousCompletedGames: 9 }));
+  assert.equal(halved.actions.length, 0);
+});
+
+test('a stale engine worker alerts on the increase, not on the level', () => {
+  // A hard-crashed worker leaves a running row forever, so a level rule here
+  // would latch exactly like the puzzle checkpoint did.
+  const facts: MistboardReadoutFacts = {
+    ...emptyFacts,
+    engines: { tasks: {}, failedTasks: 0, activeWorkers: 1, staleWorkers: 1 },
+  };
+  const first = reportWith(facts);
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]!.code, 'engine-workers-stale');
+
+  const second = reportWith(facts, first);
+  assert.equal(second.actions.length, 0);
+
+  const worse = reportWith(
+    { ...emptyFacts, engines: { tasks: {}, failedTasks: 0, activeWorkers: 1, staleWorkers: 3 } },
+    second,
+  );
+  assert.equal(worse.actions[0]!.code, 'engine-workers-stale');
+});
+
+test('the alert key holds steady while counters move under an unchanged problem', () => {
+  const first = reportWith(
+    factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),
+  );
+  const second = reportWith(
+    factsWithProduct({ completedGames: 21, previousCompletedGames: 47, humanPlayers: 8 }),
+  );
+  assert.notEqual(first.decisionFingerprint, second.decisionFingerprint);
+  assert.equal(first.alertKey, second.alertKey);
+  assert.notEqual(first.alertKey, reportWith(emptyFacts).alertKey);
+});
+
+test('the weekly markdown carries players, split, variants and a trend', () => {
+  const report = reportWith({
+    ...factsWithProduct({
+      completedGames: 78,
+      previousCompletedGames: 22,
+      humanPlayers: 17,
+      previousHumanPlayers: 7,
+      returningPlayers: 4,
+      signedInPlayers: 5,
+      abortedGames: 2,
+      completedGamesByMode: { pvp: 45, pve: 33, eve: 12 },
+      completedGamesByVariant: [
+        { variant: 'jieqi', count: 43 },
+        { variant: 'xiangqi', count: 15 },
+        { variant: 'jungle', count: 11 },
+        { variant: 'banqi', count: 4 },
+        { variant: 'dark-xiangqi', count: 4 },
+        { variant: 'jungle-flip', count: 1 },
+      ],
+    }),
+    trend: [
+      { periodEnd: '2026-08-24T00:00:00Z', completedGames: 46, humanPlayers: null },
+      { periodEnd: '2026-08-31T00:00:00Z', completedGames: 22, humanPlayers: 7 },
+    ],
+  });
+  const markdown = renderMistboardReadoutMarkdown(report);
+  assert.match(markdown, /Players: 17 \(\+10 week over week\), 4 returning, 5 signed in/);
+  assert.match(markdown, /Modes: pvp 45, pve 33, plus 12 bot-vs-bot outside the count above/);
+  assert.match(markdown, /Variants: jieqi 43,.*and 1 more/);
+  assert.match(markdown, /Aborted before a result: 2/);
+  assert.match(markdown, /trend, oldest first: 46 22 78/);
+});
+
+test('a cleared checkpoint reads as cleared rather than zero remaining', () => {
+  const puzzles = buildElephantChessPuzzleQualityReport({
+    aggregates: [qualityAggregate({ sessions: 414, starts: 239 })],
+    pilotRunId: ELEPHANTCHESS_PILOT_RUN_ID,
+    generatedAt: '2026-07-21T00:00:00Z',
+  });
+  const markdown = renderMistboardReadoutMarkdown(reportWith({ ...emptyFacts, puzzles }));
+  assert.match(markdown, /Checkpoints: plumbing cleared, 761 starts to quality gate/);
 });
 
 test('serialized readouts exclude prohibited identity and secret keys', () => {

@@ -14,13 +14,17 @@ import * as persistence from '../persistence.js';
 import {
   generateMistboardReadout,
   latestMistboardReadout,
+  listMistboardReadoutSummaries,
 } from '../persistence-mistboard-readout.js';
-import { type HttpApiContext, readJsonBody, writeJson } from './lib.js';
+import { sendReadoutEmail } from '../readout-email.js';
+import { type HttpApiContext, isHttpAdminSession, readJsonBody, writeJson } from './lib.js';
 
 type ReadoutRouteDependencies = {
   verifyToken: MistboardReadoutTokenVerifier;
   generate: typeof generateMistboardReadout;
   latest: typeof latestMistboardReadout;
+  list: typeof listMistboardReadoutSummaries;
+  email: typeof sendReadoutEmail;
   now: () => Date;
 };
 
@@ -28,8 +32,16 @@ const defaultDependencies: ReadoutRouteDependencies = {
   verifyToken: verifyGithubReadoutToken,
   generate: generateMistboardReadout,
   latest: latestMistboardReadout,
+  list: listMistboardReadoutSummaries,
+  email: sendReadoutEmail,
   now: () => new Date(),
 };
+
+const READOUT_PATHS = [
+  '/api/admin/readouts/generate',
+  '/api/admin/readouts/latest',
+  '/api/admin/readouts/history',
+] as const;
 
 export async function readoutGenerateForApi(
   ctx: HttpApiContext,
@@ -54,12 +66,23 @@ export async function readoutGenerateForApi(
       persistenceErrors: ctx.persistenceHealth?.() ?? { count1m: 0, lastAt: null },
     },
   });
+  // Fire and forget, like the engine alerts: a mail provider having a bad day
+  // must not fail the readout that is already stored.
+  const emailed = await deps
+    .email({
+      report: result.report,
+      reused: result.reused,
+      previousAlertKey: result.previousAlertKey,
+      dryRun: body.dryRun === true,
+    })
+    .catch(() => ({ send: false, reason: 'disabled' as const }));
   return {
     status: 200,
     payload: {
       report: result.report,
       markdown: renderMistboardReadoutMarkdown(result.report),
       reused: result.reused,
+      emailed: emailed.send,
     },
   };
 }
@@ -69,11 +92,9 @@ export async function tryHandle(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
-  _parsedUrl: URL,
+  parsedUrl: URL,
 ): Promise<boolean> {
-  if (pathname !== '/api/admin/readouts/generate' && pathname !== '/api/admin/readouts/latest') {
-    return false;
-  }
+  if (!(READOUT_PATHS as readonly string[]).includes(pathname)) return false;
 
   const method = pathname.endsWith('/generate') ? 'POST' : 'GET';
   if ((request.method ?? 'GET') !== method) {
@@ -85,17 +106,31 @@ export async function tryHandle(
     );
     return true;
   }
-  if (
-    !(await authorizeGithubReadoutBearer(
+  // Generation stays workflow-only: it writes a snapshot and can send mail, so
+  // the OIDC identity of the scheduled run is the only thing that may ask for
+  // one. Reads also accept an admin session, which is what the /readouts page
+  // authenticates with.
+  const authorized =
+    (await authorizeGithubReadoutBearer(
       request.headers.authorization,
       defaultDependencies.verifyToken,
-    ))
-  ) {
+    )) ||
+    (method === 'GET' && (await isHttpAdminSession(request)));
+  if (!authorized) {
     writeJson(response, 401, { error: 'unauthorized' }, { 'cache-control': 'no-store' });
     return true;
   }
   if (!persistence.isInitialized()) {
     writeJson(response, 503, { error: 'persistence_disabled' }, { 'cache-control': 'no-store' });
+    return true;
+  }
+
+  if (pathname.endsWith('/history')) {
+    const limit = Number.parseInt(parsedUrl.searchParams.get('limit') ?? '', 10);
+    const summaries = await defaultDependencies.list(undefined, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+    writeJson(response, 200, { readouts: summaries }, { 'cache-control': 'no-store' });
     return true;
   }
 

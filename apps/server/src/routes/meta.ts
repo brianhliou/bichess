@@ -11,6 +11,7 @@ import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
 import {
   type HttpApiContext,
   isHttpAdminAuthorized,
+  isHttpAdminSession,
   requireMethod,
   requirePersistence,
   writeJson,
@@ -155,9 +156,13 @@ export async function tryHandle(
   if (pathname === '/api/stats') {
     if (!requireMethod(request, response, 'GET')) return true;
     // Canonical durable totals (accounts/games), unlike the in-memory
-    // /api/live-stats. Admin-gated: in prod requires the admin debug token;
-    // open in dev. Keep it unlinked from the UI so it isn't a scrape target.
-    if (!isHttpAdminAuthorized(request)) {
+    // /api/live-stats. Admin-gated two ways: the debug token for script
+    // callers, and an admin session for the /metrics page, which fetches this
+    // with a cookie. Token-only was a silent hole: in prod the admin page got
+    // a 401 here, fell back to the public view, and dropped the account count,
+    // the online count, the result breakdown and the bot-vs-bot row with no
+    // error anywhere.
+    if (!isHttpAdminAuthorized(request) && !(await isHttpAdminSession(request))) {
       writeJson(response, 401, { error: 'unauthorized' });
       return true;
     }
