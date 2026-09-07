@@ -176,10 +176,18 @@ export type PikafishXiangqiEngineConfig = {
   version: string;
 };
 
-/** MistyBanqi standalone Rust αβ+TT UCI engine tiers. */
+/**
+ * MistyBanqi standalone Rust αβ+TT UCI engine tiers. `nodes` is the strength
+ * dial and `movetime_ms` the latency cap, matching `BanqiEngineTier`. `nodes`
+ * is absent on the three RETIRED tiers (amateur/strong/strongest), which really
+ * were movetime-only searches before the 2026-06-18 collapse to one
+ * node-budgeted bot — those entries describe what actually ran and must stay
+ * movetime-only.
+ */
 export type BanqiUciEngineConfig = {
   kind: 'banqi-uci';
   movetime_ms: number;
+  nodes?: number;
 };
 
 /** MistyJungleFlip standalone Rust αβ+Star1+TT UCI engine. */

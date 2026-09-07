@@ -15,6 +15,7 @@ export {
   isDarkXiangqiEngineClientId,
   isKnownEngineClientId,
   isPlayableLiveEngineClientId,
+  knownEngineIds,
   latestBuiltinEngineIds,
   loadEngine,
   playableBuiltinEngines,

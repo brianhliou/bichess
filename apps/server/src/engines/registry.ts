@@ -865,13 +865,28 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     name: 'MistyBanqi',
     kind: 'container',
     gameSpecId: 'banqi',
-    configHash: 'misty-banqi-0.2.1',
-    playSignature: 'misty-banqi-0.2.1',
-    config: { kind: 'banqi-uci', movetime_ms: 1500 },
+    // Hash bumped 2026-09-06 from 'misty-banqi-0.2.1' because the entry had drifted
+    // from the live tier on every axis: BANQI_ENGINE_VERSION is 0.2.4, the node budget
+    // is 3.5M (the 1.5M-era `movetime_ms: 1500` here never described a real setting —
+    // the tier's latency cap has been 5000 and then 8000, never 1500), and `nodes` was
+    // not recorded at all. NOT an in-place edit under the old hash: eve_games rows carry
+    // white_config_hash / white_play_signature snapshots, so mutating a shipped
+    // (configHash, config) pair would make every past row retroactively claim settings
+    // that never ran. A config change is a new hash, always.
+    //
+    // Shape follows the pikafish-xiangqi convention (`<engine>-<version>-nodes-<N>`):
+    // the hash names what DECIDES play — the build and the strength dial. The movetime
+    // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
+    // out of the identity while remaining recorded in `config`.
+    configHash: 'misty-banqi-0.2.4-nodes-3500000',
+    playSignature: 'misty-banqi-0.2.4-nodes-3500000',
+    config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
-      'MistyBanqi 0.2.1 — adds the gen_danger general-safety eval term (proximity+escape-aware, ' +
+      'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
       'FEATURES 506 + w_king 28) on top of v0.2.0 cheap-strength. Modal ~385/arm vs hw3: ' +
-      'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at 1.5M nodes.',
+      'no-regression + own-general-loss 35.5%->26% (~2.7sigma). Single full-strength bot at ' +
+      '3.5M nodes under an 8s latency cap (budget resized from 1.5M on 2026-09-06 to fit the ' +
+      'ceiling; not a claimed strength gain).',
   },
   'misty-banqi-amateur': {
     id: 'misty-banqi-amateur',
@@ -969,13 +984,20 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
     name: 'MistyJungleFlip',
     kind: 'container',
     gameSpecId: 'jungle-flip',
-    configHash: 'misty-jungle-flip-0.1.0',
-    playSignature: 'misty-jungle-flip-0.1.0',
-    config: { kind: 'jungle-flip-uci', nodes: 512_000, movetime_ms: 2_500 },
+    // Hash bumped 2026-09-06 from 'misty-jungle-flip-0.1.0', which had never once been
+    // touched: the binary went 0.1.0 -> 0.2.0 -> 0.4.0 -> 0.5.1, the node budget went
+    // 512K -> 2.5M, and `movetime_ms: 2_500` never matched the tier's 5000ms cap even on
+    // the first day. Bumped rather than edited in place for the same reason as banqi
+    // above — eve_games snapshots the hash per game, so a mutated pair rewrites history.
+    configHash: 'misty-jungle-flip-0.5.1-nodes-2500000',
+    playSignature: 'misty-jungle-flip-0.5.1-nodes-2500000',
+    config: { kind: 'jungle-flip-uci', nodes: 2_500_000, movetime_ms: 5_000 },
     notes:
-      'MistyJungleFlip 0.1.0 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
-      'jungle-flip FEN. Single full-strength bot at 512K nodes; chance-node (flip) search, ' +
-      'not fog/belief.',
+      'MistyJungleFlip 0.5.1 — standalone Rust αβ+Star1+TT UCI engine over the redacted ' +
+      'jungle-flip FEN, with the <=4-piece exact tablebase (WLD + distance-to-mate) loaded ' +
+      'since v0.4.0. Single full-strength bot at 2.5M nodes under a 5s latency cap ' +
+      '(budget resized from 512K on 2026-09-06 to fit the ceiling; not a claimed strength ' +
+      'gain). Chance-node (flip) search, not fog/belief.',
   },
 };
 
@@ -991,6 +1013,17 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...MINI_XIANGQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
 };
+
+/**
+ * Every engine id in the registry, playable or not. Exists so a conformance
+ * test can walk the whole catalog and assert coverage — a new entry that is
+ * neither checked against its live tier nor explicitly exempted fails CI
+ * instead of silently joining the set of entries nobody validates. Not for
+ * serving decisions: use `playableLiveEngines` / the per-variant guards there.
+ */
+export function knownEngineIds(): EngineId[] {
+  return Object.keys(KNOWN_ENGINES) as EngineId[];
+}
 
 export function latestBuiltinEngineIds(): { white: string; black: string } {
   return {
