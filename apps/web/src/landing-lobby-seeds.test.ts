@@ -13,7 +13,13 @@ import { buildLobbyPanel } from './landing-play.js';
 const FIXED_DATE = new Date('2026-07-21T12:00:00Z');
 
 describe('landing lobby bot seeks', () => {
+  // Every test gets its own device memory. On CI window.localStorage is a
+  // working store, so a one-click row start in one test would otherwise leak
+  // the remembered engine into the next test's "fresh device" (#365).
+  let restoreDeviceStorage: () => void = () => {};
+
   beforeEach(() => {
+    restoreDeviceStorage = installMemoryStorage();
     // Freeze only Date so the six-hour rotation is fixed; timers stay real for the
     // async fetch flushes below.
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -21,6 +27,7 @@ describe('landing lobby bot seeks', () => {
   });
 
   afterEach(() => {
+    restoreDeviceStorage();
     document.body.replaceChildren();
     window.history.replaceState(null, '', '/');
     vi.useRealTimers();
