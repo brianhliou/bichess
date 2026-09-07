@@ -26,6 +26,7 @@
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { JUNGLE_STUDY_I18N, jungleChapterName, jungleComment } from './lib/jungle-study-i18n.mjs';
 
 const args = process.argv.slice(2);
 const argOf = (k, d = '') => {
@@ -66,6 +67,14 @@ const STUDIES = {
       },
     },
     chapter: jieqiChapterName,
+  },
+  // How Misty wins at Jungle. Its root comments are generated too, and a comment
+  // overlay rides INSIDE the chapter's tree, so this study needs the tree write
+  // as well as the rename.
+  '4UhOMlsE': {
+    study: JUNGLE_STUDY_I18N,
+    chapter: jungleChapterName,
+    comment: jungleComment,
   },
 };
 
@@ -133,7 +142,9 @@ async function main() {
   }
 
   let changed = 0;
+  let comments = 0;
   const unparsed = [];
+  const unparsedComments = [];
   for (const chapter of chapters) {
     const translated = rules.chapter(chapter.name);
     if (!translated) {
@@ -148,13 +159,43 @@ async function main() {
     }
     console.log(`  ~ ${chapter.name}\n      ${LANGS.map((l) => next[l].name).join('  |  ')}`);
     changed += 1;
+
+    // A comment's translation rides on the comment itself, inside the serialized
+    // tree, so it cannot go in the rename body -- it needs the version-guarded
+    // tree write. Built here so the dry run reports it too.
+    let root = null;
+    if (rules.comment) {
+      const candidate = JSON.parse(JSON.stringify(chapter.root));
+      let touched = 0;
+      const walk = (node) => {
+        for (const c of node?.annotations?.comments ?? []) {
+          const out = typeof c.text === 'string' ? rules.comment(c.text) : null;
+          if (!out) continue;
+          c.i18n = { ...c.i18n, ...out };
+          touched += 1;
+        }
+        for (const kid of node?.children ?? []) walk(kid);
+      };
+      walk(candidate.root);
+      if (touched > 0) {
+        root = candidate;
+        comments += touched;
+      } else if ((chapter.root?.root?.annotations?.comments ?? []).length > 0) {
+        unparsedComments.push(chapter.name);
+      }
+    }
+
     if (!WRITE) continue;
     // The rename path takes name and i18n together; i18n alone would be a rename
     // to nothing.
     const patched = await fetch(`${BASE}/api/studies/${STUDY}/chapters/${chapter.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', cookie },
-      body: JSON.stringify({ name: chapter.name, i18n: next }),
+      body: JSON.stringify({
+        name: chapter.name,
+        i18n: next,
+        ...(root ? { root, baseVersion: chapter.version } : {}),
+      }),
     });
     if (!patched.ok) {
       throw new Error(
@@ -167,8 +208,13 @@ async function main() {
     console.log(`\nleft in English (name did not match the template):`);
     for (const name of unparsed) console.log(`  ${name}`);
   }
+  if (unparsedComments.length) {
+    console.log(`\nchapters whose comment did not match any template:`);
+    for (const name of unparsedComments) console.log(`  ${name}`);
+  }
   console.log(
-    `\n${changed} chapters ${WRITE ? 'written' : 'would change (dry run; --write to apply)'}`,
+    `\n${changed} chapters, ${comments} comments ` +
+      `${WRITE ? 'written' : 'would change (dry run; --write to apply)'}`,
   );
 }
 

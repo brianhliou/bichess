@@ -236,6 +236,39 @@ export const EN_REVIEW = {
   'practice.progress': 'Progress: {pct}%',
   'practice.solvedOfTotal': '{solved} of {total} solved',
   'practice.section.endgames': 'Basic endgames',
+  // The practice PLAYER: the panel around the exercise board. Split from the
+  // /practice shelf keys above because they are different surfaces, but they ride
+  // the same domain since a practice chapter is opened inside the study shell.
+  //
+  // The goal line is what a learner is being asked to do, so it is the one string
+  // here that must not be approximate. `describePracticeGoal` in packages/game
+  // stays the English/default; this is the localized reading of the same goal,
+  // kept in the web app so packages/game holds no presentation copy.
+  'practice.goal.mate': 'Checkmate',
+  'practice.goal.mateIn': 'Checkmate in {moves}',
+  'practice.goal.win': 'Win',
+  'practice.goal.winIn': 'Win in {moves}',
+  'practice.goal.reach': 'Reach +{cp}',
+  'practice.goal.reachIn': 'Reach +{cp} in {moves}',
+  'practice.goal.draw': 'Hold the draw',
+  'practice.goal.drawFor': 'Hold the draw for {moves} moves',
+  'practice.boardLabel': 'Xiangqi practice board',
+  'practice.coachStrip': 'Practice with the engine',
+  'practice.ofTotal': 'of {total}',
+  'practice.hint': 'Hint',
+  'practice.takeItBack': 'Take it back',
+  'practice.restart': 'Restart',
+  'practice.nextExercise': 'Next exercise',
+  'practice.hintPiece': 'This piece has the move.',
+  'practice.hintMove': 'This is the move.',
+  'practice.thinking': 'Thinking…',
+  'practice.solved': 'Solved. 🎉',
+  'practice.notHoldable': 'That is no longer holdable. Restart to try again.',
+  'practice.yourMove': 'Your move.',
+  'practice.verdictBlunder': 'That throws it away. Take the move back and look again.',
+  'practice.verdictMistake': 'That lets it slip. Take the move back and look again.',
+  'practice.verdictInaccuracy': 'Not the cleanest, but the exercise is still alive.',
+  'practice.verdictGood': 'Good. Keep going.',
   // Study surface chrome. Study/chapter TEXT is author-supplied and localized
   // per study (study-i18n.ts); these are the fixed labels around it.
   'study.chapterCount': '{count} Chapters',

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { jungleChapterName, jungleComment } from './lib/jungle-study-i18n.mjs';
 import { jieqiChapterName } from './study-name-i18n.mjs';
 
 // The eighteen chapter names are generated, which is the only reason
@@ -38,5 +39,38 @@ describe('jieqi chapter names', () => {
     ]) {
       assert.equal(jieqiChapterName(name), null, `should not have parsed: ${name}`);
     }
+  });
+});
+
+describe('jungle chapter names and comments', () => {
+  it('keeps the ordinal prefix out of the translation', () => {
+    const out = jungleChapterName('07. Red wins the race from 40 behind');
+    assert.ok(out['zh-Hans'].startsWith('07. '), out['zh-Hans']);
+    assert.ok(!/[A-Za-z]/.test(out['zh-Hans'].slice(4)), out['zh-Hans']);
+  });
+
+  it('translates every comment template it claims to', () => {
+    const sample =
+      'Red reaches the den on ply 103, having been 80 down on material ten plies earlier. ' +
+      'The den settles a game that material did not. About one game in twenty-one finishes this way. ' +
+      'Final material: red 227, black 217 (4v4 pieces).';
+    const out = jungleComment(sample);
+    assert.ok(out['zh-Hans'].includes('第 103 步'));
+    assert.ok(out['zh-Hans'].includes('80 分'));
+    assert.ok(out['zh-Hant'].includes('獸穴'));
+  });
+
+  it('returns null for prose that is not one of the templates', () => {
+    // The whole safety argument: an unrecognised comment must stay English
+    // rather than be part-matched into a sentence about a different game.
+    for (const text of [
+      'Red reaches the den on ply 103.',
+      'Drawn by the no-capture clock.',
+      'Some hand-written note about this game.',
+      '',
+    ]) {
+      assert.equal(jungleComment(text), null, `should not have parsed: ${text}`);
+    }
+    assert.equal(jungleChapterName('07. Red resigns'), null);
   });
 });

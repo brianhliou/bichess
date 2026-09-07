@@ -16,8 +16,8 @@
 // by a scripted engine in a test.
 
 import {
-  describePracticeGoal,
   fsfUciToXiangqiSquares,
+  PRACTICE_WIN_CP,
   type PracticeGoal,
   type PracticeVerdict,
   type StandardXiangqiPlayerView,
@@ -25,6 +25,7 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
+import { t } from '../i18n/catalog.js';
 import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
@@ -93,6 +94,35 @@ export interface XiangqiPracticeHandle {
   destroy(): void;
 }
 
+/**
+ * The goal line, in the reader's language.
+ *
+ * The localized twin of describePracticeGoal in packages/game, which stays the
+ * English/default so that package holds no presentation copy. Deliberately a
+ * switch over the goal's SHAPE rather than a translation of the finished English
+ * sentence: this is the one string on the surface that tells a learner what they
+ * are being asked to do, and parsing it back out of prose would be a way to get
+ * that wrong quietly.
+ */
+function localizedPracticeGoal(goal: PracticeGoal): string {
+  const moves = goal.moves;
+  switch (goal.kind) {
+    case 'mate':
+      return moves === undefined ? t('practice.goal.mate') : t('practice.goal.mateIn', { moves });
+    case 'win': {
+      if (goal.centipawns !== PRACTICE_WIN_CP) {
+        const cp = goal.centipawns;
+        return moves === undefined
+          ? t('practice.goal.reach', { cp })
+          : t('practice.goal.reachIn', { cp, moves });
+      }
+      return moves === undefined ? t('practice.goal.win') : t('practice.goal.winIn', { moves });
+    }
+    case 'draw':
+      return moves === undefined ? t('practice.goal.draw') : t('practice.goal.drawFor', { moves });
+  }
+}
+
 export function mountXiangqiPractice(
   root: HTMLElement,
   opts: XiangqiPracticeOptions,
@@ -149,7 +179,7 @@ export function mountXiangqiPractice(
   boardFrame.className = 'practice__board-frame';
   const boardEl = document.createElement('div');
   boardEl.className = 'gamebook__board xiangqi-live-board';
-  boardEl.setAttribute('aria-label', 'Xiangqi practice board');
+  boardEl.setAttribute('aria-label', t('practice.boardLabel'));
   boardFrame.append(boardEl);
   boardCol.append(boardFrame);
 
@@ -157,7 +187,7 @@ export function mountXiangqiPractice(
   brief.className = 'practice__brief';
   const briefGoal = document.createElement('p');
   briefGoal.className = 'practice__brief-goal';
-  briefGoal.textContent = describePracticeGoal(opts.goal);
+  briefGoal.textContent = localizedPracticeGoal(opts.goal);
   brief.append(briefGoal);
   if (opts.brief) {
     const briefText = document.createElement('p');
@@ -195,7 +225,7 @@ export function mountXiangqiPractice(
     num.textContent = `#${opts.progress.index}`;
     const of = document.createElement('span');
     of.className = 'practice__side-of';
-    of.textContent = `of ${opts.progress.total}`;
+    of.textContent = t('practice.ofTotal', { total: opts.progress.total });
     head.append(num, of);
     side.append(head);
   }
@@ -210,7 +240,7 @@ export function mountXiangqiPractice(
   coach.className = 'practice__coach';
   const coachStrip = document.createElement('p');
   coachStrip.className = 'practice__coach-strip';
-  coachStrip.textContent = 'Practice with the engine';
+  coachStrip.textContent = t('practice.coachStrip');
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble practice__coach-body';
   // The LEARNER's own general, not a generic mascot. The line beside it reads
@@ -231,10 +261,10 @@ export function mountXiangqiPractice(
 
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
-  const hintBtn = button('Hint', 'gamebook__btn');
-  const retryBtn = button('Take it back', 'gamebook__btn gamebook__btn--primary');
-  const restartBtn = button('Restart', 'gamebook__btn');
-  const nextBtn = button('Next exercise', 'gamebook__btn gamebook__btn--primary');
+  const hintBtn = button(t('practice.hint'), 'gamebook__btn');
+  const retryBtn = button(t('practice.takeItBack'), 'gamebook__btn gamebook__btn--primary');
+  const restartBtn = button(t('practice.restart'), 'gamebook__btn');
+  const nextBtn = button(t('practice.nextExercise'), 'gamebook__btn gamebook__btn--primary');
   controls.append(hintBtn, retryBtn, restartBtn, nextBtn);
   coach.append(coachStrip, bubble);
   coach.append(controls);
@@ -299,13 +329,13 @@ export function mountXiangqiPractice(
   function verdictLine(view: PracticeView): string {
     switch (view.verdict) {
       case 'blunder':
-        return 'That throws it away. Take the move back and look again.';
+        return t('practice.verdictBlunder');
       case 'mistake':
-        return 'That lets it slip. Take the move back and look again.';
+        return t('practice.verdictMistake');
       case 'inaccuracy':
-        return 'Not the cleanest, but the exercise is still alive.';
+        return t('practice.verdictInaccuracy');
       default:
-        return 'Good. Keep going.';
+        return t('practice.verdictGood');
     }
   }
 
@@ -337,7 +367,7 @@ export function mountXiangqiPractice(
         interactive.setMarkers([
           { square: from.from, kind: 'circle', className: 'xq-marker--practice-hint' },
         ]);
-        hintText.textContent = 'This piece has the move.';
+        hintText.textContent = t('practice.hintPiece');
       } else {
         interactive.setMarkers([]);
         // Arrows carry their colour inline, so this one does not depend on a
@@ -351,7 +381,7 @@ export function mountXiangqiPractice(
             width: 12,
           },
         ]);
-        hintText.textContent = 'This is the move.';
+        hintText.textContent = t('practice.hintMove');
       }
     }
 
@@ -379,15 +409,15 @@ export function mountXiangqiPractice(
     lastPhase = view.phase;
 
     if (state === 'thinking') {
-      feedback.textContent = 'Thinking…';
+      feedback.textContent = t('practice.thinking');
     } else if (view.phase === 'failed') {
       feedback.textContent = verdictLine(view);
     } else if (view.phase === 'success') {
-      feedback.textContent = 'Solved. 🎉';
+      feedback.textContent = t('practice.solved');
     } else if (view.phase === 'defeat') {
-      feedback.textContent = 'That is no longer holdable. Restart to try again.';
+      feedback.textContent = t('practice.notHoldable');
     } else if (view.movesPlayed === 0) {
-      feedback.textContent = 'Your move.';
+      feedback.textContent = t('practice.yourMove');
     } else {
       feedback.textContent = verdictLine(view);
     }
