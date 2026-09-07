@@ -96,3 +96,7 @@ scripts/variant-lab/out/
 # redistributed here. The derived samples (scripts/data/win-curve-samples.json)
 # are what the fit needs and those ARE tracked. See scripts/calibrate-win-curve.mjs.
 scripts/data/win-curve-corpus/
+
+# Bundled output of scripts/build-benedict-diagrams.mjs
+.benedict-diagrams.mjs
+scripts/.benedict-diagrams.mjs
