@@ -15,11 +15,22 @@ export type ForumCategory = {
   slug: string;
   name: string;
   description: string;
+  /** Per-locale overrides for name/description (migration 135), resolved by the
+   *  client against its current locale. Empty when nothing is translated. */
+  i18n: Record<string, unknown>;
   sortOrder: number;
   topicWritePolicy: ForumTopicWritePolicy;
   topicCount: number;
   postCount: number;
   latestPost: ForumCategoryLatestPost | null;
+};
+
+/** The category a topic or post belongs to, as a client needs it: enough to link
+ *  and to label, including the locale overlay so the label can be localized. */
+export type ForumCategoryRef = {
+  slug: string;
+  name: string;
+  i18n: Record<string, unknown>;
 };
 
 export type ForumAuthor = {
@@ -48,10 +59,7 @@ export type ForumTopicSummary = {
   id: string;
   slug: string;
   title: string;
-  category: {
-    slug: string;
-    name: string;
-  };
+  category: ForumCategoryRef;
   author: ForumAuthor;
   latestPost: ForumTopicLatestPost | null;
   postCount: number;
@@ -104,10 +112,7 @@ export type ForumPostSearchResult = {
     slug: string;
     title: string;
     postCount: number;
-    category: {
-      slug: string;
-      name: string;
-    };
+    category: ForumCategoryRef;
   };
   author: ForumAuthor;
   createdAt: Date;
@@ -141,10 +146,7 @@ export type ForumReport = {
     id: string;
     slug: string;
     title: string;
-    category: {
-      slug: string;
-      name: string;
-    };
+    category: ForumCategoryRef;
     hiddenAt: Date | null;
   };
   post: {
@@ -200,7 +202,7 @@ export type ResolveForumReportResult =
 
 export async function listForumCategories(): Promise<ForumCategory[]> {
   const { rows } = await getPool().query<ForumCategoryRow>(
-    `SELECT c.id, c.slug, c.name, c.description, c.sort_order, c.topic_write_policy,
+    `SELECT c.id, c.slug, c.name, c.description, c.i18n, c.sort_order, c.topic_write_policy,
             COUNT(t.id)::int AS topic_count,
             COALESCE(SUM(t.post_count), 0)::int AS post_count,
             latest.topic_id AS latest_topic_id,
@@ -316,6 +318,7 @@ export async function searchForumPosts(options: {
               t.post_count AS topic_post_count,
               c.slug AS category_slug,
               c.name AS category_name,
+              c.i18n AS category_i18n,
               GREATEST(1, (
                 (
                   SELECT COUNT(*)::int
@@ -383,6 +386,7 @@ export async function listLatestForumPosts(
             t.post_count AS topic_post_count,
             c.slug AS category_slug,
             c.name AS category_name,
+            c.i18n AS category_i18n,
             GREATEST(1, (
               (
                 SELECT COUNT(*)::int
@@ -989,7 +993,7 @@ async function listForumPosts(
 
 const FORUM_TOPIC_SELECT = `SELECT t.id, t.slug, t.title, t.post_count, t.pinned_at, t.locked_at,
           t.created_at, t.updated_at, t.last_post_at,
-          c.slug AS category_slug, c.name AS category_name,
+          c.slug AS category_slug, c.name AS category_name, c.i18n AS category_i18n,
           u.handle AS author_handle, COALESCE(u.display_name, u.handle) AS author_display_name, u.title AS author_title,
           latest_post.id AS latest_post_id,
           latest_post.created_at AS latest_post_created_at,
@@ -1021,6 +1025,7 @@ const FORUM_REPORT_SELECT = `SELECT r.id, r.status, r.target_type, r.reason, r.r
           t.hidden_at AS topic_hidden_at,
           c.slug AS category_slug,
           c.name AS category_name,
+          c.i18n AS category_i18n,
           p.id AS post_id,
           p.body_text AS post_body_text,
           p.created_at AS post_created_at,
@@ -1081,6 +1086,7 @@ type ForumCategoryRow = {
   slug: string;
   name: string;
   description: string;
+  i18n: Record<string, unknown> | null;
   sort_order: number;
   topic_write_policy: ForumTopicWritePolicy;
   topic_count: number;
@@ -1108,6 +1114,7 @@ type ForumTopicRow = {
   last_post_at: Date;
   category_slug: string;
   category_name: string;
+  category_i18n: Record<string, unknown> | null;
   author_handle: string | null;
   author_display_name: string | null;
   author_title: PlayerTitle | null;
@@ -1144,6 +1151,7 @@ type ForumPostSearchRow = {
   topic_post_count: number;
   category_slug: string;
   category_name: string;
+  category_i18n: Record<string, unknown> | null;
   total_count: number;
 };
 
@@ -1168,6 +1176,7 @@ type ForumReportRow = {
   topic_hidden_at: Date | null;
   category_slug: string;
   category_name: string;
+  category_i18n: Record<string, unknown> | null;
   post_id: string | null;
   post_body_text: string | null;
   post_created_at: Date | null;
@@ -1184,6 +1193,7 @@ function categoryFromRow(row: ForumCategoryRow): ForumCategory {
     slug: row.slug,
     name: row.name,
     description: row.description,
+    i18n: row.i18n ?? {},
     sortOrder: row.sort_order,
     topicWritePolicy: row.topic_write_policy,
     topicCount: row.topic_count,
@@ -1223,6 +1233,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
     category: {
       slug: row.category_slug,
       name: row.category_name,
+      i18n: row.category_i18n ?? {},
     },
     author: authorFromRow(row.author_handle, row.author_display_name, row.author_title),
     latestPost:
@@ -1278,6 +1289,7 @@ function postSearchResultFromRow(row: ForumPostSearchRow, query?: string): Forum
       category: {
         slug: row.category_slug,
         name: row.category_name,
+        i18n: row.category_i18n ?? {},
       },
     },
     author: authorFromRow(row.author_handle, row.author_display_name, row.author_title),
@@ -1304,6 +1316,7 @@ function reportFromRow(row: ForumReportRow): ForumReport {
       category: {
         slug: row.category_slug,
         name: row.category_name,
+        i18n: row.category_i18n ?? {},
       },
       hiddenAt: row.topic_hidden_at,
     },

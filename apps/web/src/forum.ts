@@ -3,14 +3,35 @@ import { translationNeeded } from './forum-language.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { prependTitleBadge } from './player-titles.js';
+import { formatDate, formatDateTime, timeAgo } from './relative-time.js';
 import { type AuthUser, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
+// The study overlay resolvers, reused rather than reimplemented: a forum category
+// and a study carry the same {locale: {name, description}} shape, and the
+// fallback contract (degrade one string at a time, never half a translation) is
+// the one already written down and tested in study-i18n.ts.
+import { localizedStudyDescription, localizedStudyName } from './study-i18n.js';
 import { buildUiIcon } from './ui-icon.js';
+
+/** Everything needed to label a category, wherever one turns up: a full record
+ *  on /forum, or the stub a topic carries. `i18n` is optional so a client cached
+ *  before migration 135 keeps rendering the English it already has. */
+type ForumCategoryRef = {
+  slug: string;
+  name: string;
+  description?: string;
+  i18n?: unknown;
+};
 
 type ForumCategory = {
   id: string;
   slug: string;
   name: string;
   description: string;
+  /** Per-locale name/description (migration 135). Category text lives in the
+   *  database, not the catalog, so it needs an overlay of its own -- which is
+   *  why the whole of /forum read in English while all 142 forum.* catalog keys
+   *  were translated and the gate reported 100%. */
+  i18n?: unknown;
   sortOrder: number;
   topicWritePolicy: 'account' | 'admin';
   topicCount: number;
@@ -45,10 +66,7 @@ type ForumTopicSummary = {
   id: string;
   slug: string;
   title: string;
-  category: {
-    slug: string;
-    name: string;
-  };
+  category: ForumCategoryRef;
   author: ForumAuthor;
   latestPost: {
     post: {
@@ -227,6 +245,13 @@ export async function mountForum(root: HTMLElement): Promise<void> {
   } else {
     panel.append(forumHomeHeader(searchQuery, user), categoryIndex(categories));
   }
+  // Set here rather than server-side: the locale is a stored client preference
+  // (the forum route takes no /zh-hans prefix), so the server has no way to know
+  // it and every one of these pages served an English tab title to a reader who
+  // had chosen Chinese.
+  document.title = selectedCategory
+    ? t('forum.categoryPageTitle', { category: categoryLabel(selectedCategory) })
+    : t('forum.pageTitle');
   const topicPageOptions = {
     categorySlug: searchQuery ? null : categoryFilter,
     searchQuery,
@@ -253,10 +278,7 @@ export async function mountForum(root: HTMLElement): Promise<void> {
     if (needsPagerLinks && (!autoPages || topicPage > 1)) {
       panel.append(topicPager(topicPageOptions));
     }
-    const list = topicList(
-      visibleTopics,
-      topicPage > 1 ? 'No forum topics on this page.' : undefined,
-    );
+    const list = topicList(visibleTopics, topicPage > 1 ? t('forum.noTopicsOnPage') : undefined);
     panel.append(list);
     if (autoPages && hasNextPage) {
       panel.append(
@@ -305,7 +327,7 @@ export async function mountForumTopic(root: HTMLElement, topicId: string): Promi
     return;
   }
 
-  document.title = `${topic.title} · Forum · Mistboard`;
+  document.title = t('forum.topicPageTitle', { topic: topic.title });
   const hasNextPostPage = topic.posts.length > postPageSize;
   const visiblePosts = topic.posts.slice(0, postPageSize);
 
@@ -325,7 +347,7 @@ export async function mountForumTopic(root: HTMLElement, topicId: string): Promi
       topic,
       visiblePosts,
       user,
-      postPage > 1 ? 'No forum posts on this page.' : undefined,
+      postPage > 1 ? t('forum.noPostsOnPage') : undefined,
       postPage,
     ),
   );
@@ -432,7 +454,7 @@ export async function mountForumEtiquette(root: HTMLElement): Promise<void> {
   const heading = document.createElement('h1');
   heading.className = 'forum-etiquette-title';
   heading.textContent = t('forum.etiquette');
-  header.append(forumBackLink('/forum', 'Back to forum'), heading);
+  header.append(forumBackLink('/forum', t('forum.backToForum')), heading);
 
   const body = document.createElement('div');
   body.className = 'forum-etiquette-body';
@@ -561,7 +583,10 @@ function categoryPanelHeader(
   header.className = 'forum-panel-header forum-header forum-panel-header-category';
   const titleRow = document.createElement('div');
   titleRow.className = 'forum-panel-title-row';
-  titleRow.append(forumBackLink('/forum', 'Back to forum'), forumPanelTitle(category.name));
+  titleRow.append(
+    forumBackLink('/forum', t('forum.backToForum')),
+    forumPanelTitle(categoryLabel(category)),
+  );
   header.append(titleRow, newTopicPanelAction(category, user, composer));
   return header;
 }
@@ -577,7 +602,7 @@ function searchPanelHeader(query: string): HTMLElement {
   titleStack.className = 'forum-panel-title-stack';
   titleStack.append(title, copy);
   header.append(
-    forumBackLink('/forum', 'Back to forum'),
+    forumBackLink('/forum', t('forum.backToForum')),
     titleStack,
     forumSearchForm(query, { compact: true }),
   );
@@ -651,7 +676,7 @@ function newTopicPanelAction(
   if (!composer) {
     const disabled = document.createElement('span');
     disabled.className = 'forum-panel-action forum-panel-action-disabled';
-    disabled.textContent = `${category.name} is restricted`;
+    disabled.textContent = t('forum.categoryRestricted', { category: categoryLabel(category) });
     return disabled;
   }
   const button = document.createElement('button');
@@ -684,7 +709,10 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
   const titleRow = document.createElement('div');
   titleRow.className = 'forum-topic-title-row';
   titleRow.append(
-    forumBackLink(categoryHref(topic.category), `Back to ${topic.category.name}`),
+    forumBackLink(
+      categoryHref(topic.category),
+      t('forum.backToCategory', { category: categoryLabel(topic.category) }),
+    ),
     heading,
   );
   if (user) titleRow.append(topicWatchButton(topic));
@@ -707,7 +735,11 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
   if (canReportForumContent(topic.author, user)) titleRow.append(topicReportButton(topic));
   const meta = document.createElement('p');
   meta.className = 'forum-sub';
-  meta.textContent = `${topic.category.name} · ${topic.postCount} ${topic.postCount === 1 ? 'post' : 'posts'} · last activity ${formatTimeAgo(topic.lastPostAt)}`;
+  meta.textContent = t('forum.topicMeta', {
+    category: categoryLabel(topic.category),
+    posts: postCountLabel(topic.postCount),
+    when: timeAgo(topic.lastPostAt),
+  });
   meta.title = formatDateTime(topic.lastPostAt);
   header.append(titleRow, meta);
   return header;
@@ -737,9 +769,9 @@ function categoryIndexRow(category: ForumCategory): HTMLElement {
   main.className = 'forum-category-index-main';
   main.href = categoryHref(category);
   const title = document.createElement('strong');
-  title.textContent = category.name;
+  title.textContent = categoryLabel(category);
   const desc = document.createElement('span');
-  desc.textContent = category.description;
+  desc.textContent = categoryBlurb(category);
   main.append(title, desc);
 
   row.append(
@@ -826,7 +858,10 @@ function postSearchResults(
   }
   const count = document.createElement('strong');
   count.className = 'forum-search-result-count';
-  count.textContent = `${formatCount(total)} forum ${total === 1 ? 'post' : 'posts'}`;
+  count.textContent =
+    total === 1
+      ? t('forum.forumPostCountOne')
+      : t('forum.forumPostCount', { count: formatCount(total) });
   wrap.append(count);
   for (const post of posts) wrap.append(postSearchResultRow(post));
   return wrap;
@@ -840,7 +875,7 @@ function postSearchResultRow(result: ForumPostSearchResult): HTMLElement {
   const title = document.createElement('a');
   title.className = 'forum-search-title';
   title.href = postHref(result.topic, result.post.id, result.post.page);
-  title.textContent = `${result.topic.category.name} - ${result.topic.title}`;
+  title.textContent = `${categoryLabel(result.topic.category)} - ${result.topic.title}`;
   const snippet = document.createElement('p');
   snippet.className = 'forum-search-snippet';
   snippet.textContent = result.post.snippet;
@@ -850,7 +885,7 @@ function postSearchResultRow(result: ForumPostSearchResult): HTMLElement {
   meta.className = 'forum-search-meta';
   const time = document.createElement('a');
   time.href = postHref(result.topic, result.post.id, result.post.page);
-  time.textContent = formatTimeAgo(result.createdAt);
+  time.textContent = timeAgo(result.createdAt);
   time.title = formatDateTime(result.createdAt);
   meta.append(time, document.createElement('br'));
   meta.append(
@@ -1028,7 +1063,7 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
   main.className = 'forum-topic-row-main';
   const flags = document.createElement('div');
   flags.className = 'forum-topic-flags';
-  if (options.showCategory) flags.append(pill(topic.category.name));
+  if (options.showCategory) flags.append(pill(categoryLabel(topic.category)));
   if (topic.pinned) flags.append(pill(t('forum.pinned')));
   if (topic.locked) flags.append(pill(t('forum.locked')));
 
@@ -1055,7 +1090,7 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
     const latest = document.createElement('a');
     latest.className = 'forum-topic-latest-link';
     latest.href = postHref(topic, topic.latestPost.post.id, pageForPostCount(topic.postCount));
-    latest.textContent = formatTimeAgo(topic.latestPost.createdAt);
+    latest.textContent = timeAgo(topic.latestPost.createdAt);
     latest.title = formatDateTime(topic.latestPost.createdAt);
     const by = document.createElement('span');
     by.className = 'forum-topic-latest-by';
@@ -1065,7 +1100,7 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
     );
     latestCell.append(latest, by);
   } else {
-    latestCell.textContent = formatTimeAgo(topic.lastPostAt);
+    latestCell.textContent = timeAgo(topic.lastPostAt);
     latestCell.title = formatDateTime(topic.lastPostAt);
   }
 
@@ -1094,7 +1129,7 @@ function topicInlinePageLinks(topic: ForumTopicSummary): HTMLElement | null {
     const link = document.createElement('a');
     link.className = 'forum-topic-page-link';
     link.href = topicPageHref(topic, page);
-    link.setAttribute('aria-label', `${topic.title}, page ${page}`);
+    link.setAttribute('aria-label', t('forum.topicPageLabel', { topic: topic.title, page }));
     link.textContent = String(page);
     nav.append(link);
   }
@@ -1181,7 +1216,7 @@ function postList(
     const time = document.createElement('a');
     time.className = 'forum-post-time';
     time.href = postHref(topic, post.id, page);
-    time.textContent = formatTimeAgo(post.createdAt);
+    time.textContent = timeAgo(post.createdAt);
     time.title = formatDateTime(post.createdAt);
     const actions = document.createElement('span');
     actions.className = 'forum-post-actions';
@@ -1276,7 +1311,7 @@ function postQuoteButton(post: ForumPost): HTMLButtonElement {
   button.type = 'button';
   button.className = 'forum-post-quote';
   button.textContent = t('forum.quote');
-  button.setAttribute('aria-label', `Quote ${authorLabel(post.author)}`);
+  button.setAttribute('aria-label', t('forum.quoteAuthor', { author: authorLabel(post.author) }));
   button.addEventListener('click', () => {
     insertPostQuote(post);
   });
@@ -1373,7 +1408,7 @@ function postEditedLabel(post: ForumPost): HTMLElement {
 function updatePostEditedLabel(label: HTMLElement, post: ForumPost): void {
   const edited = post.updatedAt !== post.createdAt;
   label.hidden = !edited;
-  label.textContent = edited ? `edited ${formatTimeAgo(post.updatedAt)}` : '';
+  label.textContent = edited ? `edited ${timeAgo(post.updatedAt)}` : '';
   if (edited) label.title = formatDateTime(post.updatedAt);
 }
 
@@ -1938,7 +1973,7 @@ function topicMoveForm(topic: ForumTopicDetail, categories: ForumCategory[]): HT
   for (const category of moveTargets) {
     const option = document.createElement('option');
     option.value = category.slug;
-    option.textContent = category.name;
+    option.textContent = categoryLabel(category);
     select.append(option);
   }
   const submit = document.createElement('button');
@@ -2164,11 +2199,11 @@ function reportRow(report: ForumReport): HTMLElement {
   return row;
 }
 
-function categoryLink(category: { slug: string; name: string }): HTMLAnchorElement {
+function categoryLink(category: ForumCategoryRef): HTMLAnchorElement {
   const link = document.createElement('a');
   link.className = 'forum-report-category';
   link.href = categoryHref(category);
-  link.textContent = category.name;
+  link.textContent = categoryLabel(category);
   return link;
 }
 
@@ -2310,14 +2345,36 @@ function appendLatestPostMeta(
   options: { authorClassName: string },
 ): void {
   const date = document.createElement('span');
-  date.textContent = formatTimeAgo(createdAt);
+  date.textContent = timeAgo(createdAt);
   date.title = formatDateTime(createdAt);
   parent.append(
-    document.createTextNode('by '),
+    document.createTextNode(`${t('forum.latestBy')} `),
     authorProfileLink(author, options.authorClassName),
     document.createTextNode(' · '),
     date,
   );
+}
+
+/** A post count, with the language's own plural form rather than a hand-appended
+ *  's'. Split into two keys instead of one with a `{count}` because English is
+ *  the only one of the three that inflects, and a key per branch is the only
+ *  shape that lets each language answer for itself. */
+function postCountLabel(count: number): string {
+  return count === 1 ? t('forum.postCountOne') : t('forum.postCount', { count });
+}
+
+/** A category's name in the reader's locale, falling back to the stored English.
+ *
+ *  Every place a category is named goes through this: the index rows, the panel
+ *  heading, the topic sub-line, the back links, the composer's select, and the
+ *  restricted notice. They were eight separate `category.name` reads, which is
+ *  exactly how a translated category ends up translated in five of them. */
+function categoryLabel(category: ForumCategoryRef): string {
+  return localizedStudyName(category.name, category.i18n);
+}
+
+function categoryBlurb(category: { description: string; i18n?: unknown }): string {
+  return localizedStudyDescription(category.description, category.i18n);
 }
 
 function authorProfileLink(author: ForumAuthor, className: string): HTMLElement {
@@ -2336,39 +2393,6 @@ function authorProfileLink(author: ForumAuthor, className: string): HTMLElement 
   name.textContent = author.displayName;
   link.append(name);
   return link;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return iso;
-  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-}
-
-function formatTimeAgo(iso: string): string {
-  const timestamp = new Date(iso).getTime();
-  if (!Number.isFinite(timestamp)) return formatDate(iso);
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return timeAgoLabel(minutes, 'minute');
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return timeAgoLabel(hours, 'hour');
-  const days = Math.floor(hours / 24);
-  if (days < 30) return timeAgoLabel(days, 'day');
-  if (days < 365) return timeAgoLabel(Math.floor(days / 30), 'month');
-  return timeAgoLabel(Math.floor(days / 365), 'year');
-}
-
-function timeAgoLabel(value: number, unit: string): string {
-  return `${value} ${unit}${value === 1 ? '' : 's'} ago`;
 }
 
 function pageFromParam(value: string | null): number {

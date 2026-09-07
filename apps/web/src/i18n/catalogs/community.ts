@@ -333,6 +333,29 @@ export const EN_COMMUNITY = {
   'forum.commentDeleted': 'Comment deleted by moderator.',
   'forum.onlineNow': 'Online now',
   'forum.link': 'Link',
+  // Page titles. The etiquette page already had one; the index, a category and a
+  // topic did not, so a reader who had chosen Chinese still got an English
+  // browser tab on three of the four forum surfaces.
+  'forum.pageTitle': 'Forum · Mistboard',
+  'forum.categoryPageTitle': '{category} · Forum · Mistboard',
+  'forum.topicPageTitle': '{topic} · Forum · Mistboard',
+  // Screen-reader labels. These were the last English on a translated page:
+  // invisible in a screenshot, and the whole of the page to anyone using a
+  // screen reader.
+  'forum.backToCategory': 'Back to {category}',
+  'forum.quoteAuthor': 'Quote {author}',
+  'forum.topicPageLabel': '{topic}, page {page}',
+  // Counts. Hand-written English plurals ('post' / 'posts') cannot be
+  // translated by a key per branch either, so the count rides inside the string
+  // and each language writes the form it actually uses.
+  'forum.postCount': '{count} posts',
+  'forum.postCountOne': '1 post',
+  'forum.forumPostCount': '{count} forum posts',
+  'forum.forumPostCountOne': '1 forum post',
+  'forum.topicMeta': '{category} · {posts} · last activity {when}',
+  'forum.latestBy': 'by',
+  'forum.categoryRestricted': '{category} is restricted',
+  'forum.noTopicsOnPage': 'No forum topics on this page.',
   'forum.quote': 'Quote',
   'forum.startATopic': 'Start a topic',
   'forum.postAriaLabel': 'Post',

@@ -103,6 +103,10 @@ type ForumCategoryJson = {
   slug: string;
   name: string;
   description: string;
+  /** Per-locale name/description (migration 135). The client resolves it; the
+   *  server does not, because the reader's locale is a stored client preference
+   *  and /forum takes no locale path prefix for the server to read it from. */
+  i18n: Record<string, unknown>;
   sortOrder: number;
   topicWritePolicy: persistence.ForumTopicWritePolicy;
   topicCount: number;
@@ -165,6 +169,7 @@ type ForumReportJson = {
     category: {
       slug: string;
       name: string;
+      i18n: Record<string, unknown>;
     };
     hidden: boolean;
   };
@@ -840,6 +845,7 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
     slug: category.slug,
     name: category.name,
     description: category.description,
+    i18n: category.i18n,
     sortOrder: category.sortOrder,
     topicWritePolicy: category.topicWritePolicy,
     topicCount: category.topicCount,
