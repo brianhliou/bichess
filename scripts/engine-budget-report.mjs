@@ -114,15 +114,21 @@ export const VERDICT_CEILING_UNKNOWN = 'CEILING-UNKNOWN';
 /** Timing itself is missing from every row in the group; nothing to compare. */
 export const VERDICT_NO_TIMING = 'NO-TIMING-RECORDED';
 
-/** Default window. Long enough to cover a quiet week, short enough to be current. */
-const DEFAULT_SINCE = '30d';
+/**
+ * Default window. Long enough to cover a quiet week, short enough to be current.
+ * Exported because engine-budget-check.mjs schedules this same analysis and must
+ * default to the SAME window: a checker with its own copy of the number drifts
+ * from the report it claims to run, and then the two disagree about a bot with
+ * nobody able to say which is right.
+ */
+export const DEFAULT_SINCE = '30d';
 /**
  * Default cap on artifact rows pulled. A busy month of PvE is well under this;
  * the cap exists so an unbounded prod table cannot be dragged into memory by
  * accident. Rows are taken most-recent-first, so a truncated run still describes
  * current behavior rather than a random slice.
  */
-const DEFAULT_LIMIT = 50_000;
+export const DEFAULT_LIMIT = 50_000;
 
 const LIVE_ENGINE_DECISION_ARTIFACT_TYPE = 'live-engine-decision';
 
@@ -688,6 +694,74 @@ export async function loadDecisionRows(client, options) {
   return rows;
 }
 
+/**
+ * Postgres client options for a connection string. Managed Postgres wants TLS;
+ * the local dev container has none.
+ *
+ * Exported so the scheduled checker connects by the SAME rule. The detection
+ * below already exists to avoid inventing a third rule alongside the other ops
+ * scripts, and a checker with a fourth copy would be the same mistake one level
+ * up: it would connect (or fail to) differently from the report it runs.
+ *
+ * Never logs or returns the string in any form other than the field pg needs.
+ */
+export function pgConnectionOptions(databaseUrl) {
+  const isLocal =
+    /(?:@|\/\/)(localhost|127\.0\.0\.1|host\.docker\.internal)/.test(databaseUrl) ||
+    /sslmode=disable/.test(databaseUrl);
+  return {
+    connectionString: databaseUrl,
+    ssl: isLocal ? undefined : { rejectUnauthorized: false },
+  };
+}
+
+/**
+ * Query, normalize, group, and verdict — the whole analysis, from a connected
+ * client to summaries plus the provenance meta the renderer prints.
+ *
+ * This exists as a function rather than inline in main() because the scheduled
+ * checker has to run the identical analysis. A checker that re-derived it would
+ * be a second implementation of the thing it is supposed to be watching, and the
+ * first divergence between them would look exactly like a bot regression.
+ */
+export async function collectSummaries(client, options) {
+  const raw = await loadDecisionRows(client, options);
+
+  let unreadableRows = 0;
+  const normalized = [];
+  for (const row of raw) {
+    const normalizedRow = normalizeDecisionRow({
+      gameId: row.game_id,
+      ply: row.ply,
+      payload: row.payload,
+      variant: row.variant,
+      endedAt: row.ended_at,
+    });
+    if (!normalizedRow) {
+      unreadableRows += 1;
+      continue;
+    }
+    if (options.engine && normalizedRow.engineId !== options.engine) continue;
+    normalized.push(normalizedRow);
+  }
+
+  let summaries = summarizeRows(normalized);
+  if (options.excludeLadder) summaries = summaries.filter((summary) => !summary.byDesign);
+
+  return {
+    summaries,
+    meta: {
+      since: options.since ?? null,
+      variant: options.variant ?? null,
+      engine: options.engine ?? null,
+      limit: options.limit,
+      scannedRows: raw.length,
+      truncated: raw.length >= options.limit,
+      unreadableRows,
+    },
+  };
+}
+
 async function main() {
   let values;
   try {
@@ -729,54 +803,23 @@ async function main() {
     );
   }
 
-  // Managed Postgres wants TLS; the local dev container has none. Matching the
-  // detection the other ops scripts use rather than inventing a third rule.
-  const isLocal =
-    /(?:@|\/\/)(localhost|127\.0\.0\.1|host\.docker\.internal)/.test(process.env.DATABASE_URL) ||
-    /sslmode=disable/.test(process.env.DATABASE_URL);
-  const client = new pg.Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: isLocal ? undefined : { rejectUnauthorized: false },
-  });
+  const client = new pg.Client(pgConnectionOptions(process.env.DATABASE_URL));
 
   await client.connect();
-  let raw;
+  let summaries;
+  let meta;
   try {
-    raw = await loadDecisionRows(client, { since, variant: values.variant, limit });
+    ({ summaries, meta } = await collectSummaries(client, {
+      since,
+      variant: values.variant,
+      engine: values.engine,
+      limit,
+      excludeLadder: values['exclude-ladder'],
+    }));
   } finally {
     await client.end();
   }
-
-  let unreadableRows = 0;
-  const normalized = [];
-  for (const row of raw) {
-    const normalizedRow = normalizeDecisionRow({
-      gameId: row.game_id,
-      ply: row.ply,
-      payload: row.payload,
-      variant: row.variant,
-      endedAt: row.ended_at,
-    });
-    if (!normalizedRow) {
-      unreadableRows += 1;
-      continue;
-    }
-    if (values.engine && normalizedRow.engineId !== values.engine) continue;
-    normalized.push(normalizedRow);
-  }
-
-  let summaries = summarizeRows(normalized);
-  if (values['exclude-ladder']) summaries = summaries.filter((summary) => !summary.byDesign);
-
-  const meta = {
-    since,
-    variant: values.variant ?? null,
-    engine: values.engine ?? null,
-    limit,
-    scannedRows: raw.length,
-    truncated: raw.length >= limit,
-    unreadableRows,
-  };
+  const unreadableRows = meta.unreadableRows;
 
   if (values.json) {
     console.log(
