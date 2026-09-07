@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { XIANGQI_ENDGAME_CORPUS } from '@mistboard/game';
+import { PRACTICE_SETS, practiceChapterBody } from './seed-xiangqi-practice-study.js';
 import {
   ENDGAME_STUDY_LANGS,
   endgameStudyTranslationKeys,
   hasEndgameStudyTranslation,
   localizedChapterName,
+  localizedPracticeComment,
   localizedRootComment,
+  PRACTICE_SET_I18N,
 } from './xiangqi-endgame-study-i18n.js';
 
 // Two directions, the same pair article-i18n and announcement-i18n check.
@@ -72,5 +75,57 @@ describe('endgame study translation coverage', () => {
     // translation yields null, so the chapter keeps its English comment whole.
     const entry = { ...XIANGQI_ENDGAME_CORPUS[0]!, note: 'an untranslated note' };
     assert.equal(localizedRootComment(entry, undefined, 0, 'zh-Hans'), null);
+  });
+});
+
+// The practice studies are the same corpus cut five ways, so they get the same
+// two-directional guard. These tests are the reason the split cannot silently
+// un-translate the corpus a second time: they fail on a set with no study-level
+// translation and on a chapter whose material the dictionaries do not know.
+describe('practice study translation coverage', () => {
+  it('every practice set has a name and description in both scripts', () => {
+    for (const set of PRACTICE_SETS) {
+      const i18n = PRACTICE_SET_I18N[set.slug];
+      assert.ok(i18n, `no PRACTICE_SET_I18N entry for ${set.slug}`);
+      for (const lang of ENDGAME_STUDY_LANGS) {
+        assert.ok(i18n[lang]?.name, `${set.slug} has no ${lang} name`);
+        assert.ok(i18n[lang]?.description, `${set.slug} has no ${lang} description`);
+      }
+    }
+  });
+
+  it('PRACTICE_SET_I18N has no entry for a set that no longer exists', () => {
+    const slugs = new Set(PRACTICE_SETS.map((set) => set.slug));
+    const orphans = Object.keys(PRACTICE_SET_I18N).filter((slug) => !slugs.has(slug));
+    assert.deepEqual(orphans, [], `orphaned practice set translations: ${orphans.join(', ')}`);
+  });
+
+  it('every exercise gets a localized name and comment in both scripts', () => {
+    for (const entry of XIANGQI_ENDGAME_CORPUS) {
+      for (const lang of ENDGAME_STUDY_LANGS) {
+        const body = practiceChapterBody(entry) as {
+          i18n?: Record<string, { name: string }>;
+          root: { root: { annotations: { comments: { i18n?: Record<string, string> }[] } } };
+        };
+        assert.ok(body.i18n?.[lang]?.name, `${entry.id} has no ${lang} chapter name`);
+        const comment = body.root.root.annotations.comments[0];
+        assert.ok(comment?.i18n?.[lang], `${entry.id} has no ${lang} root comment`);
+      }
+    }
+  });
+
+  it('a practice comment never states the verdict the exercise asks for', () => {
+    // The reading study's comment opens with 红胜（例胜）/和棋（例和）. That text in a
+    // practice chapter is the answer to the exercise, printed above the board.
+    for (const entry of XIANGQI_ENDGAME_CORPUS) {
+      for (const lang of ENDGAME_STUDY_LANGS) {
+        const comment = localizedPracticeComment(entry, lang);
+        if (!comment) continue;
+        assert.ok(
+          !/例勝|例胜|例和/.test(comment),
+          `${entry.id} ${lang} comment gives the verdict away: ${comment}`,
+        );
+      }
+    }
   });
 });

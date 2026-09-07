@@ -48,6 +48,14 @@ globalThis.document ??= {
   addEventListener() {},
 };
 
+// The generated per-move comments, in all three languages, shared with
+// seed-xiangqi-champions-study.ts. Imported rather than reimplemented: the two
+// studies are the same content annotated by the same pass, and when this script
+// had its own (English-only) copy of the sentence, the sibling study shipped it
+// translated and this one did not.
+const { parseJudgmentComment } = await import('../packages/game/src/xiangqi-judgment-comment.ts');
+const { judgmentCommentI18n } = await import('../apps/server/src/xiangqi-judgment-comment-i18n.ts');
+
 const DATA = 'scripts/data/world-title-annotations';
 
 /** Champion -> his name in Chinese. Every one of these nine is mainland, so the
@@ -199,6 +207,19 @@ export const ASSESS_NAG = {
  * shape study-chapter-to-article reads back, so a chapter built here converts
  * into the same spec the article already carries.
  */
+/**
+ * One tree comment, translated when it is one of ours to translate.
+ *
+ * A note that parses as the generated judgment sentence gets the overlay; a note
+ * that does not is hand-written prose about the game, and gets nothing. The
+ * parser deciding this rather than a flag is what keeps a later hand-edited note
+ * from being handed a machine translation of a sentence it no longer is.
+ */
+function comment(note) {
+  const judgment = parseJudgmentComment(note);
+  return judgment ? { text: note, i18n: judgmentCommentI18n(judgment) } : { text: note };
+}
+
 function buildTree(spec) {
   const mainline = spec.iccs.trim().split(/\s+/);
   const root = { annotations: {}, children: [] };
@@ -210,7 +231,7 @@ function buildTree(spec) {
       const glyph = NAG[annotation.glyph];
       node.annotations = {
         ...(glyph ? { glyphs: [glyph] } : {}),
-        ...(annotation.note ? { comments: [{ text: annotation.note }] } : {}),
+        ...(annotation.note ? { comments: [comment(annotation.note)] } : {}),
       };
     }
     nodes[index].children.push(node);
@@ -415,6 +436,22 @@ async function verify(studyId, games) {
     for (const lang of ['zh-Hans', 'zh-Hant']) {
       if (!stored.i18n?.[lang]?.name) bad.push(`${name}: no ${lang} name`);
     }
+    // And the comments inside the tree. Checking only the chapter NAME is how 52
+    // untranslated comments sat in this study while the verifier reported green:
+    // the overlay it looked at was not the overlay the reader reads.
+    const untranslated = [];
+    (function walk(node) {
+      for (const c of node.annotations?.comments ?? []) {
+        if (!parseJudgmentComment(c.text)) continue;
+        for (const lang of ['zh-Hans', 'zh-Hant']) {
+          if (!c.i18n?.[lang]) untranslated.push(lang);
+        }
+      }
+      (node.children ?? []).forEach(walk);
+    })(stored.root?.root ?? { children: [] });
+    if (untranslated.length) {
+      bad.push(`${name}: ${untranslated.length} untranslated generated comments`);
+    }
   }
   if (!study.study?.i18n?.['zh-Hans']?.name) bad.push('the study itself has no zh-Hans name');
   if (bad.length) {
@@ -495,8 +532,21 @@ async function main() {
       return node.children.length ? walk(node.children[0], n + 1) : n;
     })(tree.root);
     const lines = Object.values(game.spec.annotations.byPly).filter((a) => a.line).length;
+    // Comments are counted as translated / total rather than left implicit: this
+    // is the number that was silently zero, and a dry run that does not print it
+    // cannot be used to check it.
+    let comments = 0;
+    let translated = 0;
+    (function count(node) {
+      for (const c of node.annotations?.comments ?? []) {
+        comments += 1;
+        if (c.i18n?.['zh-Hans'] && c.i18n?.['zh-Hant']) translated += 1;
+      }
+      (node.children ?? []).forEach(count);
+    })(tree.root);
     console.log(
-      `${game.year} · ${game.champion.padEnd(14)} ${String(depth).padStart(3)} plies, ${lines} lines`,
+      `${game.year} · ${game.champion.padEnd(14)} ${String(depth).padStart(3)} plies, ${lines} lines, ` +
+        `${translated}/${comments} comments translated`,
     );
   }
 

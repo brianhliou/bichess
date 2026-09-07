@@ -358,3 +358,89 @@ export function endgameStudyTranslationKeys(lang: EndgameStudyLang): string[] {
 export function hasEndgameStudyTranslation(lang: EndgameStudyLang, text: string): boolean {
   return Object.hasOwn(MATERIAL[lang], text) || Object.hasOwn(PROSE[lang], text);
 }
+
+/**
+ * The five PRACTICE studies built from this same corpus (one per piece family,
+ * seeded by seed-xiangqi-practice-study.ts for the /practice shelf).
+ *
+ * They live here rather than beside `SETS` in the seeder because everything
+ * above already translates the corpus these studies are cut from: the chapter
+ * names and root comments come out of the same dictionaries, and splitting the
+ * study-level text into a second file is how the two would drift. Keyed by the
+ * curated slug, which is the one handle on these studies that never changes.
+ *
+ * Only the study's own name and description are here. Chapter text is generated,
+ * exactly as it is for the reading study.
+ */
+export const PRACTICE_SET_I18N: Record<
+  string,
+  Record<EndgameStudyLang, { name: string; description: string }>
+> = {
+  'endgames-soldier': {
+    'zh-Hans': {
+      name: '兵类残局',
+      description: '单兵能取胜的局面，和不能取胜的局面。兵不能后退，所以其中有些例胜，有些例和。',
+    },
+    'zh-Hant': {
+      name: '兵類殘局',
+      description: '單兵能取勝的局面，和不能取勝的局面。兵不能後退，所以其中有些例勝，有些例和。',
+    },
+  },
+  'endgames-chariot': {
+    'zh-Hans': {
+      name: '车类残局',
+      description: '车是唯一能单独取胜的子力。这些局面里，胜负仍然要靠技术来定。',
+    },
+    'zh-Hant': {
+      name: '車類殘局',
+      description: '車是唯一能單獨取勝的子力。這些局面裡，勝負仍然要靠技術來定。',
+    },
+  },
+  'endgames-horse': {
+    'zh-Hans': {
+      name: '马类残局',
+      description: '马走得慢，还会被蹩腿。用马取胜，考的是时机。',
+    },
+    'zh-Hant': {
+      name: '馬類殘局',
+      description: '馬走得慢，還會被蹩腿。用馬取勝，考的是時機。',
+    },
+  },
+  'endgames-cannon': {
+    'zh-Hans': {
+      name: '炮类残局',
+      description: '炮要有炮架才打得出去，所以盘上子力越少越对防守方有利。也包括马炮的组合。',
+    },
+    'zh-Hant': {
+      name: '砲類殘局',
+      description: '砲要有砲架才打得出去，所以盤上子力越少越對防守方有利。也包括馬砲的組合。',
+    },
+  },
+  'endgames-insufficient': {
+    'zh-Hans': {
+      name: '不足以取胜',
+      description: '无论怎么摆，这些子力都无法成杀。守住和棋；要点是知道它们本来就是例和。',
+    },
+    'zh-Hant': {
+      name: '不足以取勝',
+      description: '無論怎麼擺，這些子力都無法成殺。守住和棋；要點是知道它們本來就是例和。',
+    },
+  },
+};
+
+/**
+ * Localized root comment for a PRACTICE chapter, or null when the entry's prose
+ * is untranslated.
+ *
+ * Shorter than `localizedRootComment` on purpose, and it must stay that way: a
+ * practice chapter's comment is the only text the learner sees before they have
+ * solved it, so the reading study's verdict line ("红胜（例胜）") would hand them
+ * the answer to the exercise. The seeder's English side makes the same choice by
+ * using `entry.note` alone, and falling back to the matchup when there is none.
+ */
+export function localizedPracticeComment(
+  entry: EndgameEntry,
+  lang: EndgameStudyLang,
+): string | null {
+  return entry.note ? prose(entry.note, lang) : localizedChapterName(entry, lang);
+}

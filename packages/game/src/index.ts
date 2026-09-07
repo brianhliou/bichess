@@ -48,6 +48,7 @@ export * from './xiangqi-broadcast.js';
 export * from './xiangqi-endgame-corpus.js';
 export * from './xiangqi-exchange.js';
 export * from './xiangqi-import.js';
+export * from './xiangqi-judgment-comment.js';
 export * from './xiangqi-move-classification.js';
 export * from './xiangqi-notation-format.js';
 export * from './xiangqi-pgn.js';

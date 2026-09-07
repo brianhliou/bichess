@@ -25,10 +25,13 @@ import { join } from 'node:path';
 import {
   applyMove,
   createInitialXiangqiState,
+  judgmentComment,
   type XiangqiGameState,
+  type XiangqiJudgment,
   type XiangqiMove,
   type XiangqiSquare,
 } from '@mistboard/game';
+import { judgmentCommentI18n, praiseCommentZh } from './xiangqi-judgment-comment-i18n.js';
 
 type Localized = { 'zh-Hans': string; 'zh-Hant': string };
 
@@ -42,56 +45,14 @@ type SerializedNode = {
 };
 
 /**
- * Chinese for the generated per-move comments. These are templates rather than
- * prose, which is the only reason translating them is safe: the variable part is
- * a number and a glyph, and the fixed part says the same thing in both scripts.
- *
- * The chapter blurbs below are different -- real sentences -- and carry the risk
- * noted at the top of this file: nobody on this side reads Chinese well enough
- * to check them. They ship because the audience that can check them is the
- * audience the study is for, and a wrong character is a correctable embarrassment
- * where an English-only xiangqi study is a permanent one.
+ * The chapter blurbs below are real sentences, not templates, and carry the risk
+ * noted at the top of this file: nobody on this side reads Chinese well enough to
+ * check them. They ship because the audience that can check them is the audience
+ * the study is for, and a wrong character is a correctable embarrassment where an
+ * English-only xiangqi study is a permanent one. The per-move comments are the
+ * safe case and live in xiangqi-judgment-comment-i18n.ts, shared with the
+ * world-title study so the two cannot drift.
  */
-const JUDGMENT_ZH: Record<string, Localized> = {
-  blunder: { 'zh-Hans': '漏着', 'zh-Hant': '漏著' },
-  mistake: { 'zh-Hans': '错着', 'zh-Hant': '錯著' },
-  inaccuracy: { 'zh-Hans': '不精确', 'zh-Hant': '不精確' },
-};
-
-function judgmentCommentZh(
-  judgment: string,
-  lost: number,
-  evalText: string,
-  hasLine: boolean,
-  locale: keyof Localized,
-): string {
-  const label = JUDGMENT_ZH[judgment]?.[locale] ?? judgment;
-  const evalPart = evalText
-    ? locale === 'zh-Hans'
-      ? `，此后形势 ${evalText}`
-      : `，此後形勢 ${evalText}`
-    : '';
-  const linePart = hasLine
-    ? locale === 'zh-Hans'
-      ? '。引擎推荐的着法见旁支。'
-      : '。引擎推薦的著法見旁支。'
-    : '。';
-  return locale === 'zh-Hans'
-    ? `${label}：胜率损失 ${lost} 个百分点${evalPart}${linePart}`
-    : `${label}：勝率損失 ${lost} 個百分點${evalPart}${linePart}`;
-}
-
-function praiseCommentZh(glyph: string, sacrifice: number, locale: keyof Localized): string {
-  if (glyph === '!!') {
-    return locale === 'zh-Hans'
-      ? `妙手：弃子 ${sacrifice}，引擎自身的变化确认这一子确实不能收回。`
-      : `妙手：棄子 ${sacrifice}，引擎自身的變化確認這一子確實不能收回。`;
-  }
-  return locale === 'zh-Hans'
-    ? '佳着：唯一能抓住对手上一手错误的着法，其余任何走法至少差一个错着。'
-    : '佳著：唯一能抓住對手上一手錯誤的著法，其餘任何走法至少差一個錯著。';
-}
-
 type HarvestedGame = {
   key: string;
   title: string;
@@ -568,6 +529,15 @@ function evalText(row: AnnotationRow): string {
   return `${row.cp >= 0 ? '+' : ''}${(row.cp / 100).toFixed(2)}`;
 }
 
+/** This seeder's row shape, as the shared comment builder wants it. Takes a row
+ *  already known to carry a judgment; an unjudged move has no comment at all. */
+function judgmentOf(
+  row: AnnotationRow & { judgment: NonNullable<AnnotationRow['judgment']> },
+  hasLine: boolean,
+): XiangqiJudgment {
+  return { judgment: row.judgment, lost: row.lost, evalText: evalText(row), hasLine };
+}
+
 function praiseComment(hit: PositiveHit): string {
   if (hit.glyph === '!!') {
     const piece = hit.offeredPiece?.role ? ` (${hit.offeredPiece.role})` : '';
@@ -664,27 +634,13 @@ function chapterFor(
       parent.children.push(node);
     } else if (row?.judgment) {
       const line = legalLine(state, row.pv ?? []);
+      const judged = judgmentOf({ ...row, judgment: row.judgment }, line.length > 0);
       node.annotations = {
         glyphs: [NAG[row.judgment] ?? 6],
         comments: [
           {
-            text: `${row.judgment}: ${row.lost} win% given up${evalText(row) ? `, eval ${evalText(row)} after` : ''}.${line.length ? ' The engine wanted the line in the sibling branch.' : ''}`,
-            i18n: {
-              'zh-Hans': judgmentCommentZh(
-                row.judgment,
-                row.lost,
-                evalText(row),
-                line.length > 0,
-                'zh-Hans',
-              ),
-              'zh-Hant': judgmentCommentZh(
-                row.judgment,
-                row.lost,
-                evalText(row),
-                line.length > 0,
-                'zh-Hant',
-              ),
-            },
+            text: judgmentComment(judged),
+            i18n: judgmentCommentI18n(judged),
           },
         ],
       };

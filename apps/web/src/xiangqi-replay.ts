@@ -8,6 +8,7 @@ import {
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
+  parseJudgmentComment,
   parseStandardXiangqiFen,
   type XiangqiBoard,
   type XiangqiColor,
@@ -781,15 +782,19 @@ export function mountXiangqiReplay(
    * on the move, pointed at a line already drawn beside it, and appeared and
    * disappeared as the reader stepped, shoving the list around. The one thing
    * only it carried was the numbers, so those move onto the move itself.
+   *
+   * The shape is `parseJudgmentComment` in @mistboard/game, not a pattern of our
+   * own. This file used to carry its own copy, which required the eval to be a
+   * single token: every `eval mate in 4 after` note therefore failed to match and
+   * fell through to the branch below, printing the whole English sentence after a
+   * Chinese label on five moves of the champions article.
    */
-  const MACHINE_NOTE =
-    /^(blunder|mistake|inaccuracy):\s*([\d.]+)\s*win% given up, eval\s*(\S+?)\s*after\.\s*The engine wanted the line in the sibling branch\.?$/i;
 
   /** Hover text for a judged move: the judgment, the cost, and the eval. */
   function judgmentTitle(a: XiangqiReplayAnnotation | undefined): string | undefined {
     if (!a?.glyph) return undefined;
     const label = copy.judgment[a.glyph as keyof typeof copy.judgment] ?? '';
-    const machine = a.note?.match(MACHINE_NOTE);
+    const machine = a.note ? parseJudgmentComment(a.note) : null;
     if (!machine) {
       // Prose we did not generate (the positive classifier writes its own).
       // It is English and stays English: it is authored text with no
@@ -798,10 +803,10 @@ export function mountXiangqiReplay(
       const note = a.note?.replace(/^(great|brilliant):\s*/i, '');
       return [label, note].filter(Boolean).join(': ');
     }
-    const evaluation = evalText(a) || machine[3];
+    const evaluation = evalText(a) || machine.evalText;
     return [
       label,
-      copy.winChanceGivenUp(machine[2]),
+      copy.winChanceGivenUp(String(machine.lost)),
       evaluation ? `${copy.evalPrefix} ${evaluation}` : '',
     ]
       .filter(Boolean)

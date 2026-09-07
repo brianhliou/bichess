@@ -76,6 +76,7 @@
     "check:drift": "node scripts/drift-check.mjs",
     "variants": "node scripts/variant-status.mjs",
     "news:tweet": "node scripts/announce-tweet.mjs",
+    "studies:i18n-sweep": "node scripts/study-i18n-sweep.mjs",
     "i18n:check": "npm run i18n:check --workspace @mistboard/web --",
     "i18n:coverage": "npm run i18n:coverage --workspace @mistboard/web --",
     "i18n:prune-articles": "npm run i18n:prune --workspace @mistboard/web",

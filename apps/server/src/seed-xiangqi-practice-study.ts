@@ -19,6 +19,17 @@
  * Seeds FIVE studies, one per piece family, each slugged so the /practice
  * catalogue can point at it across re-seeds and renames.
  *
+ * Trilingual, from the same dictionaries the reading study uses
+ * (xiangqi-endgame-study-i18n.ts). The first cut of this seeder wrote none: the
+ * corpus was already translated for `tOceiaI7`, the split into practice studies
+ * did not carry the translations across, and 74 strings that had Chinese sitting
+ * in the repo shipped in English on a Chinese page for as long as nobody looked.
+ * A split of already-translated content inherits its translations or it silently
+ * un-translates them.
+ *
+ * `--update` rewrites the five studies that already exist rather than creating
+ * new ones. Use it for anything that lands after the first seed.
+ *
  * Local dev (server on 3001), signing itself in with the dev auth code:
  *   npx tsx apps/server/src/seed-xiangqi-practice-study.ts --email you@example.com
  *
@@ -34,12 +45,19 @@
  *
  * `--dry-run` needs no credentials and prints the split.
  */
+import { pathToFileURL } from 'node:url';
 import {
   type EndgameCategory,
   type EndgameEntry,
   endgameEntryFen,
   XIANGQI_ENDGAME_CORPUS,
 } from '@mistboard/game';
+import {
+  ENDGAME_STUDY_LANGS,
+  localizedChapterName,
+  localizedPracticeComment,
+  PRACTICE_SET_I18N,
+} from './xiangqi-endgame-study-i18n.js';
 
 const DEFAULT_BASE = 'http://127.0.0.1:3001';
 
@@ -56,7 +74,7 @@ const DEFAULT_BASE = 'http://127.0.0.1:3001';
  * which is the point: re-seeding mints new study ids and renaming changes names,
  * and either would silently empty a section of the index.
  */
-const SETS: {
+export const PRACTICE_SETS: {
   slug: string;
   categories: EndgameCategory[];
   name: string;
@@ -134,9 +152,38 @@ export function practiceChapterName(entry: EndgameEntry): string {
   return `${entry.attacker} vs ${entry.defender}`;
 }
 
+/**
+ * Per-locale overrides for one chapter, in the shape study-i18n.ts reads.
+ *
+ * Built from the same dictionaries the reading study uses, so these five studies
+ * and `tOceiaI7` say the same thing in Chinese about the same position. Omitting
+ * a locale is the correct degrade: `localizedChapterName` returns null rather
+ * than a half-translated name, and the reader gets the English one.
+ */
+export function practiceChapterI18n(entry: EndgameEntry): Record<string, { name: string }> {
+  const out: Record<string, { name: string }> = {};
+  for (const lang of ENDGAME_STUDY_LANGS) {
+    const name = localizedChapterName(entry, lang);
+    if (name) out[lang] = { name };
+  }
+  return out;
+}
+
+function practiceCommentI18n(entry: EndgameEntry): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const lang of ENDGAME_STUDY_LANGS) {
+    const text = localizedPracticeComment(entry, lang);
+    if (text) out[lang] = text;
+  }
+  return out;
+}
+
 export function practiceChapterBody(entry: EndgameEntry): Record<string, unknown> {
+  const i18n = practiceChapterI18n(entry);
+  const commentI18n = practiceCommentI18n(entry);
   return {
     name: practiceChapterName(entry),
+    ...(Object.keys(i18n).length > 0 ? { i18n } : {}),
     variant: 'xiangqi',
     // The learner plays the side with something to prove, NOT whoever happens to
     // move first. In this corpus the attacker is always Red, so:
@@ -154,7 +201,14 @@ export function practiceChapterBody(entry: EndgameEntry): Record<string, unknown
       // mainline here would be dead weight the player never reads.
       root: {
         annotations: {
-          comments: [{ text: entry.note ?? practiceChapterName(entry) }],
+          // The overlay rides on the comment itself, which is where
+          // study-i18n.ts reads per-node comment translations from.
+          comments: [
+            {
+              text: entry.note ?? practiceChapterName(entry),
+              ...(Object.keys(commentI18n).length > 0 ? { i18n: commentI18n } : {}),
+            },
+          ],
         },
         children: [],
       },
@@ -197,6 +251,12 @@ class Session {
     });
   }
 
+  async get(path: string): Promise<Response> {
+    return fetch(`${this.base}${path}`, {
+      headers: { ...(this.cookie ? { cookie: this.cookie } : {}) },
+    });
+  }
+
   async patch(path: string, body: unknown): Promise<Response> {
     return fetch(`${this.base}${path}`, {
       method: 'PATCH',
@@ -233,6 +293,7 @@ function parseArgs(): {
   base: string;
   visibility: Visibility;
   dryRun: boolean;
+  update: boolean;
 } {
   const argv = process.argv.slice(2);
   const read = (flag: string): string | null => {
@@ -248,13 +309,106 @@ function parseArgs(): {
     base: read('--base') ?? DEFAULT_BASE,
     visibility,
     dryRun: argv.includes('--dry-run'),
+    update: argv.includes('--update'),
   };
+}
+
+/**
+ * Bring the ALREADY-SEEDED studies in line with the dictionaries, in place.
+ *
+ * This exists because seeding is create-only and these five studies are pointed
+ * at by curated slug: a re-seed mints new ids, and the /practice cards, every
+ * link anyone has shared, and every learner's solved-count are all keyed to the
+ * old ones. So a translation that lands after the first seed can only reach prod
+ * as an update.
+ *
+ * Slugs resolve through `/api/practice` rather than a by-slug study read, which
+ * does not exist: the catalogue endpoint is the only public place a slug becomes
+ * a study id, and it is anonymous, so this half needs no credential to plan.
+ * Chapters are matched by their English base name, which is generated from the
+ * corpus and unique within a set (asserted below rather than assumed).
+ */
+async function updateSets(
+  session: Session,
+  sets: { slug: string; name: string; description: string; entries: EndgameEntry[] }[],
+): Promise<void> {
+  const catalogue = await session.get('/api/practice');
+  if (!catalogue.ok) {
+    throw new Error(`GET /api/practice failed: ${catalogue.status} ${await catalogue.text()}`);
+  }
+  const { sections } = (await catalogue.json()) as {
+    sections: { cards: { slug: string; studyId: string }[] }[];
+  };
+  const idBySlug = new Map(
+    sections.flatMap((section) => section.cards.map((card) => [card.slug, card.studyId])),
+  );
+
+  for (const set of sets) {
+    const studyId = idBySlug.get(set.slug);
+    if (!studyId) {
+      throw new Error(`slug ${set.slug} resolves to no study; seed it before updating`);
+    }
+    const i18n = PRACTICE_SET_I18N[set.slug];
+    if (!i18n) throw new Error(`no PRACTICE_SET_I18N entry for ${set.slug}`);
+
+    const patched = await session.patch(`/api/studies/${studyId}`, { i18n });
+    if (!patched.ok) {
+      throw new Error(
+        `patch study ${set.slug} failed: ${patched.status} ${await patched.text()} ` +
+          '(the cookie must belong to the study OWNER)',
+      );
+    }
+
+    const detail = await session.get(`/api/studies/${studyId}`);
+    if (!detail.ok) {
+      throw new Error(`read ${set.slug} failed: ${detail.status} ${await detail.text()}`);
+    }
+    const { chapters } = (await detail.json()) as {
+      chapters: { id: string; name: string; version: number; root: unknown }[];
+    };
+    const byName = new Map<string, (typeof chapters)[number]>();
+    for (const chapter of chapters) {
+      if (byName.has(chapter.name)) {
+        throw new Error(
+          `${set.slug} has two chapters named "${chapter.name}"; cannot match by name`,
+        );
+      }
+      byName.set(chapter.name, chapter);
+    }
+
+    let touched = 0;
+    for (const entry of set.entries) {
+      const chapter = byName.get(practiceChapterName(entry));
+      if (!chapter) {
+        throw new Error(`${set.slug}: no chapter named "${practiceChapterName(entry)}"`);
+      }
+      const body = practiceChapterBody(entry) as {
+        i18n?: Record<string, { name: string }>;
+        root: unknown;
+      };
+      // Name and tree go in one PATCH: the route takes `root` together with
+      // `name`/`i18n`, and the comment overlay lives INSIDE the tree, so a
+      // chapter-metadata-only patch would leave the comment in English.
+      const response = await session.patch(`/api/studies/${studyId}/chapters/${chapter.id}`, {
+        ...(body.i18n ? { i18n: body.i18n } : {}),
+        root: body.root,
+        baseVersion: chapter.version,
+      });
+      if (!response.ok) {
+        throw new Error(
+          `patch ${set.slug}/${entry.id} failed: ${response.status} ${await response.text()}`,
+        );
+      }
+      touched += 1;
+    }
+    console.log(`${set.slug}: ${studyId} updated (${touched} chapters)`);
+  }
 }
 
 async function main(): Promise<void> {
   const args = parseArgs();
 
-  const setsWithEntries = SETS.map((set) => ({
+  const setsWithEntries = PRACTICE_SETS.map((set) => ({
     ...set,
     entries: XIANGQI_ENDGAME_CORPUS.filter((entry) => set.categories.includes(entry.category)),
   }));
@@ -288,6 +442,12 @@ async function main(): Promise<void> {
   else if (args.email) await session.signIn(args.email);
   else throw new Error('pass --email (dev) or set MISTBOARD_SESSION_COOKIE (prod), or --dry-run');
 
+  if (args.update) {
+    await updateSets(session, setsWithEntries);
+    console.log(`\n${setsWithEntries.length} practice studies updated in place.`);
+    return;
+  }
+
   for (const set of setsWithEntries) {
     const first = set.entries[0];
     if (!first) throw new Error(`set ${set.slug} has no entries`);
@@ -295,6 +455,7 @@ async function main(): Promise<void> {
     const created = await session.post('/api/studies', {
       name: set.name,
       description: set.description,
+      i18n: PRACTICE_SET_I18N[set.slug],
       visibility: args.visibility,
       chapter: practiceChapterBody(first),
     });
@@ -357,7 +518,12 @@ async function flagPractice(
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+// Guarded so the sets and the chapter builder can be imported by a test. Without
+// it, importing this module to check what it EMITS runs the seeder instead --
+// which is why the translations it did not emit went unnoticed.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}
