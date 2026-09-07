@@ -325,6 +325,27 @@ test('the weekly markdown carries players, split, variants and a trend', () => {
   assert.match(markdown, /trend, oldest first: 46 22 78/);
 });
 
+test('a stored v1 product renders without undefined or NaN', () => {
+  // /readouts renders stored snapshots, so this renderer meets payloads written
+  // before the player counts existed. The first prod load of the page printed
+  // "Players: undefined (NaN week over week)" because every test until this one
+  // built a fresh report.
+  const v1Product = {
+    accountsCreated: 3,
+    previousAccountsCreated: 4,
+    completedGames: 78,
+    previousCompletedGames: 22,
+    completedGamesByMode: { pve: 78, eve: 253 },
+    completedGamesByVariant: [{ variant: 'jieqi', count: 44 }],
+  } as unknown as MistboardReadoutProduct;
+  const markdown = renderMistboardReadoutMarkdown(
+    reportWith({ ...emptyFacts, product: v1Product }),
+  );
+  assert.doesNotMatch(markdown, /undefined|NaN/);
+  assert.doesNotMatch(markdown, /Players:/);
+  assert.match(markdown, /Completed games: 78 \(\+56 week over week\)/);
+});
+
 test('a cleared checkpoint reads as cleared rather than zero remaining', () => {
   const puzzles = buildElephantChessPuzzleQualityReport({
     aggregates: [qualityAggregate({ sessions: 414, starts: 239 })],

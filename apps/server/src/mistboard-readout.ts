@@ -310,7 +310,7 @@ function productActions(
       severity: 'watch',
       dedupeKey: `product-activity-surged:${before}-${current}`,
       ownerIssue: null,
-      text: `Completed games rose to ${current} from ${before} week over week, across ${product.humanPlayers} players. Find out where they came from while the trail is warm.`,
+      text: `Completed games rose to ${current} from ${before} week over week${typeof product.humanPlayers === 'number' ? `, across ${product.humanPlayers} players` : ''}. Find out where they came from while the trail is warm.`,
     });
   }
   // Retention is the half of the funnel that a volume count hides: a week can
@@ -488,8 +488,9 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
     const product = report.product;
     lines.push(
       `- Completed games: ${product.completedGames} (${signedDelta(product.completedGames - product.previousCompletedGames)} week over week)`,
-      `- Players: ${product.humanPlayers} (${signedDelta(product.humanPlayers - product.previousHumanPlayers)} week over week), ${product.returningPlayers} returning, ${product.signedInPlayers} signed in`,
     );
+    const playersLine = renderPlayers(product);
+    if (playersLine) lines.push(playersLine);
     const trendLine = renderTrend(report);
     if (trendLine) lines.push(trendLine);
     const modesLine = renderModes(product.completedGamesByMode);
@@ -570,6 +571,27 @@ function renderVariants(entries: ReadonlyArray<{ variant: string; count: number 
   const top = entries.slice(0, 5).map((entry) => `${entry.variant} ${entry.count}`);
   const remaining = entries.length - top.length;
   return remaining > 0 ? `${top.join(', ')}, and ${remaining} more` : top.join(', ');
+}
+
+// A schema-v1 snapshot carries no player counts, and this renderer is used on
+// stored reports as well as fresh ones, so it meets v1 payloads long after the
+// collector stopped producing them. Omit the line rather than print
+// "undefined (NaN week over week)", which is what /readouts showed on the first
+// prod load.
+function renderPlayers(product: MistboardReadoutProduct): string | null {
+  if (typeof product.humanPlayers !== 'number') return null;
+  const delta =
+    typeof product.previousHumanPlayers === 'number'
+      ? ` (${signedDelta(product.humanPlayers - product.previousHumanPlayers)} week over week)`
+      : '';
+  const parts = [`- Players: ${product.humanPlayers}${delta}`];
+  if (typeof product.returningPlayers === 'number') {
+    parts.push(`${product.returningPlayers} returning`);
+  }
+  if (typeof product.signedInPlayers === 'number') {
+    parts.push(`${product.signedInPlayers} signed in`);
+  }
+  return parts.join(', ');
 }
 
 // The by-mode counts include bot-vs-bot, which the headline count deliberately
