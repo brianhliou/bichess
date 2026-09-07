@@ -290,8 +290,9 @@ jobs:
           npm run build --workspace @mistboard/board-render
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Browser smoke
-        run: npm run test --workspace @mistboard/web
+      # The learn-interface smoke that used to run here went with the dark-chess
+      # hub it drove. The study-creator smoke below is now the whole of this
+      # job's browser coverage, which is why the Playwright install stays.
       - name: Migrate study smoke database
         run: npm run db:migrate
       - name: Study creator persistence smoke
