@@ -9,6 +9,7 @@
 import type { PracticeGoal, XiangqiColor, XiangqiGameState } from '@mistboard/game';
 import { createInitialXiangqiState, parseStandardXiangqiFen } from '@mistboard/game';
 import { track } from '../analytics.js';
+import { displayComment } from '../study-i18n.js';
 import { createCeval } from './engine/ceval.js';
 import type { PracticeEval } from './practice-play.js';
 import { evaluateXiangqiForPractice } from './xiangqi-practice.js';
@@ -20,14 +21,23 @@ export interface PracticeChapterInput {
    *  tree itself is ignored, because the engine supplies the opposition. */
   root: {
     rootFen?: string;
-    root?: { annotations?: { comments?: { text?: string }[] } };
+    root?: {
+      annotations?: { comments?: { text?: string; i18n?: Record<string, string> }[] };
+    };
   };
   orientation: string;
 }
 
-/** The concept prose for the exercise: the chapter's root comment. */
+/** The concept prose for the exercise: the chapter's root comment, in the
+ *  reader's locale.
+ *
+ *  Through `displayComment` rather than `.text`, which is the whole point: the
+ *  overlay rides on the comment, and reading the base text is how a chapter that
+ *  IS translated still renders English. The 32 practice exercises had their
+ *  Chinese written and stored, and this line was the reason the board still said
+ *  "A bare horse vs A bare advisor" above it. */
 export function practiceBrief(chapter: PracticeChapterInput): string | undefined {
-  const text = chapter.root?.root?.annotations?.comments?.[0]?.text?.trim();
+  const text = displayComment(chapter.root?.root?.annotations?.comments?.[0])?.trim();
   return text ? text : undefined;
 }
 
