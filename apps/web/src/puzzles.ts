@@ -483,9 +483,18 @@ function renderPuzzleDetail(
   // Right after a solve, hand focus to the next-puzzle button (one-shot) so
   // Enter or Space advances; on small screens this also scrolls the CTA into
   // view, where the side panel sits below the board.
+  //
+  // Not inside an embed. body.embed-body hides the document's overflow, so a
+  // focus scroll there is a ONE-WAY door: it moved scrollTop to the bottom of
+  // the frame, put the board's top edge at -294px, and left no way to scroll
+  // back to it short of a reload. The embed sizes itself to its frame, so
+  // there is nothing off screen to scroll to in the first place.
   if (session.focusNext) {
     session.focusNext = false;
-    host.querySelector<HTMLButtonElement>('[data-puzzle-next="true"]')?.focus();
+    const embedded = document.documentElement.dataset.embed !== undefined;
+    host
+      .querySelector<HTMLButtonElement>('[data-puzzle-next="true"]')
+      ?.focus({ preventScroll: embedded });
   }
 }
 

@@ -582,6 +582,64 @@ body.embed-body {
 @container embed-frame (max-width: 543px) {
   .embed-puzzle {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    /* Re-budget the board. In two columns the panel sits BESIDE the board, so
+       the board can have the frame's whole height; stacked, the panel sits
+       UNDER it and needs a share of that same height. Without this the two
+       together came to ~1.5x the frame -- measured 1046px of content in a
+       720px box -- and because body.embed-body hides the overflow (deliberate,
+       so the widget never grows a second scrollbar inside the host's) the
+       excess was not scrolled, it was unreachable: a wheel event moved
+       scrollTop by 0. The width term is the safety net, since a board is
+       552:612 and must not outgrow the frame it is budgeted against. */
+    --puzzle-surface-fit: min(
+      704px,
+      calc(var(--puzzle-page-height) * 0.58),
+      calc((100cqi - 4px) * 612 / 552)
+    );
+    /* 0.58 measured, not guessed. Across 360x640, 425x720 and 559x720 the
+       panel's fixed furniture (engine bar, feedback block, actions, jump-out
+       link) leaves the move list under two rows at EVERY split that fits, so
+       the choice is a clean zero or a sliver: 0.58 is the largest board whose
+       move list collapses to exactly 0 rather than showing 0.3 of a row, which
+       reads as broken. Stacked, the move list is the one thing here that is
+       nice-to-have -- the board, the verdict and Next puzzle are not -- and
+       "Open in analysis board" still carries the full line. Two columns keep
+       the move list; only the stacked frame gives it up. */
+  }
+
+  /* The panel takes what the board leaves and scrolls inside it, rather than
+     standing at the board's full height and pushing its own buttons past the
+     bottom of a frame that cannot scroll. */
+  .embed-puzzle .puzzle-side-panel {
+    /* align-self, because .embed-puzzle sets align-items:start for the
+       two-column layout: start-aligned, a height:auto item takes its CONTENT
+       height and overflows its track instead of being bounded by it, which is
+       the same 1fr-row-that-does-not-bind mistake in a second place. */
+    align-self: stretch;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    /* The panel itself does not scroll. Scrolling the whole panel is what put
+       "Next puzzle" -- the one control the widget exists to offer after a solve
+       -- below a fold the reader has no reason to suspect. The move list
+       absorbs the squeeze instead (it already scrolls) and the action rows stay
+       pinned on screen. */
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-auto-rows: auto;
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  /* Stacked, vertical space is the scarce resource, so the trainer's generous
+     row floors (140px of moves, 190px of feedback) are what force the panel
+     past its share. Let those rows take what they are given. */
+  .embed-puzzle .puzzle-trainer-panel {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .embed-puzzle .puzzle-trainer-panel--analysis {
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 }
 

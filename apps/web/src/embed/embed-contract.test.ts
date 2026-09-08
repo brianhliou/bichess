@@ -99,6 +99,41 @@ describe('the puzzle embed grid', () => {
   });
 });
 
+describe('the stacked puzzle embed', () => {
+  // Stacking is correct for a narrow box and wrong for a narrow FRAME unless the
+  // board is re-budgeted: the panel moves from beside the board to under it, and
+  // at the two-column budget the pair came to ~1046px inside a 720px frame.
+  // body.embed-body hides the overflow on purpose, so that excess is not
+  // scrolled past, it is unreachable -- a wheel event moved scrollTop by 0, and
+  // a post-solve focus scroll then parked the board's top edge at -294px with no
+  // way back. Both halves are asserted because either alone leaves it broken.
+  function stackedBlock(): string {
+    const at = embedCss.indexOf('@container embed-frame');
+    expect(at, 'no stacked @container block').toBeGreaterThan(-1);
+    let depth = 0;
+    for (let i = embedCss.indexOf('{', at); i < embedCss.length; i += 1) {
+      if (embedCss[i] === '{') depth += 1;
+      if (embedCss[i] === '}') {
+        depth -= 1;
+        if (depth === 0) return embedCss.slice(at, i + 1);
+      }
+    }
+    throw new Error('unterminated @container block');
+  }
+
+  it('re-budgets the board against the height the panel also needs', () => {
+    expect(stackedBlock(), 'the stacked board still takes the two-column height budget').toContain(
+      '--puzzle-surface-fit',
+    );
+  });
+
+  it('bounds the panel to its track instead of its content', () => {
+    // .embed-puzzle sets align-items:start, so a height:auto panel takes its
+    // content height and overflows the row it was given.
+    expect(stackedBlock()).toContain('align-self: stretch');
+  });
+});
+
 describe('embedThemeFromSearch', () => {
   // An embed inherits the READER's OS theme by default, which is wrong for a
   // host page that has only one theme: a light-only blog framing this showed a
