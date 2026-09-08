@@ -46,6 +46,59 @@ describe('the embed default size', () => {
   });
 });
 
+// The puzzle embed's two columns are sized against the FRAME, and both halves
+// of that are load-bearing in a way nothing else checks. The sidebar column was
+// floored at a flat 160px while .puzzle-actions (four 48px buttons plus a
+// clamped gap) needs 222-264px, and because .puzzle-side-panel hides its
+// overflow the shortfall produced no scrollbar and no error -- just a move list
+// reading "d10-e" and a "NEXT PUZZL" button, on any host that framed the widget
+// tall and narrow. Both regressions below are silent at runtime, so they are
+// asserted here rather than left to a screenshot nobody takes.
+const embedCssPath = ['src/embed/embed.css', 'apps/web/src/embed/embed.css']
+  .map((candidate) => resolve(process.cwd(), candidate))
+  .find((candidate) => existsSync(candidate));
+// Comments are stripped first: these rules are DOCUMENTED in comments that
+// quote the very tokens being matched ("the old @media rule"), so a scan over
+// the raw text matches the prose instead of the declaration.
+const embedCss = readFileSync(embedCssPath as string, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+describe('the puzzle embed grid', () => {
+  it('floors the sidebar column at its own min-content, not a fixed width', () => {
+    const grid = /\.embed-puzzle\s*\{[\s\S]*?grid-template-columns:([\s\S]*?);/.exec(embedCss);
+    expect(grid, 'no grid-template-columns on .embed-puzzle').not.toBeNull();
+    const sidebarTrack = (grid?.[1] ?? '').split('minmax').pop() ?? '';
+    expect(
+      sidebarTrack,
+      `sidebar track "${sidebarTrack.trim()}" pins a width; a constant cannot track .puzzle-actions`,
+    ).toContain('min-content');
+  });
+
+  it('stacks on the frame width, not on the reader viewport', () => {
+    // Inside an iframe a viewport query happens to measure the frame, which is
+    // why the old @media rule worked. It stops being true the moment the widget
+    // is mounted in a sized element, and then the narrow layout never fires.
+    const narrow =
+      /@(media|container)([^{]*)\{\s*\.embed-puzzle\s*\{\s*grid-template-columns:\s*1fr/.exec(
+        embedCss,
+      );
+    expect(narrow, 'no narrow rule drops .embed-puzzle to one column').not.toBeNull();
+    expect(narrow?.[1], 'the narrow puzzle layout is still a viewport query').toBe('container');
+    expect(narrow?.[2], 'the narrow rule does not name the embed frame container').toContain(
+      'embed-frame',
+    );
+  });
+
+  it('declares the container the narrow rule queries', () => {
+    // An @container rule whose container does not exist never matches, and the
+    // layout silently reverts to one column at every width.
+    const frame =
+      /\.embed-frame\s*\{[\s\S]*?container-type:\s*inline-size;[\s\S]*?container-name:\s*embed-frame;/.exec(
+        embedCss,
+      );
+    expect(frame, '.embed-frame does not declare the named inline-size container').not.toBeNull();
+  });
+});
+
 describe('embedThemeFromSearch', () => {
   // An embed inherits the READER's OS theme by default, which is wrong for a
   // host page that has only one theme: a light-only blog framing this showed a

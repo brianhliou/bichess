@@ -26,6 +26,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Every narrow-layout rule below measures THIS box, not the viewport. Inside
+     an iframe the two are the same width, which is the only reason the viewport
+     queries ever worked here. They stop being the same the moment the widget is
+     mounted in a sized element rather than a frame, and a layout that stacks
+     only on a small VIEWPORT then never stacks at all. */
+  container-type: inline-size;
+  container-name: embed-frame;
 }
 
 .embed-credit {
@@ -530,7 +537,17 @@ body.embed-body {
   /* The board column is the surface budget at the tallest board's aspect
      (standard xiangqi, 552:612); the board rules below fit inside it. A bare
      `auto` track collapsed to the board's min-width instead. */
-  grid-template-columns: minmax(0, calc(var(--puzzle-surface-size) * 552 / 612)) minmax(160px, 1fr);
+  /* The sidebar's floor is its own min-content, not a number. It was 160px
+     while .puzzle-actions (four 48px buttons plus a clamped gap) needs 222-264px
+     depending on the frame width, so on a tall-and-narrow frame the board track
+     -- which is sized from the frame's HEIGHT -- grew until the sidebar was
+     handed less than it can fit, and .puzzle-side-panel's overflow:hidden
+     clipped the difference with no scrollbar and no other symptom. A measured
+     constant would go stale the next time that button row changes; min-content
+     cannot. */
+  grid-template-columns:
+    minmax(0, calc(var(--puzzle-surface-size) * 552 / 612))
+    minmax(min-content, 1fr);
   gap: 10px;
   align-items: start;
   flex: 1;
@@ -554,7 +571,15 @@ body.embed-body {
   text-align: center;
 }
 
-@media (max-width: 559px) {
+/* 543px, not 559px, is the same threshold this rule always had: a container
+   query measures .embed-frame's CONTENT box, and .embed-root pads it 8px on
+   each side, so the frame is 16px narrower than the viewport the old @media
+   rule was reading. Kept identical on purpose -- stacking is the worse of the
+   two layouts inside a fixed-height frame (the stacked column is ~1137px tall
+   in a 720px box and body.embed-body hides the overflow, so the board's top is
+   cut off), so the two-column layout should survive exactly as long as it did
+   before and no less. */
+@container embed-frame (max-width: 543px) {
   .embed-puzzle {
     grid-template-columns: 1fr;
   }
